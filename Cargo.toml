@@ -10,6 +10,9 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 rust-version = "1.90"
 repository = "https://github.com/storytold/notecraft"
+# Not published to crates.io (path dependencies between workspace crates; cargo-deny treats
+# path deps of publishable crates as wildcards).
+publish = false
 
 [workspace.dependencies]
 # internal

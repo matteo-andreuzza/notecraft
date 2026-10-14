@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 repository.workspace = true
+publish.workspace = true
 description = "NoteCraft L1 document model: notebook, section group, section, page, note containers, rich text, tags, recycle bin"
 
 [lints]
