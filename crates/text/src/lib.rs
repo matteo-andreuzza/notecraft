@@ -250,6 +250,42 @@ pub fn apply_format(p: &mut Paragraph, range: std::ops::Range<usize>, f: &dyn Fn
         f(&mut r.fmt);
         r.fmt = std::mem::take(&mut r.fmt).sanitized();
     }
+    simplify(p);
+}
+
+/// Drop overrides that equal the paragraph style's base format (catalog
+/// `BEH.Text.FormatToggles`): toggling Bold on and off again leaves no trace, so the runs merge
+/// back and later style changes show through. An override that *differs* from the base (a
+/// non-bold word in a bold heading) is kept.
+pub fn simplify(p: &mut Paragraph) {
+    let base = p.style.def().char;
+    for r in &mut p.runs {
+        let f = &mut r.fmt;
+        if f.bold == base.bold {
+            f.bold = None;
+        }
+        if f.italic == base.italic {
+            f.italic = None;
+        }
+        if f.underline == base.underline {
+            f.underline = None;
+        }
+        if f.strike == base.strike {
+            f.strike = None;
+        }
+        if f.script == base.script {
+            f.script = None;
+        }
+        if f.font.is_some() && f.font == base.font {
+            f.font = None;
+        }
+        if f.size.is_some() && f.size == base.size {
+            f.size = None;
+        }
+        if f.color.is_some() && f.color == base.color {
+            f.color = None;
+        }
+    }
     p.normalize();
 }
 

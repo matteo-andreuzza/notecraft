@@ -1,0 +1,25 @@
+[package]
+name = "notecraft-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "NoteCraft L5 engine: the editing session, undo, autosave and the command registry every front end dispatches through"
+
+[lints]
+workspace = true
+
+[dependencies]
+notecraft-doc = { workspace = true }
+notecraft-text = { workspace = true }
+notecraft-search = { workspace = true }
+notecraft-format = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

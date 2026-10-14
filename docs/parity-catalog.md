@@ -1460,6 +1460,24 @@ Interop constructs. Per-construct preserved/degraded/dropped numbers for `.one` 
 | FMT.Import.Images | Import images | Files/Import | format |  |  | P1 | missing | PNG/JPEG/… |  |
 | FMT.Native.Ncraft | Native notebook: folder of .ncraft section files + notebook.ncraft-toc, atomic saves | Files/Native | format |  |  | P0 | missing | NoteCraft (docs/architecture.md) |  |
 
+## NoteCraft additions
+
+Actions every editor needs that the reference exposes only implicitly (typing, arrow keys, clicks): they are commands too, so agents and the CLI can drive them. Not counted as reference parity on their own, but kept in the catalog so every command has a row.
+
+| ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+| NC.Text.Insert | Type text | Keyboard/Typing/Type text | key-behaviour |  | text.insert | P0 | missing | NoteCraft | typing; one undo step per word |
+| NC.Text.Enter | New paragraph (Enter) | Keyboard/Typing/New paragraph | key-behaviour | `Enter` | text.newline | P0 | missing | NoteCraft |  |
+| NC.Caret.Set | Place the caret (click in text) | Mouse/Click in text | mouse |  | caret.set | P0 | missing | NoteCraft |  |
+| NC.Caret.Left | Move left | Keyboard/Navigation/Left | key-behaviour | `Left` | caret.left | P0 | missing | NoteCraft | Shift extends |
+| NC.Caret.Right | Move right | Keyboard/Navigation/Right | key-behaviour | `Right` | caret.right | P0 | missing | NoteCraft | Shift extends |
+| NC.Caret.Up | Move up | Keyboard/Navigation/Up | key-behaviour | `Up` | caret.up | P0 | missing | NoteCraft | visual lines come from the UI |
+| NC.Caret.Down | Move down | Keyboard/Navigation/Down | key-behaviour | `Down` | caret.down | P0 | missing | NoteCraft | visual lines come from the UI |
+| NC.Object.Select | Select a note container (click its top bar) | Mouse/Select container | mouse |  | object.select | P0 | missing | NoteCraft |  |
+| NC.Page.Select | Open a page (click its tab) | Mouse/Page tab | mouse |  | nav.goto | P0 | missing | NoteCraft | Ctrl/Shift+click select several |
+| NC.Section.Select | Open a section (click its tab) | Mouse/Section tab | mouse |  | section.select | P0 | missing | NoteCraft |  |
+| NC.Notebook.Select | Open a notebook (click it in the notebook pane) | Mouse/Notebook pane | mouse |  | notebook.select | P0 | missing | NoteCraft |  |
+
 ## Revision history
 
 | Date | Change | Summary |

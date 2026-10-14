@@ -293,6 +293,7 @@ pub fn area(row: &Row) -> String {
         "FMT" => "File formats",
         "UI" => "Window layout & UI surfaces",
         "DOCK" => "Docked window ribbon",
+        "NC" => "NoteCraft additions",
         _ => "Other",
     };
     name.to_string()

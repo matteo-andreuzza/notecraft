@@ -261,6 +261,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "notecraft-engine"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "notecraft-doc",
+ "notecraft-format",
+ "notecraft-search",
+ "notecraft-text",
+ "proptest",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "notecraft-format"
 version = "0.1.0"
 dependencies = [
