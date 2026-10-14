@@ -1,0 +1,435 @@
+//! Pages and what is on them: note containers (outlines) on a free-form canvas.
+//!
+//! A page is a free-form canvas in page space (points, origin top-left; see `notecraft-geom`).
+//! Everything on it is a [`PageObject`] with a position; in M1 the only kind is the
+//! [`Outline`] (a "note container"), M2 adds pictures, ink, files, printouts and media.
+//!
+//! **Outlines are flat.** The reference stores a tree of outline elements ([MS-ONE]
+//! `jcidOutlineElementNode` with `ElementChildNodes`); NoteCraft stores the same structure as a
+//! flat list of [`Paragraph`]s each with an indent `level`, under the invariant
+//! `level[i+1] <= level[i] + 1`. A paragraph's *children* are the paragraphs that follow it with
+//! a deeper level, so the tree is recoverable exactly ([`Outline::subtree`]); flat storage makes
+//! caret movement, multi-paragraph selection and deletion straightforward.
+
+use notecraft_color::Rgba;
+use notecraft_geom::{Point, finite, length};
+use serde::{Deserialize, Serialize};
+
+use crate::id::Id;
+use crate::text::{MAX_LEVEL, ParaStyle, Paragraph};
+use crate::time::Timestamp;
+
+/// Deepest subpage level: a page can be indented two levels below a top-level page (catalog
+/// `BEH.Pages.Subpages`; unverified exact maximum).
+pub const MAX_PAGE_LEVEL: u8 = 2;
+
+/// The default maximum width of an auto-sized note container before text wraps, in points
+/// (catalog `BEH.Canvas.ContainerAutoWidth`; unverified: 6.5 inches).
+pub const AUTO_WIDTH_MAX: f32 = 468.0;
+
+/// Narrowest a container can be resized to, in points.
+pub const MIN_OUTLINE_WIDTH: f32 = 36.0;
+
+/// A note container's width.
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+pub enum OutlineWidth {
+    /// Grows with its text up to [`AUTO_WIDTH_MAX`], then wraps.
+    #[default]
+    Auto,
+    /// Set by the user dragging the container's edge ([MS-ONE] `IsLayoutSizeSetByUser`).
+    Fixed(f32),
+}
+
+/// A note container: positioned rich-text paragraphs with outline indentation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Outline {
+    /// Stable id.
+    pub id: Id,
+    /// Top-left corner in page space.
+    pub pos: Point,
+    /// Width policy.
+    #[serde(default)]
+    pub width: OutlineWidth,
+    /// The paragraphs (flat, with levels; see the module docs).
+    pub paragraphs: Vec<Paragraph>,
+}
+
+impl Outline {
+    /// A container at `pos` holding one empty paragraph.
+    pub fn new(id: Id, pos: Point, first_paragraph: Id) -> Outline {
+        Outline { id, pos: pos.sanitized(), width: OutlineWidth::Auto, paragraphs: vec![Paragraph::new(first_paragraph)] }
+    }
+
+    /// Enforce the invariants: position finite, fixed width clamped, every paragraph normalised,
+    /// and `level[i+1] <= level[i] + 1` (levels that jump are pulled up).
+    pub fn normalize(&mut self) {
+        self.pos = self.pos.sanitized();
+        if let OutlineWidth::Fixed(w) = self.width {
+            self.width = OutlineWidth::Fixed(length(w).max(MIN_OUTLINE_WIDTH));
+        }
+        let mut prev: Option<u8> = None;
+        for p in &mut self.paragraphs {
+            p.normalize();
+            if let Some(pl) = prev {
+                p.level = p.level.min(pl.saturating_add(1)).min(MAX_LEVEL);
+            }
+            prev = Some(p.level);
+        }
+    }
+
+    /// The index range `i..end` of paragraph `i` and all its descendants (empty if `i` is out
+    /// of range).
+    pub fn subtree(&self, i: usize) -> std::ops::Range<usize> {
+        let Some(p) = self.paragraphs.get(i) else { return i..i };
+        let lvl = p.level;
+        let mut end = i + 1;
+        while self.paragraphs.get(end).is_some_and(|q| q.level > lvl) {
+            end += 1;
+        }
+        i..end
+    }
+
+    /// Whether paragraph `i` is hidden because an ancestor is collapsed.
+    pub fn is_hidden(&self, i: usize) -> bool {
+        let Some(p) = self.paragraphs.get(i) else { return true };
+        let mut need = p.level;
+        for j in (0..i).rev() {
+            let Some(q) = self.paragraphs.get(j) else { break };
+            if q.level < need {
+                if q.collapsed {
+                    return true;
+                }
+                need = q.level;
+                if need == 0 {
+                    break;
+                }
+            }
+        }
+        false
+    }
+
+    /// Whether every paragraph is empty (an empty container disappears when the caret leaves
+    /// it; catalog `BEH.Canvas.EmptyContainerRemoved`).
+    pub fn is_empty(&self) -> bool {
+        self.paragraphs.iter().all(|p| p.is_empty() && p.tags.is_empty() && p.list.is_none())
+    }
+
+    /// Index of the paragraph with `id`.
+    pub fn paragraph_index(&self, id: Id) -> Option<usize> {
+        self.paragraphs.iter().position(|p| p.id == id)
+    }
+}
+
+/// Something placed on a page.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind")]
+pub enum PageObject {
+    /// A note container.
+    Outline(Outline),
+}
+
+impl PageObject {
+    /// The object's id.
+    pub fn id(&self) -> Id {
+        match self {
+            PageObject::Outline(o) => o.id,
+        }
+    }
+
+    /// The object's position.
+    pub fn pos(&self) -> Point {
+        match self {
+            PageObject::Outline(o) => o.pos,
+        }
+    }
+
+    /// The outline, if this is one.
+    pub fn as_outline(&self) -> Option<&Outline> {
+        match self {
+            PageObject::Outline(o) => Some(o),
+        }
+    }
+
+    /// The outline, mutably, if this is one.
+    pub fn as_outline_mut(&mut self) -> Option<&mut Outline> {
+        match self {
+            PageObject::Outline(o) => Some(o),
+        }
+    }
+}
+
+/// Rule lines and grids (View › Rule Lines; catalog `BEH.View.RuleLines`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum RuleLines {
+    /// No lines.
+    #[default]
+    None,
+    /// Narrow ruled.
+    Narrow,
+    /// College ruled.
+    College,
+    /// Standard ruled.
+    Standard,
+    /// Wide ruled.
+    Wide,
+    /// Small grid.
+    GridSmall,
+    /// Medium grid.
+    GridMedium,
+    /// Large grid.
+    GridLarge,
+    /// Very large grid.
+    GridVeryLarge,
+}
+
+impl RuleLines {
+    /// Spacing between lines in points (unverified values: 1/4 in for narrow, 9/32 in for
+    /// college, 11/32 in standard, 7/16 in wide; grids 1/8, 1/4, 3/8, 1/2 in).
+    pub fn spacing(self) -> f32 {
+        match self {
+            RuleLines::None => 0.0,
+            RuleLines::Narrow => 18.0,
+            RuleLines::College => 20.25,
+            RuleLines::Standard => 24.75,
+            RuleLines::Wide => 31.5,
+            RuleLines::GridSmall => 9.0,
+            RuleLines::GridMedium => 18.0,
+            RuleLines::GridLarge => 27.0,
+            RuleLines::GridVeryLarge => 36.0,
+        }
+    }
+
+    /// Whether this draws a grid (vertical lines too).
+    pub fn is_grid(self) -> bool {
+        matches!(self, RuleLines::GridSmall | RuleLines::GridMedium | RuleLines::GridLarge | RuleLines::GridVeryLarge)
+    }
+
+    /// Every option in gallery order.
+    pub const ALL: [RuleLines; 9] = [
+        RuleLines::None,
+        RuleLines::Narrow,
+        RuleLines::College,
+        RuleLines::Standard,
+        RuleLines::Wide,
+        RuleLines::GridSmall,
+        RuleLines::GridMedium,
+        RuleLines::GridLarge,
+        RuleLines::GridVeryLarge,
+    ];
+}
+
+/// A fixed paper size (View › Paper Size); `None` on a page means the page grows freely.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct PaperSize {
+    /// Width in points.
+    pub width: f32,
+    /// Height in points.
+    pub height: f32,
+    /// Print margins (top, right, bottom, left) in points.
+    pub margins: [f32; 4],
+}
+
+/// Per-page appearance.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PageSetup {
+    /// Page background colour (`None` = no colour).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color: Option<Rgba>,
+    /// Rule lines or grid.
+    pub rule_lines: RuleLines,
+    /// Rule line colour (`None` = default light blue).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rule_color: Option<Rgba>,
+    /// Hide the page title (View › Hide Page Title).
+    pub hide_title: bool,
+    /// Fixed paper size.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub paper: Option<PaperSize>,
+}
+
+/// A page.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Page {
+    /// Stable id.
+    pub id: Id,
+    /// The title (a Page Title paragraph; its text is the page tab name).
+    pub title: Paragraph,
+    /// Subpage level 0..=[`MAX_PAGE_LEVEL`].
+    #[serde(default)]
+    pub level: u8,
+    /// When the page was created (shown under the title).
+    pub created: Timestamp,
+    /// When the page was last changed.
+    pub modified: Timestamp,
+    /// The date and time shown under the title (defaults to `created`; the user can change it).
+    #[serde(default)]
+    pub shown_time: Option<Timestamp>,
+    /// Who created the page.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub author: String,
+    /// Objects on the page, in z-order (back to front).
+    #[serde(default)]
+    pub objects: Vec<PageObject>,
+    /// Appearance.
+    #[serde(default)]
+    pub setup: PageSetup,
+    /// Whether its subpages are collapsed in the page list.
+    #[serde(default)]
+    pub collapsed: bool,
+}
+
+/// What an untitled page is called in the page list (catalog `BEH.Pages.Title`).
+pub const UNTITLED: &str = "Untitled page";
+
+impl Page {
+    /// A new empty page.
+    pub fn new(id: Id, title_id: Id, now: Timestamp, author: &str) -> Page {
+        let mut title = Paragraph::new(title_id);
+        title.style = ParaStyle::PageTitle;
+        Page {
+            id,
+            title,
+            level: 0,
+            created: now,
+            modified: now,
+            shown_time: None,
+            author: author.to_string(),
+            objects: Vec::new(),
+            setup: PageSetup::default(),
+            collapsed: false,
+        }
+    }
+
+    /// The title text (may be empty).
+    pub fn title_text(&self) -> String {
+        self.title.text()
+    }
+
+    /// The name shown in the page list: the title, or [`UNTITLED`] when it is blank. Soft line
+    /// breaks become spaces.
+    pub fn display_title(&self) -> String {
+        let t = self.title_text().replace('\n', " ");
+        let t = t.trim();
+        if t.is_empty() { UNTITLED.to_string() } else { t.to_string() }
+    }
+
+    /// The date/time shown under the title.
+    pub fn shown_time(&self) -> Timestamp {
+        self.shown_time.unwrap_or(self.created)
+    }
+
+    /// Enforce invariants: level clamped, title normalised and styled, every outline
+    /// normalised, empty outlines removed.
+    pub fn normalize(&mut self) {
+        self.level = self.level.min(MAX_PAGE_LEVEL);
+        self.title.normalize();
+        self.title.style = ParaStyle::PageTitle;
+        self.title.level = 0;
+        for o in &mut self.objects {
+            match o {
+                PageObject::Outline(ol) => ol.normalize(),
+            }
+        }
+        self.objects.retain(|o| match o {
+            PageObject::Outline(ol) => !ol.paragraphs.is_empty(),
+        });
+    }
+
+    /// Index of the object with `id`.
+    pub fn object_index(&self, id: Id) -> Option<usize> {
+        self.objects.iter().position(|o| o.id() == id)
+    }
+
+    /// The outline with `id`.
+    pub fn outline(&self, id: Id) -> Option<&Outline> {
+        self.objects.iter().find_map(|o| o.as_outline().filter(|ol| ol.id == id))
+    }
+
+    /// The outline with `id`, mutably.
+    pub fn outline_mut(&mut self, id: Id) -> Option<&mut Outline> {
+        self.objects.iter_mut().find_map(|o| o.as_outline_mut().filter(|ol| ol.id == id))
+    }
+
+    /// All plain text on the page (title first), for search and exports.
+    pub fn plain_text(&self) -> String {
+        let mut s = self.title_text();
+        for o in &self.objects {
+            match o {
+                PageObject::Outline(ol) => {
+                    for p in &ol.paragraphs {
+                        s.push('\n');
+                        s.push_str(&p.text());
+                    }
+                }
+            }
+        }
+        s
+    }
+
+    /// Clamp every coordinate so a hostile file can't place objects at ±∞.
+    pub fn sanitize_positions(&mut self) {
+        for o in &mut self.objects {
+            match o {
+                PageObject::Outline(ol) => ol.pos = Point::new(finite(ol.pos.x), finite(ol.pos.y)),
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn outline(levels: &[u8]) -> Outline {
+        let mut o = Outline::new(Id(100), Point::ZERO, Id(1));
+        o.paragraphs = levels
+            .iter()
+            .enumerate()
+            .map(|(i, l)| {
+                let mut p = Paragraph::with_text(Id(i as u128 + 1), &format!("p{i}"));
+                p.level = *l;
+                p
+            })
+            .collect();
+        o
+    }
+
+    #[test]
+    fn subtree_and_hidden() {
+        let mut o = outline(&[0, 1, 2, 1, 0]);
+        assert_eq!(o.subtree(0), 0..4);
+        assert_eq!(o.subtree(1), 1..3);
+        assert_eq!(o.subtree(4), 4..5);
+        assert_eq!(o.subtree(99), 99..99);
+        o.paragraphs[1].collapsed = true;
+        assert!(o.is_hidden(2));
+        assert!(!o.is_hidden(3));
+        assert!(!o.is_hidden(1));
+    }
+
+    #[test]
+    fn normalize_pulls_up_level_jumps() {
+        let mut o = outline(&[0, 3, 7, 1]);
+        o.width = OutlineWidth::Fixed(-5.0);
+        o.normalize();
+        let lv: Vec<u8> = o.paragraphs.iter().map(|p| p.level).collect();
+        assert_eq!(lv, vec![0, 1, 2, 1]);
+        assert_eq!(o.width, OutlineWidth::Fixed(MIN_OUTLINE_WIDTH));
+    }
+
+    #[test]
+    fn page_title_and_text() {
+        // parity: BEH.Pages.Title
+        let mut p = Page::new(Id(1), Id(2), Timestamp(0), "me");
+        assert_eq!(p.display_title(), UNTITLED);
+        p.title = Paragraph::with_text(Id(2), "  Meeting\nnotes ");
+        p.level = 9;
+        p.objects.push(PageObject::Outline(outline(&[0, 1])));
+        p.normalize();
+        assert_eq!(p.display_title(), "Meeting notes");
+        assert_eq!(p.level, MAX_PAGE_LEVEL);
+        assert_eq!(p.title.style, ParaStyle::PageTitle);
+        assert!(p.plain_text().contains("p1"));
+    }
+}

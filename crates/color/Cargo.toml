@@ -1,0 +1,18 @@
+[package]
+name = "notecraft-color"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "NoteCraft L0 colours: RGBA values, hex parsing and the section, page, highlight and font palettes"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+proptest = { workspace = true }

@@ -1,0 +1,21 @@
+[package]
+name = "notecraft-doc"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "NoteCraft L1 document model: notebook, section group, section, page, note containers, rich text, tags, recycle bin"
+
+[lints]
+workspace = true
+
+[dependencies]
+notecraft-geom = { workspace = true }
+notecraft-color = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+proptest = { workspace = true }

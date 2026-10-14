@@ -13,6 +13,9 @@ repository = "https://github.com/storytold/notecraft"
 
 [workspace.dependencies]
 # internal
+notecraft-geom = { path = "crates/geom" }
+notecraft-color = { path = "crates/color" }
+notecraft-doc = { path = "crates/doc" }
 
 # shared Craft libraries, pinned by immutable revision (structure-audit.md › Repository hygiene)
 craft-atomic = { git = "https://github.com/storytold/craft-libs", rev = "457a078809690994b22debdffb703ff36d3129df" }
