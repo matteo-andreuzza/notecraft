@@ -1,0 +1,18 @@
+[package]
+name = "notecraft-text"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "NoteCraft L2 rich-text editing: paragraph edits on grapheme boundaries, formats over ranges, word motion, auto-lists"
+
+[lints]
+workspace = true
+
+[dependencies]
+notecraft-doc = { workspace = true }
+unicode-segmentation = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
