@@ -1,0 +1,21 @@
+[package]
+name = "notecraft-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "NoteCraft headless CLI: list and run commands, batch scripts, MCP server"
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "notecraft-cli"
+path = "src/main.rs"
+
+[dependencies]
+notecraft-engine = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }

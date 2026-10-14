@@ -35,6 +35,8 @@ mod view_cmds;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_cmds;
 
 use serde_json::Value;
 

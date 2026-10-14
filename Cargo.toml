@@ -1,8 +1,7 @@
 [workspace]
 resolver = "3"
-# `apps/*` joins the members with the first app (cargo rejects a glob that matches nothing).
-members = ["crates/*", "xtask"]
-default-members = ["crates/*", "xtask"]
+members = ["crates/*", "apps/*", "xtask"]
+default-members = ["crates/*", "apps/notecraft-cli", "xtask"]
 
 [workspace.package]
 version = "0.1.0"
@@ -33,6 +32,9 @@ thiserror = "2"
 serde = { version = "1", features = ["derive", "rc"] }
 serde_json = { version = "1", features = ["float_roundtrip"] }
 log = "0.4"
+# Local time for the hosts (apps only: the engine never reads the clock). Pure Rust; reads the
+# system time zone itself.
+chrono = { version = "0.4", default-features = false, features = ["clock", "std", "wasmbind"] }
 proptest = "1"
 unicode-segmentation = "1"
 zip = { version = "3", default-features = false, features = ["deflate"] }

@@ -88,10 +88,39 @@ fn insert(s: &mut Session, v: &Value) -> CmdResult {
     let lines: Vec<&str> = text.split('\n').collect();
     for (i, line) in lines.iter().enumerate() {
         if i > 0 {
-            caret = split_at_caret(s, caret)?;
+            caret = if caret.block == Block::Title {
+                // A newline in the title moves into the page body, as Enter does.
+                newline(s, &Value::Null)?;
+                s.text_range().map(|r| r.head).ok_or_else(|| CmdError::Failed("no caret after leaving the title".into()))?
+            } else {
+                split_at_caret(s, caret)?
+            };
         }
         if line.is_empty() {
             continue;
+        }
+        // A line that starts with a list prefix in an empty paragraph becomes a list item, exactly
+        // as typing it character by character would (BEH.Outline.AutoBullet/AutoNumber).
+        let mut line: &str = line;
+        if caret.block != Block::Title && caret.offset == 0 {
+            let empty = s
+                .page()
+                .and_then(|p| Session::block_paras(p, caret.block))
+                .and_then(|ps| ps.get(caret.para))
+                .is_some_and(|p| p.is_empty() && p.list.is_none());
+            if empty
+                && let Some((fmt, n)) = t::detect_list_prefix(line)
+                && n < line.len()
+                && match fmt {
+                    ListFormat::Bullet(_) => s.prefs.auto_bullets,
+                    ListFormat::Number { .. } => s.prefs.auto_numbering,
+                }
+            {
+                if let Some(pm) = s.page_mut().and_then(|pg| Session::para_mut(pg, caret.block, caret.para)) {
+                    pm.list = Some(fmt);
+                }
+                line = line.get(n..).unwrap_or("");
+            }
         }
         let fmt = typing_fmt(s, caret);
         caret = insert_at(s, caret, line, &fmt)?;
