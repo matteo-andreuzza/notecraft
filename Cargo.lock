@@ -212,6 +212,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "notecraft-search"
+version = "0.1.0"
+dependencies = [
+ "notecraft-doc",
+ "proptest",
+]
+
+[[package]]
 name = "notecraft-text"
 version = "0.1.0"
 dependencies = [

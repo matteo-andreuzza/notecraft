@@ -1,0 +1,17 @@
+[package]
+name = "notecraft-search"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "NoteCraft L2 full-text search: inverted index over pages, prefix and phrase queries, notebook scopes"
+
+[lints]
+workspace = true
+
+[dependencies]
+notecraft-doc = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
