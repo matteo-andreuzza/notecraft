@@ -1,0 +1,24 @@
+[package]
+name = "notecraft-format"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "NoteCraft L3 native format: notebook folders of .ncraft section files, atomic saves, recovery and backups"
+
+[lints]
+workspace = true
+
+[dependencies]
+notecraft-doc = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+zip = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+craft-atomic = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

@@ -18,6 +18,7 @@ notecraft-color = { path = "crates/color" }
 notecraft-doc = { path = "crates/doc" }
 notecraft-text = { path = "crates/text" }
 notecraft-search = { path = "crates/search" }
+notecraft-format = { path = "crates/format" }
 
 # shared Craft libraries, pinned by immutable revision (structure-audit.md › Repository hygiene)
 craft-atomic = { git = "https://github.com/storytold/craft-libs", rev = "457a078809690994b22debdffb703ff36d3129df" }
