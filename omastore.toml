@@ -1,0 +1,11 @@
+kind = "app"
+categories = ["Office"]
+icon = "assets/app-icon/hicolor/256x256/apps/ai.storyteller.notecraft.png"
+
+[linux.x86_64]
+asset = "notecraft-{version}-linux-x86_64.tar.gz"
+exec = "notecraft-{version}-linux-x86_64/bin/notecraft"
+
+[linux.aarch64]
+asset = "notecraft-{version}-linux-aarch64.tar.gz"
+exec = "notecraft-{version}-linux-aarch64/bin/notecraft"

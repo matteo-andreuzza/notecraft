@@ -1,0 +1,13 @@
+[package]
+name = "xtask"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+description = "NoteCraft workspace tooling: cargo xtask layers | wasm | ci | assets | parity | version"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde_json = { workspace = true }

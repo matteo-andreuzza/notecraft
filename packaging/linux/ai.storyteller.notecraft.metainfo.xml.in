@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata (software centres, Flathub). Template: package.sh and the Flatpak
+     manifest substitute @VERSION@ and @DATE@ from Cargo.toml and the build date. -->
+<component type="desktop-application">
+  <id>ai.storyteller.notecraft</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT OR Apache-2.0</project_license>
+  <name>NoteCraft</name>
+  <summary>Take notes, organise notebooks and draw with ink</summary>
+  <developer id="ai.storyteller">
+    <name>Learning Machines LLC</name>
+  </developer>
+  <description>
+    <p>
+      NoteCraft is an open-source, native digital notebook. Notebooks hold section groups,
+      sections and pages; each page is a free-form canvas where you type anywhere, format text,
+      tag notes, and search everything instantly. Your notebooks are plain folders on your disk.
+    </p>
+    <p>
+      Every action is a command that the included notecraft-cli tool and AI agents (over MCP)
+      can run too.
+    </p>
+  </description>
+  <launchable type="desktop-id">ai.storyteller.notecraft.desktop</launchable>
+  <icon type="stock">ai.storyteller.notecraft</icon>
+  <!-- Only url types known to appstream 0.15 (Ubuntu 22.04, where CI validates): no vcs-browser. -->
+  <url type="homepage">https://getartcraft.com/apps/notecraft</url>
+  <url type="bugtracker">https://github.com/storytold/notecraft/issues</url>
+  <url type="help">https://github.com/storytold/notecraft</url>
+  <url type="contact">https://discord.gg/artcraft</url>
+  <categories>
+    <category>Office</category>
+  </categories>
+  <keywords>
+    <keyword>notes</keyword>
+    <keyword>notebook</keyword>
+    <keyword>note taking</keyword>
+    <keyword>ink</keyword>
+    <keyword>outline</keyword>
+  </keywords>
+  <!-- Proposed app colour (NoteCraft violet #8a4fc8 / ink #5e2f96); see assets/app-icon/README.md. -->
+  <branding>
+    <color type="primary" scheme_preference="light">#d9c4f2</color>
+    <color type="primary" scheme_preference="dark">#5e2f96</color>
+  </branding>
+  <requires>
+    <display_length compare="ge">760</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+  <provides>
+    <binary>notecraft</binary>
+    <binary>notecraft-cli</binary>
+    <mediatype>application/x-notecraft-section</mediatype>
+    <mediatype>application/onenote</mediatype>
+    <mediatype>application/x-onenote-toc</mediatype>
+    <mediatype>application/x-onenote-package</mediatype>
+  </provides>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="@VERSION@" date="@DATE@"/>
+  </releases>
+</component>

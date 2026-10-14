@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=NoteCraft
+GenericName=Digital Notebook
+Comment=Take notes, organise notebooks and draw with ink
+Exec=notecraft %F
+TryExec=notecraft
+Icon=ai.storyteller.notecraft
+Terminal=false
+StartupNotify=true
+StartupWMClass=ai.storyteller.notecraft
+Categories=Office;
+MimeType=application/x-notecraft-section;application/x-notecraft-notebook;application/onenote;application/msonenote;application/x-onenote-toc;application/x-onenote-package;
+Keywords=notes;notebook;onenote;note taking;ink;outline;tags;journal;one;onetoc2;onepkg;

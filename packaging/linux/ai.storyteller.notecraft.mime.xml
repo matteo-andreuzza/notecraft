@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- File types NoteCraft opens. The OneNote types describe compatibility only. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-notecraft-section">
+    <comment>NoteCraft section</comment>
+    <glob pattern="*.ncraft"/>
+  </mime-type>
+  <mime-type type="application/x-notecraft-notebook">
+    <comment>NoteCraft notebook</comment>
+    <glob pattern="notebook.ncraft-toc"/>
+  </mime-type>
+  <mime-type type="application/onenote">
+    <comment>OneNote section</comment>
+    <glob pattern="*.one"/>
+  </mime-type>
+  <mime-type type="application/x-onenote-toc">
+    <comment>OneNote notebook table of contents</comment>
+    <glob pattern="*.onetoc2"/>
+  </mime-type>
+  <mime-type type="application/x-onenote-package">
+    <comment>OneNote package</comment>
+    <glob pattern="*.onepkg"/>
+  </mime-type>
+</mime-info>

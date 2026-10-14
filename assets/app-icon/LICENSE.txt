@@ -1,0 +1,3 @@
+The NoteCraft app icon (notecraft.svg and every file rendered from it in this directory) is
+original work by the NoteCraft contributors, licensed under the MIT License or the Apache
+License, Version 2.0, at your option (LICENSE-MIT, LICENSE-APACHE at the repository root).

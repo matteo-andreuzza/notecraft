@@ -1,0 +1,12 @@
+NoteCraft
+Copyright (c) 2026 ArtCraft Team and the NoteCraft contributors.
+Licensed under the MIT License or the Apache License, Version 2.0, at your option
+(LICENSE-MIT, LICENSE-APACHE).
+
+Third-party material
+
+This product bundles third-party material under its own licenses, listed below. The per-file
+list (author, source, license) is in ATTRIBUTION.md.
+
+None: every bundled asset is original to NoteCraft. Builds made with craft-fonts
+(CRAFT_FONTS_DIR) embed the fonts listed in ATTRIBUTION.md under the SIL Open Font License 1.1.

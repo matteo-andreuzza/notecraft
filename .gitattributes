@@ -1,0 +1,12 @@
+# Scripts run on Linux: keep their line endings LF in every checkout and archive (a copy of a
+# Windows checkout must still run packaging/linux/package.sh).
+*.sh text eol=lf
+
+# Not text at all: no textual diffs or merges either.
+*.png binary
+*.ico binary
+*.icns binary
+*.one binary
+*.onetoc2 binary
+*.onepkg binary
+*.ncraft binary

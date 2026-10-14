@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- NoteCraft PLACEHOLDER icon: a ring-bound notebook with coloured section tabs and a
+       ruled page, on NoteCraft violet. Original work drawn by hand for this repository;
+       deliberately not modelled on any vendor's note-taking logo (no letters, no "N", no
+       overlapping panels). Temporary until the owner's engraved creature portrait replaces it
+       (craftrules standards/icon-design.md). Palette: ink #0b0b0c, paper #efe9dc,
+       app colour #8a4fc8 (proposed). -->
+  <defs>
+    <clipPath id="tile"><rect width="512" height="512" rx="112"/></clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect width="512" height="512" fill="#8a4fc8"/>
+    <g transform="rotate(-5 256 262)" stroke="#0b0b0c" stroke-linejoin="round" stroke-linecap="round">
+      <!-- section tabs peeking out on the right edge -->
+      <rect x="372" y="124" width="58" height="56" rx="10" fill="#efe9dc" stroke-width="12"/>
+      <rect x="372" y="196" width="58" height="56" rx="10" fill="#8a4fc8" stroke-width="12"/>
+      <rect x="372" y="268" width="58" height="56" rx="10" fill="#efe9dc" stroke-width="12"/>
+      <!-- the page -->
+      <rect x="116" y="84" width="276" height="356" rx="18" fill="#efe9dc" stroke-width="14"/>
+      <!-- title line and ruled lines -->
+      <path d="M168 138 H300" stroke-width="14"/>
+      <path d="M168 196 H352 M168 240 H352 M168 284 H330 M168 328 H352 M168 372 H286" fill="none" stroke-width="8"/>
+      <!-- a to-do box ticked on the first ruled line -->
+      <path d="M332 128 l12 12 l22 -26" fill="none" stroke-width="10"/>
+      <!-- ring binding -->
+      <g fill="#efe9dc" stroke-width="10">
+        <rect x="88" y="120" width="56" height="22" rx="11"/>
+        <rect x="88" y="196" width="56" height="22" rx="11"/>
+        <rect x="88" y="272" width="56" height="22" rx="11"/>
+        <rect x="88" y="348" width="56" height="22" rx="11"/>
+      </g>
+    </g>
+  </g>
+</svg>
