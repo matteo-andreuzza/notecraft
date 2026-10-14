@@ -1,0 +1,26 @@
+[package]
+name = "notecraft-ui-egui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "NoteCraft L6 egui front end: the OneNote-style ribbon, notebook pane, section tabs, page list and canvas (thin: every action is an engine command)"
+
+[lints]
+workspace = true
+
+[dependencies]
+notecraft-engine = { workspace = true }
+egui = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+# Font parser egui's epaint uses; system font files are validated with it before they reach
+# egui (which can't handle a file it fails to parse). Same version as epaint's: no second copy.
+skrifa = { version = "0.44", default-features = false, features = ["std"] }
+
+[dev-dependencies]
+egui_kittest = { workspace = true, features = ["wgpu", "snapshot"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
