@@ -1,6 +1,6 @@
 # NoteCraft parity with Microsoft OneNote
 
-> **Last reviewed:** 2026-10-14 · **Last updated:** 2026-10-14 · **Change:** major (first version: scaffold, nothing implemented yet) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the OneNote 2016-style ribbon app); gaps filled from OneNote 2019 and OneNote for Windows 10, recorded per row
+> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** major (M1: shell and core editing) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the OneNote 2016-style ribbon app); gaps filled from OneNote 2019 and OneNote for Windows 10, recorded per row
 
 This is the assessment page (the siblings call it `target-app-parity.md`). Every number here is
 computed by `cargo xtask parity` from [`parity-catalog.md`](parity-catalog.md) — the inventory of
@@ -22,23 +22,74 @@ exists for it, and *verified* only when a test pins its documented behaviour.
 
 ## Could a typical OneNote user switch today?
 
-**No.** Nothing is implemented yet. This line is re-estimated, conservatively, after every
-milestone.
+**Not yet.** After M1 a person can keep text notes in NoteCraft day to day on Linux: notebooks,
+section groups, sections and subpages in the OneNote layout; free-form note containers with
+headings, bullets, numbering, indentation and character formatting; the nine built-in tags plus
+custom ones, To Do checkboxes and the Tags Summary; search across notebooks; undo; the recycle
+bin; notebooks saved automatically as folders, with backups. What still stops a OneNote user:
+no way to bring existing `.one` notebooks over (M3), no tables, pictures, files or ink (M2),
+plain-text-only clipboard exchange with other applications, no printing, sync or page history,
+and an unpolished web build that keeps nothing between visits. Estimate: a user who starts new
+notebooks and writes mostly text could switch for that; anyone with existing notebooks or rich
+pages could not.
 
 ## Unverified assumptions
 
 Behaviour that public documentation does not pin down is implemented the most plausible way and
-listed here (and in the catalog's Notes column as `unverified`).
+listed here (and in the catalog's Notes column as `unverified`). Rows that are wired or verified:
 
-| Catalog ID | Assumption | Why unverified |
+| Catalog ID | Assumption | Note |
 |---|---|---|
+| UI.Nav.FindOnPage | Find on page bar (Ctrl+F): match count, next/previous, highlights on the page | Match highlighting on the page is not pinned by a test (unverified). |
+| UI.Window.IME | IME composition for CJK and other input methods | Commit inserts the composed text; the preedit is not drawn in place yet (unverified). |
+| UI.Window.Accessibility | Screen reader support (AccessKit) for panes, page list and canvas | Controls expose labels through AccessKit (the UI tests query them); not yet tried with a screen reader (unverified). |
+| R.Home.Styles.Heading1 | Style: Heading 1 | built-in style list from user-visible UI; unverified order |
+| R.Home.Styles.Heading2 | Style: Heading 2 | built-in style list from user-visible UI; unverified order |
+| R.Home.Styles.Heading3 | Style: Heading 3 | built-in style list from user-visible UI; unverified order |
+| R.Home.Styles.Heading4 | Style: Heading 4 | built-in style list from user-visible UI; unverified order |
+| R.Home.Styles.Heading5 | Style: Heading 5 | built-in style list from user-visible UI; unverified order |
+| R.Home.Styles.Heading6 | Style: Heading 6 | built-in style list from user-visible UI; unverified order |
+| R.Home.Styles.PageTitle | Style: Page Title | built-in style list from user-visible UI; unverified order |
+| R.Home.Styles.Citation | Style: Citation | built-in style list from user-visible UI; unverified order |
+| R.Home.Styles.Quote | Style: Quote | built-in style list from user-visible UI; unverified order |
+| R.Home.Styles.Code | Style: Code | built-in style list from user-visible UI; unverified order |
+| R.Home.Styles.Normal | Style: Normal | built-in style list from user-visible UI; unverified order |
+| R.Home.Tags.ToDo | Tag: To Do | built-in tag list and order from user-visible UI; unverified |
+| R.Home.Tags.Important | Tag: Important | built-in tag list and order from user-visible UI; unverified |
+| R.Home.Tags.Question | Tag: Question | built-in tag list and order from user-visible UI; unverified |
+| R.Home.Tags.RememberForLater | Tag: Remember for later | built-in tag list and order from user-visible UI; unverified |
+| R.Home.Tags.Definition | Tag: Definition | built-in tag list and order from user-visible UI; unverified |
+| R.Home.Tags.Highlight | Tag: Highlight | built-in tag list and order from user-visible UI; unverified |
+| R.Home.Tags.Contact | Tag: Contact | built-in tag list and order from user-visible UI; unverified |
+| R.Home.Tags.Address | Tag: Address | built-in tag list and order from user-visible UI; unverified |
+| R.Home.Tags.PhoneNumber | Tag: Phone number | built-in tag list and order from user-visible UI; unverified |
+| KB.Format.Subscript | Subscript | unverified: the M365 table says Ctrl+Shift+Minus, which collides with KB.Select.Subordinates in the same table; Ctrl+= is the Windows 10 table's key |
+| KB.App.Ribbon | Collapse or expand the ribbon | standard Office key; unverified for OneNote |
+| BEH.Canvas.EmptyContainerRemoved | A container left empty disappears when the caret leaves it | unverified |
+| BEH.Outline.EmptyBulletEnds | Enter on an empty bulleted or numbered paragraph ends the list (outdents, then removes the bullet) | unverified exact sequence |
+| BEH.Text.Undo | Undo/redo reverse whole user actions; typing coalesces into word-sized steps | unverified granularity |
+| BEH.Text.FontSizeSteps | Increase/Decrease Font Size step through 8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72 | unverified list for OneNote |
+| BEH.Pages.Title | The page title is the page tab name; an untitled page shows "Untitled page" with the first line of content as fallback | unverified fallback |
+| BEH.Sections.Colors | Sections take one of 16 colours (or None); new sections get the next colour in a rotation | unverified rotation order |
+| BEH.Sections.NewSectionName | A new section is named "New Section 1", "New Section 2"… and starts in rename mode with one Untitled page | unverified |
+| BEH.Recycle.DeletedPages | Deleted pages and sections go to the Notebook Recycle Bin and are kept for 60 days; they can be restored with Move or Copy | unverified 60-day figure |
+| BEH.Save.CrashRecovery | After a crash or kill -9 no saved note is lost and the notebook opens cleanly | The kill -9 test pins that the notebook reopens with every section whole; that the last completed save survives is not pinned (unverified). |
+| BEH.Search.PrefixMatch | Search matches word prefixes, case-insensitively, and finds titles, text, tags and file names | unverified matching rules |
+| BEH.Search.Quoted | Quoted phrases match exactly; several words match pages that contain all of them | unverified |
+| BEH.Paste.HTML | Pasting rich text keeps formatting (Keep Source Formatting is the default paste) | unverified default. Formatting survives copy and paste inside NoteCraft; HTML from other applications is not read yet. |
 
 ## Known crashes
 
-None known (no code yet).
+None known. Every command runs inside the session's last-resort guard (`Session::run` restores
+the page and reports an error if a command panics), the `panic_hunt` test runs every command
+with adversarial parameters, the control channel and the MCP server cap line sizes and refuse
+malformed input, and the desktop app logs a panic before the process ends. Folder notebooks are
+written atomically; the `kill -9` test kills a writer mid-save six times and reopens the
+notebook each time.
 
 ## Revision history
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-15 | major | M1: shell and core editing; wiring 28.1%, behaviour 8.4%; unverified list and switch estimate |
 | 2026-10-14 | major | First version |
