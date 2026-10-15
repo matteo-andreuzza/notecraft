@@ -17,5 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 notecraft-engine = { workspace = true }
+notecraft-automation = { workspace = true }
+log = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }

@@ -78,12 +78,17 @@ loads at run time (`libxkbcommon`, `libwayland-client` or `libX11`, Vulkan or GL
 
 ```sh
 notecraft-cli commands                      # every command: id, catalog id, menu path, shortcut, params
-notecraft-cli run --sample --cmd 'page.new' --cmd 'text.insert={"text":"Agenda"}' --save out/
-notecraft-cli mcp                           # MCP server over stdio (headless)
+notecraft-cli run --notebook ~/Notebooks/Work --cmd 'page.new={"title":"Agenda"}' --print
+notecraft-cli batch script.jsonl --sample   # one {"command": id, "params": {...}} per line
+notecraft-cli mcp --notebook ~/Notebooks/Work   # MCP server over stdio (headless)
+claude mcp add notecraft -- notecraft-cli mcp   # Claude Code
 ```
 
-The desktop app's control channel (`--control <port>`) accepts JSON lines on `127.0.0.1` that
-run commands and take screenshots; see [`docs/control-protocol.md`](docs/control-protocol.md).
+The MCP server ([`docs/mcp.md`](docs/mcp.md)) can be confined to folders with
+`--automation-read-root` / `--automation-write-root`, or bridged to the running app with
+`--connect 127.0.0.1:<port>`. The desktop app's control channel (`--control <port>`) accepts
+JSON lines on `127.0.0.1`, guarded by a per-start key, that run commands, press keys and take
+screenshots; see [`docs/control-protocol.md`](docs/control-protocol.md).
 
 ## Architecture
 
