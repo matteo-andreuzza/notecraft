@@ -135,7 +135,7 @@ Status: **done** (built in the 2024 style and tested), **partial**, **planned** 
 | 21 | Copilot | not drawn: a Microsoft service with no NoteCraft counterpart | UI.Window.Copilot | out-of-scope |
 | 22 | Window buttons | the compositor's; drawn buttons where none are drawn | — | gap (M4) |
 | 23 | Themes | Colorful (default), White, Dark Gray, Black, Use system setting; remembered | UI.Window.DarkMode, OPT.General.OfficeTheme | done (A1): tokens and contrast tests, picked in File › Account, remembered; the Options dialog entry is still missing |
-| 24 | Icons | 20 × 20 grid, 1.25 stroke, line in `icon` + accent and fill tones from the tokens, drawn in code | — | planned (A6) |
+| 24 | Icons | 20 × 20 grid, 1.25 stroke, line in `icon` + accent and fill tones from the tokens, drawn in code | — | done (A6): ~60 controls use the WordCraft set (`icons_set.rs`), the rest keep NoteCraft's drawings recoloured from the theme; interface glyphs (☰, chevrons, search, sort, expand…) are new |
 
 ## 4. Screenshots
 

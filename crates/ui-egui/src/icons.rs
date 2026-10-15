@@ -34,18 +34,93 @@ pub fn key_for(id: &str) -> &str {
     id.rsplit('.').next().unwrap_or(id)
 }
 
-/// Draw the icon for catalog id `id` into `r`.
-pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
+/// The `icons_set` icon for a control, by its catalog name: the 2024-style artwork where the set
+/// has the same idea.
+fn set_name(key: &str) -> Option<&'static str> {
+    Some(match key {
+        "PasteMenu" | "Paste" | "PasteKeepSource" | "PasteMerge" | "PasteGallery" => "paste",
+        "Cut" => "cut",
+        "CopyOneNote" => "copy",
+        "FormatPainter" => "painter",
+        "Bold" => "bold",
+        "Italic" => "italic",
+        "Underline" => "underline",
+        "Strikethrough" => "strike",
+        "Subscript" => "subscript",
+        "Superscript" => "superscript",
+        "TextHighlightColorPicker" => "highlight",
+        "FontColorPicker" => "fontcolor",
+        "ClearFormatting" => "clear",
+        "BulletsGallery" => "bullets",
+        "NumberingGallery" => "numbering",
+        "OutdentClassic" => "outdent",
+        "IndentClassic" => "indent",
+        "QuickStylesGallery" => "styles",
+        "Dictate" => "dictate",
+        "SendNotesViaEmail" => "envelope",
+        "TableInsertGallery" | "TableInsert" => "table",
+        "PictureFromFileInsert" | "PastePicture" => "picture",
+        "ScreenCaptureInsert" => "screenshot",
+        "InsertOnlineVideo" | "VideoRecordingInsert" | "ShowTraining" => "video",
+        "HyperlinkCreateHere" => "link",
+        "InsertBuildingBlocksEquationsGallery" | "EquationInsertNew" | "Math" | "SelectionToMathConvert" => "equation",
+        "SymbolInsertGallery" | "SymbolsDialog" => "symbol",
+        "FileAttachmentInsert" => "file",
+        "OfficeExtensionsAppStore" | "OfficeExtensionsGallery2" => "addins",
+        "SelectAndTypeMode" => "select",
+        "LassoSelect" => "lasso",
+        "EraserMenu" | "EraserLastUsed" | "SmallEraser" | "MediumEraser" | "LargeEraser" | "StrokeEraserOneNote" => "eraser",
+        "AddPen" | "InkStylesGallery" => "pen",
+        "MoreColorAndThicknessOptions" => "thickness",
+        "InkReplay" => "replay",
+        "Ruler" => "ruler",
+        "InkShapeGallery" | "InkToShape" => "shapes",
+        "RotateMenuOneNote" => "rotate",
+        "ObjectsArrangeMenu" => "position",
+        "SpellCheck" => "spelling",
+        "Thesaurus" => "thesaurus",
+        "ResearchPane" => "researcher",
+        "AccessibilityChecker" => "accessibility",
+        "TranslateMenu" | "TranslateSelected" | "MiniTranslator" => "translate",
+        "LanguageCommands" | "SetLanguage" | "LanguagePreferences" => "language",
+        "PasswordProtectSection" => "protect",
+        "ImmersiveReader" => "immersive",
+        "ZoomIn" | "ZoomOut" | "ZoomClassic" => "zoom",
+        "ZoomCurrent100" => "zoom100",
+        "PaperSize" => "size",
+        "RuleLinesMenu" => "gridlines",
+        "PageColorGallery" => "colors",
+        "Help" => "help",
+        "Feedback" | "ContactSupport" => "comment",
+        "WhatsNew" => "info",
+        "PageVersionSplitButton" | "PageVersions" => "compare",
+        "LinkedNotes" => "pin",
+        _ => return None,
+    })
+}
+
+/// Draw the icon for catalog id `id` into `r`: the line work in `line`, the accent parts in
+/// `accent`, white areas in `paper` (all from the theme; pass the disabled colour for all three
+/// on a disabled control).
+pub fn draw(pa: &Painter, r: Rect, id: &str, line: Color32, accent: Color32, paper: Color32) {
+    match set_name(key_for(id)) {
+        Some(name) => crate::icons_set::paint(pa, r, name, line, accent),
+        None => draw_own(pa, r, id, line, accent, paper),
+    }
+}
+
+/// NoteCraft's own drawing for catalog id `id` (controls with no counterpart in `icons_set`).
+/// `accent` and `paper` come from the theme, so the drawings follow it.
+fn draw_own(pa: &Painter, r: Rect, id: &str, color: Color32, accent: Color32, paper: Color32) {
     let s = Stroke::new((r.width() / 14.0).max(1.0), color);
     let thin = Stroke::new((r.width() / 20.0).max(1.0), color);
-    let accent = Color32::from_rgb(0x8a, 0x4f, 0xc8);
     let k = key_for(id);
     match k {
         "PasteMenu" | "Paste" | "PasteKeepSource" | "PasteMerge" | "PasteText" | "PastePicture" | "PasteGallery" => {
             // Clipboard board with a sheet.
             rect(pa, r, 0.18, 0.18, 0.72, 0.92, Color32::from_rgb(0xd9, 0xb8, 0x7a), s);
             rect(pa, r, 0.34, 0.1, 0.56, 0.24, color, s);
-            rect(pa, r, 0.42, 0.38, 0.88, 0.94, Color32::WHITE, s);
+            rect(pa, r, 0.42, 0.38, 0.88, 0.94, paper, s);
             if k == "PasteText" {
                 text(pa, Rect::from_min_max(p(r, 0.42, 0.38), p(r, 0.88, 0.94)), "A", 0.7, color, false);
             }
@@ -58,7 +133,7 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
         }
         "CopyOneNote" => {
             rect(pa, r, 0.14, 0.1, 0.62, 0.66, Color32::TRANSPARENT, s);
-            rect(pa, r, 0.36, 0.32, 0.86, 0.9, Color32::WHITE, s);
+            rect(pa, r, 0.36, 0.32, 0.86, 0.9, paper, s);
         }
         "FormatPainter" => {
             rect(pa, r, 0.12, 0.12, 0.78, 0.38, Color32::from_rgb(0xf4, 0xc4, 0x30), s);
@@ -143,27 +218,27 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
         }
         "QuickStylesGallery" => text(pa, r, "Aa", 0.6, color, false),
         "TagsGallery" | "ToDoTag" | "TagsCustomize" | "TagsRemoveAll" => {
-            rect(pa, r, 0.18, 0.18, 0.82, 0.82, Color32::WHITE, s);
+            rect(pa, r, 0.18, 0.18, 0.82, 0.82, paper, s);
             if k != "TagsRemoveAll" {
                 line(pa, r, &[(0.3, 0.5), (0.45, 0.66), (0.72, 0.32)], Stroke::new(s.width * 1.2, accent));
             }
         }
         "FindTaggedNotes" => {
-            rect(pa, r, 0.1, 0.1, 0.5, 0.5, Color32::WHITE, s);
+            rect(pa, r, 0.1, 0.1, 0.5, 0.5, paper, s);
             line(pa, r, &[(0.18, 0.3), (0.28, 0.4), (0.42, 0.2)], thin);
             pa.circle_stroke(p(r, 0.62, 0.62), r.width() * 0.18, s);
             line(pa, r, &[(0.75, 0.75), (0.92, 0.92)], s);
         }
         "OutlookTasksMenu" => {
-            rect(pa, r, 0.12, 0.18, 0.88, 0.86, Color32::WHITE, s);
+            rect(pa, r, 0.12, 0.18, 0.88, 0.86, paper, s);
             line(pa, r, &[(0.3, 0.52), (0.45, 0.66), (0.72, 0.36)], s);
         }
         "SendNotesViaEmail" => {
-            rect(pa, r, 0.08, 0.22, 0.92, 0.8, Color32::WHITE, s);
+            rect(pa, r, 0.08, 0.22, 0.92, 0.8, paper, s);
             line(pa, r, &[(0.08, 0.22), (0.5, 0.56), (0.92, 0.22)], s);
         }
         "MeetingDetailsInsertGallery" | "DateInsert" | "MeetingDetailsOtherDayInsert" => {
-            rect(pa, r, 0.12, 0.18, 0.88, 0.9, Color32::WHITE, s);
+            rect(pa, r, 0.12, 0.18, 0.88, 0.9, paper, s);
             rect(pa, r, 0.12, 0.18, 0.88, 0.36, accent, s);
             for (x, y) in [(0.3, 0.55), (0.5, 0.55), (0.7, 0.55), (0.3, 0.74), (0.5, 0.74)] {
                 pa.circle_filled(p(r, x, y), r.width() * 0.04, color);
@@ -174,9 +249,9 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             line(pa, r, &[(0.5, 0.25), (0.5, 0.5), (0.7, 0.62)], s);
         }
         "DateAndTimeInsertOneNote" => {
-            rect(pa, r, 0.08, 0.14, 0.7, 0.76, Color32::WHITE, s);
+            rect(pa, r, 0.08, 0.14, 0.7, 0.76, paper, s);
             rect(pa, r, 0.08, 0.14, 0.7, 0.3, accent, s);
-            pa.circle_filled(p(r, 0.72, 0.72), r.width() * 0.24, Color32::WHITE);
+            pa.circle_filled(p(r, 0.72, 0.72), r.width() * 0.24, paper);
             pa.circle_stroke(p(r, 0.72, 0.72), r.width() * 0.24, s);
             line(pa, r, &[(0.72, 0.58), (0.72, 0.72), (0.82, 0.78)], thin);
         }
@@ -188,7 +263,7 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             line(pa, r, &[(0.38, 0.76), (0.5, 0.64), (0.62, 0.76)], s);
         }
         "TableInsertGallery" | "TableInsert" | "SelectTableOneNote" | "SelectColumns" | "SelectRows" | "SelectCell" => {
-            rect(pa, r, 0.1, 0.14, 0.9, 0.86, Color32::WHITE, s);
+            rect(pa, r, 0.1, 0.14, 0.9, 0.86, paper, s);
             rect(pa, r, 0.1, 0.14, 0.9, 0.32, accent, s);
             line(pa, r, &[(0.1, 0.5), (0.9, 0.5)], thin);
             line(pa, r, &[(0.1, 0.68), (0.9, 0.68)], thin);
@@ -196,7 +271,7 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             line(pa, r, &[(0.63, 0.14), (0.63, 0.86)], thin);
         }
         "PrintoutFromFileInsert" => {
-            rect(pa, r, 0.18, 0.08, 0.82, 0.92, Color32::WHITE, s);
+            rect(pa, r, 0.18, 0.08, 0.82, 0.92, paper, s);
             for y in [0.3, 0.45, 0.6, 0.75] {
                 line(pa, r, &[(0.3, y), (0.7, y)], thin);
             }
@@ -205,7 +280,7 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             line(pa, r, &[(0.62, 0.3), (0.62, 0.72), (0.5, 0.86), (0.38, 0.72), (0.38, 0.2), (0.46, 0.1), (0.54, 0.2), (0.54, 0.66)], s);
         }
         "InsertExcelSpreadsheetMenu" | "InsertExistingExcelSpreadsheet" | "InsertNewExcelSpreadsheetWithPreview" | "ConvertToExcelSpreadsheet" => {
-            rect(pa, r, 0.14, 0.1, 0.86, 0.9, Color32::WHITE, s);
+            rect(pa, r, 0.14, 0.1, 0.86, 0.9, paper, s);
             for y in [0.3, 0.5, 0.7] {
                 line(pa, r, &[(0.14, y), (0.86, y)], thin);
             }
@@ -213,8 +288,8 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             rect(pa, r, 0.4, 0.3, 0.86, 0.5, Color32::from_rgb(0x9c, 0xcf, 0x7f), Stroke::NONE);
         }
         "InsertVisioDrawingMenu" | "InsertExistingVisioDrawing" | "InsertNewVisioDrawingWithPreview" => {
-            rect(pa, r, 0.1, 0.12, 0.42, 0.38, Color32::WHITE, s);
-            rect(pa, r, 0.58, 0.62, 0.9, 0.88, Color32::WHITE, s);
+            rect(pa, r, 0.1, 0.12, 0.42, 0.38, paper, s);
+            rect(pa, r, 0.58, 0.62, 0.9, 0.88, paper, s);
             line(pa, r, &[(0.26, 0.38), (0.26, 0.75), (0.58, 0.75)], s);
         }
         "ScreenCaptureInsert" => {
@@ -233,7 +308,7 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             rect(pa, r, 0.3, 0.3, 0.7, 0.7, accent, Stroke::NONE);
         }
         "PictureFromFileInsert" | "ClipArtInsertDialog" => {
-            rect(pa, r, 0.08, 0.16, 0.92, 0.84, Color32::WHITE, s);
+            rect(pa, r, 0.08, 0.16, 0.92, 0.84, paper, s);
             pa.add(Shape::convex_polygon(
                 vec![p(r, 0.14, 0.78), p(r, 0.42, 0.42), p(r, 0.62, 0.66), p(r, 0.72, 0.54), p(r, 0.86, 0.78)],
                 Color32::from_rgb(0x5c, 0x8a, 0x3a),
@@ -255,11 +330,11 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             line(pa, r, &[(0.5, 0.74), (0.5, 0.9)], s);
         }
         "VideoRecordingInsert" | "InsertOnlineVideo" => {
-            rect(pa, r, 0.08, 0.28, 0.64, 0.72, Color32::WHITE, s);
+            rect(pa, r, 0.08, 0.28, 0.64, 0.72, paper, s);
             pa.add(Shape::convex_polygon(vec![p(r, 0.66, 0.5), p(r, 0.92, 0.3), p(r, 0.92, 0.7)], color, Stroke::NONE));
         }
         "PageTemplatesSplitButton" | "PageTemplatesTaskpane" | "NewPageFromStationery" | "StationeryMostRecentlyUsedList" => {
-            rect(pa, r, 0.18, 0.08, 0.82, 0.92, Color32::WHITE, s);
+            rect(pa, r, 0.18, 0.08, 0.82, 0.92, paper, s);
             rect(pa, r, 0.28, 0.2, 0.72, 0.4, accent, Stroke::NONE);
             for y in [0.55, 0.68, 0.81] {
                 line(pa, r, &[(0.28, y), (0.72, y)], thin);
@@ -276,7 +351,7 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
         "SelectAndTypeMode" => {
             pa.add(Shape::convex_polygon(
                 vec![p(r, 0.25, 0.1), p(r, 0.25, 0.8), p(r, 0.42, 0.64), p(r, 0.55, 0.92), p(r, 0.65, 0.88), p(r, 0.53, 0.6), p(r, 0.75, 0.6)],
-                Color32::WHITE,
+                paper,
                 s,
             ));
         }
@@ -317,7 +392,7 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             }
         }
         "Ruler" => {
-            pa.add(Shape::convex_polygon(vec![p(r, 0.08, 0.7), p(r, 0.7, 0.08), p(r, 0.92, 0.3), p(r, 0.3, 0.92)], Color32::WHITE, s));
+            pa.add(Shape::convex_polygon(vec![p(r, 0.08, 0.7), p(r, 0.7, 0.08), p(r, 0.92, 0.3), p(r, 0.3, 0.92)], paper, s));
             for t in [0.25, 0.4, 0.55, 0.7] {
                 line(pa, r, &[(t, 0.95 - t), (t + 0.06, 1.01 - t)], thin);
             }
@@ -327,7 +402,7 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             rect(pa, r, 0.46, 0.5, 0.88, 0.88, Color32::TRANSPARENT, s);
         }
         "ObjectsArrangeMenu" | "ObjectBringForward" | "ObjectBringToFront" | "ObjectSendBackward" | "ObjectSendToBack" => {
-            rect(pa, r, 0.1, 0.1, 0.6, 0.6, Color32::WHITE, s);
+            rect(pa, r, 0.1, 0.1, 0.6, 0.6, paper, s);
             rect(pa, r, 0.4, 0.4, 0.9, 0.9, accent, s);
         }
         "RotateMenuOneNote"
@@ -364,7 +439,7 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
         | "MarkPageAsUnreadContextual"
         | "MarkAllPagesAsRead"
         | "UnreadNotebookChangesShow" => {
-            rect(pa, r, 0.18, 0.08, 0.82, 0.92, Color32::WHITE, s);
+            rect(pa, r, 0.18, 0.08, 0.82, 0.92, paper, s);
             for y in [0.3, 0.5] {
                 line(pa, r, &[(0.3, y), (0.7, y)], Stroke::new(s.width * 1.5, color));
             }
@@ -379,8 +454,8 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
         | "FindLastThreeMonths"
         | "FindLasteSixMonths"
         | "FindAllChangesByDate" => {
-            rect(pa, r, 0.1, 0.1, 0.66, 0.82, Color32::WHITE, s);
-            pa.circle_filled(p(r, 0.72, 0.7), r.width() * 0.22, Color32::WHITE);
+            rect(pa, r, 0.1, 0.1, 0.66, 0.82, paper, s);
+            pa.circle_filled(p(r, 0.72, 0.7), r.width() * 0.22, paper);
             pa.circle_stroke(p(r, 0.72, 0.7), r.width() * 0.22, s);
             line(pa, r, &[(0.72, 0.56), (0.72, 0.7), (0.82, 0.76)], thin);
         }
@@ -398,13 +473,13 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
         | "DeleteAllPageVersionsInNotebook"
         | "DisableVersionHistory"
         | "DisableVersionHistory2" => {
-            rect(pa, r, 0.3, 0.06, 0.88, 0.72, Color32::WHITE, s);
-            rect(pa, r, 0.12, 0.28, 0.7, 0.94, Color32::WHITE, s);
+            rect(pa, r, 0.3, 0.06, 0.88, 0.72, paper, s);
+            rect(pa, r, 0.12, 0.28, 0.7, 0.94, paper, s);
         }
         "RecycleBinMenu" | "RecycleBin" | "EmptyRecycleBin" => {
             line(pa, r, &[(0.12, 0.24), (0.88, 0.24)], s);
             line(pa, r, &[(0.38, 0.24), (0.42, 0.1), (0.58, 0.1), (0.62, 0.24)], s);
-            pa.add(Shape::convex_polygon(vec![p(r, 0.2, 0.28), p(r, 0.8, 0.28), p(r, 0.72, 0.92), p(r, 0.28, 0.92)], Color32::WHITE, s));
+            pa.add(Shape::convex_polygon(vec![p(r, 0.2, 0.28), p(r, 0.8, 0.28), p(r, 0.72, 0.92), p(r, 0.28, 0.92)], paper, s));
             for x in [0.4, 0.6] {
                 line(pa, r, &[(x, 0.4), (x, 0.8)], thin);
             }
@@ -414,7 +489,7 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             line(pa, r, &[(0.3, 0.72), (0.45, 0.88), (0.8, 0.58)], Stroke::new(s.width * 1.3, Color32::from_rgb(0x38, 0x76, 0x1d)));
         }
         "ResearchPane" | "Thesaurus" => {
-            rect(pa, r, 0.1, 0.12, 0.62, 0.88, Color32::WHITE, s);
+            rect(pa, r, 0.1, 0.12, 0.62, 0.88, paper, s);
             pa.circle_stroke(p(r, 0.64, 0.56), r.width() * 0.2, s);
             line(pa, r, &[(0.78, 0.7), (0.92, 0.88)], s);
         }
@@ -438,31 +513,31 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             line(pa, r, &[(0.32, 0.44), (0.32, 0.26), (0.5, 0.1), (0.68, 0.26), (0.68, 0.44)], s);
         }
         "LinkedNotes" => {
-            rect(pa, r, 0.08, 0.14, 0.48, 0.86, Color32::WHITE, s);
-            rect(pa, r, 0.52, 0.14, 0.92, 0.86, Color32::WHITE, s);
+            rect(pa, r, 0.08, 0.14, 0.48, 0.86, paper, s);
+            rect(pa, r, 0.52, 0.14, 0.92, 0.86, paper, s);
             line(pa, r, &[(0.38, 0.5), (0.62, 0.5)], Stroke::new(s.width, accent));
         }
         "NormalViewOneNote" | "NavigationPanes" => {
-            rect(pa, r, 0.06, 0.14, 0.94, 0.86, Color32::WHITE, s);
+            rect(pa, r, 0.06, 0.14, 0.94, 0.86, paper, s);
             rect(pa, r, 0.06, 0.14, 0.3, 0.86, accent, Stroke::NONE);
             rect(pa, r, 0.74, 0.14, 0.94, 0.86, Color32::from_rgb(0xd2, 0xd0, 0xce), Stroke::NONE);
         }
         "FullPageView" => {
-            rect(pa, r, 0.1, 0.1, 0.9, 0.9, Color32::WHITE, s);
+            rect(pa, r, 0.1, 0.1, 0.9, 0.9, paper, s);
             line(pa, r, &[(0.2, 0.36), (0.2, 0.2), (0.36, 0.2)], s);
             line(pa, r, &[(0.64, 0.8), (0.8, 0.8), (0.8, 0.64)], s);
         }
         "CurrentWindowDock" | "NewDockedWindow" => {
-            rect(pa, r, 0.06, 0.14, 0.94, 0.86, Color32::WHITE, s);
+            rect(pa, r, 0.06, 0.14, 0.94, 0.86, paper, s);
             rect(pa, r, 0.62, 0.14, 0.94, 0.86, accent, Stroke::NONE);
         }
         "SwitchBackground" => {
             pa.circle_filled(r.center(), r.width() * 0.38, color);
-            pa.circle_filled(p(r, 0.62, 0.42), r.width() * 0.3, Color32::WHITE);
+            pa.circle_filled(p(r, 0.62, 0.42), r.width() * 0.3, paper);
         }
         "ImmersiveReader" => {
-            rect(pa, r, 0.08, 0.2, 0.5, 0.84, Color32::WHITE, s);
-            rect(pa, r, 0.5, 0.2, 0.92, 0.84, Color32::WHITE, s);
+            rect(pa, r, 0.08, 0.2, 0.5, 0.84, paper, s);
+            rect(pa, r, 0.5, 0.2, 0.92, 0.84, paper, s);
             text(pa, Rect::from_min_max(p(r, 0.08, 0.2), p(r, 0.5, 0.84)), "A", 0.5, accent, false);
         }
         "PageColorGallery" => {
@@ -470,19 +545,19 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             rect(pa, r, 0.08, 0.86, 0.92, 0.98, Color32::from_rgb(0x8a, 0xa8, 0xe4), Stroke::NONE);
         }
         "RuleLinesMenu" | "RuleLineColorMenu" | "RuleLineColorGallery" | "NewPagesWithRuleLines" => {
-            rect(pa, r, 0.14, 0.08, 0.86, 0.92, Color32::WHITE, s);
+            rect(pa, r, 0.14, 0.08, 0.86, 0.92, paper, s);
             for y in [0.28, 0.44, 0.6, 0.76] {
                 line(pa, r, &[(0.14, y), (0.86, y)], Stroke::new(thin.width, Color32::from_rgb(0x6c, 0x9c, 0xd8)));
             }
             line(pa, r, &[(0.3, 0.08), (0.3, 0.92)], Stroke::new(thin.width, Color32::from_rgb(0xd1, 0x34, 0x38)));
         }
         "PageTitleHide" => {
-            rect(pa, r, 0.14, 0.08, 0.86, 0.92, Color32::WHITE, s);
+            rect(pa, r, 0.14, 0.08, 0.86, 0.92, paper, s);
             line(pa, r, &[(0.26, 0.22), (0.74, 0.22)], Stroke::new(s.width * 1.5, color));
             line(pa, r, &[(0.1, 0.4), (0.9, 0.04)], Stroke::new(thin.width, Color32::from_rgb(0xd1, 0x34, 0x38)));
         }
         "PaperSize" => {
-            rect(pa, r, 0.22, 0.08, 0.78, 0.92, Color32::WHITE, s);
+            rect(pa, r, 0.22, 0.08, 0.78, 0.92, paper, s);
             line(pa, r, &[(0.08, 0.2), (0.08, 0.8)], thin);
             line(pa, r, &[(0.3, 0.97), (0.7, 0.97)], thin);
         }
@@ -495,8 +570,8 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             }
         }
         "WindowNew" | "NewSideNote" | "WindowKeepOnTop" => {
-            rect(pa, r, 0.06, 0.18, 0.7, 0.8, Color32::WHITE, s);
-            rect(pa, r, 0.36, 0.36, 0.94, 0.94, if k == "NewSideNote" { Color32::from_rgb(0xf5, 0xd9, 0x6b) } else { Color32::WHITE }, s);
+            rect(pa, r, 0.06, 0.18, 0.7, 0.8, paper, s);
+            rect(pa, r, 0.36, 0.36, 0.94, 0.94, if k == "NewSideNote" { Color32::from_rgb(0xf5, 0xd9, 0x6b) } else { paper }, s);
         }
         "Help" | "ContactSupport" | "ShowTraining" | "WhatsNew" | "Feedback" => {
             pa.circle_stroke(r.center(), r.width() * 0.4, s);
@@ -516,7 +591,7 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, color: Color32) {
             );
         }
         "Dictate" => {
-            rect(pa, r, 0.38, 0.1, 0.62, 0.58, Color32::WHITE, s);
+            rect(pa, r, 0.38, 0.1, 0.62, 0.58, paper, s);
             line(pa, r, &[(0.26, 0.42), (0.26, 0.6), (0.5, 0.74), (0.74, 0.6), (0.74, 0.42)], s);
             line(pa, r, &[(0.5, 0.74), (0.5, 0.9)], s);
         }
@@ -615,7 +690,7 @@ pub fn tag(pa: &Painter, r: Rect, symbol: notecraft_engine::doc::TagSymbol, chec
                 line(pa, r, &[(0.24, 0.1), (0.24, 0.92)], s);
                 pa.add(Shape::convex_polygon(vec![p(r, 0.26, 0.12), p(r, 0.84, 0.3), p(r, 0.26, 0.5)], c, Stroke::NONE));
             } else {
-                draw(pa, r, key, color);
+                draw(pa, r, key, color, color, Color32::TRANSPARENT);
             }
         }
     }

@@ -26,6 +26,15 @@ room), and **no fonts** (they come from storytold/craft-fonts at build time, whe
 | `assets/app-icon/LICENSE.txt` | licence of the app icon | NoteCraft contributors | original | MIT OR Apache-2.0 |
 | `assets/app-icon/README.md` | provenance of the app icon | NoteCraft contributors | original | MIT OR Apache-2.0 |
 
+## Artwork drawn in code
+
+Not files, but listed so their origin is on record.
+
+| Path | What | Author | Source | Licence |
+|---|---|---|---|---|
+| `crates/ui-egui/src/icons_set.rs` | the 2024-style ribbon and interface icons (20 × 20 grid, 1.25 stroke, line + accent) | the ArtCraft team | ported from WordCraft's `crates/ui-egui/src/icons.rs` (same team; original artwork, no external assets) | MIT OR Apache-2.0 |
+| `crates/ui-egui/src/icons.rs` | NoteCraft's own icons for controls the set above lacks, the tag symbols and the interface glyphs | NoteCraft contributors | original | MIT OR Apache-2.0 |
+
 ## Reference material (not bundled)
 
 These public documents define what NoteCraft must do. Nothing from them is copied into the
@@ -36,3 +45,4 @@ binaries; they are cited by section in code comments and in `docs/parity-catalog
 | Office Fluent User Interface Control Identifiers, OneNote 2016 and 2019 (`onenotecontrols.xlsx`) | Microsoft | github.com/OfficeDev/office-fluent-ui-command-identifiers | MIT | the inventory of ribbon tabs, groups, controls, backstage entries and context menus in `docs/parity-catalog.md` (control names only; labels are our functional descriptions) |
 | Keyboard shortcuts in OneNote | Microsoft Support | support.microsoft.com (article 44b8b3f4-c274-4bcc-a089-e80fdcc87950) | public documentation | the `KB.*` rows of the catalog |
 | [MS-ONESTORE], [MS-ONE], [MS-ONETOC2], [MS-FSSHTTPB], [MS-CAB] | Microsoft Open Specifications | learn.microsoft.com/openspecs | Open Specifications Promise | the `.one`/`.onetoc2`/`.onepkg` readers and writers (M3) |
+| Screenshots of the Microsoft 365 OneNote app (desktop and web, 2024 UI) | taken by the maintainers | kept locally, never committed | observation only | measuring the 2024 look (`docs/ui-parity.md`); nothing is copied or traced from them |

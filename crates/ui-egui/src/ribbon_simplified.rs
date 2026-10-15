@@ -399,7 +399,7 @@ fn entry(app: &mut NoteApp, ui: &mut Ui, e: &E, c: Option<&Control>, t: Tokens) 
     }
     let color = if on { t.icon } else { t.text_disabled };
     let icon = Rect::from_center_size(pos2(rect.min.x + size::BUTTON / 2.0, rect.center().y), vec2(size::ICON, size::ICON));
-    icons::draw(p, icon, id, color);
+    icons::draw(p, icon, id, color, if on { t.accent } else { color }, t.ribbon_card);
     if matches!(e.1, Kind::Label | Kind::Gallery) {
         let font = TypeRung::Body.font(ui.ctx(), Weight::Regular);
         p.text(pos2(rect.min.x + size::BUTTON - 2.0, rect.center().y), Align2::LEFT_CENTER, &lab, font, if on { t.text } else { t.text_disabled });

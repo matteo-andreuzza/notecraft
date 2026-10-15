@@ -496,7 +496,7 @@ mod tests {
     }
 
     /// AGENTS.md › colours come from `theme::Tokens`: no colour literal in the shell outside this
-    /// file and `icons.rs`.
+    /// file and the icon artwork (`icons.rs`, `icons_set.rs`).
     #[test]
     fn colours_come_from_the_theme() {
         let banned = ["Color32::from_rgb(", "Color32::from_rgba_unmultiplied(", "Color32::from_gray(", "Color32::from_rgba_premultiplied("];
@@ -504,7 +504,7 @@ mod tests {
         for entry in std::fs::read_dir(&dir).unwrap() {
             let path = entry.unwrap().path();
             let name = path.file_name().unwrap().to_string_lossy().to_string();
-            if !name.ends_with(".rs") || name == "theme.rs" || name == "icons.rs" || name == "tests.rs" {
+            if !name.ends_with(".rs") || name == "theme.rs" || name.starts_with("icons") || name == "tests.rs" {
                 continue;
             }
             let src = std::fs::read_to_string(&path).unwrap();

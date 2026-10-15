@@ -332,7 +332,8 @@ fn large(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], t: Tokens) {
     }
     let color = if on { t.text } else { t.text_disabled };
     let icon = Rect::from_center_size(pos2(rect.center().x, rect.min.y + 22.0), vec2(30.0, 30.0));
-    icons::draw(p, icon, id, color);
+    let (line, accent) = if on { (t.icon, t.accent) } else { (t.text_disabled, t.text_disabled) };
+    icons::draw(p, icon, id, line, accent, t.ribbon_card);
     let has_menu = !kids.is_empty() || special_menu(id);
     let galley = ui.fonts_mut(|f| f.layout(lab.clone(), font.clone(), color, w - 4.0));
     let gsize = galley.size();
@@ -549,7 +550,8 @@ fn small(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], with_label: bo
         p.rect_filled(rect, crate::theme::radius::CONTROL, t.hover);
     }
     let color = if on { t.text } else { t.text_disabled };
-    icons::draw(p, Rect::from_min_size(rect.min + vec2(3.0, 3.0), vec2(16.0, 16.0)), id, color);
+    let (line, accent) = if on { (t.icon, t.accent) } else { (t.text_disabled, t.text_disabled) };
+    icons::draw(p, Rect::from_min_size(rect.min + vec2(3.0, 3.0), vec2(16.0, 16.0)), id, line, accent, t.ribbon_card);
     if with_label {
         p.text(pos2(rect.min.x + 23.0, rect.center().y), egui::Align2::LEFT_CENTER, &lab, font, color);
     }

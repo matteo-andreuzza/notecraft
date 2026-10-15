@@ -15,6 +15,7 @@ pub mod chrome;
 pub mod dialogs;
 pub mod fonts;
 pub mod icons;
+pub mod icons_set;
 pub mod keymap;
 pub mod nav;
 pub mod panes;
