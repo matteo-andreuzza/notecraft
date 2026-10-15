@@ -151,15 +151,18 @@ fn window_parts_are_present_and_work() {
         present(&h, row, l);
     }
     // Custom-drawn controls are labelled for screen readers too.
-    for l in ["Bold", "Collapse the Ribbon (Ctrl+F1)", "Create a New Section", "Add Page", "Change search scope"] {
+    for l in ["Bold", "Collapse the Ribbon (Ctrl+F1)", "New section", "Add page", "Change search scope", "Hide Navigation"] {
         present(&h, "UI.Window.Accessibility", l);
     }
     for tab in ["File", "Home", "Insert", "Draw", "History", "Review", "View", "Help"] {
         assert!(has(&h, tab), "UI.Ribbon.Tabs: {tab}");
     }
     assert!(has(&h, "Sample Notebook"), "UI.Nav.NotebookPane");
-    // A section is listed in the notebook pane and has a tab.
-    assert!(h.query_all_by_label("Meetings").count() >= 2, "UI.Nav.NotebookPane, UI.Nav.SectionTabs");
+    // The 2024 navigation: every section in the notebook tree, no section tabs above the page.
+    assert_eq!(h.query_all_by_label("Meetings").count(), 1, "UI.Nav.NotebookTree");
+    for (row, l) in [("UI.Nav.SearchBox", "Search notebooks"), ("UI.Nav.QuickNotes", "Quick notes"), ("UI.Nav.SortPages", "Sort pages")] {
+        present(&h, row, l);
+    }
     assert!(has(&h, "Welcome to NoteCraft") && has(&h, "Handy shortcuts"), "UI.Nav.PageList");
 
     // UI.Window.ContextMenus: right-click a page tab and a section tab.
@@ -181,15 +184,16 @@ fn window_parts_are_present_and_work() {
 
     // UI.Nav.AddPage: one more page at the end of the section.
     let pages = h.state().session.section().unwrap().pages.len();
-    h.get_by_label("Add Page").click();
+    h.get_by_label("Add page").click();
     h.run();
     assert_eq!(h.state().session.section().unwrap().pages.len(), pages + 1, "UI.Nav.AddPage");
 
-    // UI.Nav.SectionTabs: the "+" tab adds a section.
+    // UI.Nav.NewSectionLink: "+ New section" under the notebook's sections adds one.
     let sections = h.state().session.notebook().unwrap().sections().len();
-    h.get_by_label("Create a New Section").click();
-    h.run();
-    assert_eq!(h.state().session.notebook().unwrap().sections().len(), sections + 1, "UI.Nav.SectionTabs");
+    h.get_by_label("New section").click();
+    // The new section's name is being edited in place (a blinking caret keeps repainting).
+    h.run_steps(3);
+    assert_eq!(h.state().session.notebook().unwrap().sections().len(), sections + 1, "UI.Nav.NewSectionLink");
     h.key_press(egui::Key::Escape);
     h.run();
 
@@ -201,13 +205,14 @@ fn window_parts_are_present_and_work() {
     h.run();
     assert!(!h.state().session.view.ribbon_collapsed, "UI.Ribbon.Collapse");
 
-    // UI.Nav.NotebookPaneCollapse.
-    h.get_by_label("«").click();
+    // UI.Nav.Toggle (UI.Nav.NotebookPaneCollapse): ☰ hides the tree and the page column.
+    h.get_by_label("Hide Navigation").click();
     h.run();
-    assert!(h.state().session.view.notebook_pane_collapsed, "UI.Nav.NotebookPaneCollapse");
-    h.get_by_label("»").click();
+    assert!(h.state().session.view.notebook_pane_collapsed, "UI.Nav.Toggle");
+    assert!(!has(&h, "Add page") && !has(&h, "Quick notes"), "UI.Nav.NotebookPaneCollapse");
+    h.get_by_label("Show Navigation").click();
     h.run();
-    assert!(!h.state().session.view.notebook_pane_collapsed, "UI.Nav.NotebookPaneCollapse");
+    assert!(!h.state().session.view.notebook_pane_collapsed, "UI.Nav.Toggle");
 
     // UI.Nav.FindOnPage: Ctrl+F opens the bar with its buttons.
     h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::F);
@@ -319,9 +324,10 @@ fn the_title_search_runs_commands_and_hands_text_to_search_notebooks() {
     h.run();
     assert!(h.query_by_label_contains("Search notebooks for").is_some(), "UI.Window.SearchBox lists a notes row");
     h.key_press(egui::Key::Enter);
-    h.run();
-    h.run();
+    h.run_steps(3);
     assert_eq!(h.state().session.notebook().unwrap().sections().len(), sections + 1, "UI.Window.TellMe");
+    h.key_press(egui::Key::Escape);
+    h.run_steps(2);
     h.event(egui::Event::Key { key: egui::Key::Q, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::ALT });
     h.run();
     h.event(egui::Event::Text("basil".into()));
@@ -372,4 +378,38 @@ fn the_ribbon_switches_between_simplified_and_classic() {
     h.get_by_label("Single-line ribbon").click();
     h.run();
     assert_eq!(h.state().session.view.ribbon_mode, RibbonMode::Simplified);
+}
+
+#[test]
+fn the_notebook_tree_quick_notes_and_sort_work() {
+    let mut h = harness(app());
+    h.run();
+    // UI.Nav.NotebookTree: a click on the open notebook folds its sections away, and back.
+    assert!(h.query_by_label("Garden").is_some(), "UI.Nav.NotebookTree shows nested sections");
+    h.get_by_label("Sample Notebook").click();
+    h.run();
+    assert!(h.query_by_label("Meetings").is_none(), "UI.Nav.NotebookTree collapses");
+    h.get_by_label("Sample Notebook").click();
+    h.run();
+    assert!(h.query_by_label("Meetings").is_some(), "UI.Nav.NotebookTree expands");
+    // A section group folds on its own.
+    h.get_by_label("Projects").click();
+    h.run();
+    assert!(h.query_by_label("Garden").is_none(), "UI.Nav.NotebookTree folds a section group");
+    // UI.Nav.QuickNotes opens the Quick Notes section.
+    h.get_by_label("Quick notes").click();
+    h.run();
+    assert_eq!(h.state().session.section().unwrap().name, "Quick Notes", "UI.Nav.QuickNotes");
+    // UI.Nav.SortPages: the sort menu reorders the pages of the open section.
+    h.get_by_label("Meetings").click();
+    h.run();
+    let first = h.state().session.section().unwrap().pages[0].display_title();
+    h.get_by_label("Sort pages").click();
+    h.run();
+    h.get_by_label("Title (A to Z)").click();
+    h.run();
+    let titles: Vec<String> = h.state().session.section().unwrap().pages.iter().map(|p| p.display_title().to_lowercase()).collect();
+    let mut sorted = titles.clone();
+    sorted.sort();
+    assert_eq!(titles, sorted, "UI.Nav.SortPages (was led by {first})");
 }

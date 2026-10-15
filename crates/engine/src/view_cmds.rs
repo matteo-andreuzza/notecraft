@@ -106,6 +106,13 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         )
         .key("Mod+F1")
         .pure(),
+        // R.View.Views.NavigationPanes — show or hide the navigation (the notebook tree and the
+        // page column), also the ☰ button under the ribbon (UI.Nav.Toggle).
+        CommandSpec::new("view.navigationPanes", "R.View.Views.NavigationPanes", "Navigation Panes", "View/Views/Navigation Panes", |s, _| {
+            s.view.notebook_pane_collapsed = !s.view.notebook_pane_collapsed;
+            Ok(json!({"shown": !s.view.notebook_pane_collapsed}))
+        })
+        .pure(),
         // UI.Ribbon.ModeSwitch — the ▾ chevron at the ribbon's bottom right: simplified (one row,
         // the 2024 default) or classic. Without `mode` it switches to the other one.
         CommandSpec::new("ui.ribbonMode", "UI.Ribbon.ModeSwitch", "Ribbon Layout", "Window/Ribbon/Mode Switch", |s, p| {

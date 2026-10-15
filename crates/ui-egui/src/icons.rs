@@ -811,3 +811,57 @@ pub fn app_mark(pa: &Painter, r: Rect, accent: Color32, on_accent: Color32) {
     gline(pa, r, &[(8.0, 10.0), (12.5, 10.0)], s);
     gline(pa, r, &[(8.0, 12.8), (12.5, 12.8)], s);
 }
+
+/// A notebook: a cover in the notebook's colour with a darker spine.
+pub fn notebook(pa: &Painter, r: Rect, cover: Color32, spine: Color32) {
+    let body = Rect::from_min_max(g(r, 4.5, 2.5), g(r, 15.5, 17.5));
+    pa.rect_filled(body, egui::CornerRadius::same((r.width() / 10.0) as u8), cover);
+    pa.rect_filled(Rect::from_min_max(g(r, 4.5, 2.5), g(r, 7.0, 17.5)), egui::CornerRadius::same((r.width() / 12.0) as u8), spine);
+}
+
+/// A plus sign.
+pub fn plus(pa: &Painter, r: Rect, color: Color32) {
+    let s = glyph_stroke(r, color);
+    gline(pa, r, &[(10.0, 4.0), (10.0, 16.0)], s);
+    gline(pa, r, &[(4.0, 10.0), (16.0, 10.0)], s);
+}
+
+/// Add page: a page with a pencil.
+pub fn add_page(pa: &Painter, r: Rect, color: Color32) {
+    let s = glyph_stroke(r, color);
+    gline(pa, r, &[(10.0, 3.5), (4.0, 3.5), (4.0, 16.5), (15.5, 16.5), (15.5, 10.0)], s);
+    gline(pa, r, &[(8.5, 12.0), (9.0, 9.5), (15.0, 3.5), (17.0, 5.5), (11.0, 11.5), (8.5, 12.0)], s);
+}
+
+/// Sort: lines of decreasing length with a down arrow.
+pub fn sort(pa: &Painter, r: Rect, color: Color32) {
+    let s = glyph_stroke(r, color);
+    gline(pa, r, &[(3.5, 5.0), (11.5, 5.0)], s);
+    gline(pa, r, &[(3.5, 10.0), (9.0, 10.0)], s);
+    gline(pa, r, &[(3.5, 15.0), (6.5, 15.0)], s);
+    gline(pa, r, &[(15.0, 4.0), (15.0, 16.0)], s);
+    gline(pa, r, &[(12.5, 13.5), (15.0, 16.0), (17.5, 13.5)], s);
+}
+
+/// Quick notes: a sticky note with a folded corner.
+pub fn quick_note(pa: &Painter, r: Rect, color: Color32) {
+    let s = glyph_stroke(r, color);
+    gline(pa, r, &[(4.0, 4.0), (16.0, 4.0), (16.0, 12.0), (12.0, 16.0), (4.0, 16.0), (4.0, 4.0)], s);
+    gline(pa, r, &[(16.0, 12.0), (12.0, 12.0), (12.0, 16.0)], s);
+}
+
+/// Expand (full page view) or, `restore`, back: two diagonal arrows.
+pub fn expand(pa: &Painter, r: Rect, restore: bool, color: Color32) {
+    let s = glyph_stroke(r, color);
+    if restore {
+        gline(pa, r, &[(4.0, 16.0), (8.5, 11.5)], s);
+        gline(pa, r, &[(5.0, 11.5), (8.5, 11.5), (8.5, 15.0)], s);
+        gline(pa, r, &[(16.0, 4.0), (11.5, 8.5)], s);
+        gline(pa, r, &[(11.5, 5.0), (11.5, 8.5), (15.0, 8.5)], s);
+    } else {
+        gline(pa, r, &[(4.0, 16.0), (8.5, 11.5)], s);
+        gline(pa, r, &[(4.0, 12.5), (4.0, 16.0), (7.5, 16.0)], s);
+        gline(pa, r, &[(16.0, 4.0), (11.5, 8.5)], s);
+        gline(pa, r, &[(12.5, 4.0), (16.0, 4.0), (16.0, 7.5)], s);
+    }
+}

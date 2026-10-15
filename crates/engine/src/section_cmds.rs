@@ -20,6 +20,12 @@ fn need_section(s: &Session) -> Option<&'static str> {
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
+        // UI.Nav.QuickNotes — "Quick notes" pinned at the bottom of the navigation (2024 UI):
+        // opens the Quick Notes section of the default notebook (the first one open), creating it
+        // at the end of that notebook when it is missing (unverified: the reference lets the user
+        // pick the Quick Notes location in Options).
+        CommandSpec::new("nav.quickNotes", "UI.Nav.QuickNotes", "Quick Notes", "Window/Navigation/Quick Notes", quick_notes)
+            .when(|s| if s.ws.notebooks.is_empty() { Some("Open a notebook first") } else { None }),
         // KB.Notebooks.NewSection — Ctrl+T: "New Section N" with the next colour and one
         // Untitled page; the UI then renames it in place (BEH.Sections.NewSectionName).
         CommandSpec::new(
@@ -178,6 +184,31 @@ fn parent_path(s: &Session, nb: &notecraft_doc::Notebook, group: Option<Id>) -> 
             path
         })
         .unwrap_or_default()
+}
+
+/// The name of the Quick Notes section.
+pub(crate) const QUICK_NOTES: &str = "Quick Notes";
+
+fn quick_notes(s: &mut Session, _v: &Value) -> CmdResult {
+    let nb = s.ws.notebooks.first().cloned().ok_or_else(|| CmdError::Disabled("open a notebook first".into()))?;
+    let existing = nb.children.iter().find_map(|n| match n {
+        NavNode::Section(sec) if sec.name.eq_ignore_ascii_case(QUICK_NOTES) => Some(sec.id),
+        _ => None,
+    });
+    if let Some(sid) = existing {
+        s.goto_section(sid)?;
+        return Ok(json!({"section": sid.to_string(), "created": false}));
+    }
+    let sid = s.new_id();
+    let mut sec = Section::new(sid, QUICK_NOTES, SectionColor::rotation(section_count(&nb)), s.now());
+    let page = crate::page_cmds::make_page(s, "");
+    let pid = page.id;
+    sec.pages.push(Arc::new(page));
+    let nbm = s.ws.notebook_mut(nb.id).ok_or_else(no_page)?;
+    nbm.children.push(NavNode::Section(Arc::new(sec)));
+    s.goto_page(pid)?;
+    s.set_caret(Pos::new(Block::Title, 0, 0));
+    Ok(json!({"section": sid.to_string(), "page": pid.to_string(), "created": true}))
 }
 
 pub(crate) fn new_section(s: &mut Session, v: &Value) -> CmdResult {

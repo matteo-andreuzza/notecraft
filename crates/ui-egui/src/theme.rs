@@ -422,6 +422,13 @@ pub fn c32(c: notecraft_engine::doc::color::Rgba) -> Color32 {
     Color32::from_rgba_unmultiplied(c.r, c.g, c.b, c.a)
 }
 
+/// `c` darkened towards black by `factor` (1 = unchanged), keeping its alpha.
+pub fn darken(c: Color32, factor: f32) -> Color32 {
+    let f = factor.clamp(0.0, 1.0);
+    let ch = |v: u8| (f32::from(v) * f).round() as u8;
+    Color32::from_rgba_unmultiplied(ch(c.r()), ch(c.g()), ch(c.b()), c.a())
+}
+
 /// Convenience: a corner radius of `r` points.
 pub fn round(r: u8) -> CornerRadius {
     CornerRadius::same(r)

@@ -117,6 +117,8 @@ pub struct UiState {
     pub status: Option<(String, f64)>,
     /// Notebook pane width (points).
     pub notebook_pane_width: f32,
+    /// Notebooks and section groups collapsed in the navigation tree (the rest are expanded).
+    pub nav_collapsed: Vec<notecraft_engine::doc::Id>,
     /// Find Tags pane grouping.
     pub tags_group: String,
     /// Find Tags pane: show only unchecked items.
@@ -138,7 +140,8 @@ impl Default for UiState {
             dialog: None,
             theme: ThemeKind::Colorful,
             status: None,
-            notebook_pane_width: 210.0,
+            notebook_pane_width: theme::size::NAV_WIDTH,
+            nav_collapsed: Vec::new(),
             tags_group: "tag".into(),
             tags_unchecked: false,
             tags_scope: "all".into(),
@@ -317,6 +320,7 @@ impl NoteApp {
             chrome::title_bar(self, ui, t);
             chrome::tab_row(self, ui, t);
             ribbon::show(self, ui, t);
+            nav::nav_row(self, ui, t);
         } else {
             self.full_page_bar(ui, t);
         }
@@ -332,8 +336,8 @@ impl NoteApp {
             }
         }
         egui::CentralPanel::no_frame().show(ui, |ui| {
-            if !self.session.view.full_page {
-                nav::section_tabs(self, ui, t);
+            if self.session.notebook().is_none() {
+                nav::empty_state(self, ui, t);
             }
             if self.session.view.find.active {
                 panes::find_bar(self, ui, t);

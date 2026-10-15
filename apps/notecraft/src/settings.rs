@@ -57,17 +57,28 @@ pub struct Notebooks {
     pub last_page: String,
 }
 
-/// Pane sizes in points.
+/// Pane sizes in points and the navigation tree's folds.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Layout {
     /// Notebook pane width.
     pub notebook_pane_width: f32,
+    /// Page column width.
+    pub page_list_width: f32,
+    /// Navigation hidden (☰).
+    pub navigation_hidden: bool,
+    /// Notebooks and section groups folded in the tree.
+    pub collapsed: Vec<notecraft_engine::doc::Id>,
 }
 
 impl Default for Layout {
     fn default() -> Layout {
-        Layout { notebook_pane_width: notecraft_ui_egui::UiState::default().notebook_pane_width }
+        Layout {
+            notebook_pane_width: notecraft_ui_egui::UiState::default().notebook_pane_width,
+            page_list_width: notecraft_engine::ViewState::default().page_list_width,
+            navigation_hidden: false,
+            collapsed: Vec::new(),
+        }
     }
 }
 
@@ -183,7 +194,12 @@ pub fn capture(app: &NoteApp, previous: &DesktopSettings) -> DesktopSettings {
         appearance: Appearance { theme: app.ui.theme, ribbon: s.view.ribbon_mode, ribbon_collapsed: s.view.ribbon_collapsed },
         editing: s.prefs.clone(),
         notebooks: Notebooks { open, last_page },
-        layout: Layout { notebook_pane_width: app.ui.notebook_pane_width },
+        layout: Layout {
+            notebook_pane_width: app.ui.notebook_pane_width,
+            page_list_width: s.view.page_list_width,
+            navigation_hidden: s.view.notebook_pane_collapsed,
+            collapsed: app.ui.nav_collapsed.clone(),
+        },
     }
 }
 
@@ -200,6 +216,12 @@ pub fn apply(app: &mut NoteApp, s: &DesktopSettings) {
     if s.layout.notebook_pane_width.is_finite() {
         app.ui.notebook_pane_width = s.layout.notebook_pane_width.clamp(120.0, 600.0);
     }
+    if s.layout.page_list_width.is_finite() {
+        app.session.view.page_list_width = s.layout.page_list_width.clamp(120.0, 480.0);
+    }
+    app.session.view.notebook_pane_collapsed = s.layout.navigation_hidden;
+    // Folds of notebooks that no longer exist are harmless; cap the list against a hostile file.
+    app.ui.nav_collapsed = s.layout.collapsed.iter().take(10_000).copied().collect();
 }
 
 /// The account's user name (`USER`, `USERNAME` on Windows), or empty.
@@ -294,6 +316,9 @@ mod tests {
         let mut app = NoteApp::new(notecraft_engine::Session::with_sample(clock), Box::new(notecraft_ui_egui::FixedHost(clock)));
         app.ui.theme = ThemeKind::White;
         app.session.view.ribbon_mode = notecraft_engine::RibbonMode::Classic;
+        app.session.view.page_list_width = 260.0;
+        let nb = app.session.notebook().unwrap().id;
+        app.ui.nav_collapsed.push(nb);
         app.session.prefs.author = "Grace".into();
         let s = capture(&app, &DesktopSettings::default());
         // The sample notebook lives in memory: nothing to reopen.
@@ -304,6 +329,9 @@ mod tests {
         assert_eq!(other.ui.theme, ThemeKind::White);
         // UI.Ribbon.ModeSwitch: the ribbon layout is remembered.
         assert_eq!(other.session.view.ribbon_mode, notecraft_engine::RibbonMode::Classic);
+        // The page column width and the tree's folds too.
+        assert_eq!(other.session.view.page_list_width, 260.0);
+        assert_eq!(other.ui.nav_collapsed, vec![nb]);
         assert_eq!(other.session.prefs.author, "Grace");
         let mut bad = s.clone();
         bad.layout.notebook_pane_width = f32::NAN;

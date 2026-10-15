@@ -1,15 +1,14 @@
-//! Navigation — catalog `UI.Nav.*`. Being rebuilt for the 2024 look (decision D1,
-//! `docs/ui-parity.md`): the notebook tree and the page column move to the left and the section
-//! tabs go away. Today: the notebook pane (left), the section tabs (top of the page area), the
-//! search box, and the page list (right), with their context menus (`CM.Notebook`,
-//! `CM.SectionGroup`, `CM.Section`, `CM.Page`, `CM.PageListArea`, `CM.SectionTabsArea`,
-//! `CM.NotebookPaneArea`).
+//! Navigation in the 2024 layout (decision D1, `docs/ui-parity.md` §3 rows 10–13) — catalog
+//! `UI.Nav.*`: the row under the ribbon (☰, Search notebooks), the tree of every open notebook with
+//! "+ New section" and Quick notes, and the page column between the tree and the page; with their
+//! context menus (`CM.Notebook`, `CM.SectionGroup`, `CM.Section`, `CM.Page`, `CM.PageListArea`,
+//! `CM.NotebookPaneArea`). There are no section tabs above the page in this layout.
 
-use egui::{Align, Align2, Color32, FontId, Frame, Layout, Margin, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
+use egui::{Align, Align2, FontId, Frame, Layout, Margin, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
 use notecraft_engine::doc::{Id, NavNode};
 use serde_json::json;
 
-use crate::theme::c32;
+use crate::theme::{TypeRung, Weight, c32, radius, size};
 use crate::{NoteApp, Rename, Tokens, icons};
 
 /// A context-menu entry that runs a command (disabled with its reason when unavailable).
@@ -27,58 +26,95 @@ pub fn cmd_item(app: &mut NoteApp, ui: &mut Ui, label: &str, cmd: &str, params: 
     }
 }
 
-/// The notebook pane (catalog `UI.Nav.NotebookPane`, `UI.Nav.NotebookPaneCollapse`).
-pub fn notebook_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
-    let ctx = ui.ctx().clone();
-    if app.session.view.notebook_pane_collapsed {
-        egui::Panel::left("notebook_pane_collapsed").exact_size(30.0).frame(Frame::NONE.fill(t.window_back).stroke(Stroke::new(1.0, t.border))).show(
-            ui,
-            |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.add_space(6.0);
-                    if ui.add(egui::Button::new("»").frame(false)).on_hover_text("Expand Notebook Pane").clicked() {
-                        app.run(&ctx, "view.notebookPane", json!({}));
-                    }
-                    let name = app.session.notebook().map(|n| n.name.clone()).unwrap_or_default();
-                    ui.add_space(8.0);
-                    for ch in name.chars().take(18) {
-                        ui.label(RichText::new(ch.to_string()).size(12.0).color(t.text));
-                    }
-                });
-            },
-        );
-        return;
+/// Paint a tree or page-column row's background: the selection or hover as a rounded fill inset
+/// from the pane's edges.
+fn row_bg(ui: &Ui, rect: Rect, selected: bool, hovered: bool, t: &Tokens) {
+    let r = rect.shrink2(vec2(2.0, 1.0));
+    if selected {
+        ui.painter().rect_filled(r, radius::CONTROL, t.nav_selected);
+    } else if hovered {
+        ui.painter().rect_filled(r, radius::CONTROL, t.nav_hover);
     }
-    egui::Panel::left("notebook_pane")
-        .default_size(app.ui.notebook_pane_width)
-        .size_range(150.0..=420.0)
-        .resizable(true)
-        .frame(Frame::NONE.fill(t.window_back).inner_margin(Margin::symmetric(0, 4)).stroke(Stroke::new(1.0, t.border)))
+}
+
+/// Whether a notebook or section group is collapsed in the tree.
+fn is_collapsed(app: &NoteApp, id: Id) -> bool {
+    app.ui.nav_collapsed.contains(&id)
+}
+
+fn toggle_collapsed(app: &mut NoteApp, id: Id) {
+    if let Some(i) = app.ui.nav_collapsed.iter().position(|x| *x == id) {
+        app.ui.nav_collapsed.remove(i);
+    } else {
+        app.ui.nav_collapsed.push(id);
+    }
+}
+
+/// The row under the ribbon: ☰ on the left, Search notebooks on the right (catalog
+/// `UI.Nav.Toggle`, `UI.Nav.SearchBox`).
+pub fn nav_row(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    egui::Panel::top("nav_row")
+        .show_separator_line(false)
+        .exact_size(size::NAV_ROW)
+        .frame(Frame::NONE.fill(t.window_back).inner_margin(Margin { left: 6, right: 8, top: 0, bottom: 2 }))
         .show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.add_space(8.0);
-                ui.label(RichText::new("Notebooks").size(12.5).color(t.text.gamma_multiply(0.8)));
+            ui.horizontal_centered(|ui| {
+                let shown = !app.session.view.notebook_pane_collapsed;
+                let label = if shown { "Hide Navigation" } else { "Show Navigation" };
+                let (resp, rect, color) = crate::chrome::icon_button(ui, 26.0, label, true, &t);
+                icons::hamburger(ui.painter(), rect.shrink(5.0), color);
+                if resp.on_hover_text(label).clicked() {
+                    app.run(&ctx, "view.navigationPanes", json!({}));
+                }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.add_space(4.0);
-                    // UI.Nav.NotebookPaneCollapse — the pin/collapse button.
-                    if ui.add(egui::Button::new("«").frame(false)).on_hover_text("Collapse Notebook Pane").clicked() {
-                        app.run(&ctx, "view.notebookPane", json!({}));
-                    }
+                    let w = 240.0_f32.min(ui.available_width() - 8.0).max(120.0);
+                    let (r, _) = ui.allocate_exact_size(vec2(w, 24.0), Sense::hover());
+                    search_box(app, ui, r, t);
                 });
             });
-            ui.add_space(2.0);
+        });
+}
+
+/// The navigation pane: the tree of every open notebook, and Quick notes pinned at the bottom
+/// (catalog `UI.Nav.NotebookPane`, `UI.Nav.NotebookTree`, `UI.Nav.NewSectionLink`,
+/// `UI.Nav.QuickNotes`). Hidden with the page column by ☰.
+pub fn notebook_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    if app.session.view.notebook_pane_collapsed {
+        return;
+    }
+    let ctx = ui.ctx().clone();
+    let shown = egui::Panel::left("notebook_pane")
+        .default_size(app.ui.notebook_pane_width)
+        .size_range(160.0..=420.0)
+        .resizable(true)
+        .show_separator_line(false)
+        .frame(Frame::NONE.fill(t.window_back).inner_margin(Margin { left: 4, right: 4, top: 2, bottom: 4 }))
+        .show(ui, |ui| {
+            let full = ui.available_rect_before_wrap();
+            let quick_h = size::TREE_ROW + 9.0;
+            let tree = Rect::from_min_max(full.min, pos2(full.max.x, full.max.y - quick_h));
+            let quick = Rect::from_min_max(pos2(full.min.x, tree.max.y), full.max);
             // CM.NotebookPaneArea — right-click on the empty pane. Registered before the rows,
             // so a row (registered later, so on top) keeps its own menu.
-            let area = ui.interact(ui.available_rect_before_wrap(), ui.id().with("nb_area"), Sense::click());
-            egui::ScrollArea::vertical().id_salt("nb_scroll").show(ui, |ui| {
-                let notebooks: Vec<_> = app.session.ws.notebooks.clone();
-                for nb in notebooks {
-                    notebook_row(app, ui, &nb, t);
-                    if app.session.sel.notebook == Some(nb.id) {
-                        nodes(app, ui, &nb.children, 1, t);
+            let area = ui.interact(tree, ui.id().with("nb_area"), Sense::click());
+            ui.scope_builder(egui::UiBuilder::new().max_rect(tree), |ui| {
+                egui::ScrollArea::vertical().id_salt("nb_scroll").auto_shrink([false, false]).show(ui, |ui| {
+                    ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+                    let notebooks: Vec<_> = app.session.ws.notebooks.clone();
+                    for (i, nb) in notebooks.iter().enumerate() {
+                        if i > 0 {
+                            let (r, _) = ui.allocate_exact_size(vec2(ui.available_width(), 9.0), Sense::hover());
+                            ui.painter()
+                                .line_segment([pos2(r.min.x + 8.0, r.center().y), pos2(r.max.x - 8.0, r.center().y)], Stroke::new(1.0, t.border));
+                        }
+                        notebook_row(app, ui, nb, t);
+                        if !is_collapsed(app, nb.id) {
+                            nodes(app, ui, &nb.children, 1, t);
+                            new_section_row(app, ui, nb.id, t);
+                        }
                     }
-                }
-                ui.allocate_space(vec2(ui.available_width(), 40.0))
+                });
             });
             area.context_menu(|ui| {
                 cmd_item(app, ui, "New Section", "section.new", json!({}));
@@ -93,31 +129,72 @@ pub fn notebook_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                     ui.close();
                 }
             });
+            ui.scope_builder(egui::UiBuilder::new().max_rect(quick), |ui| {
+                ui.painter().line_segment(
+                    [pos2(quick.min.x + 8.0, quick.min.y + 4.0), pos2(quick.max.x - 8.0, quick.min.y + 4.0)],
+                    Stroke::new(1.0, t.border),
+                );
+                ui.add_space(9.0);
+                let (rect, resp) = ui.allocate_exact_size(vec2(quick.width(), size::TREE_ROW), Sense::click());
+                let on = app.disabled_reason("nav.quickNotes").is_none();
+                resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, "Quick notes"));
+                row_bg(ui, rect, false, resp.hovered() && on, &t);
+                let color = if on { t.text } else { t.text_disabled };
+                icons::quick_note(
+                    ui.painter(),
+                    Rect::from_center_size(pos2(rect.min.x + 30.0, rect.center().y), vec2(size::ICON, size::ICON)),
+                    if on { t.icon } else { color },
+                );
+                ui.painter().text(
+                    pos2(rect.min.x + 44.0, rect.center().y),
+                    Align2::LEFT_CENTER,
+                    "Quick notes",
+                    TypeRung::Body.font(&ctx, Weight::Regular),
+                    color,
+                );
+                if resp.on_hover_text("Open Quick Notes").clicked() && on {
+                    app.run(&ctx, "nav.quickNotes", json!({}));
+                }
+            });
         });
+    // The pane is resizable; remember the width the user dragged it to.
+    let w = shown.response.rect.width();
+    if w.is_finite() && (w - app.ui.notebook_pane_width).abs() > 0.5 {
+        app.ui.notebook_pane_width = w;
+    }
 }
 
 fn notebook_row(app: &mut NoteApp, ui: &mut Ui, nb: &notecraft_engine::doc::Notebook, t: Tokens) {
     let ctx = ui.ctx().clone();
     let selected = app.session.sel.notebook == Some(nb.id);
-    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click());
+    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), size::TREE_ROW), Sense::click());
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, &nb.name));
-    if selected {
-        ui.painter().rect_filled(rect, 0.0, t.nav_selected);
-    } else if resp.hovered() {
-        ui.painter().rect_filled(rect, 0.0, t.hover);
-    }
-    // Notebook icon in the notebook's colour.
-    let icon = Rect::from_min_size(rect.min + vec2(10.0, 5.0), vec2(13.0, 16.0));
-    ui.painter().rect_filled(icon, 2.0, c32(nb.color.rgba()));
-    ui.painter().rect_stroke(icon, 2.0, Stroke::new(1.0, t.text.gamma_multiply(0.5)), egui::StrokeKind::Inside);
+    row_bg(ui, rect, false, resp.hovered(), &t);
+    let collapsed = is_collapsed(app, nb.id);
+    let chev = Rect::from_center_size(pos2(rect.min.x + 12.0, rect.center().y), vec2(14.0, 14.0));
+    icons::chevron(ui.painter(), chev, if collapsed { icons::Dir::Right } else { icons::Dir::Down }, t.icon);
+    let cover = c32(nb.color.rgba());
+    icons::notebook(
+        ui.painter(),
+        Rect::from_center_size(pos2(rect.min.x + 30.0, rect.center().y), vec2(18.0, 18.0)),
+        cover,
+        crate::theme::darken(cover, 0.7),
+    );
     let renaming = matches!(&app.ui.rename, Some(Rename::Notebook(id, _)) if *id == nb.id);
+    let font = TypeRung::Body.font(&ctx, if selected { Weight::Semibold } else { Weight::Regular });
     if renaming {
-        rename_field(app, ui, Rect::from_min_max(rect.min + vec2(30.0, 2.0), rect.max - vec2(4.0, 2.0)));
+        rename_field(app, ui, Rect::from_min_max(rect.min + vec2(42.0, 2.0), rect.max - vec2(4.0, 2.0)));
     } else {
-        ui.painter().text(pos2(rect.min.x + 30.0, rect.center().y), Align2::LEFT_CENTER, &nb.name, FontId::proportional(13.5), t.text);
+        ui.painter().with_clip_rect(rect).text(pos2(rect.min.x + 44.0, rect.center().y), Align2::LEFT_CENTER, &nb.name, font, t.text);
     }
     if resp.clicked() {
-        app.run(&ctx, "notebook.select", json!({"notebook": nb.id.to_string()}));
+        let on_chevron = resp.interact_pointer_pos().is_some_and(|p| p.x < rect.min.x + 22.0);
+        if on_chevron || selected {
+            toggle_collapsed(app, nb.id);
+        } else {
+            app.run(&ctx, "notebook.select", json!({"notebook": nb.id.to_string()}));
+            app.ui.nav_collapsed.retain(|x| *x != nb.id);
+        }
     }
     let nb_id = nb.id.to_string();
     resp.context_menu(|ui| {
@@ -137,29 +214,54 @@ fn notebook_row(app: &mut NoteApp, ui: &mut Ui, nb: &notecraft_engine::doc::Note
     });
 }
 
+/// "+ New section" after a notebook's sections (catalog `UI.Nav.NewSectionLink`).
+fn new_section_row(app: &mut NoteApp, ui: &mut Ui, nb: Id, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), size::TREE_ROW), Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "New section"));
+    row_bg(ui, rect, false, resp.hovered(), &t);
+    icons::plus(ui.painter(), Rect::from_center_size(pos2(rect.min.x + 30.0, rect.center().y), vec2(14.0, 14.0)), t.accent_text);
+    ui.painter().text(
+        pos2(rect.min.x + 44.0, rect.center().y),
+        Align2::LEFT_CENTER,
+        "New section",
+        TypeRung::Body.font(&ctx, Weight::Regular),
+        t.accent_text,
+    );
+    if resp.on_hover_text("Create a New Section (Ctrl+T)").clicked() {
+        app.run(&ctx, "section.new", json!({"notebook": nb.to_string()}));
+    }
+}
+
 fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: Tokens) {
     if depth > notecraft_engine::doc::notebook::MAX_GROUP_DEPTH {
         return;
     }
     let ctx = ui.ctx().clone();
+    let font = TypeRung::Body.font(&ctx, Weight::Regular);
+    let indent = (depth.saturating_sub(1)) as f32 * size::INDENT;
     for n in children {
         match n {
             NavNode::Section(s) => {
                 let selected = app.session.sel.section == Some(s.id);
-                let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 24.0), Sense::click());
+                let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), size::TREE_ROW), Sense::click());
                 resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, &s.name));
-                if selected {
-                    ui.painter().rect_filled(rect, 0.0, t.nav_selected);
-                } else if resp.hovered() {
-                    ui.painter().rect_filled(rect, 0.0, t.hover);
+                row_bg(ui, rect, selected, resp.hovered(), &t);
+                // Ctrl+Shift+G (KB.Notebooks.FocusSectionTab) puts the keyboard focus here.
+                if selected && app.session.sel.focus == notecraft_engine::selection::FocusArea::SectionTabs {
+                    ui.painter().rect_stroke(rect.shrink2(vec2(2.0, 1.0)), radius::CONTROL, Stroke::new(1.5, t.accent), egui::StrokeKind::Inside);
                 }
-                let x = rect.min.x + 14.0 + depth as f32 * 12.0;
-                ui.painter().rect_filled(Rect::from_min_size(pos2(x, rect.min.y + 6.0), vec2(5.0, 12.0)), 1.0, c32(s.color.rgba()));
+                let x = rect.min.x + 26.0 + indent;
+                ui.painter().rect_filled(
+                    Rect::from_min_size(pos2(x, rect.center().y - 7.0), vec2(4.0, 14.0)),
+                    egui::CornerRadius::same(2),
+                    c32(s.color.rgba()),
+                );
                 let renaming = matches!(&app.ui.rename, Some(Rename::Section(id, _)) if *id == s.id);
                 if renaming {
-                    rename_field(app, ui, Rect::from_min_max(pos2(x + 10.0, rect.min.y + 1.0), rect.max - vec2(4.0, 1.0)));
+                    rename_field(app, ui, Rect::from_min_max(pos2(x + 14.0, rect.min.y + 2.0), rect.max - vec2(4.0, 2.0)));
                 } else {
-                    ui.painter().text(pos2(x + 11.0, rect.center().y), Align2::LEFT_CENTER, &s.name, FontId::proportional(13.0), t.text);
+                    ui.painter().with_clip_rect(rect).text(pos2(x + 18.0, rect.center().y), Align2::LEFT_CENTER, &s.name, font.clone(), t.text);
                 }
                 if resp.clicked() {
                     app.run(&ctx, "section.select", json!({"section": s.id.to_string()}));
@@ -170,30 +272,25 @@ fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: 
                 section_menu(app, &resp, s.id, &s.name);
             }
             NavNode::Group(g) => {
-                let open_id = ui.id().with(("group_open", g.id));
-                let open = ui.data_mut(|d| *d.get_temp_mut_or(open_id, true));
-                let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 24.0), Sense::click());
-                if resp.hovered() {
-                    ui.painter().rect_filled(rect, 0.0, t.hover);
-                }
-                let x = rect.min.x + 10.0 + depth as f32 * 12.0;
-                icons::triangle(ui.painter(), pos2(x + 4.0, rect.center().y), 8.0, if open { icons::Dir::Down } else { icons::Dir::Right }, t.text);
-                // A section group: a stack of tabs.
-                for k in 0..3 {
-                    ui.painter().rect_filled(
-                        Rect::from_min_size(pos2(x + 12.0 + k as f32 * 3.0, rect.min.y + 6.0 + k as f32 * 1.0), vec2(4.0, 11.0)),
-                        1.0,
-                        t.accent.gamma_multiply(0.5 + 0.2 * k as f32),
-                    );
-                }
+                let open = !is_collapsed(app, g.id);
+                let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), size::TREE_ROW), Sense::click());
+                resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, &g.name));
+                row_bg(ui, rect, false, resp.hovered(), &t);
+                let x = rect.min.x + 20.0 + indent;
+                icons::chevron(
+                    ui.painter(),
+                    Rect::from_center_size(pos2(x + 8.0, rect.center().y), vec2(14.0, 14.0)),
+                    if open { icons::Dir::Down } else { icons::Dir::Right },
+                    t.icon,
+                );
                 let renaming = matches!(&app.ui.rename, Some(Rename::Group(id, _)) if *id == g.id);
                 if renaming {
-                    rename_field(app, ui, Rect::from_min_max(pos2(x + 26.0, rect.min.y + 1.0), rect.max - vec2(4.0, 1.0)));
+                    rename_field(app, ui, Rect::from_min_max(pos2(x + 20.0, rect.min.y + 2.0), rect.max - vec2(4.0, 2.0)));
                 } else {
-                    ui.painter().text(pos2(x + 27.0, rect.center().y), Align2::LEFT_CENTER, &g.name, FontId::proportional(13.0), t.text);
+                    ui.painter().with_clip_rect(rect).text(pos2(x + 24.0, rect.center().y), Align2::LEFT_CENTER, &g.name, font.clone(), t.text);
                 }
                 if resp.clicked() {
-                    ui.data_mut(|d| d.insert_temp(open_id, !open));
+                    toggle_collapsed(app, g.id);
                 }
                 let gid = g.id.to_string();
                 let gname = g.name.clone();
@@ -298,128 +395,6 @@ fn rename_field(app: &mut NoteApp, ui: &mut Ui, rect: Rect) {
     }
 }
 
-/// The section tabs across the top of the page area, plus the search box on the right
-/// (catalog `UI.Nav.SectionTabs`, `UI.Nav.SearchBox`).
-pub fn section_tabs(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
-    let ctx = ui.ctx().clone();
-    let Some(nb) = app.session.notebook().cloned() else {
-        empty_state(app, ui, t);
-        return;
-    };
-    // The tabs show the current level: the sections and groups next to the current section.
-    let parent_path: Vec<usize> = app
-        .session
-        .sel
-        .section
-        .and_then(|s| nb.find(s))
-        .map(|mut p| {
-            p.pop();
-            p
-        })
-        .unwrap_or_default();
-    let siblings: Vec<NavNode> = nb.children_at(&parent_path).cloned().unwrap_or_default();
-    let (bar, _) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::hover());
-    ui.painter().rect_filled(bar, 0.0, t.ribbon_card);
-    ui.painter().line_segment([bar.left_bottom(), bar.right_bottom()], Stroke::new(1.0, t.border));
-    let search_w = 260.0_f32.min(bar.width() * 0.35);
-    let tabs_rect = Rect::from_min_max(bar.min, pos2(bar.max.x - search_w - 8.0, bar.max.y));
-    let mut x = tabs_rect.min.x + 6.0;
-    // A "back up" tab when inside a section group.
-    if !parent_path.is_empty() {
-        let r = Rect::from_min_size(pos2(x, bar.min.y + 5.0), vec2(26.0, 25.0));
-        let resp = ui.interact(r, ui.id().with("tab_up"), Sense::click()).on_hover_text("Back to the parent section group");
-        icons::triangle(ui.painter(), r.center(), 10.0, icons::Dir::Left, t.text);
-        if resp.clicked() {
-            let up = &parent_path[..parent_path.len() - 1];
-            let first = nb.children_at(up).and_then(|c| c.iter().find_map(|n| if let NavNode::Section(s) = n { Some(s.id) } else { None }));
-            if let Some(s) = first {
-                app.run(&ctx, "section.select", json!({"section": s.to_string()}));
-            }
-        }
-        x += 30.0;
-    }
-    for n in &siblings {
-        let (name, color, id, is_group) = match n {
-            NavNode::Section(s) => (s.name.clone(), c32(s.color.rgba()), s.id, false),
-            NavNode::Group(g) => (g.name.clone(), t.window_back, g.id, true),
-        };
-        let font = FontId::proportional(12.5);
-        let w = ui.fonts_mut(|f| f.layout_no_wrap(name.clone(), font.clone(), Color32::BLACK).size().x) + 22.0 + if is_group { 14.0 } else { 0.0 };
-        // Leave room for the "+" tab after the last one shown.
-        if x + w > tabs_rect.max.x - 32.0 {
-            break;
-        }
-        let selected = app.session.sel.section == Some(id);
-        let r = Rect::from_min_size(pos2(x, bar.min.y + if selected { 3.0 } else { 6.0 }), vec2(w, if selected { 27.0 } else { 24.0 }));
-        let resp = ui.interact(r, ui.id().with(("sectab", id)), Sense::click_and_drag());
-        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, &name));
-        let fill = if selected { color } else { color.gamma_multiply(0.85) };
-        ui.painter().rect_filled(r, egui::CornerRadius { nw: 4, ne: 4, sw: 0, se: 0 }, fill);
-        if selected {
-            ui.painter().rect_stroke(r, egui::CornerRadius { nw: 4, ne: 4, sw: 0, se: 0 }, Stroke::new(1.0, t.border), egui::StrokeKind::Inside);
-        }
-        let renaming = matches!(&app.ui.rename, Some(Rename::Section(rid, _)) if *rid == id);
-        if renaming {
-            rename_field(app, ui, r.shrink(2.0));
-        } else {
-            let tc = crate::theme::text_on(fill);
-            if is_group {
-                // A stack of tabs marks a section group.
-                for k in 0..3 {
-                    ui.painter().rect_filled(
-                        Rect::from_min_size(pos2(r.min.x + 8.0 + k as f32 * 3.0, r.center().y - 5.0 + k as f32), vec2(3.0, 10.0)),
-                        0.5,
-                        t.accent.gamma_multiply(0.5 + 0.2 * k as f32),
-                    );
-                }
-                ui.painter().text(r.center() + vec2(7.0, 0.0), Align2::CENTER_CENTER, &name, font, tc);
-            } else {
-                ui.painter().text(r.center(), Align2::CENTER_CENTER, &name, font, tc);
-            }
-        }
-        if resp.clicked() {
-            match n {
-                NavNode::Section(_) => {
-                    app.run(&ctx, "section.select", json!({"section": id.to_string()}));
-                }
-                NavNode::Group(g) => {
-                    // Opening a group shows its sections as tabs.
-                    if let Some(first) = g.children.iter().find_map(|c| if let NavNode::Section(s) = c { Some(s.id) } else { None }) {
-                        app.run(&ctx, "section.select", json!({"section": first.to_string()}));
-                    }
-                }
-            }
-        }
-        if resp.double_clicked() && !is_group {
-            app.ui.rename = Some(Rename::Section(id, name.clone()));
-        }
-        if !is_group {
-            section_menu(app, &resp, id, &name);
-        }
-        x += w + 2.0;
-    }
-    // The "+" tab: Create a New Section.
-    let plus = Rect::from_min_size(pos2(x + 2.0, bar.min.y + 6.0), vec2(26.0, 24.0));
-    let presp = ui.interact(plus, ui.id().with("tab_plus"), Sense::click()).on_hover_text("Create a New Section (Ctrl+T)");
-    presp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Create a New Section"));
-    if presp.hovered() {
-        ui.painter().rect_filled(plus, 3.0, t.hover);
-    }
-    ui.painter().text(plus.center(), Align2::CENTER_CENTER, "+", FontId::proportional(16.0), t.text);
-    if presp.clicked() {
-        app.run(&ctx, "section.new", json!({}));
-    }
-    // CM.SectionTabsArea.
-    let area = ui.interact(Rect::from_min_max(pos2(plus.max.x + 4.0, bar.min.y), tabs_rect.max), ui.id().with("tabs_area"), Sense::click());
-    area.context_menu(|ui| {
-        cmd_item(app, ui, "New Section", "section.new", json!({}));
-        cmd_item(app, ui, "New Section Group", "sectionGroup.new", json!({}));
-    });
-    // The search box with its scope drop-down.
-    let sr = Rect::from_min_max(pos2(bar.max.x - search_w - 4.0, bar.min.y + 4.0), pos2(bar.max.x - 4.0, bar.max.y - 4.0));
-    search_box(app, ui, sr, t);
-}
-
 fn scope_label(k: notecraft_engine::ScopeKind) -> &'static str {
     match k {
         notecraft_engine::ScopeKind::Page => "This Page",
@@ -430,15 +405,42 @@ fn scope_label(k: notecraft_engine::ScopeKind) -> &'static str {
     }
 }
 
+/// Search notebooks: a rounded box with the magnifier, the query, and the scope ▾ (catalog
+/// `UI.Nav.SearchBox`, `CM.SearchScope.*`). Its id stays `search_box` (Ctrl+E focuses it).
 fn search_box(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: Tokens) {
     let ctx = ui.ctx().clone();
     let id = egui::Id::new("search_box");
-    let hint = format!("Search ({})", scope_label(app.session.view.scope));
+    let focused = ctx.memory(|m| m.has_focus(id));
+    let hovered = ui.rect_contains_pointer(r);
+    let stroke = if focused {
+        Stroke::new(1.0, t.accent)
+    } else if hovered {
+        Stroke::new(1.0, t.input_border)
+    } else {
+        Stroke::new(1.0, t.card_border)
+    };
+    ui.painter().rect(r, radius::SEARCH, t.input, stroke, egui::StrokeKind::Inside);
+    // The whole box is the click target and what a screen reader announces.
+    let area = ui.interact(r, id.with("area"), Sense::click());
+    area.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Search notebooks"));
+    if area.clicked() {
+        ctx.memory_mut(|m| m.request_focus(id));
+    }
+    icons::search(ui.painter(), Rect::from_center_size(pos2(r.min.x + 14.0, r.center().y), vec2(14.0, 14.0)), t.icon);
+    let hint = "Search notebooks";
     let mut q = app.ui.search.clone();
+    let edit = Rect::from_min_max(pos2(r.min.x + 26.0, r.min.y + 1.0), pos2(r.max.x - 24.0, r.max.y - 1.0));
     let resp = ui.put(
-        Rect::from_min_max(r.min, pos2(r.max.x - 24.0, r.max.y)),
-        egui::TextEdit::singleline(&mut q).id(id).hint_text(hint).font(FontId::proportional(12.5)),
+        edit,
+        egui::TextEdit::singleline(&mut q)
+            .id(id)
+            .frame(Frame::NONE)
+            .hint_text(RichText::new(hint).color(t.text_dim))
+            .text_color(t.text)
+            .font(TypeRung::Body.font(&ctx, Weight::Regular))
+            .vertical_align(Align::Center),
     );
+    let resp = resp.on_hover_text(format!("Search notebooks (Ctrl+E) · {}", scope_label(app.session.view.scope)));
     if q != app.ui.search {
         app.ui.search = q;
         app.ui.search_open = !app.ui.search.trim().is_empty();
@@ -452,10 +454,13 @@ fn search_box(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: Tokens) {
         app.run(&ctx, "search.dismiss", json!({}));
     }
     // Scope drop-down (catalog CM.SearchScope.*).
-    let sb = Rect::from_min_max(pos2(r.max.x - 22.0, r.min.y), r.max);
+    let sb = Rect::from_min_max(pos2(r.max.x - 22.0, r.min.y + 1.0), pos2(r.max.x - 1.0, r.max.y - 1.0));
     let sresp = ui.interact(sb, ui.id().with("scope_btn"), Sense::click()).on_hover_text("Change search scope");
     sresp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Change search scope"));
-    icons::triangle(ui.painter(), sb.center(), 8.0, icons::Dir::Down, t.text);
+    if sresp.hovered() {
+        ui.painter().rect_filled(sb, radius::CONTROL, t.hover);
+    }
+    icons::chevron(ui.painter(), sb.shrink(4.0), icons::Dir::Down, t.icon);
     egui::Popup::menu(&sresp).show(|ui| {
         for (label, cmd) in [
             ("This Page", "search.scopePage"),
@@ -469,7 +474,7 @@ fn search_box(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: Tokens) {
         ui.separator();
         cmd_item(app, ui, "Set This Scope as Default", "search.setDefaultScope", json!({}));
     });
-    ctx.data_mut(|d| d.insert_temp(egui::Id::new("search_box_rect"), resp.rect));
+    ctx.data_mut(|d| d.insert_temp(egui::Id::new("search_box_rect"), r));
 }
 
 /// The as-you-type results under the search box (catalog `BEH.Search.Instant`).
@@ -527,86 +532,132 @@ pub fn search_dropdown(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
     );
 }
 
-/// The page list (catalog `UI.Nav.PageList`, `UI.Nav.AddPage`, `CM.Page.*`).
+/// The page column between the notebook tree and the page: Add page and sort on top, then the
+/// pages (catalog `UI.Nav.PageList`, `UI.Nav.AddPage`, `UI.Nav.SortPages`, `CM.Page.*`). Hidden
+/// with the tree by ☰; its right edge drags its width (also Ctrl+Shift+[ / ]).
 pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    if app.session.view.notebook_pane_collapsed {
+        return;
+    }
     let ctx = ui.ctx().clone();
     let width = app.session.view.page_list_width;
-    egui::Panel::right("page_list").exact_size(width).frame(Frame::NONE.fill(t.window_back).stroke(Stroke::new(1.0, t.border))).show(ui, |ui| {
-        let Some(section) = app.session.section().cloned() else {
-            ui.add_space(10.0);
-            ui.label(RichText::new("No section").color(t.text_disabled));
-            return;
-        };
-        // "+ Add Page".
-        let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::click());
-        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Add Page"));
-        if resp.hovered() {
-            ui.painter().rect_filled(r, 0.0, t.hover);
-        }
-        icons::plus_circle(ui.painter(), pos2(r.min.x + 18.0, r.center().y), 7.0, t.accent);
-        ui.painter().text(pos2(r.min.x + 32.0, r.center().y), Align2::LEFT_CENTER, "Add Page", FontId::proportional(13.0), t.accent);
-        if resp.on_hover_text("Add a page at the end of the section (Ctrl+N)").clicked() {
-            app.run(&ctx, "page.new", json!({}));
-        }
-        ui.painter().line_segment([r.left_bottom(), r.right_bottom()], Stroke::new(1.0, t.border));
-        // CM.PageListArea — right-click below or between the page tabs. Registered before the
-        // tabs, so a tab (registered later, so on top) keeps its own menu.
-        let area = ui.interact(ui.available_rect_before_wrap(), ui.id().with("pages_area"), Sense::click());
-        egui::ScrollArea::vertical().id_salt("pages_scroll").show(ui, |ui| {
-            for (i, page) in section.pages.iter().enumerate() {
-                if section.page_hidden(i) {
-                    continue;
-                }
-                let selected = app.session.sel.page == Some(page.id) || app.session.sel.pages.contains(&page.id);
-                let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click_and_drag());
-                let page_title = page.display_title();
-                resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, &page_title));
-                if selected {
-                    ui.painter().rect_filled(r, 0.0, t.nav_selected);
-                    ui.painter().rect_filled(Rect::from_min_size(r.min, vec2(3.0, r.height())), 0.0, t.accent);
-                } else if resp.hovered() {
-                    ui.painter().rect_filled(r, 0.0, t.hover);
-                }
-                let indent = 12.0 + page.level as f32 * 16.0;
-                let has_kids = section.page_family(i).len() > 1;
-                if has_kids {
-                    let arrow = Rect::from_min_size(pos2(r.max.x - 22.0, r.min.y + 4.0), vec2(18.0, 18.0));
-                    let aresp = ui.interact(arrow, ui.id().with(("collapse", page.id)), Sense::click());
-                    icons::triangle(ui.painter(), arrow.center(), 8.0, if page.collapsed { icons::Dir::Right } else { icons::Dir::Down }, t.text);
-                    if aresp.clicked() {
-                        app.run(&ctx, "page.toggleSubpages", json!({"page": page.id.to_string()}));
+    let shown = egui::Panel::left("page_list")
+        .exact_size(width)
+        .show_separator_line(true)
+        .frame(Frame::NONE.fill(t.page_list).inner_margin(Margin { left: 4, right: 4, top: 6, bottom: 4 }))
+        .show(ui, |ui| {
+            let Some(section) = app.session.section().cloned() else {
+                ui.add_space(10.0);
+                ui.label(RichText::new("No section").color(t.text_disabled));
+                return;
+            };
+            ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+            page_header(app, ui, t);
+            ui.add_space(4.0);
+            // CM.PageListArea — right-click below or between the pages. Registered before the
+            // rows, so a row (registered later, so on top) keeps its own menu.
+            let area = ui.interact(ui.available_rect_before_wrap(), ui.id().with("pages_area"), Sense::click());
+            let row_h = size::PAGE_ROW;
+            let font = TypeRung::Body.font(&ctx, Weight::Regular);
+            egui::ScrollArea::vertical().id_salt("pages_scroll").auto_shrink([false, false]).show(ui, |ui| {
+                let mut shown_i = 0usize;
+                for (i, page) in section.pages.iter().enumerate() {
+                    if section.page_hidden(i) {
+                        continue;
                     }
-                }
-                let font = FontId::proportional(13.0);
-                let title = page.display_title();
-                let max_w = r.width() - indent - 28.0;
-                let galley = ui.fonts_mut(|f| f.layout(title, font, t.text, max_w.max(20.0)));
-                let row_rect = galley.rows.first().map(|row| row.rect()).unwrap_or(Rect::NOTHING);
-                let _ = row_rect;
-                ui.painter().with_clip_rect(r).galley(pos2(r.min.x + indent, r.center().y - 8.0), galley, t.text);
-                if resp.clicked() {
-                    let (add, range) = ui.input(|i| (i.modifiers.command, i.modifiers.shift));
-                    app.run(&ctx, "nav.goto", json!({"page": page.id.to_string(), "add": add, "range": range}));
-                }
-                page_menu(app, &resp, page.id, has_kids, page.collapsed);
-                // Drag a page onto another position (BEH.Pages.DragReorder).
-                if resp.drag_stopped()
-                    && let Some(pos) = ui.ctx().pointer_interact_pos()
-                {
-                    let rows_top = r.min.y - (i as f32) * 26.0;
-                    let target = (((pos.y - rows_top) / 26.0).floor().max(0.0)) as usize;
-                    let level = if pos.x > r.min.x + indent + 30.0 { page.level + 1 } else { page.level };
-                    if target != i {
-                        app.run(&ctx, "page.move", json!({"page": page.id.to_string(), "index": target, "level": level}));
+                    let selected = app.session.sel.page == Some(page.id) || app.session.sel.pages.contains(&page.id);
+                    let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), row_h), Sense::click_and_drag());
+                    let page_title = page.display_title();
+                    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, &page_title));
+                    row_bg(ui, r, selected, resp.hovered(), &t);
+                    let indent = size::ROW_PAD + 4.0 + page.level as f32 * size::INDENT;
+                    let has_kids = section.page_family(i).len() > 1;
+                    if has_kids {
+                        let arrow = Rect::from_center_size(pos2(r.max.x - 14.0, r.center().y), vec2(16.0, 16.0));
+                        let aresp = ui.interact(arrow, ui.id().with(("collapse", page.id)), Sense::click());
+                        icons::chevron(ui.painter(), arrow, if page.collapsed { icons::Dir::Right } else { icons::Dir::Down }, t.icon);
+                        if aresp.clicked() {
+                            app.run(&ctx, "page.toggleSubpages", json!({"page": page.id.to_string()}));
+                        }
                     }
+                    let weight_font = if selected { TypeRung::Body.font(&ctx, Weight::Medium) } else { font.clone() };
+                    let clip = Rect::from_min_max(r.min, pos2(r.max.x - if has_kids { 26.0 } else { 6.0 }, r.max.y));
+                    ui.painter().with_clip_rect(clip).text(
+                        pos2(r.min.x + indent, r.center().y),
+                        Align2::LEFT_CENTER,
+                        page.display_title(),
+                        weight_font,
+                        t.text,
+                    );
+                    if resp.clicked() {
+                        let (add, range) = ui.input(|i| (i.modifiers.command, i.modifiers.shift));
+                        app.run(&ctx, "nav.goto", json!({"page": page.id.to_string(), "add": add, "range": range}));
+                    }
+                    page_menu(app, &resp, page.id, has_kids, page.collapsed);
+                    // Drag a page onto another position (BEH.Pages.DragReorder).
+                    if resp.drag_stopped()
+                        && let Some(pos) = ui.ctx().pointer_interact_pos()
+                    {
+                        let rows_top = r.min.y - (shown_i as f32) * row_h;
+                        let target = (((pos.y - rows_top) / row_h).floor().max(0.0)) as usize;
+                        let level = if pos.x > r.min.x + indent + 30.0 { page.level + 1 } else { page.level };
+                        if target != i {
+                            app.run(&ctx, "page.move", json!({"page": page.id.to_string(), "index": target, "level": level}));
+                        }
+                    }
+                    shown_i += 1;
                 }
-            }
-            ui.allocate_space(vec2(ui.available_width(), 60.0))
+                ui.allocate_space(vec2(ui.available_width(), 60.0))
+            });
+            area.context_menu(|ui| {
+                cmd_item(app, ui, "New Page", "page.new", json!({}));
+                cmd_item(app, ui, "Paste Page", "page.paste", json!({}));
+            });
         });
-        area.context_menu(|ui| {
-            cmd_item(app, ui, "New Page", "page.new", json!({}));
-            cmd_item(app, ui, "Paste Page", "page.paste", json!({}));
-        });
+    // Drag the right edge to resize (the canvas is registered later, so the handle sits half
+    // inside the column, where it wins).
+    let r = shown.response.rect;
+    let handle = Rect::from_min_max(pos2(r.max.x - 4.0, r.min.y), pos2(r.max.x + 2.0, r.max.y));
+    let h = ui.interact(handle, egui::Id::new("page_list_resize"), Sense::drag());
+    if h.hovered() || h.dragged() {
+        ctx.set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
+    }
+    if h.dragged() {
+        app.session.view.page_list_width = (width + h.drag_delta().x).clamp(120.0, 480.0);
+    }
+}
+
+/// Add page (outlined, with the page-and-pencil icon) and the sort button.
+fn page_header(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    let (row, _) = ui.allocate_exact_size(vec2(ui.available_width(), size::BUTTON + 4.0), Sense::hover());
+    let font = TypeRung::Body.font(&ctx, Weight::Regular);
+    let tw = ui.painter().layout_no_wrap("Add page".into(), font.clone(), t.accent_text).size().x;
+    let add = Rect::from_min_size(pos2(row.min.x + 6.0, row.min.y + 2.0), vec2(tw + 36.0, size::BUTTON));
+    let resp = ui.interact(add, ui.id().with("add_page"), Sense::click());
+    let on = app.disabled_reason("page.new").is_none();
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, "Add page"));
+    let fill = if resp.hovered() && on { t.hover } else { t.page_list };
+    ui.painter().rect(add, radius::CONTROL, fill, Stroke::new(1.0, t.card_border), egui::StrokeKind::Inside);
+    let color = if on { t.accent_text } else { t.text_disabled };
+    icons::add_page(ui.painter(), Rect::from_center_size(pos2(add.min.x + 15.0, add.center().y), vec2(size::ICON, size::ICON)), color);
+    ui.painter().text(pos2(add.min.x + 28.0, add.center().y), Align2::LEFT_CENTER, "Add page", font, color);
+    if resp.on_hover_text("Add a page at the end of the section (Ctrl+N)").clicked() && on {
+        app.run(&ctx, "page.new", json!({}));
+    }
+    let sort = Rect::from_min_size(pos2(row.max.x - size::BUTTON - 4.0, row.min.y + 2.0), vec2(size::BUTTON, size::BUTTON));
+    let sresp = ui.interact(sort, ui.id().with("sort_pages"), Sense::click());
+    let on = app.disabled_reason("page.sort").is_none();
+    sresp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, "Sort pages"));
+    if sresp.hovered() && on {
+        ui.painter().rect_filled(sort, radius::CONTROL, t.hover);
+    }
+    icons::sort(ui.painter(), sort.shrink(6.0), if on { t.icon } else { t.text_disabled });
+    let sresp = sresp.on_hover_text("Sort pages");
+    egui::Popup::menu(&sresp).show(|ui| {
+        cmd_item(app, ui, "Title (A to Z)", "page.sort", json!({"by": "title"}));
+        cmd_item(app, ui, "Date created (newest first)", "page.sort", json!({"by": "created"}));
+        cmd_item(app, ui, "Date modified (newest first)", "page.sort", json!({"by": "modified"}));
     });
 }
 
@@ -656,7 +707,8 @@ fn page_menu(app: &mut NoteApp, resp: &egui::Response, pid: Id, has_kids: bool, 
     });
 }
 
-fn empty_state(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+/// The page area with no notebook open.
+pub fn empty_state(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     ui.add_space(60.0);
     ui.vertical_centered(|ui| {
         ui.label(RichText::new("No notebook is open").size(18.0).color(t.page_meta));
@@ -668,5 +720,4 @@ fn empty_state(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             app.ui.backstage = Some(crate::Backstage::Open);
         }
     });
-    let _ = (Margin::ZERO, Color32::TRANSPARENT);
 }

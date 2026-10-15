@@ -20,6 +20,12 @@ fn need_page_sel(s: &Session) -> Option<&'static str> {
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
+        // UI.Nav.SortPages — the sort button beside Add page (2024 UI): reorders the section's
+        // pages, each page keeping its subpages under it, in one undo step. Titles A→Z, dates
+        // newest first unless `descending` says otherwise (unverified).
+        CommandSpec::new("page.sort", "UI.Nav.SortPages", "Sort Pages", "Window/Navigation/Sort Pages", sort_pages)
+            .params(r#"{"by": "title" | "created" | "modified", "descending"?: bool, "section"?: id}"#)
+            .when(need_section),
         // KB.Pages.NewPage — Ctrl+N adds a page at the end of the section.
         CommandSpec::new("page.new", "KB.Pages.NewPage", "New Page", "Keyboard/Pages/Add a new page at the end of the section", new_page)
             .key("Mod+N")
@@ -163,6 +169,43 @@ fn target_page(s: &Session, v: &Value) -> Result<Id, CmdError> {
 }
 
 /// A new empty page (title empty, rule lines per preference).
+fn sort_pages(s: &mut Session, v: &Value) -> CmdResult {
+    let sid = match p::id(v, "section")? {
+        Some(id) => id,
+        None => s.sel.section.ok_or_else(|| CmdError::Disabled("open a section first".into()))?,
+    };
+    let by = p::req_str(v, "by")?;
+    let descending = match v.get("descending") {
+        Some(Value::Bool(b)) => *b,
+        Some(_) => return Err(CmdError::Params("`descending` must be true or false".into())),
+        None => by != "title",
+    };
+    let sec = s.ws.section_mut(sid).ok_or_else(|| CmdError::Params("no such section".into()))?;
+    // Families: a page and the subpages under it move together.
+    let mut families: Vec<Vec<Arc<Page>>> = Vec::new();
+    for page in sec.pages.drain(..) {
+        match families.last_mut() {
+            Some(f) if page.level > f.first().map_or(0, |h| h.level) => f.push(page),
+            _ => families.push(vec![page]),
+        }
+    }
+    let head = |f: &Vec<Arc<Page>>| f.first().cloned();
+    match by {
+        "title" => families.sort_by_cached_key(|f| head(f).map(|h| h.display_title().to_lowercase()).unwrap_or_default()),
+        "created" => families.sort_by_key(|f| head(f).map(|h| h.created)),
+        "modified" => families.sort_by_key(|f| head(f).map(|h| h.modified)),
+        other => {
+            sec.pages = families.into_iter().flatten().collect();
+            return Err(CmdError::Params(format!("unknown sort `{other}` (title, created or modified)")));
+        }
+    }
+    if descending {
+        families.reverse();
+    }
+    sec.pages = families.into_iter().flatten().collect();
+    Ok(json!({"pages": sec.pages.len()}))
+}
+
 pub(crate) fn make_page(s: &mut Session, title: &str) -> Page {
     let id = s.new_id();
     let tid = s.new_id();

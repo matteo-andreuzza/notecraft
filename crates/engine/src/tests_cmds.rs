@@ -631,6 +631,56 @@ fn view_commands() {
     assert_eq!(s.view.page_list_width, w);
     run(&mut s, "view.notebookPane", json!({}));
     assert!(s.view.notebook_pane_collapsed);
+    // R.View.Views.NavigationPanes / UI.Nav.Toggle: ☰ shows the navigation again.
+    run(&mut s, "view.navigationPanes", json!({}));
+    assert!(!s.view.notebook_pane_collapsed);
+}
+
+#[test]
+fn quick_notes_opens_or_creates_the_section() {
+    // UI.Nav.QuickNotes: the sample has a Quick Notes section; it is opened, not duplicated.
+    let mut s = sample();
+    let sections = s.notebook().unwrap().sections().len();
+    let r = run(&mut s, "nav.quickNotes", json!({}));
+    assert_eq!(r["created"], false);
+    assert_eq!(s.section().unwrap().name, "Quick Notes");
+    assert_eq!(s.notebook().unwrap().sections().len(), sections);
+    // Without one, it is created at the end of the first notebook, with a page, in one undo step.
+    let qid = s.section().unwrap().id.to_string();
+    run(&mut s, "section.delete", json!({"section": qid}));
+    let r = run(&mut s, "nav.quickNotes", json!({}));
+    assert_eq!(r["created"], true);
+    assert_eq!(s.section().unwrap().name, "Quick Notes");
+    assert_eq!(s.section().unwrap().pages.len(), 1);
+    run(&mut s, "edit.undo", json!({}));
+    assert!(s.notebook().unwrap().sections().iter().all(|x| x.name != "Quick Notes"));
+}
+
+#[test]
+fn sort_pages_keeps_subpages_with_their_page() {
+    // UI.Nav.SortPages: by title A→Z; a subpage stays under its page; one undo step.
+    let mut s = sample();
+    run(&mut s, "section.new", json!({"name": "Sort"}));
+    for t in ["Charlie", "alpha", "Bravo"] {
+        run(&mut s, "page.new", json!({"title": t}));
+    }
+    // "Bravo" becomes a subpage of the page before it, "alpha".
+    let bravo = s.page().unwrap().id.to_string();
+    run(&mut s, "page.demote", json!({"page": bravo}));
+    let titles = |s: &Session| s.section().unwrap().pages.iter().map(|p| p.display_title()).collect::<Vec<_>>();
+    let before = titles(&s);
+    run(&mut s, "page.sort", json!({"by": "title"}));
+    let after = titles(&s);
+    let pos = |name: &str| after.iter().position(|t| t == name).unwrap();
+    assert!(pos("alpha") < pos("Charlie"), "{after:?}");
+    assert_eq!(pos("Bravo"), pos("alpha") + 1, "the subpage follows its page: {after:?}");
+    run(&mut s, "page.sort", json!({"by": "title", "descending": true}));
+    assert!(titles(&s).iter().position(|t| t == "Charlie") < titles(&s).iter().position(|t| t == "alpha"));
+    assert!(s.run("page.sort", json!({"by": "colour"})).is_err());
+    assert_eq!(titles(&s).len(), before.len(), "a refused sort keeps every page");
+    run(&mut s, "edit.undo", json!({}));
+    run(&mut s, "edit.undo", json!({}));
+    assert_eq!(titles(&s), before);
 }
 
 #[test]
