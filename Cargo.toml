@@ -23,6 +23,7 @@ notecraft-search = { path = "crates/search" }
 notecraft-format = { path = "crates/format" }
 notecraft-engine = { path = "crates/engine" }
 notecraft-ui-egui = { path = "crates/ui-egui" }
+notecraft-automation = { path = "crates/automation" }
 
 # shared Craft libraries, pinned by immutable revision (structure-audit.md › Repository hygiene)
 craft-atomic = { git = "https://github.com/storytold/craft-libs", rev = "457a078809690994b22debdffb703ff36d3129df" }

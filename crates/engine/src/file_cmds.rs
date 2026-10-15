@@ -294,6 +294,7 @@ fn write_file(_: &str, _: &[u8]) -> Result<(), CmdError> {
     Err(CmdError::Disabled("the web version downloads exports instead".into()))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn backup_label(s: &Session) -> String {
     let c = s.now().civil(s.clock.utc_offset_min);
     format!("{:04}-{:02}-{:02}_{:02}{:02}{:02}", c.year, c.month, c.day, c.hour, c.minute, c.second)
