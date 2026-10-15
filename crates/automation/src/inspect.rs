@@ -112,6 +112,21 @@ pub fn page_json(p: &Page, runs: bool) -> Value {
                     .collect();
                 json!({"kind": "outline", "id": ol.id, "x": ol.pos.x, "y": ol.pos.y, "width": serde_json::to_value(ol.width).unwrap_or(Value::Null), "paragraphs": paras})
             }
+            PageObject::Table(t) => {
+                let rows: Vec<Value> = t
+                    .rows
+                    .iter()
+                    .map(|r| {
+                        let cells: Vec<Value> = r
+                            .cells
+                            .iter()
+                            .map(|c| json!({"id": c.id, "text": c.text(), "shading": c.shading.map(|x| x.to_hex())}))
+                            .collect();
+                        json!({"id": r.id, "cells": cells})
+                    })
+                    .collect();
+                json!({"kind": "table", "id": t.id, "x": t.pos.x, "y": t.pos.y, "columns": t.columns, "borders": t.borders, "headerRow": t.header_row, "rows": rows})
+            }
         })
         .collect();
     json!({
@@ -132,7 +147,15 @@ pub fn page_json(p: &Page, runs: bool) -> Value {
 pub fn page_text(p: &Page) -> String {
     let mut out = format!("# {}\n", p.display_title());
     for o in &p.objects {
-        let PageObject::Outline(ol) = o;
+        let ol = match o {
+            PageObject::Outline(ol) => ol,
+            PageObject::Table(t) => {
+                // A table prints as tab-separated rows.
+                out.push_str(&t.plain_text());
+                out.push_str("\n\n");
+                continue;
+            }
+        };
         let labels = notecraft_engine::text::list_labels(&ol.paragraphs);
         for (para, label) in ol.paragraphs.iter().zip(labels) {
             let tags: String = para.tags.iter().map(|t| format!("[{}{}]", t.name, if t.checked { " ✓" } else { "" })).collect();

@@ -49,7 +49,11 @@ pub const RECYCLE_DIR: &str = ".ncraft-recycle";
 pub const RECYCLE_FILE: &str = "recycle.ncraft-bin";
 /// Current schema version written by this build. Readers accept any version up to this one;
 /// newer files are refused with an error rather than half-read.
-pub const VERSION: u32 = 1;
+///
+/// History: 1 = M1 (outlines); 2 = M2 tables (`PageObject::Table`). A file without tables is
+/// read the same by both, but older builds refuse every version-2 file rather than drop
+/// tables they don't know.
+pub const VERSION: u32 = 2;
 
 /// Largest decompressed JSON entry accepted (1 GiB): a 2 GB notebook spreads over many
 /// sections, so one section beyond this is corrupt or hostile.
@@ -229,10 +233,7 @@ pub fn decode_section(bytes: &[u8]) -> Result<Section> {
     let f: SectionFile = serde_json::from_slice(&json).map_err(|e| corrupt(format!("section.json: {e}")))?;
     check_version(&f.format, SECTION_MAGIC, f.version)?;
     let mut s = f.section;
-    s.normalize();
-    for p in &mut s.pages {
-        Arc::make_mut(p).sanitize_positions();
-    }
+    s.normalize_pages();
     Ok(s)
 }
 
@@ -274,7 +275,7 @@ pub fn decode_archive(bytes: &[u8]) -> Result<Notebook> {
     let f: ArchiveFile = serde_json::from_slice(&json).map_err(|e| corrupt(format!("notebook.json: {e}")))?;
     check_version(&f.format, ARCHIVE_MAGIC, f.version)?;
     let mut nb = f.notebook;
-    nb.normalize();
+    nb.normalize_pages();
     Ok(nb)
 }
 
@@ -386,6 +387,54 @@ mod tests {
         // Deeply nested JSON hits serde_json's recursion limit instead of the stack.
         let deep = format!("{}{}", "[".repeat(100_000), "]".repeat(100_000));
         assert!(decode_section(&zip_one(SECTION_ENTRY, deep.as_bytes()).unwrap()).is_err());
+    }
+
+    /// A section written by format 1 (M1), byte for byte as that build wrote it.
+    const V1_SECTION: &str = r#"{"format":"notecraft-section","version":1,"section":{"id":"0000000000000000000000000000000a","name":"Old","color":2,"pages":[{"id":"00000000000000000000000000000014","title":{"id":"00000000000000000000000000000015","runs":[{"text":"From v1"}],"style":"Normal","level":0,"align":"Left","space_before":0.0,"space_after":0.0,"line_spacing":0.0,"rtl":false,"collapsed":false,"modified":0},"level":0,"created":5,"modified":5,"shown_time":null,"author":"me","objects":[{"kind":"Outline","id":"0000000000000000000000000000001e","pos":{"x":36.0,"y":90.0},"width":"Auto","paragraphs":[{"id":"0000000000000000000000000000001f","runs":[{"text":"Written by format 1"}],"style":"Normal","level":0,"align":"Left","space_before":0.0,"space_after":0.0,"line_spacing":0.0,"rtl":false,"collapsed":false,"modified":0}]}],"setup":{"rule_lines":"None","hide_title":false},"collapsed":false}],"created":5}}"#;
+
+    #[test]
+    fn format_1_files_still_open() {
+        let z = zip_one(SECTION_ENTRY, V1_SECTION.as_bytes()).unwrap();
+        let s = decode_section(&z).unwrap();
+        assert_eq!(s.name, "Old");
+        assert_eq!(s.pages[0].display_title(), "From v1");
+        assert_eq!(s.pages[0].objects[0].as_outline().unwrap().paragraphs[0].text(), "Written by format 1");
+        // Saved again, it is a current-format file that still reads back the same.
+        let again = decode_section(&encode_section(&s).unwrap()).unwrap();
+        assert_eq!(again.pages[0].plain_text(), s.pages[0].plain_text());
+    }
+
+    #[test]
+    fn tables_round_trip_and_hostile_tables_are_repaired() {
+        use notecraft_doc::{Table, color::Rgba};
+        let mut s = sample_section();
+        let mut n = 100u128;
+        let mut mint = || {
+            n += 1;
+            Id(n)
+        };
+        let mut t = Table::new(Id(50), Point::new(40.0, 200.0), 2, 3, &mut mint);
+        t.rows[1].cells[2].paragraphs[0] = Paragraph::with_text(Id(60), "cell");
+        t.rows[0].cells[0].shading = Some(Rgba::rgb(0xFF, 0xF2, 0xCC));
+        t.columns[1] = 150.0;
+        t.borders = false;
+        Arc::make_mut(&mut s.pages[0]).objects.push(PageObject::Table(t.clone()));
+        let back = decode_section(&encode_section(&s).unwrap()).unwrap();
+        assert_eq!(back.pages[0].table(Id(50)), Some(&t), "FMT.Native.Ncraft: tables survive a save");
+        // A hostile table: ragged rows, no paragraphs, absurd widths, far too many columns.
+        let json =
+            String::from_utf8(serde_json::to_vec(&SectionFile { format: SECTION_MAGIC.into(), version: VERSION, section: back }).unwrap()).unwrap();
+        let wide = format!("[{}]", vec!["1e30"; 500].join(","));
+        let evil = json.replacen(r#""columns":[96.0,150.0,96.0]"#, &format!(r#""columns":{wide}"#), 1).replacen(
+            r#""paragraphs":[{"id":"000000000000000000000000000000"#,
+            r#""paragraphs":[],"x":[{"id":"000000000000000000000000000000"#,
+            1,
+        );
+        let s2 = decode_section(&zip_one(SECTION_ENTRY, evil.as_bytes()).unwrap()).unwrap();
+        let t2 = s2.pages[0].table(Id(50)).unwrap();
+        assert_eq!(t2.n_cols(), notecraft_doc::table::MAX_COLS);
+        assert!(t2.rows.iter().all(|r| r.cells.len() == t2.n_cols() && r.cells.iter().all(|c| !c.paragraphs.is_empty())));
+        assert!(t2.columns.iter().all(|w| *w <= notecraft_doc::table::MAX_COL_WIDTH));
     }
 
     #[test]

@@ -211,6 +211,33 @@ The engine never reads the clock itself (wasm traps on `SystemTime::now`): the h
 (milliseconds since the Unix epoch) and the local UTC offset. Dates are formatted by the engine
 from civil-date arithmetic (no time-zone database needed beyond the host's offset).
 
+### 4.8 Tables (decision D2, 2026-10-15)
+
+- **A table is its own page object**, `PageObject::Table { id, pos, columns: [width pt], rows:
+  [{ id, cells: [{ id, paragraphs, shading }] }], borders, header_row }`, positioned and moved
+  like a note container. In the reference a table is an outline element inside a container
+  ([MS-ONE] `jcidTableNode` as content of `jcidOutlineElementNode`); keeping it beside the
+  containers leaves every text command untouched. **M3 import:** a container holding a table is
+  split into container, table, container, stacked at the positions the layout gives them
+  (containment is the only thing lost; rows, cells, column widths, borders and shading map 1:1
+  to `RowCount`/`ColumnCount`, `TableColumnWidths`, `TableBordersVisible`, `CellShadingColor`).
+- **Cells are text blocks.** `Block::Cell(cell id)` joins `Title` and `Outline(id)`; a cell holds
+  a flat paragraph list with levels like a container, so typing, formatting, find and the caret
+  commands work in cells unchanged. A drag across cells selects a rectangle
+  (`PageSel::Cells { table, rows, cols }`); paragraph and character commands apply to every
+  selected cell.
+- **Columns have fixed widths** (default 96 pt, unverified), changed by dragging a border; rows
+  are as tall as their tallest cell. No merged cells (Merge/Split stay disabled).
+- **Limits** against hostile input: 5,000 rows, 64 columns, 50,000 cells, widths 18–2,000 pt;
+  `Table::normalize` repairs ragged rows, empty cells and bad widths on load.
+- **Keys:** Tab/Shift+Tab move between cells (the last cell adds a row, or a column in a one-row
+  table), Enter adds a row (on an empty last row it ends the table), Alt+Enter a paragraph in the
+  cell, Ctrl+Enter a row below; arrows cross cell edges.
+- **Format:** `.ncraft` version 2 (version 1 files open unchanged; older builds refuse version 2).
+  Loaded pages are now normalised in full (`Section::normalize_pages`), tables included.
+- **Insert position:** below the caret's container (the UI passes the laid-out bottom; the
+  engine alone estimates 20 pt per line), or where the user clicked, or below everything.
+
 ## 5. Risks
 
 | Risk | Impact | Mitigation |
@@ -228,6 +255,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | # | Date | Decision | Overrides | Why |
 |---|---|---|---|---|
 | D1 | 2026-10-15 | The visual model is the current OneNote for Microsoft 365 desktop app (the 2024 UI): neutral title bar with a centred Search box; a tab row whose active tab is semibold with an accent underline; the ribbon in a floating rounded card, **Simplified (one row) by default** with a ▾ chevron to the **Classic** ribbon (both in the modern style, the choice remembered); navigation on the left (a tree of every notebook with coloured section bars, + New section, Quick notes pinned at the bottom; the page column with Add page and sort); **no section tabs above the page**; panes as cards. Surfaces that only exist in the 2016 layout become `out-of-scope` rows that name their replacement. | The window layout of the original brief (OneNote 2016-style: section tabs across the top, page list on the right) | The user's directive: like the other ArtCraft apps follow the latest Office. The brief is kept verbatim; this table records the override. The command set, menu paths, shortcuts and behaviour mandate are unchanged. |
+| D2 | 2026-10-15 | Tables are their own page object (`PageObject::Table`) with cells as text blocks (`Block::Cell`) and fixed column widths; `.ncraft` version 2 (§4.8). | — (the plan named `PageObject::Table`; the containment detail was open) | The simplest model compatible with M3: [MS-ONE] tables map 1:1 except that a table inside a container becomes a neighbour of it; no existing text command changes. |
 
 ## 7. Assumptions
 

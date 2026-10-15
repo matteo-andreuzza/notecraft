@@ -207,7 +207,7 @@ pub const TABS: &[Tab] = &[
                 name: "Tables",
                 items: &[Item::LargeMenu(
                     "R.Insert.Tables.TableInsertGallery",
-                    &["R.Insert.Tables.TableInsert", "R.Insert.Tables.InsertNewExcelSpreadsheetWithPreview"],
+                    &["R.Insert.Tables.TableInsert", "NC.Table.ConvertTextToTable", "R.Insert.Tables.InsertNewExcelSpreadsheetWithPreview"],
                 )],
             },
             Group {
@@ -619,7 +619,10 @@ pub const CONTEXTUAL: &[Tab] = &[
                     ],
                 )],
             },
-            Group { name: "Convert", items: &[Item::Large("CT.TableLayout.Convert.ConvertToExcelSpreadsheet")] },
+            Group {
+                name: "Convert",
+                items: &[Item::Large("NC.Table.ConvertToText"), Item::Large("CT.TableLayout.Convert.ConvertToExcelSpreadsheet")],
+            },
         ],
     },
     Tab {

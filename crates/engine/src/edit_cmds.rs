@@ -189,9 +189,20 @@ pub(crate) fn copy_selection(s: &mut Session) -> Result<String, CmdError> {
     match &s.sel.on_page {
         PageSel::Objects { ids } => {
             for id in ids {
-                if let Some(o) = page.outline(*id) {
-                    out.extend(o.paragraphs.iter().cloned());
+                match page.objects.iter().find(|o| o.id() == *id) {
+                    Some(notecraft_doc::PageObject::Outline(o)) => out.extend(o.paragraphs.iter().cloned()),
+                    // A table copies as text: a paragraph per row, tabs between cells.
+                    Some(notecraft_doc::PageObject::Table(t)) => {
+                        let all = (0, t.n_rows().saturating_sub(1));
+                        out.extend(crate::table_cmds::rows_as_paragraphs(t, all, (0, t.n_cols().saturating_sub(1)), &mut || notecraft_doc::Id::NIL));
+                    }
+                    None => {}
                 }
+            }
+        }
+        PageSel::Cells { table, rows, cols } => {
+            if let Some(t) = page.table(*table) {
+                out.extend(crate::table_cmds::rows_as_paragraphs(t, *rows, *cols, &mut || notecraft_doc::Id::NIL));
             }
         }
         PageSel::Text(_) => {

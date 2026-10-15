@@ -9,7 +9,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use egui::{Color32, Frame, Margin, Popup, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
+use egui::{Align2, Color32, Frame, Margin, Popup, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
 use notecraft_engine::catalog::{self, Row};
 use notecraft_engine::doc::color::{FONT_THEME, HIGHLIGHT_COLORS, PAGE_COLORS, STANDARD_COLORS, font_grid};
 use notecraft_engine::doc::{ParaStyle, RuleLines};
@@ -63,6 +63,21 @@ pub(crate) fn command(id: &str) -> Option<String> {
 }
 
 /// Whether a toggle control is currently on.
+/// The table the selection is in (the caret's cell, selected cells or a selected table).
+fn current_table(app: &NoteApp) -> Option<&notecraft_engine::doc::Table> {
+    use notecraft_engine::selection::{Block, PageSel};
+    let page = app.session.page()?;
+    match &app.session.sel.on_page {
+        PageSel::Text(r) => match r.head.block {
+            Block::Cell(c) => page.table_of_cell(c).map(|(t, _, _)| t),
+            _ => None,
+        },
+        PageSel::Cells { table, .. } => page.table(*table),
+        PageSel::Objects { ids } => ids.iter().find_map(|id| page.table(*id)),
+        PageSel::None => None,
+    }
+}
+
 pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
     let s = &app.session;
     let fmt = || {
@@ -91,6 +106,8 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "view.newPagesWithRuleLines" => s.prefs.new_pages_rule_lines.is_some(),
         "tag.findTags" => s.view.tags_pane,
         "view.navigationPanes" => !s.view.notebook_pane_collapsed,
+        "table.hideBorders" => current_table(app).is_some_and(|t| !t.borders),
+        "table.headerRow" => current_table(app).is_some_and(|t| t.header_row),
         _ => false,
     }
 }
@@ -386,14 +403,96 @@ pub(crate) fn special_menu(id: &str) -> bool {
                 | "NumberingGallery"
                 | "ParagraphAlignmentMenu"
                 | "ExtendedTextFormattingMenu"
+                | "TableInsertGallery"
+                | "ShadingColorPicker"
         )
     )
+}
+
+/// Columns × rows of the Insert › Table size grid (unverified: the reference's grid size).
+const TABLE_GRID: (usize, usize) = (10, 8);
+
+/// The Insert › Table size grid: hover picks columns × rows, a click inserts the table below the
+/// caret's container (catalog `R.Insert.Tables.TableInsertGallery`).
+fn table_grid(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    let cell = 18.0;
+    let (cols, rows) = TABLE_GRID;
+    let label_h = 20.0;
+    let size = vec2(cols as f32 * cell + 4.0, rows as f32 * cell + label_h + 4.0);
+    let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
+    let grid = Rect::from_min_size(rect.min + vec2(2.0, label_h + 2.0), vec2(cols as f32 * cell, rows as f32 * cell));
+    let pick = resp.hover_pos().filter(|p| grid.contains(*p)).map(|p| {
+        let c = (((p.x - grid.min.x) / cell) as usize).min(cols - 1) + 1;
+        let r = (((p.y - grid.min.y) / cell) as usize).min(rows - 1) + 1;
+        (c, r)
+    });
+    let painter = ui.painter();
+    let caption = match pick {
+        Some((c, r)) => format!("{c}x{r} Table"),
+        None => "Insert Table".to_string(),
+    };
+    painter.text(
+        rect.min + vec2(4.0, 2.0),
+        Align2::LEFT_TOP,
+        caption,
+        crate::theme::TypeRung::Body.font(&ctx, crate::theme::Weight::Regular),
+        t.text,
+    );
+    for r in 0..rows {
+        for c in 0..cols {
+            let sq = Rect::from_min_size(grid.min + vec2(c as f32 * cell, r as f32 * cell), vec2(cell - 3.0, cell - 3.0));
+            let on = pick.is_some_and(|(pc, pr)| c < pc && r < pr);
+            painter.rect_filled(sq, 1.0, if on { t.accent.gamma_multiply(0.25) } else { t.page });
+            painter.rect_stroke(sq, 1.0, Stroke::new(1.0, if on { t.accent } else { t.border }), egui::StrokeKind::Inside);
+        }
+    }
+    let resp = resp.on_hover_text("Insert a table of this size");
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Table size grid"));
+    if resp.clicked()
+        && let Some((c, r)) = pick
+    {
+        let mut params = json!({"rows": r, "cols": c});
+        if let Some(pt) = table_spot(app) {
+            params["x"] = json!(pt.x);
+            params["y"] = json!(pt.y);
+        }
+        app.run(&ctx, "insert.table", params);
+        app.canvas.focused = true;
+        ui.close();
+    }
+}
+
+/// Where a new table goes when the caret is in a container: below the container as last laid
+/// out (the engine has no layout and only estimates).
+pub(crate) fn table_spot(app: &NoteApp) -> Option<notecraft_engine::doc::geom::Point> {
+    let c = app.session.sel.caret()?;
+    let notecraft_engine::selection::Block::Outline(id) = c.block else { return None };
+    let o = app.canvas.outlines.iter().find(|o| o.id == id)?;
+    let pos = app.session.page()?.outline(id)?.pos;
+    let bottom = app.canvas.to_page(o.rect.max).y;
+    Some(notecraft_engine::doc::geom::Point::new(pos.x, bottom + 8.0))
 }
 
 /// Draw the special drop-down content; returns true when drawn.
 pub(crate) fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, _t: Tokens) -> bool {
     let ctx = ui.ctx().clone();
     match id.rsplit('.').next() {
+        Some("TableInsertGallery") => {
+            table_grid(app, ui, _t);
+            ui.separator();
+            false
+        }
+        Some("ShadingColorPicker") => {
+            if ui.button("No Color").clicked() {
+                app.run(&ctx, "table.shading", json!({"color": null}));
+                ui.close();
+            }
+            swatch_grid(ui, &PAGE_COLORS.iter().map(|s| (s.name, s.color)).collect::<Vec<_>>(), 4, |c| {
+                app.run(&ctx, "table.shading", json!({"color": c.to_hex()}));
+            });
+            true
+        }
         Some("PageColorGallery") => {
             if ui.button("No Color").clicked() {
                 app.run(&ctx, "view.pageColor", json!({"color": null}));

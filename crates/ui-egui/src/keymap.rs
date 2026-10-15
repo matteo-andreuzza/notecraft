@@ -4,8 +4,10 @@
 //! keys, checked against the catalog's `KB.*` rows). A few keys depend on context, as in the
 //! reference, and are routed here first:
 //!
-//! - Enter on a link opens it (`KB.Format.OpenLink`), otherwise starts a paragraph;
-//! - Tab / Shift+Tab indent and outdent at the start of a paragraph (`KB.Outline.IndentTab`);
+//! - Enter on a link opens it (`KB.Format.OpenLink`), in a table cell adds a row
+//!   (`KB.Table.NewRowEnter`), otherwise starts a paragraph;
+//! - Tab / Shift+Tab move between table cells (a new row or column from the last cell), and
+//!   elsewhere indent and outdent at the start of a paragraph (`KB.Outline.IndentTab`);
 //! - Alt+Shift+Up/Down move paragraphs on the canvas but pages in the page list;
 //! - arrows, Home/End take their target from the canvas layout (visual lines);
 //! - Esc closes Find, then cancels the selection;
@@ -154,6 +156,11 @@ fn run(app: &mut NoteApp, ctx: &egui::Context, id: &str, params: Value) {
 }
 
 /// Route a key that depends on context. Returns true when handled.
+/// Whether the caret is in a table cell (Tab, Enter and the arrows then move through cells).
+fn caret_in_cell(app: &NoteApp) -> bool {
+    app.session.text_range().is_some_and(|r| matches!(r.head.block, Block::Cell(_)))
+}
+
 fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) -> bool {
     let canvas = app.canvas.focused;
     let page_list = app.session.sel.focus == FocusArea::PageList;
@@ -172,6 +179,8 @@ fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) ->
         Key::Enter if canvas && plain && !m.shift => {
             if caret_on_link(app) {
                 run(app, ctx, "link.open", json!({}));
+            } else if caret_in_cell(app) {
+                run(app, ctx, "table.enter", json!({}));
             } else {
                 run(app, ctx, "text.newline", json!({}));
             }
@@ -179,6 +188,10 @@ fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) ->
         }
         Key::Enter if canvas && plain && m.shift => {
             run(app, ctx, "text.lineBreak", json!({}));
+            true
+        }
+        Key::Tab if canvas && plain && caret_in_cell(app) => {
+            run(app, ctx, if m.shift { "table.prevCell" } else { "table.nextCell" }, json!({}));
             true
         }
         Key::Tab if canvas && plain => {
@@ -369,6 +382,11 @@ pub fn handle_input(app: &mut NoteApp, ctx: &egui::Context) {
         }
     }
     if !consumed.is_empty() {
+        // egui also reads Tab as "focus the next widget" at the end of the frame; a Tab the page
+        // used (indent, next cell) must not hand the keyboard to the search box.
+        if consumed.iter().any(|(_, k)| *k == Key::Tab) {
+            ctx.memory_mut(|m| m.move_focus(egui::FocusDirection::None));
+        }
         ctx.input_mut(|i| {
             for (m, k) in consumed {
                 i.consume_key(m, k);

@@ -2,7 +2,8 @@
 //!
 //! A page is a free-form canvas in page space (points, origin top-left; see `notecraft-geom`).
 //! Everything on it is a [`PageObject`] with a position; in M1 the only kind is the
-//! [`Outline`] (a "note container"), M2 adds pictures, ink, files, printouts and media.
+//! [`Outline`] (a "note container"); M2 adds the [`Table`], then pictures, ink, files,
+//! printouts and media.
 //!
 //! **Outlines are flat.** The reference stores a tree of outline elements ([MS-ONE]
 //! `jcidOutlineElementNode` with `ElementChildNodes`); NoteCraft stores the same structure as a
@@ -16,6 +17,7 @@ use notecraft_geom::{Point, finite, length};
 use serde::{Deserialize, Serialize};
 
 use crate::id::Id;
+use crate::table::{Table, TableCell};
 use crate::text::{MAX_LEVEL, ParaStyle, Paragraph};
 use crate::time::Timestamp;
 
@@ -126,6 +128,8 @@ impl Outline {
 pub enum PageObject {
     /// A note container.
     Outline(Outline),
+    /// A table (`.ncraft` format 2 and later).
+    Table(Table),
 }
 
 impl PageObject {
@@ -133,6 +137,7 @@ impl PageObject {
     pub fn id(&self) -> Id {
         match self {
             PageObject::Outline(o) => o.id,
+            PageObject::Table(t) => t.id,
         }
     }
 
@@ -140,6 +145,15 @@ impl PageObject {
     pub fn pos(&self) -> Point {
         match self {
             PageObject::Outline(o) => o.pos,
+            PageObject::Table(t) => t.pos,
+        }
+    }
+
+    /// Move the object (the position is sanitized).
+    pub fn set_pos(&mut self, pos: Point) {
+        match self {
+            PageObject::Outline(o) => o.pos = pos.sanitized(),
+            PageObject::Table(t) => t.pos = pos.sanitized(),
         }
     }
 
@@ -147,6 +161,7 @@ impl PageObject {
     pub fn as_outline(&self) -> Option<&Outline> {
         match self {
             PageObject::Outline(o) => Some(o),
+            PageObject::Table(_) => None,
         }
     }
 
@@ -154,6 +169,31 @@ impl PageObject {
     pub fn as_outline_mut(&mut self) -> Option<&mut Outline> {
         match self {
             PageObject::Outline(o) => Some(o),
+            PageObject::Table(_) => None,
+        }
+    }
+
+    /// The table, if this is one.
+    pub fn as_table(&self) -> Option<&Table> {
+        match self {
+            PageObject::Table(t) => Some(t),
+            PageObject::Outline(_) => None,
+        }
+    }
+
+    /// The table, mutably, if this is one.
+    pub fn as_table_mut(&mut self) -> Option<&mut Table> {
+        match self {
+            PageObject::Table(t) => Some(t),
+            PageObject::Outline(_) => None,
+        }
+    }
+
+    /// Every paragraph in the object (a container's, or each cell's in reading order).
+    pub fn paragraphs(&self) -> Box<dyn Iterator<Item = &Paragraph> + '_> {
+        match self {
+            PageObject::Outline(o) => Box::new(o.paragraphs.iter()),
+            PageObject::Table(t) => Box::new(t.rows.iter().flat_map(|r| r.cells.iter()).flat_map(|c| c.paragraphs.iter())),
         }
     }
 }
@@ -329,10 +369,12 @@ impl Page {
         for o in &mut self.objects {
             match o {
                 PageObject::Outline(ol) => ol.normalize(),
+                PageObject::Table(t) => t.normalize(),
             }
         }
         self.objects.retain(|o| match o {
             PageObject::Outline(ol) => !ol.paragraphs.is_empty(),
+            PageObject::Table(t) => !t.is_empty(),
         });
     }
 
@@ -351,7 +393,33 @@ impl Page {
         self.objects.iter_mut().find_map(|o| o.as_outline_mut().filter(|ol| ol.id == id))
     }
 
-    /// All plain text on the page (title first), for search and exports.
+    /// The table with `id`.
+    pub fn table(&self, id: Id) -> Option<&Table> {
+        self.objects.iter().find_map(|o| o.as_table().filter(|t| t.id == id))
+    }
+
+    /// The table with `id`, mutably.
+    pub fn table_mut(&mut self, id: Id) -> Option<&mut Table> {
+        self.objects.iter_mut().find_map(|o| o.as_table_mut().filter(|t| t.id == id))
+    }
+
+    /// The table holding the cell `cell`, with the cell's row and column.
+    pub fn table_of_cell(&self, cell: Id) -> Option<(&Table, usize, usize)> {
+        self.objects.iter().filter_map(PageObject::as_table).find_map(|t| t.locate(cell).map(|(r, c)| (t, r, c)))
+    }
+
+    /// The cell with `id` in any table on the page.
+    pub fn cell(&self, id: Id) -> Option<&TableCell> {
+        self.objects.iter().filter_map(PageObject::as_table).find_map(|t| t.cell_by_id(id))
+    }
+
+    /// The cell with `id`, mutably.
+    pub fn cell_mut(&mut self, id: Id) -> Option<&mut TableCell> {
+        self.objects.iter_mut().filter_map(PageObject::as_table_mut).find_map(|t| t.cell_by_id_mut(id))
+    }
+
+    /// All plain text on the page (title first), for search and exports. A table's cells are
+    /// separated by tabs, its rows by line breaks.
     pub fn plain_text(&self) -> String {
         let mut s = self.title_text();
         for o in &self.objects {
@@ -362,6 +430,10 @@ impl Page {
                         s.push_str(&p.text());
                     }
                 }
+                PageObject::Table(t) => {
+                    s.push('\n');
+                    s.push_str(&t.plain_text());
+                }
             }
         }
         s
@@ -370,9 +442,8 @@ impl Page {
     /// Clamp every coordinate so a hostile file can't place objects at ±∞.
     pub fn sanitize_positions(&mut self) {
         for o in &mut self.objects {
-            match o {
-                PageObject::Outline(ol) => ol.pos = Point::new(finite(ol.pos.x), finite(ol.pos.y)),
-            }
+            let p = o.pos();
+            o.set_pos(Point::new(finite(p.x), finite(p.y)));
         }
     }
 }

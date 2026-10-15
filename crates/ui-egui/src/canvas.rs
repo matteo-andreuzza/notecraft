@@ -13,14 +13,16 @@
 //! **Interaction** (catalog `BEH.Canvas.*`): a click in text places the caret (`caret.set`), a
 //! drag selects, a click on empty canvas arms a new container there (`outline.new`), the
 //! container's top bar moves it (`outline.move`), its right edge resizes it (`outline.resize`), a
-//! checkbox tag toggles (`tag.click`), a paragraph handle double-click collapses
-//! (`outline.toggleCollapse`).
+//! checkbox tag toggles (`tag.click`), a paragraph handle selects, drags
+//! (`outline.moveParagraph`) and on a double-click collapses (`outline.toggleCollapse`). In a
+//! table, a click places the caret in a cell, a drag across cells selects them
+//! (`table.selectRange`) and a column border drags to a new width (`table.columnWidth`).
 
 use std::sync::Arc;
 
 use egui::text::{CCursor, LayoutJob, TextFormat};
 use egui::{Align, Align2, Color32, CursorIcon, FontId, Galley, Pos2, Rect, Sense, Stroke, Ui, pos2, vec2};
-use notecraft_engine::doc::{CharFormat, Id, OutlineWidth, Page, PageObject, Paragraph, RuleLines, Script};
+use notecraft_engine::doc::{CharFormat, Id, OutlineWidth, Page, PageObject, Paragraph, RuleLines, Script, Table};
 use notecraft_engine::selection::{Block, PageSel};
 use serde_json::json;
 
@@ -88,7 +90,55 @@ pub struct OutlineLayout {
     pub resize: Rect,
     /// Left edge of level-0 text (screen x).
     pub left: f32,
+    /// A table's frame (moves like a container, has no resize edge).
+    pub table: bool,
 }
+
+/// One laid-out table cell (screen).
+#[derive(Clone, Copy, Debug)]
+pub struct CellLayout {
+    /// The cell's id (its text block is `Block::Cell(id)`).
+    pub id: Id,
+    /// Row index.
+    pub row: usize,
+    /// Column index.
+    pub col: usize,
+    /// The cell's rectangle.
+    pub rect: Rect,
+}
+
+/// One laid-out table (screen).
+#[derive(Clone, Debug)]
+pub struct TableLayout {
+    /// The table's id.
+    pub id: Id,
+    /// The grid's outer rectangle.
+    pub rect: Rect,
+    /// Every cell, row by row.
+    pub cells: Vec<CellLayout>,
+    /// The x of each column's right border.
+    pub col_edges: Vec<f32>,
+}
+
+impl TableLayout {
+    /// The cell under a screen point.
+    pub fn cell_at(&self, p: Pos2) -> Option<CellLayout> {
+        self.cells.iter().find(|c| c.rect.contains(p)).copied()
+    }
+
+    /// The column whose right border is within a few points of `p` (for resizing).
+    pub fn border_at(&self, p: Pos2) -> Option<(usize, f32)> {
+        if p.y < self.rect.min.y || p.y > self.rect.max.y {
+            return None;
+        }
+        let i = self.col_edges.iter().position(|x| (p.x - x).abs() <= 3.0)?;
+        let left = if i == 0 { self.rect.min.x } else { self.col_edges.get(i - 1).copied().unwrap_or(self.rect.min.x) };
+        Some((i, left))
+    }
+}
+
+/// Padding inside a table cell, page points.
+const CELL_PAD: f32 = 4.0;
 
 /// Where a dragged paragraph would land (catalog `BEH.Outline.DragParagraph`).
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -104,18 +154,21 @@ pub(crate) enum ParaDrop {
 
 #[derive(Clone, Copy, PartialEq)]
 enum Drag {
-    Select,
+    Select { anchor: Option<notecraft_engine::selection::Pos> },
     Move { id: Id, grab_page: notecraft_engine::doc::geom::Vec2 },
     Resize { id: Id, left: f32 },
     Para { from: Id, para: usize },
+    Column { table: Id, col: usize, left: f32 },
 }
 
 /// Canvas view state.
 pub struct CanvasState {
     /// Paragraph layouts of the last frame.
     pub paras: Vec<ParaLayout>,
-    /// Container layouts of the last frame.
+    /// Container layouts of the last frame (tables included, for their move bar).
     pub outlines: Vec<OutlineLayout>,
+    /// Table layouts of the last frame.
+    pub tables: Vec<TableLayout>,
     /// Screen position of the page origin in the last frame.
     pub origin: Pos2,
     /// Zoom used in the last frame.
@@ -141,6 +194,7 @@ impl Default for CanvasState {
         CanvasState {
             paras: Vec::new(),
             outlines: Vec::new(),
+            tables: Vec::new(),
             origin: Pos2::ZERO,
             zoom: 1.0,
             focused: false,
@@ -301,7 +355,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         app.canvas.zoom = zoom;
         app.canvas.viewport = viewport.translate(min.to_vec2());
         // Lay out everything first (needed for the content size).
-        let (paras, outlines, extent) = layout_page(app, &ctx, &page, zoom, t, page_text);
+        let (paras, outlines, tables, extent) = layout_page(app, &ctx, &page, zoom, t, page_text);
         app.canvas.extent = extent;
         let content = vec2(extent.x.max(avail.width()), extent.y.max(avail.height()));
         let (rect, resp) = ui.allocate_exact_size(content, Sense::click_and_drag());
@@ -314,6 +368,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         let caret_outline = match app.session.sel.caret() {
             Some(c) => match c.block {
                 Block::Outline(id) => Some(id),
+                Block::Cell(cell) => page.table_of_cell(cell).map(|(tb, _, _)| tb.id),
                 Block::Title => None,
             },
             None => None,
@@ -322,6 +377,12 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             PageSel::Objects { ids } => ids.clone(),
             _ => Vec::new(),
         };
+        // Tables: shading, borders, selected cells.
+        for tl in &tables {
+            let Some(tb) = page.table(tl.id) else { continue };
+            let hot = hover.is_some_and(|h| tl.rect.expand(6.0).contains(h)) || caret_outline == Some(tl.id);
+            draw_table(&painter, tb, tl, &app.session.sel.on_page, hot, t);
+        }
         for o in &outlines {
             let hot = hover.is_some_and(|h| o.rect.expand(6.0).contains(h)) || caret_outline == Some(o.id) || selected_objects.contains(&o.id);
             if hot {
@@ -331,7 +392,9 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 for i in 0..5 {
                     painter.circle_filled(pos2(o.bar.center().x - 8.0 + i as f32 * 4.0, o.bar.center().y), 0.9, t.page_meta);
                 }
-                painter.rect_filled(o.resize, 0.0, t.container.gamma_multiply(0.5));
+                if !o.table {
+                    painter.rect_filled(o.resize, 0.0, t.container.gamma_multiply(0.5));
+                }
             }
             if selected_objects.contains(&o.id) {
                 painter.rect_filled(o.rect, 0.0, t.selection);
@@ -340,16 +403,27 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         // Selection and find highlights behind the text.
         highlights(app, &painter, &paras, t);
         let defs = app.session.tag_defs();
-        let labels_cache: std::collections::HashMap<Id, Vec<String>> =
-            page.objects.iter().filter_map(|o| o.as_outline()).map(|ol| (ol.id, notecraft_engine::text::list_labels(&ol.paragraphs))).collect();
+        let mut labels_cache: std::collections::HashMap<Block, Vec<String>> = std::collections::HashMap::new();
+        for o in &page.objects {
+            match o {
+                PageObject::Outline(ol) => {
+                    labels_cache.insert(Block::Outline(ol.id), notecraft_engine::text::list_labels(&ol.paragraphs));
+                }
+                PageObject::Table(tb) => {
+                    for c in tb.rows.iter().flat_map(|r| r.cells.iter()) {
+                        labels_cache.insert(Block::Cell(c.id), notecraft_engine::text::list_labels(&c.paragraphs));
+                    }
+                }
+            }
+        }
         for pl in &paras {
             painter.galley(pl.pos, pl.galley.clone(), page_text);
-            if let Block::Outline(oid) = pl.block
-                && let Some(para) = page.outline(oid).and_then(|o| o.paragraphs.get(pl.para))
+            if pl.block != Block::Title
+                && let Some(para) = notecraft_engine::Session::block_paras(&page, pl.block).and_then(|ps| ps.get(pl.para))
             {
                 let first_row_h = pl.galley.rows.first().map(|r| r.height()).unwrap_or(14.0);
                 // Bullet or number.
-                let label = labels_cache.get(&oid).and_then(|l| l.get(pl.para)).cloned().unwrap_or_default();
+                let label = labels_cache.get(&pl.block).and_then(|l| l.get(pl.para)).cloned().unwrap_or_default();
                 let has_label = !label.is_empty();
                 if has_label {
                     let size = (para.effective_fmt_at(0).size.unwrap_or(11.0) * PT * zoom).max(6.0);
@@ -385,8 +459,9 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         }
         // Paragraph handle on hover (UI.Canvas.ParagraphHandle).
         if let Some(h) = hover
-            && let Some(pl) =
-                paras.iter().find(|p| p.block != Block::Title && Rect::from_min_max(p.handle.min, pos2(p.rect().max.x, p.rect().max.y)).contains(h))
+            && let Some(pl) = paras
+                .iter()
+                .find(|p| matches!(p.block, Block::Outline(_)) && Rect::from_min_max(p.handle.min, pos2(p.rect().max.x, p.rect().max.y)).contains(h))
         {
             icons::move_handle(&painter, pl.handle.center(), (10.0 * zoom).max(7.0), t.page_meta);
         }
@@ -422,6 +497,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         // Drag ghost for a container being moved is the container itself (moved live).
         app.canvas.paras = paras;
         app.canvas.outlines = outlines;
+        app.canvas.tables = tables;
         // The drop indicator of a paragraph being dragged by its handle.
         if let Some(Drag::Para { from, para }) = app.canvas.drag
             && let Some(h) = ctx.pointer_latest_pos()
@@ -483,11 +559,12 @@ fn layout_page(
     zoom: f32,
     t: Tokens,
     page_text: Color32,
-) -> (Vec<ParaLayout>, Vec<OutlineLayout>, egui::Vec2) {
+) -> (Vec<ParaLayout>, Vec<OutlineLayout>, Vec<TableLayout>, egui::Vec2) {
     let z = PT * zoom;
     let origin = app.canvas.origin;
     let mut paras = Vec::new();
     let mut outlines = Vec::new();
+    let mut tables = Vec::new();
     let mut extent = vec2(0.0, 0.0);
     let caret = app.session.sel.caret();
     let preedit_at = |block: Block, para: usize| -> Option<(usize, &str)> {
@@ -513,7 +590,16 @@ fn layout_page(
         });
     }
     for o in &page.objects {
-        let PageObject::Outline(ol) = o;
+        let ol = match o {
+            PageObject::Outline(ol) => ol,
+            PageObject::Table(tb) => {
+                let (tl, frame) = layout_table(ctx, tb, origin, zoom, t, page_text, &preedit_at, &mut paras);
+                extent = extent.max(vec2(frame.rect.max.x - origin.x + 240.0, frame.rect.max.y - origin.y + 240.0));
+                tables.push(tl);
+                outlines.push(frame);
+                continue;
+            }
+        };
         let x0 = origin.x + ol.pos.x * z;
         let y0 = origin.y + ol.pos.y * z;
         let max_w = match ol.width {
@@ -561,10 +647,117 @@ fn layout_page(
         let rect = Rect::from_min_max(pos2(x0 - pad - 16.0 * zoom, y0 - pad), pos2(x0 + width_px + pad, y.max(y0 + 14.0 * z) + pad));
         let bar = Rect::from_min_max(pos2(rect.min.x, rect.min.y - 9.0), pos2(rect.max.x, rect.min.y));
         let resize = Rect::from_min_max(pos2(rect.max.x - 3.0, rect.min.y), pos2(rect.max.x + 4.0, rect.max.y));
-        outlines.push(OutlineLayout { id: ol.id, rect, bar, resize, left: x0 });
+        outlines.push(OutlineLayout { id: ol.id, rect, bar, resize, left: x0, table: false });
         extent = extent.max(vec2(rect.max.x - origin.x + 240.0, rect.max.y - origin.y + 240.0));
     }
-    (paras, outlines, extent)
+    (paras, outlines, tables, extent)
+}
+
+/// Lay out a table: each cell's paragraphs wrap at the column width; a row is as tall as its
+/// tallest cell. Returns the table's layout and its frame (for the move bar).
+#[allow(clippy::too_many_arguments)]
+fn layout_table<'a>(
+    ctx: &egui::Context,
+    tb: &Table,
+    origin: Pos2,
+    zoom: f32,
+    t: Tokens,
+    page_text: Color32,
+    preedit_at: &dyn Fn(Block, usize) -> Option<(usize, &'a str)>,
+    paras: &mut Vec<ParaLayout>,
+) -> (TableLayout, OutlineLayout) {
+    let z = PT * zoom;
+    let x0 = origin.x + tb.pos.x * z;
+    let y0 = origin.y + tb.pos.y * z;
+    let mut xs = Vec::with_capacity(tb.columns.len() + 1);
+    let mut x = x0;
+    xs.push(x);
+    for w in &tb.columns {
+        x += w * z;
+        xs.push(x);
+    }
+    let pad = CELL_PAD * z;
+    let mut y = y0;
+    let mut cells = Vec::new();
+    for (r, row) in tb.rows.iter().enumerate() {
+        let mut row_h: f32 = 0.0;
+        let first_cell = cells.len();
+        for (c, cell) in row.cells.iter().enumerate() {
+            let (cx0, cx1) = (xs.get(c).copied().unwrap_or(x0), xs.get(c + 1).copied().unwrap_or(x0));
+            let width = (cx1 - cx0) / z;
+            let labels = notecraft_engine::text::list_labels(&cell.paragraphs);
+            let mut cy = y + pad;
+            for (i, para) in cell.paragraphs.iter().enumerate() {
+                let has_list = labels.get(i).is_some_and(|l| !l.is_empty());
+                let lead = para.level as f32 * INDENT + para.tags.len() as f32 * TAG_W + if has_list { LIST_W } else { 0.0 };
+                let wrap = (width - 2.0 * CELL_PAD - lead).max(8.0) * z;
+                cy += para.space_before * z;
+                let g = layout_para(ctx, para, wrap, zoom, t, page_text, preedit_at(Block::Cell(cell.id), i));
+                let pos = pos2(cx0 + pad + lead * z, cy);
+                let h = g.size().y;
+                paras.push(ParaLayout {
+                    block: Block::Cell(cell.id),
+                    para: i,
+                    galley: g,
+                    pos,
+                    text: para.text(),
+                    checkboxes: Vec::new(),
+                    handle: Rect::NOTHING,
+                });
+                cy += h + para.space_after * z;
+            }
+            row_h = row_h.max(cy - y + pad);
+            cells.push(CellLayout { id: cell.id, row: r, col: c, rect: Rect::from_min_max(pos2(cx0, y), pos2(cx1, y)) });
+        }
+        let row_h = row_h.max(14.0 * z);
+        for cl in cells.iter_mut().skip(first_cell) {
+            cl.rect.max.y = y + row_h;
+        }
+        y += row_h;
+    }
+    let right = xs.last().copied().unwrap_or(x0);
+    let rect = Rect::from_min_max(pos2(x0, y0), pos2(right, y.max(y0 + 14.0 * z)));
+    let frame_rect = rect.expand(4.0);
+    let bar = Rect::from_min_max(pos2(frame_rect.min.x, frame_rect.min.y - 9.0), pos2(frame_rect.max.x, frame_rect.min.y));
+    let frame = OutlineLayout { id: tb.id, rect: frame_rect, bar, resize: Rect::NOTHING, left: x0, table: true };
+    (TableLayout { id: tb.id, rect, cells, col_edges: xs.into_iter().skip(1).collect() }, frame)
+}
+
+/// Draw a table's shading, borders and selected cells. Hidden borders show as faint lines
+/// while the table is hovered or holds the caret, so its cells stay findable.
+fn draw_table(painter: &egui::Painter, tb: &Table, tl: &TableLayout, sel: &PageSel, hot: bool, t: Tokens) {
+    for cl in &tl.cells {
+        if let Some(c) = tb.cell(cl.row, cl.col).and_then(|c| c.shading) {
+            painter.rect_filled(cl.rect, 0.0, c32(c));
+        }
+    }
+    let stroke = if tb.borders {
+        Some(Stroke::new(1.0, t.table_border))
+    } else if hot {
+        Some(Stroke::new(1.0, t.container.gamma_multiply(0.7)))
+    } else {
+        None
+    };
+    if let Some(st) = stroke {
+        painter.rect_stroke(tl.rect, 0.0, st, egui::StrokeKind::Middle);
+        for x in tl.col_edges.iter().take(tl.col_edges.len().saturating_sub(1)) {
+            painter.line_segment([pos2(*x, tl.rect.min.y), pos2(*x, tl.rect.max.y)], st);
+        }
+        let mut last_row = usize::MAX;
+        for cl in &tl.cells {
+            if cl.row != last_row && cl.row > 0 {
+                painter.line_segment([pos2(tl.rect.min.x, cl.rect.min.y), pos2(tl.rect.max.x, cl.rect.min.y)], st);
+            }
+            last_row = cl.row;
+        }
+    }
+    if let PageSel::Cells { table, rows, cols } = sel
+        && *table == tl.id
+    {
+        for cl in tl.cells.iter().filter(|c| c.row >= rows.0 && c.row <= rows.1 && c.col >= cols.0 && c.col <= cols.1) {
+            painter.rect_filled(cl.rect.shrink(0.5), 0.0, t.selection);
+        }
+    }
 }
 
 fn rule_lines(painter: &egui::Painter, page: &Page, rect: Rect, origin: Pos2, zoom: f32, t: Tokens) {
@@ -680,7 +873,7 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
     let hover = resp.hover_pos();
     // Cursor shape.
     if let Some(h) = hover {
-        if app.canvas.outlines.iter().any(|o| o.resize.contains(h)) {
+        if app.canvas.outlines.iter().any(|o| o.resize.contains(h)) || app.canvas.tables.iter().any(|tl| tl.border_at(h).is_some()) {
             ctx.set_cursor_icon(CursorIcon::ResizeHorizontal);
         } else if app.canvas.outlines.iter().any(|o| o.bar.contains(h)) {
             ctx.set_cursor_icon(CursorIcon::Move);
@@ -706,11 +899,18 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
             }
             return;
         }
-        // Move bar: selects the container; dragging moves it.
+        // A table's column border: dragging sets the column's width.
+        if let Some((tid, (col, left))) = app.canvas.tables.iter().find_map(|tl| tl.border_at(p).map(|b| (tl.id, b))) {
+            if resp.drag_started() {
+                app.canvas.drag = Some(Drag::Column { table: tid, col, left });
+            }
+            return;
+        }
+        // Move bar: selects the container (or table); dragging moves it.
         if let Some(o) = app.canvas.outlines.iter().find(|o| o.bar.contains(p)).copied() {
             app.run(ctx, "object.select", json!({"ids": [o.id.to_string()]}));
             if resp.drag_started() {
-                let pos = app.session.page().and_then(|pg| pg.outline(o.id)).map(|ol| ol.pos).unwrap_or_default();
+                let pos = app.session.page().and_then(|pg| pg.objects.iter().find(|x| x.id() == o.id).map(PageObject::pos)).unwrap_or_default();
                 let grab = app.canvas.to_page(p);
                 app.canvas.drag = Some(Drag::Move { id: o.id, grab_page: notecraft_engine::doc::geom::Vec2::new(grab.x - pos.x, grab.y - pos.y) });
             }
@@ -744,10 +944,7 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
         // Text.
         if let Some(pl) = hit_para(app, p) {
             let off = pl.offset_at(p);
-            let block = match pl.block {
-                Block::Title => "title".to_string(),
-                Block::Outline(id) => id.to_string(),
-            };
+            let block = block_param(pl.block);
             app.run(ctx, "caret.set", json!({"block": block, "para": pl.para, "offset": off, "extend": shift}));
             if resp.double_clicked() {
                 let w = notecraft_engine::text::word_at(&pl.text, off);
@@ -758,7 +955,7 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
                 app.run(ctx, "caret.set", json!({"block": block, "para": pl.para, "offset": pl.text.len(), "extend": true}));
             }
             if resp.drag_started() {
-                app.canvas.drag = Some(Drag::Select);
+                app.canvas.drag = Some(Drag::Select { anchor: app.session.text_range().map(|r| r.anchor) });
             }
             return;
         }
@@ -772,18 +969,33 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
         && let Some(p) = resp.interact_pointer_pos()
     {
         match app.canvas.drag {
-            Some(Drag::Select) => {
-                if let Some(anchor) = app.session.text_range().map(|r| r.anchor)
-                    && let Some(pl) =
-                        app.canvas.paras.iter().filter(|pl| pl.block == anchor.block).min_by(|a, b| dist(a, p).total_cmp(&dist(b, p))).cloned()
+            Some(Drag::Select { anchor }) => {
+                // From one cell into another of the same table: the cells are selected.
+                if let Some(a) = anchor
+                    && let Block::Cell(ac) = a.block
+                    && let Some((tl, from, to)) = app.canvas.tables.iter().find_map(|tl| {
+                        let from = tl.cells.iter().find(|c| c.id == ac)?;
+                        let to = tl.cell_at(p)?;
+                        Some((tl.id, *from, to))
+                    })
+                    && from.id != to.id
                 {
+                    app.run(ctx, "table.selectRange", json!({"table": tl.to_string(), "rows": [from.row, to.row], "cols": [from.col, to.col]}));
+                } else if let Some(a) = anchor
+                    && let Some(pl) =
+                        app.canvas.paras.iter().filter(|pl| pl.block == a.block).min_by(|x, y| dist(x, p).total_cmp(&dist(y, p))).cloned()
+                {
+                    // Back inside the anchor's block: a text selection again.
+                    if app.session.text_range().is_none_or(|r| r.anchor != a) {
+                        app.run(ctx, "caret.set", json!({"block": block_param(a.block), "para": a.para, "offset": a.offset}));
+                    }
                     let off = pl.offset_at(p);
-                    let block = match pl.block {
-                        Block::Title => "title".to_string(),
-                        Block::Outline(id) => id.to_string(),
-                    };
-                    app.run(ctx, "caret.set", json!({"block": block, "para": pl.para, "offset": off, "extend": true}));
+                    app.run(ctx, "caret.set", json!({"block": block_param(pl.block), "para": pl.para, "offset": off, "extend": true}));
                 }
+            }
+            Some(Drag::Column { table, col, left }) => {
+                let w = (p.x - left) / (PT * app.canvas.zoom.max(0.1));
+                app.run(ctx, "table.columnWidth", json!({"table": table.to_string(), "col": col, "width": w}));
             }
             Some(Drag::Move { id, grab_page }) => {
                 let pt = app.canvas.to_page(p);
@@ -837,7 +1049,10 @@ pub(crate) fn para_drop(app: &NoteApp, page: &Page, from: Id, para: usize, p: Po
         return ParaDrop::Nowhere;
     }
     let base_level = src.paragraphs.get(para).map(|q| q.level).unwrap_or(0);
-    let Some(o) = app.canvas.outlines.iter().find(|o| o.rect.expand(16.0).contains(p)) else {
+    if app.canvas.tables.iter().any(|tl| tl.rect.expand(8.0).contains(p)) {
+        return ParaDrop::Nowhere;
+    }
+    let Some(o) = app.canvas.outlines.iter().find(|o| !o.table && o.rect.expand(16.0).contains(p)) else {
         let pt = app.canvas.to_page(p);
         return ParaDrop::NewAt(notecraft_engine::doc::geom::Point::new(pt.x.max(0.0), pt.y.max(0.0)));
     };
@@ -884,14 +1099,26 @@ fn dist(pl: &ParaLayout, p: Pos2) -> f32 {
     dx * dx + dy * dy
 }
 
-/// The paragraph under a point: inside a paragraph's rect, or to the right of a line of a
-/// container (clicking past the end of a line puts the caret at its end).
+/// The `block` parameter of `caret.set` for a block.
+fn block_param(b: Block) -> String {
+    match b {
+        Block::Title => "title".to_string(),
+        Block::Outline(id) | Block::Cell(id) => id.to_string(),
+    }
+}
+
+/// The paragraph under a point: inside a paragraph's rect, anywhere in a table cell (its
+/// nearest paragraph), or to the right of a line of a container (clicking past the end of a
+/// line puts the caret at its end).
 fn hit_para(app: &NoteApp, p: Pos2) -> Option<ParaLayout> {
     if let Some(pl) = app.canvas.paras.iter().find(|pl| pl.rect().expand2(vec2(3.0, 0.0)).contains(p)) {
         return Some(pl.clone());
     }
+    if let Some(cell) = app.canvas.tables.iter().find_map(|tl| tl.cell_at(p)) {
+        return app.canvas.paras.iter().filter(|pl| pl.block == Block::Cell(cell.id)).min_by(|a, b| dist(a, p).total_cmp(&dist(b, p))).cloned();
+    }
     // Within a container's frame: the nearest paragraph of that container.
-    let o = app.canvas.outlines.iter().find(|o| o.rect.contains(p))?;
+    let o = app.canvas.outlines.iter().find(|o| !o.table && o.rect.contains(p))?;
     app.canvas.paras.iter().filter(|pl| pl.block == Block::Outline(o.id)).min_by(|a, b| dist(a, p).total_cmp(&dist(b, p))).cloned()
 }
 

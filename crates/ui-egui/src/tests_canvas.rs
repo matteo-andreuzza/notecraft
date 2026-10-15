@@ -3,6 +3,7 @@
 
 use egui::{Pos2, pos2};
 use egui_kittest::Harness;
+use egui_kittest::kittest::Queryable;
 use notecraft_engine::doc::Id;
 use notecraft_engine::selection::Block;
 use serde_json::json;
@@ -170,4 +171,103 @@ fn the_container_bar_moves_and_its_edge_resizes() {
     click(&mut h, pl.pos + egui::vec2(3.0, 4.0));
     let c = h.state().session.sel.caret().unwrap();
     assert_eq!((c.block, c.para, c.offset), (Block::Outline(o), 0, 0));
+}
+
+/// A page with a 2 × 3 table at (60, 120) pt, the caret in its first cell.
+fn page_with_table() -> (NoteApp, Id) {
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    let v = a.session.run("insert.table", json!({"rows": 2, "cols": 3, "x": 60.0, "y": 120.0})).unwrap();
+    a.canvas.focused = true;
+    (a, Id::parse(v["table"].as_str().unwrap()).unwrap())
+}
+
+fn table(h: &Harness<'static, NoteApp>, id: Id) -> notecraft_engine::doc::Table {
+    h.state().session.page().unwrap().table(id).unwrap().clone()
+}
+
+#[test]
+fn table_cells_take_clicks_keys_and_drags() {
+    let (a, tid) = page_with_table();
+    let mut h = harness(a);
+    h.run();
+    // Typing and Tab go through the keymap into the cells.
+    h.event(egui::Event::Text("Name".into()));
+    h.run();
+    h.key_press(egui::Key::Tab);
+    h.run();
+    h.event(egui::Event::Text("Qty".into()));
+    h.run();
+    let t = table(&h, tid);
+    assert_eq!((t.rows[0].cells[0].text(), t.rows[0].cells[1].text()), ("Name".to_string(), "Qty".to_string()));
+    // The Table Layout tab shows while the caret is in the table.
+    assert!(crate::chrome::contextual_tabs(h.state()).iter().any(|t| t.name == "Table Layout"), "UI.Ribbon.ContextualTabs");
+    assert!(h.query_by_label("Table Layout").is_some());
+    // A click anywhere in a cell puts the caret there.
+    let tl = h.state().canvas.tables[0].clone();
+    let cell = tl.cells.iter().find(|c| c.row == 1 && c.col == 2).copied().unwrap();
+    click(&mut h, cell.rect.center() + egui::vec2(10.0, 2.0));
+    assert_eq!(h.state().session.sel.caret().map(|c| c.block), Some(Block::Cell(cell.id)));
+    // Enter adds a row (the keymap routes it to table.enter); on an empty last row it would
+    // end the table instead.
+    h.event(egui::Event::Text("x".into()));
+    h.run();
+    h.key_press(egui::Key::Enter);
+    h.run();
+    assert_eq!(table(&h, tid).n_rows(), 3, "KB.Table.NewRowEnter through the keymap");
+    // A drag from one cell to another selects the cells.
+    let tl = h.state().canvas.tables[0].clone();
+    let a0 = tl.cells.iter().find(|c| c.row == 0 && c.col == 0).copied().unwrap();
+    let b1 = tl.cells.iter().find(|c| c.row == 1 && c.col == 1).copied().unwrap();
+    drag(&mut h, a0.rect.center(), b1.rect.center());
+    assert_eq!(h.state().session.sel.on_page, notecraft_engine::selection::PageSel::Cells { table: tid, rows: (0, 1), cols: (0, 1) });
+    // Dragging a column border sets its width (one undo step).
+    let undo = h.state().session.undo_labels().len();
+    let tl = h.state().canvas.tables[0].clone();
+    let edge = egui::pos2(tl.col_edges[0], tl.rect.center().y);
+    drag(&mut h, edge, edge + egui::vec2(60.0, 0.0));
+    let w = table(&h, tid).columns[0];
+    assert!((w - (notecraft_engine::doc::table::DEFAULT_COL_WIDTH + 60.0 / crate::canvas::PT)).abs() < 3.0, "NC.Table.ColumnWidth: {w}");
+    assert_eq!(h.state().session.undo_labels().len(), undo + 1);
+    // A Table Layout button runs its command.
+    h.state_mut().ui.tab = "Table Layout".into();
+    h.run();
+    let c = table(&h, tid).rows[0].cells[0].id;
+    h.state_mut().session.run("caret.set", json!({"block": c.to_string(), "para": 0, "offset": 0})).unwrap();
+    h.run();
+    h.get_by_label("Insert Below").click();
+    h.run();
+    assert_eq!(table(&h, tid).n_rows(), 4, "CT.TableLayout.Insert.TableInsertRowsBelow from the ribbon");
+    // Outside the table the tab goes away and the ribbon falls back to Home.
+    h.state_mut().session.run("nav.pageTitle", json!({})).unwrap();
+    h.run();
+    assert!(crate::chrome::contextual_tabs(h.state()).is_empty());
+    assert_eq!(crate::chrome::current_tab(h.state()).map(|t| t.name), Some("Home"));
+}
+
+#[test]
+fn the_insert_table_grid_inserts_below_the_caret_container() {
+    let (a, o) = page_with("Above the table");
+    let mut h = harness(a);
+    h.run();
+    h.state_mut().ui.tab = "Insert".into();
+    h.run();
+    // The Table button opens the size grid; hovering 3 columns × 2 rows and clicking inserts.
+    h.get_by_label("Table").click();
+    h.run();
+    let grid = h.get_by_label("Table size grid").rect();
+    let cell = 18.0;
+    let p = egui::pos2(grid.min.x + 2.0 + 2.5 * cell, grid.min.y + 22.0 + 1.5 * cell);
+    h.event(egui::Event::PointerMoved(p));
+    h.run();
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Primary, pressed, modifiers: egui::Modifiers::NONE });
+    }
+    h.run();
+    let page = h.state().session.page().unwrap().clone();
+    let t = page.objects.iter().find_map(|x| x.as_table()).expect("a table was inserted");
+    assert_eq!((t.n_rows(), t.n_cols()), (2, 3));
+    let ol = page.outline(o).unwrap();
+    assert_eq!(t.pos.x, ol.pos.x);
+    assert!(t.pos.y > ol.pos.y + 10.0, "below the container: {} vs {}", t.pos.y, ol.pos.y);
 }

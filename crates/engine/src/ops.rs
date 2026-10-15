@@ -31,7 +31,7 @@ pub(crate) fn need_text(s: &Session) -> Option<&'static str> {
         return Some("No page is open");
     }
     match s.sel.on_page {
-        PageSel::Text(_) | PageSel::Objects { .. } => None,
+        PageSel::Text(_) | PageSel::Objects { .. } | PageSel::Cells { .. } => None,
         PageSel::None => {
             if s.pending_outline.is_some() {
                 None
@@ -47,6 +47,7 @@ pub(crate) fn need_selection(s: &Session) -> Option<&'static str> {
         Some(r) if !r.is_caret() => None,
         _ => match &s.sel.on_page {
             PageSel::Objects { ids } if !ids.is_empty() => None,
+            PageSel::Cells { .. } => None,
             _ => Some("Select some text first"),
         },
     }
@@ -65,8 +66,22 @@ pub(crate) fn touched(s: &Session) -> Vec<(Block, std::ops::Range<usize>)> {
             None => Vec::new(),
         },
         PageSel::Objects { ids } => ids.iter().filter_map(|id| page.outline(*id).map(|o| (Block::Outline(*id), 0..o.paragraphs.len()))).collect(),
+        PageSel::Cells { .. } => selected_cells(s).into_iter().map(|(id, n)| (Block::Cell(id), 0..n)).collect(),
         PageSel::None => Vec::new(),
     }
+}
+
+/// The cells of a cell selection, in reading order: `(cell id, paragraph count)`.
+pub(crate) fn selected_cells(s: &Session) -> Vec<(notecraft_doc::Id, usize)> {
+    let PageSel::Cells { table, rows, cols } = s.sel.on_page else { return Vec::new() };
+    let Some(t) = s.page().and_then(|p| p.table(table)) else { return Vec::new() };
+    t.rows
+        .iter()
+        .skip(rows.0)
+        .take(rows.1.saturating_sub(rows.0).saturating_add(1))
+        .flat_map(|r| r.cells.iter().skip(cols.0).take(cols.1.saturating_sub(cols.0).saturating_add(1)))
+        .map(|c| (c.id, c.paragraphs.len()))
+        .collect()
 }
 
 /// Character ranges a character-format command applies to: per paragraph, the byte range.
@@ -90,6 +105,11 @@ pub(crate) fn segments(s: &Session) -> Vec<(Block, usize, std::ops::Range<usize>
             .iter()
             .filter_map(|id| page.outline(*id).map(|o| (*id, o)))
             .flat_map(|(id, o)| o.paragraphs.iter().enumerate().map(move |(i, p)| (Block::Outline(id), i, 0..p.len())))
+            .collect(),
+        PageSel::Cells { .. } => selected_cells(s)
+            .into_iter()
+            .filter_map(|(id, _)| page.cell(id).map(|c| (id, c)))
+            .flat_map(|(id, c)| c.paragraphs.iter().enumerate().map(move |(i, p)| (Block::Cell(id), i, 0..p.len())))
             .collect(),
         PageSel::None => Vec::new(),
     }
@@ -175,12 +195,25 @@ pub(crate) fn ensure_caret(s: &mut Session) -> Result<Pos, CmdError> {
 pub(crate) fn next_free_y(page: &notecraft_doc::Page) -> f32 {
     let mut y = CONTENT_TOP;
     for o in &page.objects {
-        if let Some(ol) = o.as_outline() {
-            let lines: usize = ol.paragraphs.iter().map(|p| 1 + p.text().matches('\n').count()).sum();
-            y = y.max(ol.pos.y + lines as f32 * 20.0 + 24.0);
-        }
+        y = y.max(object_bottom(o) + 24.0);
     }
     y
+}
+
+fn para_lines(p: &Paragraph) -> usize {
+    1 + p.text().matches('\n').count()
+}
+
+/// The estimated bottom of an object in page points (20 pt per line, no layout in the engine).
+pub(crate) fn object_bottom(o: &PageObject) -> f32 {
+    match o {
+        PageObject::Outline(ol) => ol.pos.y + ol.paragraphs.iter().map(para_lines).sum::<usize>() as f32 * 20.0,
+        PageObject::Table(t) => {
+            let rows: usize =
+                t.rows.iter().map(|r| r.cells.iter().map(|c| c.paragraphs.iter().map(para_lines).sum::<usize>()).max().unwrap_or(1)).sum();
+            t.pos.y + rows as f32 * 20.0 + t.rows.len() as f32 * 6.0
+        }
+    }
 }
 
 /// The format typed text gets at `pos`: pending formatting if set, otherwise the run on the
@@ -217,7 +250,7 @@ pub(crate) fn insert_at(s: &mut Session, pos: Pos, text: &str, fmt: &CharFormat)
 pub(crate) fn prune_empty_outlines(s: &mut Session) -> bool {
     let keep = s.sel.caret().and_then(|c| match c.block {
         Block::Outline(id) => Some(id),
-        Block::Title => None,
+        Block::Title | Block::Cell(_) => None,
     });
     let has_empty = s.page().is_some_and(|p| p.objects.iter().any(|o| o.as_outline().is_some_and(|ol| ol.is_empty() && Some(ol.id) != keep)));
     if !has_empty {
@@ -256,6 +289,18 @@ pub(crate) fn clone_page_fresh(s: &mut Session, page: &notecraft_doc::Page, now:
                 ol.id = s.new_id();
                 for para in &mut ol.paragraphs {
                     para.id = s.new_id();
+                }
+            }
+            PageObject::Table(t) => {
+                t.id = s.new_id();
+                for row in &mut t.rows {
+                    row.id = s.new_id();
+                    for cell in &mut row.cells {
+                        cell.id = s.new_id();
+                        for para in &mut cell.paragraphs {
+                            para.id = s.new_id();
+                        }
+                    }
                 }
             }
         }

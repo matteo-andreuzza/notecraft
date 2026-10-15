@@ -81,7 +81,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         .when(need_outline_caret),
         // BEH.Canvas.ContainerMove / ContainerResize.
         CommandSpec::new("outline.move", "BEH.Canvas.ContainerMove", "Move Note Container", "Behaviour/Canvas", move_outline)
-            .params(r#"{"id": outline id, "x": pt, "y": pt}"#)
+            .params(r#"{"id": outline or table id, "x": pt, "y": pt}"#)
             .when(need_page),
         CommandSpec::new("outline.resize", "BEH.Canvas.ContainerResize", "Resize Note Container", "Behaviour/Canvas", resize_outline)
             .params(r#"{"id": outline id, "width": pt | null (auto)}"#)
@@ -226,9 +226,9 @@ fn move_outline(s: &mut Session, v: &Value) -> CmdResult {
     let x = p::req_f32(v, "x")?;
     let y = p::req_f32(v, "y")?;
     let page = s.page_mut().ok_or_else(no_page)?;
-    let o = page.outline_mut(id).ok_or_else(|| CmdError::Params("no such note container".into()))?;
-    // Containers can't be dragged above or left of the page origin.
-    o.pos = Point::new(x.max(0.0), y.max(0.0)).sanitized();
+    let o = page.objects.iter_mut().find(|o| o.id() == id).ok_or_else(|| CmdError::Params("no such note container or table".into()))?;
+    // Containers (and tables) can't be dragged above or left of the page origin.
+    o.set_pos(Point::new(x.max(0.0), y.max(0.0)));
     s.coalesce = Some(format!("move:{id}"));
     Ok(Value::Null)
 }

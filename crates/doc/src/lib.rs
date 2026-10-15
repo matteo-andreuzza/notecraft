@@ -5,7 +5,8 @@
 //!
 //! ```text
 //! Workspace ─ Notebook ─┬─ SectionGroup ─ (Sections and SectionGroups, nested)
-//!                       ├─ Section ─ Page ─ PageObject::Outline ─ Paragraph ─ Run
+//!                       ├─ Section ─ Page ─┬─ PageObject::Outline ─ Paragraph ─ Run
+//!                       │                  └─ PageObject::Table ─ TableRow ─ TableCell ─ Paragraph
 //!                       └─ RecycleBin
 //! ```
 //!
@@ -21,6 +22,7 @@
 pub mod id;
 pub mod notebook;
 pub mod page;
+pub mod table;
 pub mod tags;
 pub mod text;
 pub mod time;
@@ -28,6 +30,7 @@ pub mod time;
 pub use id::{Id, IdGen};
 pub use notebook::{DeletedPage, DeletedSection, NavNode, Notebook, RecycleBin, Section, SectionColor, SectionGroup, Workspace, clean_name};
 pub use page::{Outline, OutlineWidth, Page, PageObject, PageSetup, PaperSize, RuleLines};
+pub use table::{Table, TableCell, TableRow};
 pub use tags::{TagDef, TagSymbol, TagUse, builtin_tags};
 pub use text::{Align, Bullet, CharFormat, ListFormat, Numbering, ParaStyle, Paragraph, Run, Script, StyleDef, sanitize_text};
 pub use time::{Civil, Timestamp};

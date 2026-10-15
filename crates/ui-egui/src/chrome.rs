@@ -231,12 +231,13 @@ fn search(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: &Tokens) {
     }
 }
 
-/// The contextual tabs for the current selection (Table Layout, Equation, Audio & Video). The
-/// objects they act on arrive in M2, so none is shown yet; a contextual tab named in the view state
-/// without its selection falls back to Home rather than showing tools for nothing.
-pub fn contextual_tabs(_app: &NoteApp) -> Vec<&'static Tab> {
-    let _ = CONTEXTUAL;
-    Vec::new()
+/// The contextual tabs for the current selection (catalog `UI.Ribbon.ContextualTabs`): Table
+/// Layout while the caret or the selection is in a table. Equation and Audio & Video follow
+/// with their objects. A contextual tab named in the UI state without its selection falls back
+/// to Home rather than showing tools for nothing.
+pub fn contextual_tabs(app: &NoteApp) -> Vec<&'static Tab> {
+    let in_table = notecraft_engine::commands::find("table.selectTable").is_some_and(|c| (c.enabled)(&app.session).is_none());
+    CONTEXTUAL.iter().filter(|t| t.name == "Table Layout" && in_table).collect()
 }
 
 /// The tab whose body the ribbon shows: the selected one if visible, else Home.

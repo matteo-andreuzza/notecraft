@@ -156,10 +156,21 @@ pub(crate) fn find_on_page(s: &mut Session, query: &str) -> usize {
             matches.push((Block::Title, 0, r.start, r.end));
         }
         for o in &page.objects {
-            if let Some(ol) = o.as_outline() {
-                for (i, p) in ol.paragraphs.iter().enumerate() {
-                    for r in find_all(&p.text(), query) {
-                        matches.push((Block::Outline(ol.id), i, r.start, r.end));
+            match o {
+                notecraft_doc::PageObject::Outline(ol) => {
+                    for (i, p) in ol.paragraphs.iter().enumerate() {
+                        for r in find_all(&p.text(), query) {
+                            matches.push((Block::Outline(ol.id), i, r.start, r.end));
+                        }
+                    }
+                }
+                notecraft_doc::PageObject::Table(t) => {
+                    for c in t.rows.iter().flat_map(|r| r.cells.iter()) {
+                        for (i, p) in c.paragraphs.iter().enumerate() {
+                            for r in find_all(&p.text(), query) {
+                                matches.push((Block::Cell(c.id), i, r.start, r.end));
+                            }
+                        }
                     }
                 }
             }

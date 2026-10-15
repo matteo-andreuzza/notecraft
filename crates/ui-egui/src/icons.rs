@@ -59,6 +59,8 @@ fn set_name(key: &str) -> Option<&'static str> {
         "Dictate" => "dictate",
         "SendNotesViaEmail" => "envelope",
         "TableInsertGallery" | "TableInsert" => "table",
+        "SortMenu" | "SortUp" | "SortDown" | "ShowSortTableRowsDialog" => "sort",
+        "ShadingColorPicker" => "shading",
         "PictureFromFileInsert" | "PastePicture" => "picture",
         "ScreenCaptureInsert" => "screenshot",
         "InsertOnlineVideo" | "VideoRecordingInsert" | "ShowTraining" => "video",
@@ -107,6 +109,106 @@ pub fn draw(pa: &Painter, r: Rect, id: &str, line: Color32, accent: Color32, pap
         Some(name) => crate::icons_set::paint(pa, r, name, line, accent),
         None => draw_own(pa, r, id, line, accent, paper),
     }
+}
+
+/// The Table Layout controls: a 3 × 3 grid in the line colour with the part the command acts on
+/// in the accent (a row, a column, a cell, the header), plus a mark (a plus where rows or
+/// columns are inserted, a red cross for deletions, arrows for merge and split). Returns false
+/// for other keys.
+fn table_icon(pa: &Painter, r: Rect, k: &str, color: Color32, accent: Color32, paper: Color32) -> bool {
+    let s = Stroke::new((r.width() / 14.0).max(1.0), color);
+    let thin = Stroke::new((r.width() / 20.0).max(1.0), color);
+    let red = Color32::from_rgb(0xd1, 0x34, 0x38);
+    // Grid bounds and lines (fractions of the icon).
+    let (x0, y0, x1, y1) = (0.1, 0.16, 0.9, 0.84);
+    let xs = [x0, 0.37, 0.63, x1];
+    let ys = [y0, 0.39, 0.61, y1];
+    let fill = |c0: usize, r0: usize, c1: usize, r1: usize| {
+        rect(pa, r, xs[c0], ys[r0], xs[c1], ys[r1], accent.gamma_multiply(0.4), Stroke::NONE);
+    };
+    let grid = |dashed: bool| {
+        if dashed {
+            for (a, b) in [((x0, y0), (x1, y0)), ((x0, y1), (x1, y1)), ((x0, y0), (x0, y1)), ((x1, y0), (x1, y1))] {
+                let n = 6;
+                for i in (0..n).step_by(2) {
+                    let t0 = i as f32 / n as f32;
+                    let t1 = (i + 1) as f32 / n as f32;
+                    line(pa, r, &[(a.0 + (b.0 - a.0) * t0, a.1 + (b.1 - a.1) * t0), (a.0 + (b.0 - a.0) * t1, a.1 + (b.1 - a.1) * t1)], thin);
+                }
+            }
+            return;
+        }
+        rect(pa, r, x0, y0, x1, y1, Color32::TRANSPARENT, s);
+        for x in &xs[1..3] {
+            line(pa, r, &[(*x, y0), (*x, y1)], thin);
+        }
+        for y in &ys[1..3] {
+            line(pa, r, &[(x0, *y), (x1, *y)], thin);
+        }
+    };
+    let plus = |cx: f32, cy: f32| {
+        pa.circle_filled(p(r, cx, cy), r.width() * 0.17, paper);
+        let st = Stroke::new(s.width * 1.2, accent);
+        line(pa, r, &[(cx - 0.11, cy), (cx + 0.11, cy)], st);
+        line(pa, r, &[(cx, cy - 0.11), (cx, cy + 0.11)], st);
+    };
+    let cross = || {
+        pa.circle_filled(p(r, 0.76, 0.74), r.width() * 0.2, paper);
+        let st = Stroke::new(s.width * 1.2, red);
+        line(pa, r, &[(0.66, 0.64), (0.86, 0.84)], st);
+        line(pa, r, &[(0.86, 0.64), (0.66, 0.84)], st);
+    };
+    rect(pa, r, x0, y0, x1, y1, paper, Stroke::NONE);
+    match k {
+        "SelectTableOneNote" => fill(0, 0, 3, 3),
+        "SelectColumns" => fill(1, 0, 2, 3),
+        "SelectRows" => fill(0, 1, 3, 2),
+        "SelectCell" => fill(1, 1, 2, 2),
+        "HeaderRowNoFormatting" => fill(0, 0, 3, 1),
+        "DeleteTableOneNote" | "DeleteColumnsOneNote" | "DeleteRowsOneNote" => match k {
+            "DeleteColumnsOneNote" => fill(1, 0, 2, 3),
+            "DeleteRowsOneNote" => fill(0, 1, 3, 2),
+            _ => {}
+        },
+        "TableInsertRowsAbove" => fill(0, 0, 3, 1),
+        "TableInsertRowsBelow" => fill(0, 2, 3, 3),
+        "TableInsertColumnsLeft" => fill(0, 0, 1, 3),
+        "TableInsertColumnsRight" => fill(2, 0, 3, 3),
+        "MergeCells" | "UnmergeCells" | "TableBordersHide" | "ConvertToText" | "ConvertTextToTable" => {}
+        _ => return false,
+    }
+    grid(k == "TableBordersHide");
+    match k {
+        "DeleteTableOneNote" | "DeleteColumnsOneNote" | "DeleteRowsOneNote" => cross(),
+        "TableInsertRowsAbove" => plus(0.5, 0.16),
+        "TableInsertRowsBelow" => plus(0.5, 0.84),
+        "TableInsertColumnsLeft" => plus(0.1, 0.5),
+        "TableInsertColumnsRight" => plus(0.9, 0.5),
+        "MergeCells" | "UnmergeCells" => {
+            rect(pa, r, xs[0] + 0.02, ys[1] + 0.02, xs[3] - 0.02, ys[2] - 0.02, paper, Stroke::NONE);
+            let st = Stroke::new(s.width, accent);
+            let (a, b) = if k == "MergeCells" { (0.2, 0.44) } else { (0.44, 0.2) };
+            line(pa, r, &[(a, 0.5), (b, 0.5)], st);
+            line(pa, r, &[(1.0 - a, 0.5), (1.0 - b, 0.5)], st);
+            let head = if k == "MergeCells" { -0.07 } else { 0.07 };
+            line(pa, r, &[(b + head, 0.43), (b, 0.5), (b + head, 0.57)], st);
+            line(pa, r, &[(1.0 - b - head, 0.43), (1.0 - b, 0.5), (1.0 - b - head, 0.57)], st);
+        }
+        "ConvertToText" | "ConvertTextToTable" => {
+            // Half grid, half lines of text, with an arrow from one to the other.
+            rect(pa, r, 0.5, 0.1, 0.95, 0.9, paper, Stroke::NONE);
+            for y in [0.3, 0.45, 0.6, 0.75] {
+                line(pa, r, &[(0.6, y), (0.9, y)], thin);
+            }
+            let st = Stroke::new(s.width, accent);
+            let (from, to) = if k == "ConvertToText" { (0.32, 0.58) } else { (0.58, 0.32) };
+            line(pa, r, &[(from, 0.5), (to, 0.5)], st);
+            let d = if to > from { -0.07 } else { 0.07 };
+            line(pa, r, &[(to + d, 0.43), (to, 0.5), (to + d, 0.57)], st);
+        }
+        _ => {}
+    }
+    true
 }
 
 /// NoteCraft's own drawing for catalog id `id` (controls with no counterpart in `icons_set`).
@@ -211,7 +313,8 @@ fn draw_own(pa: &Painter, r: Rect, id: &str, color: Color32, accent: Color32, pa
                 line(pa, r, &[(a, *y), (b, *y)], thin);
             }
         }
-        "Delete" | "DeleteTableOneNote" | "DeleteColumnsOneNote" | "DeleteRowsOneNote" => {
+        _ if table_icon(pa, r, k, color, accent, paper) => {}
+        "Delete" => {
             let red = Color32::from_rgb(0xd1, 0x34, 0x38);
             line(pa, r, &[(0.2, 0.2), (0.8, 0.8)], Stroke::new(s.width * 1.3, red));
             line(pa, r, &[(0.8, 0.2), (0.2, 0.8)], Stroke::new(s.width * 1.3, red));
@@ -262,7 +365,7 @@ fn draw_own(pa: &Painter, r: Rect, id: &str, color: Color32, accent: Color32, pa
             line(pa, r, &[(0.5, 0.64), (0.5, 0.9)], s);
             line(pa, r, &[(0.38, 0.76), (0.5, 0.64), (0.62, 0.76)], s);
         }
-        "TableInsertGallery" | "TableInsert" | "SelectTableOneNote" | "SelectColumns" | "SelectRows" | "SelectCell" => {
+        "TableInsertGallery" | "TableInsert" => {
             rect(pa, r, 0.1, 0.14, 0.9, 0.86, paper, s);
             rect(pa, r, 0.1, 0.14, 0.9, 0.32, accent, s);
             line(pa, r, &[(0.1, 0.5), (0.9, 0.5)], thin);

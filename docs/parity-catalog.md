@@ -50,7 +50,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Ribbon.DisplayOptions | Ribbon display options (auto-hide, tabs only, tabs and commands) | Window/Ribbon/Display Options | surface |  |  | P2 | wired | GK (Office 2016+) | The ▾ chevron at the ribbon's bottom right: layout (single-line or classic) and Always show / Show tabs only; Automatically hide is drawn disabled (not implemented). |
 | UI.Ribbon.Simplified | Simplified ribbon: one row of 16 px icons with labels only where needed, font and size boxes, split ▾ buttons, separators and an overflow … menu with what doesn't fit | Window/Ribbon/Simplified | surface |  |  | P0 | wired | M365-2024 | The default ribbon in the 2024 UI. Placements follow the reference screenshots; controls not placed are listed in the … menu under their classic group. |
 | UI.Ribbon.ModeSwitch | Switch between the simplified and the classic ribbon (▾ chevron at the ribbon's bottom right); the choice is remembered | Window/Ribbon/Mode Switch | surface |  | ui.ribbonMode | P0 | wired | M365-2024 | Remembered in the desktop settings. |
-| UI.Ribbon.ContextualTabs | Contextual tabs appear with the selection (Table, Equation, Audio & Video) | Window/Ribbon/Contextual Tabs | surface |  |  | P1 | missing | FLUENT19:TabSet* |  |
+| UI.Ribbon.ContextualTabs | Contextual tabs appear with the selection (Table, Equation, Audio & Video) | Window/Ribbon/Contextual Tabs | surface |  |  | P1 | wired | FLUENT19:TabSet* | Table Layout while the selection is in a table; Equation and Audio & Video come with their objects. |
 | UI.Ribbon.Keytips | Access keys (Alt / F10 show keytips; Alt+N, F etc.) | Window/Ribbon/Keytips | surface |  |  | P2 | missing | KBD365 (Alt+N sequences) |  |
 | UI.Ribbon.Galleries | In-ribbon galleries with live preview (Styles, Tags, Pens) | Window/Ribbon/Galleries | surface |  |  | P1 | missing | FLUENT19 (gallery controls) |  |
 | UI.Ribbon.Tooltips | ScreenTips with the command name, shortcut and description | Window/Ribbon/ScreenTips | surface |  |  | P1 | missing | GK |  |
@@ -243,7 +243,7 @@ The Insert tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | R.Insert.Insert.PenInsertSpace | Insert Space | Insert/Insert Space | toggle |  | insert.space | P1 | missing | FLUENT19:PenInsertSpace |  |
-| R.Insert.Tables.TableInsertGallery | Table | Insert/Tables/Table | gallery |  | insert.table | P1 | missing | FLUENT19:TableInsertGallery |  |
+| R.Insert.Tables.TableInsertGallery | Table | Insert/Tables/Table | gallery |  | insert.table | P1 | verified | FLUENT19:TableInsertGallery |  |
 | R.Insert.Tables.TableInsert | Insert Table | Insert/Tables/Table/Insert Table | button |  | insert.tableDialog | P1 | missing | FLUENT19:TableInsert |  |
 | R.Insert.Tables.InsertNewExcelSpreadsheetWithPreview | New Excel Spreadsheet | Insert/Tables/Table/New Excel Spreadsheet | button |  | insert.newSpreadsheet | P3 | missing | FLUENT19:InsertNewExcelSpreadsheetWithPreview |  |
 | R.Insert.Files.PrintoutFromFileInsert | File Printout | Insert/Files/File Printout | button |  | insert.printout | P1 | missing | FLUENT19:PrintoutFromFileInsert |  |
@@ -448,29 +448,29 @@ Shown only while the selection is in a table / an equation / on a recording.
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| CT.TableLayout.Select.SelectTableOneNote | Select Table | Table Layout/Select/Select Table | button |  | table.selectTable | P1 | missing | FLUENT19:SelectTableOneNote |  |
-| CT.TableLayout.Select.SelectColumns | Select Columns | Table Layout/Select/Select Columns | button |  | table.selectColumns | P1 | missing | FLUENT19:SelectColumns |  |
-| CT.TableLayout.Select.SelectRows | Select Rows | Table Layout/Select/Select Rows | button |  | table.selectRows | P1 | missing | FLUENT19:SelectRows |  |
-| CT.TableLayout.Select.SelectCell | Select Cell | Table Layout/Select/Select Cell | button |  | table.selectCell | P1 | missing | FLUENT19:SelectCell |  |
-| CT.TableLayout.Delete.DeleteTableOneNote | Delete Table | Table Layout/Delete/Delete Table | button |  | table.delete | P1 | missing | FLUENT19:DeleteTableOneNote |  |
-| CT.TableLayout.Delete.DeleteColumnsOneNote | Delete Columns | Table Layout/Delete/Delete Columns | button |  | table.deleteColumns | P1 | missing | FLUENT19:DeleteColumnsOneNote |  |
-| CT.TableLayout.Delete.DeleteRowsOneNote | Delete Rows | Table Layout/Delete/Delete Rows | button |  | table.deleteRows | P1 | missing | FLUENT19:DeleteRowsOneNote |  |
-| CT.TableLayout.Insert.TableInsertRowsAbove | Insert Above | Table Layout/Insert/Insert Above | button |  | table.insertAbove | P1 | missing | FLUENT19:TableInsertRowsAbove |  |
-| CT.TableLayout.Insert.TableInsertRowsBelow | Insert Below | Table Layout/Insert/Insert Below | button | `Mod+Enter` | table.insertBelow | P1 | missing | FLUENT19:TableInsertRowsBelow |  |
-| CT.TableLayout.Insert.TableInsertColumnsLeft | Insert Left | Table Layout/Insert/Insert Left | button | `Mod+Alt+E` | table.insertLeft | P1 | missing | FLUENT19:TableInsertColumnsLeft |  |
-| CT.TableLayout.Insert.TableInsertColumnsRight | Insert Right | Table Layout/Insert/Insert Right | button | `Mod+Alt+R` | table.insertRight | P1 | missing | FLUENT19:TableInsertColumnsRight |  |
+| CT.TableLayout.Select.SelectTableOneNote | Select Table | Table Layout/Select/Select Table | button |  | table.selectTable | P1 | verified | FLUENT19:SelectTableOneNote |  |
+| CT.TableLayout.Select.SelectColumns | Select Columns | Table Layout/Select/Select Columns | button |  | table.selectColumns | P1 | verified | FLUENT19:SelectColumns |  |
+| CT.TableLayout.Select.SelectRows | Select Rows | Table Layout/Select/Select Rows | button |  | table.selectRows | P1 | verified | FLUENT19:SelectRows |  |
+| CT.TableLayout.Select.SelectCell | Select Cell | Table Layout/Select/Select Cell | button |  | table.selectCell | P1 | verified | FLUENT19:SelectCell |  |
+| CT.TableLayout.Delete.DeleteTableOneNote | Delete Table | Table Layout/Delete/Delete Table | button |  | table.delete | P1 | verified | FLUENT19:DeleteTableOneNote |  |
+| CT.TableLayout.Delete.DeleteColumnsOneNote | Delete Columns | Table Layout/Delete/Delete Columns | button |  | table.deleteColumns | P1 | verified | FLUENT19:DeleteColumnsOneNote |  |
+| CT.TableLayout.Delete.DeleteRowsOneNote | Delete Rows | Table Layout/Delete/Delete Rows | button |  | table.deleteRows | P1 | verified | FLUENT19:DeleteRowsOneNote |  |
+| CT.TableLayout.Insert.TableInsertRowsAbove | Insert Above | Table Layout/Insert/Insert Above | button |  | table.insertAbove | P1 | verified | FLUENT19:TableInsertRowsAbove |  |
+| CT.TableLayout.Insert.TableInsertRowsBelow | Insert Below | Table Layout/Insert/Insert Below | button | `Mod+Enter` | table.insertBelow | P1 | verified | FLUENT19:TableInsertRowsBelow |  |
+| CT.TableLayout.Insert.TableInsertColumnsLeft | Insert Left | Table Layout/Insert/Insert Left | button | `Mod+Alt+E` | table.insertLeft | P1 | verified | FLUENT19:TableInsertColumnsLeft |  |
+| CT.TableLayout.Insert.TableInsertColumnsRight | Insert Right | Table Layout/Insert/Insert Right | button | `Mod+Alt+R` | table.insertRight | P1 | verified | FLUENT19:TableInsertColumnsRight |  |
 | CT.TableLayout.Merge.MergeCells | Merge Cells | Table Layout/Merge/Merge Cells | button |  | table.merge | P1 | missing | FLUENT19:MergeCells |  |
 | CT.TableLayout.Merge.UnmergeCells | Split Cells | Table Layout/Merge/Split Cells | button |  | table.split | P1 | missing | FLUENT19:UnmergeCells |  |
-| CT.TableLayout.Format.TableBordersHide | Hide Borders | Table Layout/Format/Hide Borders | toggle |  | table.hideBorders | P1 | missing | FLUENT19:TableBordersHide |  |
-| CT.TableLayout.Format.ShadingColorPicker | Shading | Table Layout/Format/Shading | gallery |  | table.shading | P1 | missing | FLUENT19:ShadingColorPicker |  |
-| CT.TableLayout.Alignment.AlignLeft | Align Left | Table Layout/Alignment/Align Left | toggle | `Mod+L` | para.alignLeft | P0 | missing | FLUENT19:AlignLeft |  |
-| CT.TableLayout.Alignment.AlignCenter | Center | Table Layout/Alignment/Center | toggle |  | para.alignCenter | P0 | missing | FLUENT19:AlignCenter |  |
-| CT.TableLayout.Alignment.AlignRight | Align Right | Table Layout/Alignment/Align Right | toggle | `Mod+R` | para.alignRight | P0 | missing | FLUENT19:AlignRight |  |
+| CT.TableLayout.Format.TableBordersHide | Hide Borders | Table Layout/Format/Hide Borders | toggle |  | table.hideBorders | P1 | verified | FLUENT19:TableBordersHide |  |
+| CT.TableLayout.Format.ShadingColorPicker | Shading | Table Layout/Format/Shading | gallery |  | table.shading | P1 | verified | FLUENT19:ShadingColorPicker |  |
+| CT.TableLayout.Alignment.AlignLeft | Align Left | Table Layout/Alignment/Align Left | toggle | `Mod+L` | para.alignLeft | P0 | wired | FLUENT19:AlignLeft |  |
+| CT.TableLayout.Alignment.AlignCenter | Center | Table Layout/Alignment/Center | toggle |  | para.alignCenter | P0 | wired | FLUENT19:AlignCenter |  |
+| CT.TableLayout.Alignment.AlignRight | Align Right | Table Layout/Alignment/Align Right | toggle | `Mod+R` | para.alignRight | P0 | wired | FLUENT19:AlignRight |  |
 | CT.TableLayout.Data.SortMenu | Sort | Table Layout/Data/Sort | menu |  |  | P1 | missing | FLUENT19:SortMenu |  |
-| CT.TableLayout.Data.SortUp | Sort Ascending | Table Layout/Data/Sort/Sort Ascending | button |  | table.sortAscending | P1 | missing | FLUENT19:SortUp |  |
-| CT.TableLayout.Data.SortDown | Sort Descending | Table Layout/Data/Sort/Sort Descending | button |  | table.sortDescending | P1 | missing | FLUENT19:SortDown |  |
+| CT.TableLayout.Data.SortUp | Sort Ascending | Table Layout/Data/Sort/Sort Ascending | button |  | table.sortAscending | P1 | wired | FLUENT19:SortUp | Sorts the whole table by the caret's column, the header row excluded; unverified collation (numbers first, text ignoring case, empty cells last). |
+| CT.TableLayout.Data.SortDown | Sort Descending | Table Layout/Data/Sort/Sort Descending | button |  | table.sortDescending | P1 | wired | FLUENT19:SortDown | As Sort Ascending, reversed (empty cells stay last); unverified collation. |
 | CT.TableLayout.Data.ShowSortTableRowsDialog | Sort… | Table Layout/Data/Sort/Sort… | button |  | table.sortDialog | P2 | missing | FLUENT19:ShowSortTableRowsDialog |  |
-| CT.TableLayout.Data.HeaderRowNoFormatting | Header Row (excluded from sort) | Table Layout/Data/Sort/Header Row (excluded from sort) | check |  | table.headerRow | P2 | missing | FLUENT19:HeaderRowNoFormatting |  |
+| CT.TableLayout.Data.HeaderRowNoFormatting | Header Row (excluded from sort) | Table Layout/Data/Sort/Header Row (excluded from sort) | check |  | table.headerRow | P2 | verified | FLUENT19:HeaderRowNoFormatting |  |
 | CT.TableLayout.Convert.ConvertToExcelSpreadsheet | Convert to Excel Spreadsheet | Table Layout/Convert/Convert to Excel Spreadsheet | button |  | table.convertToSpreadsheet | P3 | missing | FLUENT19:ConvertToExcelSpreadsheet |  |
 
 ## Contextual tab › Equation
@@ -1164,14 +1164,14 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Insert.Time | Insert the current time | Keyboard/Insert items/Insert the current time | shortcut | `Alt+Shift+T` | insert.time | P1 | wired | KBD365 |  |
 | KB.Insert.Equation | Start a math equation or convert the selection | Keyboard/Insert items/Start a math equation or convert the selection | shortcut | `Alt+=` | insert.equation | P2 | missing | KBD365 |  |
 | KB.Table.CreateWithTab | Create a table: Tab after typing text on a new line | Keyboard/Tables/Create a table: Tab after typing text on a new line | key-behaviour |  |  | P1 | missing | KBD365 | behaviour of Tab in text |
-| KB.Table.NewColumnTab | Create another column in a single-row table: Tab | Keyboard/Tables/Create another column in a single-row table: Tab | key-behaviour |  |  | P1 | missing | KBD365 | behaviour of Tab in a table |
-| KB.Table.NewRowEnter | Create another row at the end cell: Enter (again to finish) | Keyboard/Tables/Create another row at the end cell: Enter (again to finish) | key-behaviour |  |  | P1 | missing | KBD365 | behaviour of Enter in a table |
-| KB.Table.RowBelow | Insert a row below the current row | Keyboard/Tables/Insert a row below the current row | shortcut | `Mod+Enter` | table.insertBelow | P1 | missing | KBD365 | in a table cell |
-| KB.Table.ParagraphInCell | Create another paragraph in the same cell | Keyboard/Tables/Create another paragraph in the same cell | shortcut | `Alt+Enter` | table.newParagraphInCell | P1 | missing | KBD365 |  |
-| KB.Table.ColumnRight | Create a column to the right | Keyboard/Tables/Create a column to the right | shortcut | `Mod+Alt+R` | table.insertRight | P1 | missing | KBD365 |  |
-| KB.Table.ColumnLeft | Create a column to the left | Keyboard/Tables/Create a column to the left | shortcut | `Mod+Alt+E` | table.insertLeft | P1 | missing | KBD365 |  |
+| KB.Table.NewColumnTab | Create another column in a single-row table: Tab | Keyboard/Tables/Create another column in a single-row table: Tab | key-behaviour |  |  | P1 | verified | KBD365 | behaviour of Tab in a table |
+| KB.Table.NewRowEnter | Create another row at the end cell: Enter (again to finish) | Keyboard/Tables/Create another row at the end cell: Enter (again to finish) | key-behaviour |  | table.enter | P1 | verified | KBD365 | Behaviour of Enter in a table. Enter in other cells also adds a row below (unverified); Enter on an empty last row removes it and leaves the table. |
+| KB.Table.RowBelow | Insert a row below the current row | Keyboard/Tables/Insert a row below the current row | shortcut | `Mod+Enter` | table.insertBelow | P1 | wired | KBD365 | in a table cell |
+| KB.Table.ParagraphInCell | Create another paragraph in the same cell | Keyboard/Tables/Create another paragraph in the same cell | shortcut | `Alt+Enter` | table.newParagraphInCell | P1 | verified | KBD365 |  |
+| KB.Table.ColumnRight | Create a column to the right | Keyboard/Tables/Create a column to the right | shortcut | `Mod+Alt+R` | table.insertRight | P1 | wired | KBD365 |  |
+| KB.Table.ColumnLeft | Create a column to the left | Keyboard/Tables/Create a column to the left | shortcut | `Mod+Alt+E` | table.insertLeft | P1 | wired | KBD365 |  |
 | KB.Table.RowAboveEnter | Create a row above: Enter at the beginning of a row (not the first) | Keyboard/Tables/Create a row above: Enter at the beginning of a row (not the first) | key-behaviour |  |  | P1 | missing | KBD365 | behaviour of Enter in a table |
-| KB.Table.TabInLastCell | Create a new row: Tab in the last cell | Keyboard/Tables/Create a new row: Tab in the last cell | key-behaviour |  |  | P1 | missing | KBD365 | behaviour of Tab in a table |
+| KB.Table.TabInLastCell | Create a new row: Tab in the last cell | Keyboard/Tables/Create a new row: Tab in the last cell | key-behaviour |  |  | P1 | verified | KBD365 | behaviour of Tab in a table |
 | KB.Table.DeleteEmptyRow | Delete the current empty row: Delete twice at its beginning | Keyboard/Tables/Delete the current empty row: Delete twice at its beginning | key-behaviour |  |  | P2 | missing | KBD365 | behaviour of Delete in a table |
 | KB.Select.ToLineEnd | Select to the end of the line | Keyboard/Select/Select to the end of the line | shortcut | `Shift+End` | caret.selectLineEnd | P0 | verified | KBD365 |  |
 | KB.Select.Line | Select the whole line (Shift+Down at the line start) | Keyboard/Select/Select the whole line (Shift+Down at the line start) | shortcut | `Shift+Down` | caret.selectDown | P0 | wired | KBD365 |  |
@@ -1492,6 +1492,12 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 | NC.Page.Select | Open a page (click its tab) | Mouse/Page tab | mouse |  | nav.goto | P0 | wired | NoteCraft | Ctrl/Shift+click select several |
 | NC.Section.Select | Open a section (click it in the notebook tree) | Mouse/Section tab | mouse |  | section.select | P0 | wired | NoteCraft |  |
 | NC.Notebook.Select | Open a notebook (click it in the notebook pane) | Mouse/Notebook pane | mouse |  | notebook.select | P0 | wired | NoteCraft |  |
+| NC.Table.NextCell | Next Cell | Keyboard/Tables/Move to the next cell | key-behaviour | `Tab` | table.nextCell | P1 | wired | NoteCraft; KBD365 (Tables) | Move to the next table cell (Tab); from the last cell a new row, or a new column in a one-row table. Lands at the end of the cell's text (unverified) |
+| NC.Table.PrevCell | Previous Cell | Keyboard/Tables/Move to the previous cell | key-behaviour | `Shift+Tab` | table.prevCell | P1 | verified | NoteCraft; KBD365 (Tables) | Move to the previous table cell (Shift+Tab). |
+| NC.Table.SelectRange | Select Cells | Mouse/Drag across table cells | mouse |  | table.selectRange | P1 | verified | NoteCraft | Select table cells by dragging across them. |
+| NC.Table.ColumnWidth | Column Width | Mouse/Drag a table column border | mouse |  | table.columnWidth | P1 | verified | NoteCraft; [MS-ONE] TableColumnWidths | Drag a table column's border to change its width. |
+| NC.Table.ConvertTextToTable | Convert Text to Table | Insert/Tables/Table/Convert Text to Table | button |  | insert.convertTextToTable | P1 | wired | NoteCraft | The selected paragraphs become a table: a row per paragraph, tabs split the cells. Unverified placement in the reference |
+| NC.Table.ConvertToText | Convert to Text | Table Layout/Convert/Convert to Text | button |  | table.convertToText | P2 | wired | NoteCraft | A table becomes text: a paragraph per row, cells joined by tabs. Unverified placement in the reference |
 
 ## Revision history
 

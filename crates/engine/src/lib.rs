@@ -29,6 +29,7 @@ mod page_cmds;
 mod para_cmds;
 mod search_cmds;
 mod section_cmds;
+mod table_cmds;
 mod tag_cmds;
 mod text_cmds;
 mod view_cmds;
@@ -37,6 +38,8 @@ mod view_cmds;
 mod tests;
 #[cfg(test)]
 mod tests_cmds;
+#[cfg(test)]
+mod tests_table;
 
 use serde_json::Value;
 

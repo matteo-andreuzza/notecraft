@@ -472,6 +472,7 @@ impl Session {
         match block {
             Block::Title => Some(std::slice::from_ref(&page.title)),
             Block::Outline(id) => page.outline(id).map(|o| o.paragraphs.as_slice()),
+            Block::Cell(id) => page.cell(id).map(|c| c.paragraphs.as_slice()),
         }
     }
 
@@ -480,6 +481,7 @@ impl Session {
         match block {
             Block::Title => None,
             Block::Outline(id) => page.outline_mut(id).map(|o| &mut o.paragraphs),
+            Block::Cell(id) => page.cell_mut(id).map(|c| &mut c.paragraphs),
         }
     }
 
@@ -488,6 +490,7 @@ impl Session {
         match block {
             Block::Title => (para == 0).then_some(&mut page.title),
             Block::Outline(id) => page.outline_mut(id)?.paragraphs.get_mut(para),
+            Block::Cell(id) => page.cell_mut(id)?.paragraphs.get_mut(para),
         }
     }
 
@@ -732,12 +735,10 @@ pub(crate) fn walk_pages(nb: &Notebook, f: &mut dyn FnMut(PageMeta, &Arc<Page>))
 pub(crate) fn page_search_text(p: &Page) -> String {
     let mut s = p.plain_text();
     for o in &p.objects {
-        if let Some(ol) = o.as_outline() {
-            for para in &ol.paragraphs {
-                for t in &para.tags {
-                    s.push(' ');
-                    s.push_str(&t.name);
-                }
+        for para in o.paragraphs() {
+            for t in &para.tags {
+                s.push(' ');
+                s.push_str(&t.name);
             }
         }
     }

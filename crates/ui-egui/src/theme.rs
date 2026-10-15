@@ -163,6 +163,8 @@ pub struct Tokens {
     pub page_meta: Color32,
     /// Note container frame (on hover/focus).
     pub container: Color32,
+    /// Table borders on the page.
+    pub table_border: Color32,
     /// Text selection fill.
     pub selection: Color32,
     /// Hyperlinks on the page.
@@ -248,6 +250,7 @@ impl Tokens {
             page_text: Color32::BLACK,
             page_meta: Color32::from_rgb(0x61, 0x61, 0x61),
             container: Color32::from_rgb(0xC8, 0xC6, 0xC4),
+            table_border: Color32::from_rgb(0x8A, 0x88, 0x86),
             selection: Color32::from_rgba_unmultiplied(0x7A, 0x3D, 0xB8, 60),
             link: Color32::from_rgb(0x05, 0x63, 0xC1),
             rule: Color32::from_rgb(0xB4, 0xCF, 0xE6),
@@ -287,6 +290,7 @@ impl Tokens {
             page_text: Color32::from_rgb(0xF3, 0xF2, 0xF1),
             page_meta: Color32::from_rgb(0xA6, 0xA6, 0xA6),
             container: Color32::from_rgb(0x60, 0x5E, 0x5C),
+            table_border: Color32::from_rgb(0x9E, 0x9C, 0x9A),
             selection: Color32::from_rgba_unmultiplied(0xB7, 0x94, 0xF0, 70),
             link: Color32::from_rgb(0x6C, 0xB8, 0xF6),
             rule: Color32::from_rgb(0x3A, 0x4D, 0x63),

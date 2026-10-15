@@ -1,0 +1,756 @@
+//! Tables: Insert › Table, the Table Layout contextual tab (select, delete, insert, borders,
+//! shading, sort), the keys that move through cells and grow a table, and conversion between
+//! tables and text.
+//!
+//! Where a table is "the current table" ([`table_sel`]): the caret is in one of its cells, its
+//! cells are selected, or it is selected as an object. Every editing command here records one
+//! undo step through `Session::run`; the selection commands are pure. Sizes are bounded by
+//! `notecraft_doc::table::{MAX_ROWS, MAX_COLS, MAX_CELLS}` against hostile params.
+
+use notecraft_doc::color::Rgba;
+use notecraft_doc::geom::Point;
+use notecraft_doc::table::{DEFAULT_COL_WIDTH, MAX_CELLS, MAX_COL_WIDTH, MAX_COLS, MAX_ROWS, MIN_COL_WIDTH};
+use notecraft_doc::{CharFormat, Id, Outline, PageObject, Paragraph, Run, Table, TableCell};
+use notecraft_text as t;
+use serde_json::{Value, json};
+
+use crate::ops::{self, DEFAULT_LEFT, need_page, no_page};
+use crate::selection::{Block, PageSel, Pos};
+use crate::{CmdError, CmdResult, CommandSpec, Session, p};
+
+/// The table the selection is in, with the selected rows and columns (inclusive ranges).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct TableSel {
+    /// The table.
+    pub table: Id,
+    /// First and last row.
+    pub rows: (usize, usize),
+    /// First and last column.
+    pub cols: (usize, usize),
+}
+
+/// The current table and selected cells (see the module docs).
+pub(crate) fn table_sel(s: &Session) -> Option<TableSel> {
+    let page = s.page()?;
+    match &s.sel.on_page {
+        PageSel::Text(r) => match r.head.block {
+            Block::Cell(cell) => {
+                let (t, row, col) = page.table_of_cell(cell)?;
+                Some(TableSel { table: t.id, rows: (row, row), cols: (col, col) })
+            }
+            _ => None,
+        },
+        PageSel::Cells { table, rows, cols } => {
+            let t = page.table(*table)?;
+            let (lr, lc) = (t.n_rows().checked_sub(1)?, t.n_cols().checked_sub(1)?);
+            let r0 = rows.0.min(rows.1).min(lr);
+            let c0 = cols.0.min(cols.1).min(lc);
+            Some(TableSel { table: *table, rows: (r0, rows.0.max(rows.1).min(lr)), cols: (c0, cols.0.max(cols.1).min(lc)) })
+        }
+        PageSel::Objects { ids } => {
+            let t = ids.iter().find_map(|id| page.table(*id))?;
+            Some(TableSel { table: t.id, rows: (0, t.n_rows().checked_sub(1)?), cols: (0, t.n_cols().checked_sub(1)?) })
+        }
+        PageSel::None => None,
+    }
+}
+
+/// Enabled when the selection is in a table.
+pub(crate) fn in_table(s: &Session) -> Option<&'static str> {
+    if s.sel.page.is_none() {
+        return Some("No page is open");
+    }
+    if table_sel(s).is_some() { None } else { Some("Click in a table first") }
+}
+
+fn need_caret_in_cell(s: &Session) -> Option<&'static str> {
+    if s.sel.page.is_none() {
+        return Some("No page is open");
+    }
+    match s.text_range() {
+        Some(r) if matches!(r.head.block, Block::Cell(_)) => None,
+        _ => Some("Click in a table cell first"),
+    }
+}
+
+fn need_text_selection(s: &Session) -> Option<&'static str> {
+    if s.sel.page.is_none() {
+        return Some("No page is open");
+    }
+    match (&s.sel.on_page, s.text_range()) {
+        (PageSel::Text(_), Some(r)) if matches!(r.head.block, Block::Outline(_)) => None,
+        (PageSel::Objects { ids }, _) if ids.len() == 1 && s.page().is_some_and(|p| p.outline(ids[0]).is_some()) => None,
+        _ => Some("Select paragraphs in a note container first"),
+    }
+}
+
+pub(crate) fn specs() -> Vec<CommandSpec> {
+    vec![
+        // R.Insert.Tables.TableInsertGallery — the size grid under Insert › Table.
+        CommandSpec::new("insert.table", "R.Insert.Tables.TableInsertGallery", "Table", "Insert/Tables/Table", insert_table)
+            .params(r#"{"rows": int (1..5000, default 2), "cols": int (1..64, default 2), "x"?: pt, "y"?: pt}"#)
+            .when(need_page),
+        // NC.Table.ConvertTextToTable — the selected paragraphs become rows, tabs split cells.
+        CommandSpec::new(
+            "insert.convertTextToTable",
+            "NC.Table.ConvertTextToTable",
+            "Convert Text to Table",
+            "Insert/Tables/Table/Convert Text to Table",
+            convert_text_to_table,
+        )
+        .when(need_text_selection),
+        // CT.TableLayout.Select.*
+        CommandSpec::new(
+            "table.selectTable",
+            "CT.TableLayout.Select.SelectTableOneNote",
+            "Select Table",
+            "Table Layout/Select/Select Table",
+            |s, _| select(s, true, true),
+        )
+        .pure()
+        .when(in_table),
+        CommandSpec::new(
+            "table.selectColumns",
+            "CT.TableLayout.Select.SelectColumns",
+            "Select Columns",
+            "Table Layout/Select/Select Columns",
+            |s, _| select(s, true, false),
+        )
+        .pure()
+        .when(in_table),
+        CommandSpec::new("table.selectRows", "CT.TableLayout.Select.SelectRows", "Select Rows", "Table Layout/Select/Select Rows", |s, _| {
+            select(s, false, true)
+        })
+        .pure()
+        .when(in_table),
+        CommandSpec::new("table.selectCell", "CT.TableLayout.Select.SelectCell", "Select Cell", "Table Layout/Select/Select Cell", |s, _| {
+            select(s, false, false)
+        })
+        .pure()
+        .when(in_table),
+        // NC.Table.SelectRange — a drag across cells.
+        CommandSpec::new("table.selectRange", "NC.Table.SelectRange", "Select Cells", "Mouse/Drag across table cells", select_range)
+            .params(r#"{"table": table id, "rows": [first, last], "cols": [first, last]}"#)
+            .pure()
+            .when(need_page),
+        // CT.TableLayout.Delete.*
+        CommandSpec::new(
+            "table.delete",
+            "CT.TableLayout.Delete.DeleteTableOneNote",
+            "Delete Table",
+            "Table Layout/Delete/Delete Table",
+            delete_table,
+        )
+        .when(in_table),
+        CommandSpec::new(
+            "table.deleteColumns",
+            "CT.TableLayout.Delete.DeleteColumnsOneNote",
+            "Delete Columns",
+            "Table Layout/Delete/Delete Columns",
+            |s, _| delete_lines(s, false),
+        )
+        .when(in_table),
+        CommandSpec::new("table.deleteRows", "CT.TableLayout.Delete.DeleteRowsOneNote", "Delete Rows", "Table Layout/Delete/Delete Rows", |s, _| {
+            delete_lines(s, true)
+        })
+        .when(in_table),
+        // CT.TableLayout.Insert.*
+        CommandSpec::new(
+            "table.insertAbove",
+            "CT.TableLayout.Insert.TableInsertRowsAbove",
+            "Insert Above",
+            "Table Layout/Insert/Insert Above",
+            |s, _| insert_row(s, false),
+        )
+        .when(in_table),
+        CommandSpec::new(
+            "table.insertBelow",
+            "CT.TableLayout.Insert.TableInsertRowsBelow",
+            "Insert Below",
+            "Table Layout/Insert/Insert Below",
+            |s, _| insert_row(s, true),
+        )
+        .key("Mod+Enter")
+        .when(in_table),
+        CommandSpec::new(
+            "table.insertLeft",
+            "CT.TableLayout.Insert.TableInsertColumnsLeft",
+            "Insert Left",
+            "Table Layout/Insert/Insert Left",
+            |s, _| insert_col(s, false),
+        )
+        .key("Mod+Alt+E")
+        .when(in_table),
+        CommandSpec::new(
+            "table.insertRight",
+            "CT.TableLayout.Insert.TableInsertColumnsRight",
+            "Insert Right",
+            "Table Layout/Insert/Insert Right",
+            |s, _| insert_col(s, true),
+        )
+        .key("Mod+Alt+R")
+        .when(in_table),
+        // CT.TableLayout.Format.*
+        CommandSpec::new(
+            "table.hideBorders",
+            "CT.TableLayout.Format.TableBordersHide",
+            "Hide Borders",
+            "Table Layout/Format/Hide Borders",
+            hide_borders,
+        )
+        .when(in_table),
+        CommandSpec::new("table.shading", "CT.TableLayout.Format.ShadingColorPicker", "Shading", "Table Layout/Format/Shading", shading)
+            .params(r##"{"color": "#RRGGBB" | null (no colour)}"##)
+            .when(in_table),
+        // CT.TableLayout.Data.*
+        CommandSpec::new("table.sortAscending", "CT.TableLayout.Data.SortUp", "Sort Ascending", "Table Layout/Data/Sort/Sort Ascending", |s, _| {
+            sort(s, false)
+        })
+        .when(in_table),
+        CommandSpec::new(
+            "table.sortDescending",
+            "CT.TableLayout.Data.SortDown",
+            "Sort Descending",
+            "Table Layout/Data/Sort/Sort Descending",
+            |s, _| sort(s, true),
+        )
+        .when(in_table),
+        CommandSpec::new(
+            "table.headerRow",
+            "CT.TableLayout.Data.HeaderRowNoFormatting",
+            "Header Row (excluded from sort)",
+            "Table Layout/Data/Sort/Header Row (excluded from sort)",
+            header_row,
+        )
+        .when(in_table),
+        // NC.Table.ConvertToText — rows become paragraphs, cells are joined by tabs.
+        CommandSpec::new("table.convertToText", "NC.Table.ConvertToText", "Convert to Text", "Table Layout/Convert/Convert to Text", convert_to_text)
+            .when(in_table),
+        // NC.Table.ColumnWidth — dragging a column border.
+        CommandSpec::new("table.columnWidth", "NC.Table.ColumnWidth", "Column Width", "Mouse/Drag a table column border", column_width)
+            .params(r#"{"table": table id, "col": int, "width": pt}"#)
+            .when(need_page),
+        // NC.Table.NextCell / PrevCell — Tab and Shift+Tab in a cell (KB.Table.TabInLastCell,
+        // KB.Table.NewColumnTab).
+        CommandSpec::new("table.nextCell", "NC.Table.NextCell", "Next Cell", "Keyboard/Tables/Move to the next cell", next_cell)
+            .key("Tab")
+            .when(need_caret_in_cell),
+        CommandSpec::new("table.prevCell", "NC.Table.PrevCell", "Previous Cell", "Keyboard/Tables/Move to the previous cell", prev_cell)
+            .key("Shift+Tab")
+            .pure()
+            .when(need_caret_in_cell),
+        // KB.Table.NewRowEnter (with KB.Table.RowAboveEnter) — Enter in a cell.
+        CommandSpec::new(
+            "table.enter",
+            "KB.Table.NewRowEnter",
+            "New Row",
+            "Keyboard/Tables/Create another row at the end cell: Enter (again to finish)",
+            enter,
+        )
+        .when(need_caret_in_cell),
+        // KB.Table.ParagraphInCell — Alt+Enter.
+        CommandSpec::new(
+            "table.newParagraphInCell",
+            "KB.Table.ParagraphInCell",
+            "New Paragraph in Cell",
+            "Keyboard/Tables/Create another paragraph in the same cell",
+            crate::text_cmds::newline,
+        )
+        .key("Alt+Enter")
+        .when(need_caret_in_cell),
+    ]
+}
+
+fn mint(s: &mut Session) -> impl FnMut() -> Id + '_ {
+    move || s.ids.next_id()
+}
+
+fn stamp(s: &Session, cell: &mut TableCell) {
+    for p in &mut cell.paragraphs {
+        p.author = s.author();
+        p.modified = s.now();
+    }
+}
+
+fn caret_in(s: &mut Session, cell: Id, at_end: bool) {
+    let (para, offset) = match s.page().and_then(|p| p.cell(cell)) {
+        Some(c) if at_end => {
+            let last = c.paragraphs.len().saturating_sub(1);
+            (last, c.paragraphs.get(last).map(Paragraph::len).unwrap_or(0))
+        }
+        _ => (0, 0),
+    };
+    s.set_caret(Pos::new(Block::Cell(cell), para, offset));
+}
+
+fn table_mut(s: &mut Session, id: Id) -> Result<&mut Table, CmdError> {
+    s.page_mut().ok_or_else(no_page)?.table_mut(id).ok_or_else(|| CmdError::Failed("the table is gone".into()))
+}
+
+fn cur(s: &Session) -> Result<TableSel, CmdError> {
+    table_sel(s).ok_or_else(|| CmdError::Disabled("click in a table first".into()))
+}
+
+fn insert_table(s: &mut Session, v: &Value) -> CmdResult {
+    let rows = p::usize(v, "rows").unwrap_or(2);
+    let cols = p::usize(v, "cols").unwrap_or(2);
+    if rows == 0 || cols == 0 || rows > MAX_ROWS || cols > MAX_COLS || rows.saturating_mul(cols) > MAX_CELLS {
+        return Err(CmdError::Params(format!("a table has 1–{MAX_ROWS} rows, 1–{MAX_COLS} columns and at most {MAX_CELLS} cells")));
+    }
+    let page = s.page().ok_or_else(no_page)?;
+    // Below the caret's container when there is one (unverified: the reference puts the table
+    // inside that container, after the caret paragraph; see docs/plan.md §4.8).
+    let below = |o: &PageObject| Point::new(o.pos().x, ops::object_bottom(o) + 12.0);
+    let pos = match (p::f32(v, "x"), p::f32(v, "y")) {
+        (Some(x), Some(y)) => Point::new(x.max(0.0), y.max(0.0)),
+        _ => match (s.pending_outline, s.sel.caret()) {
+            (Some(pt), _) => pt,
+            (None, Some(Pos { block: Block::Outline(id), .. })) => page.objects.iter().find(|o| o.id() == id).map(below).unwrap_or_default(),
+            (None, Some(Pos { block: Block::Cell(c), .. })) => {
+                page.table_of_cell(c).and_then(|(t, _, _)| page.objects.iter().find(|o| o.id() == t.id)).map(below).unwrap_or_default()
+            }
+            _ => Point::new(DEFAULT_LEFT, ops::next_free_y(page)),
+        },
+    };
+    s.pending_outline = None;
+    let id = s.new_id();
+    let mut table = Table::new(id, pos, rows, cols, &mut mint(s));
+    for row in &mut table.rows {
+        for c in &mut row.cells {
+            stamp(s, c);
+        }
+    }
+    let first = table.rows.first().and_then(|r| r.cells.first()).map(|c| c.id);
+    s.page_mut().ok_or_else(no_page)?.objects.push(PageObject::Table(table));
+    if let Some(c) = first {
+        caret_in(s, c, false);
+    }
+    Ok(json!({"table": id.to_string()}))
+}
+
+fn select(s: &mut Session, all_rows: bool, all_cols: bool) -> CmdResult {
+    let ts = cur(s)?;
+    let t = s.page().and_then(|p| p.table(ts.table)).ok_or_else(no_page)?;
+    let rows = if all_rows { (0, t.n_rows().saturating_sub(1)) } else { ts.rows };
+    let cols = if all_cols { (0, t.n_cols().saturating_sub(1)) } else { ts.cols };
+    s.sel.on_page = PageSel::Cells { table: ts.table, rows, cols };
+    s.pending_fmt = None;
+    Ok(Value::Null)
+}
+
+fn pair(v: &Value, k: &str) -> Result<(usize, usize), CmdError> {
+    let a = v.get(k).and_then(Value::as_array).ok_or_else(|| CmdError::Params(format!("`{k}` must be [first, last]")))?;
+    let n = |i: usize| a.get(i).and_then(Value::as_u64).map(|x| x.min(usize::MAX as u64) as usize);
+    match (n(0), n(1)) {
+        (Some(x), Some(y)) => Ok((x.min(y), x.max(y))),
+        _ => Err(CmdError::Params(format!("`{k}` must be [first, last]"))),
+    }
+}
+
+fn select_range(s: &mut Session, v: &Value) -> CmdResult {
+    let table = p::req_id(v, "table")?;
+    let (rows, cols) = (pair(v, "rows")?, pair(v, "cols")?);
+    let t = s.page().ok_or_else(no_page)?.table(table).ok_or_else(|| CmdError::Params("no such table on this page".into()))?;
+    if rows.1 >= t.n_rows() || cols.1 >= t.n_cols() {
+        return Err(CmdError::Params("the range is outside the table".into()));
+    }
+    s.sel.on_page = PageSel::Cells { table, rows, cols };
+    s.pending_fmt = None;
+    Ok(Value::Null)
+}
+
+fn delete_table(s: &mut Session, _: &Value) -> CmdResult {
+    let ts = cur(s)?;
+    let page = s.page_mut().ok_or_else(no_page)?;
+    page.objects.retain(|o| o.id() != ts.table);
+    s.sel.on_page = PageSel::None;
+    Ok(Value::Null)
+}
+
+fn delete_lines(s: &mut Session, rows: bool) -> CmdResult {
+    let ts = cur(s)?;
+    let t = table_mut(s, ts.table)?;
+    let (a, b) = if rows { ts.rows } else { ts.cols };
+    let total = if rows { t.n_rows() } else { t.n_cols() };
+    if a == 0 && b + 1 >= total {
+        // Every row (or column): the table goes.
+        return delete_table(s, &Value::Null);
+    }
+    if rows {
+        t.rows.drain(a..=b.min(total - 1));
+    } else {
+        t.columns.drain(a..=b.min(total - 1));
+        for r in &mut t.rows {
+            let n = r.cells.len();
+            r.cells.drain(a.min(n)..=b.min(n.saturating_sub(1)));
+        }
+    }
+    let (row, col) =
+        if rows { (a.min(t.n_rows() - 1), ts.cols.0.min(t.n_cols() - 1)) } else { (ts.rows.0.min(t.n_rows() - 1), a.min(t.n_cols() - 1)) };
+    let target = t.cell(row, col).map(|c| c.id);
+    if let Some(c) = target {
+        caret_in(s, c, false);
+    }
+    Ok(Value::Null)
+}
+
+fn room(rows: usize, cols: usize) -> Result<(), CmdError> {
+    if rows > MAX_ROWS || cols > MAX_COLS || rows.saturating_mul(cols) > MAX_CELLS {
+        return Err(CmdError::Failed(format!("a table holds at most {MAX_ROWS} rows, {MAX_COLS} columns and {MAX_CELLS} cells")));
+    }
+    Ok(())
+}
+
+fn insert_row(s: &mut Session, below: bool) -> CmdResult {
+    let ts = cur(s)?;
+    let (n_rows, n_cols) = s.page().and_then(|p| p.table(ts.table)).map(|t| (t.n_rows(), t.n_cols())).ok_or_else(no_page)?;
+    let mut row = Table::new_row(n_cols, &mut mint(s));
+    for c in &mut row.cells {
+        stamp(s, c);
+    }
+    let at = if below { ts.rows.1 + 1 } else { ts.rows.0 };
+    let target = row.cells.get(ts.cols.0).map(|c| c.id);
+    room(n_rows + 1, n_cols)?;
+    let t = table_mut(s, ts.table)?;
+    t.rows.insert(at.min(t.rows.len()), row);
+    // The caret goes to the new row, same column (unverified).
+    if let Some(c) = target {
+        caret_in(s, c, false);
+    }
+    Ok(Value::Null)
+}
+
+fn insert_col(s: &mut Session, right: bool) -> CmdResult {
+    let ts = cur(s)?;
+    let (n_rows, n_cols) = s.page().and_then(|p| p.table(ts.table)).map(|t| (t.n_rows(), t.n_cols())).ok_or_else(no_page)?;
+    let mut cells: Vec<TableCell> = Vec::with_capacity(n_rows);
+    for _ in 0..n_rows {
+        let (a, b) = (s.new_id(), s.new_id());
+        let mut c = TableCell::new(a, b);
+        stamp(s, &mut c);
+        cells.push(c);
+    }
+    let at = if right { ts.cols.1 + 1 } else { ts.cols.0 };
+    let target = cells.get(ts.rows.0).map(|c| c.id);
+    room(n_rows, n_cols + 1)?;
+    let t = table_mut(s, ts.table)?;
+    let at = at.min(t.columns.len());
+    t.columns.insert(at, DEFAULT_COL_WIDTH);
+    for (r, c) in t.rows.iter_mut().zip(cells) {
+        let k = at.min(r.cells.len());
+        r.cells.insert(k, c);
+    }
+    if let Some(c) = target {
+        caret_in(s, c, false);
+    }
+    Ok(Value::Null)
+}
+
+fn hide_borders(s: &mut Session, _: &Value) -> CmdResult {
+    let ts = cur(s)?;
+    let t = table_mut(s, ts.table)?;
+    t.borders = !t.borders;
+    Ok(json!({"borders": t.borders}))
+}
+
+fn shading(s: &mut Session, v: &Value) -> CmdResult {
+    let color = match v.get("color") {
+        None | Some(Value::Null) => None,
+        Some(Value::String(h)) => Some(Rgba::from_hex(h).ok_or_else(|| CmdError::Params("`color` must be #RRGGBB or null".into()))?),
+        Some(_) => return Err(CmdError::Params("`color` must be #RRGGBB or null".into())),
+    };
+    let ts = cur(s)?;
+    let t = table_mut(s, ts.table)?;
+    for r in t.rows.iter_mut().skip(ts.rows.0).take(ts.rows.1 - ts.rows.0 + 1) {
+        for c in r.cells.iter_mut().skip(ts.cols.0).take(ts.cols.1 - ts.cols.0 + 1) {
+            c.shading = color;
+        }
+    }
+    Ok(Value::Null)
+}
+
+/// Sort key: numbers before text and compared as numbers, text case-insensitively, empty
+/// cells last (unverified: the reference's collation).
+fn sort_key(text: &str) -> (u8, f64, String) {
+    let tr = text.trim();
+    if tr.is_empty() {
+        return (2, 0.0, String::new());
+    }
+    match tr.replace(',', "").parse::<f64>() {
+        Ok(n) if n.is_finite() => (0, n, String::new()),
+        _ => (1, 0.0, tr.to_lowercase()),
+    }
+}
+
+fn sort(s: &mut Session, descending: bool) -> CmdResult {
+    let ts = cur(s)?;
+    let col = ts.cols.0;
+    let t = table_mut(s, ts.table)?;
+    let skip = usize::from(t.header_row).min(t.rows.len());
+    let body = t.rows.get_mut(skip..).ok_or_else(|| CmdError::Failed("the table is gone".into()))?;
+    body.sort_by(|a, b| {
+        let ka = sort_key(&a.cells.get(col).map(TableCell::text).unwrap_or_default());
+        let kb = sort_key(&b.cells.get(col).map(TableCell::text).unwrap_or_default());
+        let ord = ka.0.cmp(&kb.0).then(ka.1.total_cmp(&kb.1)).then_with(|| ka.2.cmp(&kb.2));
+        // Empty cells stay last either way.
+        if descending && ka.0 != 2 && kb.0 != 2 { ord.reverse() } else { ord }
+    });
+    Ok(Value::Null)
+}
+
+fn header_row(s: &mut Session, _: &Value) -> CmdResult {
+    let ts = cur(s)?;
+    let t = table_mut(s, ts.table)?;
+    t.header_row = !t.header_row;
+    Ok(json!({"headerRow": t.header_row}))
+}
+
+fn column_width(s: &mut Session, v: &Value) -> CmdResult {
+    let table = p::req_id(v, "table")?;
+    let col = p::req_usize(v, "col")?;
+    let width = p::req_f32(v, "width")?.clamp(MIN_COL_WIDTH, MAX_COL_WIDTH);
+    let t = s.page_mut().ok_or_else(no_page)?.table_mut(table).ok_or_else(|| CmdError::Params("no such table on this page".into()))?;
+    let w = t.columns.get_mut(col).ok_or_else(|| CmdError::Params("no such column".into()))?;
+    *w = width;
+    s.coalesce = Some(format!("colw:{table}:{col}"));
+    Ok(Value::Null)
+}
+
+/// Rows `rows` of `t` as paragraphs: cells joined by tabs, a cell's paragraphs by spaces, the
+/// runs (and so the formatting) kept. Used by Convert to Text and by Copy of cells.
+pub(crate) fn rows_as_paragraphs(t: &Table, rows: (usize, usize), cols: (usize, usize), mint: &mut dyn FnMut() -> Id) -> Vec<Paragraph> {
+    let mut out = Vec::new();
+    for r in t.rows.iter().skip(rows.0).take(rows.1.saturating_sub(rows.0) + 1) {
+        let mut p = Paragraph::new(mint());
+        for (k, c) in r.cells.iter().skip(cols.0).take(cols.1.saturating_sub(cols.0) + 1).enumerate() {
+            if k > 0 {
+                p.runs.push(Run::new("\t", CharFormat::default()));
+            }
+            for (j, cp) in c.paragraphs.iter().enumerate() {
+                if j > 0 {
+                    p.runs.push(Run::new(" ", CharFormat::default()));
+                }
+                p.runs.extend(cp.runs.iter().cloned());
+            }
+        }
+        p.normalize();
+        out.push(p);
+    }
+    out
+}
+
+fn convert_to_text(s: &mut Session, _: &Value) -> CmdResult {
+    let ts = cur(s)?;
+    let t = s.page().and_then(|p| p.table(ts.table)).cloned().ok_or_else(no_page)?;
+    let paras = rows_as_paragraphs(&t, (0, t.n_rows().saturating_sub(1)), (0, t.n_cols().saturating_sub(1)), &mut mint(s));
+    let oid = s.new_id();
+    let mut o = Outline::new(oid, t.pos, Id::NIL);
+    o.paragraphs = paras;
+    o.normalize();
+    let page = s.page_mut().ok_or_else(no_page)?;
+    let idx = page.object_index(ts.table).ok_or_else(|| CmdError::Failed("the table is gone".into()))?;
+    if let Some(slot) = page.objects.get_mut(idx) {
+        *slot = PageObject::Outline(o);
+    }
+    s.set_caret(Pos::new(Block::Outline(oid), 0, 0));
+    Ok(json!({"outline": oid.to_string()}))
+}
+
+/// Split a paragraph's runs at tab characters (each piece keeps its formatting).
+fn split_tabs(p: &Paragraph) -> Vec<Vec<Run>> {
+    let text = p.text();
+    let mut out = Vec::new();
+    let mut start = 0;
+    for (i, ch) in text.char_indices() {
+        if ch == '\t' {
+            out.push(t::slice(p, start..i));
+            start = i + 1;
+        }
+    }
+    out.push(t::slice(p, start..text.len()));
+    out
+}
+
+fn convert_text_to_table(s: &mut Session, _: &Value) -> CmdResult {
+    let (oid, first, last) = match (&s.sel.on_page, s.text_range()) {
+        (PageSel::Text(_), Some(r)) => match r.head.block {
+            Block::Outline(id) => {
+                let (a, b) = r.ordered();
+                (id, a.para, b.para)
+            }
+            _ => return Err(CmdError::Disabled("select paragraphs in a note container first".into())),
+        },
+        (PageSel::Objects { ids }, _) => {
+            let id = *ids.first().ok_or_else(|| CmdError::Disabled("select a note container first".into()))?;
+            let n = s.page().and_then(|p| p.outline(id)).map(|o| o.paragraphs.len()).unwrap_or(0);
+            (id, 0, n.saturating_sub(1))
+        }
+        _ => return Err(CmdError::Disabled("select paragraphs in a note container first".into())),
+    };
+    let o = s.page().and_then(|p| p.outline(oid)).cloned().ok_or_else(|| CmdError::Failed("note container not found".into()))?;
+    let last = last.min(o.paragraphs.len().saturating_sub(1));
+    let picked = o.paragraphs.get(first..=last).ok_or_else(|| CmdError::Failed("selection out of range".into()))?;
+    let pieces: Vec<Vec<Vec<Run>>> = picked.iter().map(split_tabs).collect();
+    let cols = pieces.iter().map(Vec::len).max().unwrap_or(1).clamp(1, MAX_COLS);
+    let rows = pieces.len();
+    if rows > MAX_ROWS || rows.saturating_mul(cols) > MAX_CELLS {
+        return Err(CmdError::Failed(format!("a table holds at most {MAX_ROWS} rows and {MAX_CELLS} cells")));
+    }
+    // Where the table goes: the container's place when it is converted whole, otherwise below
+    // the paragraphs before the selection (estimated: the engine has no layout).
+    let before: f32 = o.paragraphs.get(..first).map(|ps| ps.iter().map(|p| 1.0 + p.text().matches('\n').count() as f32).sum()).unwrap_or(0.0);
+    let pos = Point::new(o.pos.x, o.pos.y + before * 20.0);
+    let tid = s.new_id();
+    let mut table = Table::new(tid, pos, rows, cols, &mut mint(s));
+    for (row, cells) in table.rows.iter_mut().zip(pieces) {
+        for (cell, runs) in row.cells.iter_mut().zip(cells) {
+            if let Some(p) = cell.paragraphs.first_mut() {
+                p.runs = runs;
+                p.normalize();
+            }
+        }
+        for c in &mut row.cells {
+            stamp(s, c);
+        }
+    }
+    let tail: Vec<Paragraph> = o.paragraphs.get(last + 1..).map(<[Paragraph]>::to_vec).unwrap_or_default();
+    let below = ops::object_bottom(&PageObject::Table(table.clone())) + 12.0;
+    let tail_id = if tail.is_empty() || first == 0 { None } else { Some(s.new_id()) };
+    let first_cell = table.cell(0, 0).map(|c| c.id);
+    let page = s.page_mut().ok_or_else(no_page)?;
+    let idx = page.object_index(oid).ok_or_else(|| CmdError::Failed("note container not found".into()))?;
+    match (first, tail.is_empty()) {
+        (0, true) => {
+            if let Some(slot) = page.objects.get_mut(idx) {
+                *slot = PageObject::Table(table);
+            }
+        }
+        (0, false) => {
+            // The selection was the start: the rest of the container moves below the table.
+            if let Some(ol) = page.outline_mut(oid) {
+                ol.paragraphs = tail;
+                ol.pos = Point::new(ol.pos.x, below);
+            }
+            page.objects.insert(idx, PageObject::Table(table));
+        }
+        _ => {
+            if let Some(ol) = page.outline_mut(oid) {
+                ol.paragraphs.truncate(first);
+            }
+            page.objects.insert(idx + 1, PageObject::Table(table));
+            if let Some(nid) = tail_id {
+                let mut rest = Outline::new(nid, Point::new(o.pos.x, below), Id::NIL);
+                rest.paragraphs = tail;
+                rest.normalize();
+                page.objects.insert(idx + 2, PageObject::Outline(rest));
+            }
+        }
+    }
+    if let Some(c) = first_cell {
+        caret_in(s, c, false);
+    }
+    Ok(json!({"table": tid.to_string()}))
+}
+
+/// The caret's cell: `(table, row, col)`.
+fn caret_cell(s: &Session) -> Result<(Id, usize, usize, Pos), CmdError> {
+    let c = s.text_range().map(|r| r.head).ok_or_else(|| CmdError::Disabled("click in a table cell first".into()))?;
+    let Block::Cell(cell) = c.block else { return Err(CmdError::Disabled("click in a table cell first".into())) };
+    let (t, r, col) = s.page().and_then(|p| p.table_of_cell(cell)).ok_or_else(|| CmdError::Failed("the table is gone".into()))?;
+    Ok((t.id, r, col, c))
+}
+
+fn next_cell(s: &mut Session, _: &Value) -> CmdResult {
+    let (tid, r, c, _) = caret_cell(s)?;
+    let (n_rows, n_cols) = s.page().and_then(|p| p.table(tid)).map(|t| (t.n_rows(), t.n_cols())).ok_or_else(no_page)?;
+    let next = if c + 1 < n_cols {
+        Some((r, c + 1))
+    } else if r + 1 < n_rows {
+        Some((r + 1, 0))
+    } else {
+        None
+    };
+    let target = match next {
+        Some((nr, nc)) => s.page().and_then(|p| p.table(tid)).and_then(|t| t.cell(nr, nc)).map(|x| x.id),
+        // The last cell: a single-row table grows a column (KB.Table.NewColumnTab), a longer one
+        // a row (KB.Table.TabInLastCell).
+        None if n_rows == 1 => {
+            let ts = TableSel { table: tid, rows: (0, 0), cols: (c, c) };
+            s.sel.on_page = PageSel::Cells { table: ts.table, rows: ts.rows, cols: ts.cols };
+            insert_col(s, true)?;
+            return Ok(Value::Null);
+        }
+        None => {
+            s.sel.on_page = PageSel::Cells { table: tid, rows: (r, r), cols: (0, 0) };
+            insert_row(s, true)?;
+            return Ok(Value::Null);
+        }
+    };
+    if let Some(cell) = target {
+        // The caret lands at the end of the next cell's text (unverified).
+        caret_in(s, cell, true);
+    }
+    Ok(Value::Null)
+}
+
+fn prev_cell(s: &mut Session, _: &Value) -> CmdResult {
+    let (tid, r, c, _) = caret_cell(s)?;
+    let n_cols = s.page().and_then(|p| p.table(tid)).map(Table::n_cols).ok_or_else(no_page)?;
+    let prev = if c > 0 {
+        Some((r, c - 1))
+    } else if r > 0 {
+        Some((r - 1, n_cols.saturating_sub(1)))
+    } else {
+        None
+    };
+    if let Some(cell) = prev.and_then(|(pr, pc)| s.page().and_then(|p| p.table(tid)).and_then(|t| t.cell(pr, pc)).map(|x| x.id)) {
+        caret_in(s, cell, true);
+    }
+    Ok(Value::Null)
+}
+
+fn enter(s: &mut Session, _: &Value) -> CmdResult {
+    let (tid, r, c, caret) = caret_cell(s)?;
+    let t = s.page().and_then(|p| p.table(tid)).cloned().ok_or_else(no_page)?;
+    let at_row_start = c == 0 && caret.para == 0 && caret.offset == 0;
+    if at_row_start && r > 0 && !t.rows.get(r).is_some_and(|row| row.is_empty()) {
+        // KB.Table.RowAboveEnter: a row above; the caret stays in its cell.
+        s.sel.on_page = PageSel::Cells { table: tid, rows: (r, r), cols: (0, 0) };
+        insert_row(s, false)?;
+        s.set_caret(caret);
+        return Ok(Value::Null);
+    }
+    let last_row = r + 1 == t.n_rows();
+    if last_row && t.n_rows() > 1 && t.rows.get(r).is_some_and(|row| row.is_empty()) {
+        // Enter again on the new, empty last row: the row goes and the caret leaves the table;
+        // typing starts a container below it.
+        let tm = table_mut(s, tid)?;
+        tm.rows.truncate(r);
+        let bottom = s.page().and_then(|p| p.objects.iter().find(|o| o.id() == tid).map(ops::object_bottom)).unwrap_or(t.pos.y);
+        s.sel.on_page = PageSel::None;
+        s.pending_outline = Some(Point::new(t.pos.x, bottom + 12.0));
+        return Ok(Value::Null);
+    }
+    // Anywhere else: a new row below, the caret in its first cell (unverified for cells other
+    // than the last one).
+    s.sel.on_page = PageSel::Cells { table: tid, rows: (r, r), cols: (0, 0) };
+    insert_row(s, true)?;
+    Ok(Value::Null)
+}
+
+/// The neighbouring cell for caret moves across cell edges: `dr`/`dc` of -1, 0 or 1; left and
+/// right wrap to the previous/next row.
+pub(crate) fn neighbour_cell(s: &Session, cell: Id, dr: i8, dc: i8) -> Option<Id> {
+    let page = s.page()?;
+    let (t, r, c) = page.table_of_cell(cell)?;
+    let (nr, nc) = match (dr, dc) {
+        (0, 1) if c + 1 < t.n_cols() => (r, c + 1),
+        (0, 1) => (r.checked_add(1).filter(|x| *x < t.n_rows())?, 0),
+        (0, -1) if c > 0 => (r, c - 1),
+        (0, -1) => (r.checked_sub(1)?, t.n_cols().checked_sub(1)?),
+        (1, 0) => (r.checked_add(1).filter(|x| *x < t.n_rows())?, c),
+        (-1, 0) => (r.checked_sub(1)?, c),
+        _ => return None,
+    };
+    t.cell(nr, nc).map(|x| x.id)
+}

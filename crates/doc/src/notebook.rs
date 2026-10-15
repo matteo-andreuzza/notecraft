@@ -129,6 +129,39 @@ impl Section {
     }
 }
 
+impl Section {
+    /// Normalise every page in full (outlines, tables, paragraphs, positions), not only the
+    /// page order: for data loaded from disk, which is hostile. `normalize` stays cheap for the
+    /// engine, which keeps pages normal as it edits them.
+    pub fn normalize_pages(&mut self) {
+        for p in &mut self.pages {
+            let pm = Arc::make_mut(p);
+            pm.normalize();
+            pm.sanitize_positions();
+        }
+        self.normalize();
+    }
+}
+
+impl Notebook {
+    /// [`Section::normalize_pages`] for every section, then [`Notebook::normalize`].
+    pub fn normalize_pages(&mut self) {
+        fn walk(nodes: &mut [NavNode], depth: usize) {
+            if depth > MAX_GROUP_DEPTH {
+                return;
+            }
+            for n in nodes {
+                match n {
+                    NavNode::Group(g) => walk(&mut g.children, depth + 1),
+                    NavNode::Section(s) => Arc::make_mut(s).normalize_pages(),
+                }
+            }
+        }
+        walk(&mut self.children, 0);
+        self.normalize();
+    }
+}
+
 fn page_is_normal(p: &Page) -> bool {
     p.level <= crate::page::MAX_PAGE_LEVEL
 }

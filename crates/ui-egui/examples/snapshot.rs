@@ -7,8 +7,9 @@
 //!
 //! Renders the sample notebook with each ribbon tab in the simplified and the classic layout, a
 //! narrow window (the overflow menu), the Tags Summary pane, the backstage, the
-//! White, Dark Gray and Black themes, full page view and a 2× HiDPI frame, and writes one PNG per
-//! state. Set `CRAFT_FONTS_DIR` to a folder with Inter to see the preferred interface font.
+//! White, Dark Gray and Black themes, full page view, a 2× HiDPI frame, a page with a table (the
+//! Table Layout tab in both layouts, selected cells) and a hovered paragraph handle, and writes
+//! one PNG per state. Set `CRAFT_FONTS_DIR` to a folder with Inter to see the preferred interface font.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
 
 use egui_kittest::Harness;
@@ -28,10 +29,24 @@ fn shot(name: &str, out: &std::path::Path, ppp: f32, setup: impl FnOnce(&mut Not
 }
 
 fn shot_sized(name: &str, out: &std::path::Path, ppp: f32, size: egui::Vec2, setup: impl FnOnce(&mut NoteApp)) {
+    shot_then(name, out, ppp, size, setup, |_| {});
+}
+
+/// A shot with something done to the running harness first (hovering, for example).
+fn shot_then(
+    name: &str,
+    out: &std::path::Path,
+    ppp: f32,
+    size: egui::Vec2,
+    setup: impl FnOnce(&mut NoteApp),
+    then: impl FnOnce(&mut Harness<'static, NoteApp>),
+) {
     let mut a = app();
     setup(&mut a);
     let mut h = Harness::builder().with_size(size).with_pixels_per_point(ppp).wgpu().build_ui_state(|ui, app: &mut NoteApp| app.ui(ui), a);
     h.run_steps(4);
+    then(&mut h);
+    h.run_steps(2);
     match h.render() {
         Ok(img) => {
             let p = out.join(format!("{name}.png"));
@@ -40,6 +55,34 @@ fn shot_sized(name: &str, out: &std::path::Path, ppp: f32, size: egui::Vec2, set
         }
         Err(e) => eprintln!("{name}: render failed: {e}"),
     }
+}
+
+/// A new page with a heading paragraph and a filled 4 × 3 table; the caret ends in a cell.
+fn table_page(a: &mut NoteApp) {
+    let s = &mut a.session;
+    s.run("page.new", json!({"title": "Project plan"})).unwrap();
+    s.run("outline.new", json!({"x": 36.0, "y": 90.0})).unwrap();
+    s.run("text.insert", json!({"text": "Tasks for this week"})).unwrap();
+    s.run("insert.table", json!({"rows": 4, "cols": 3, "x": 36.0, "y": 118.0})).unwrap();
+    let rows = [["Task", "Owner", "Due"], ["Draft the brief", "Ana", "Mon"], ["Review the budget", "Luca", "Wed"], ["Book the room", "Sam", "Fri"]];
+    for (r, row) in rows.iter().enumerate() {
+        for (c, text) in row.iter().enumerate() {
+            s.run("text.insert", json!({"text": text})).unwrap();
+            if !(r == 3 && c == 2) {
+                s.run("table.nextCell", json!({})).unwrap();
+            }
+        }
+    }
+    s.run("table.selectRange", json!({"table": table_id(s), "rows": [0, 0], "cols": [0, 2]})).unwrap();
+    s.run("table.shading", json!({"color": "#DEEBF7"})).unwrap();
+    s.run("format.bold", json!({})).unwrap();
+    let cell = s.page().unwrap().objects.iter().find_map(|o| o.as_table()).unwrap().rows[2].cells[1].id;
+    s.run("caret.set", json!({"block": cell.to_string(), "para": 0, "offset": 4})).unwrap();
+    a.canvas.focused = true;
+}
+
+fn table_id(s: &Session) -> String {
+    s.page().unwrap().objects.iter().find_map(|o| o.as_table()).unwrap().id.to_string()
 }
 
 fn main() {
@@ -74,4 +117,35 @@ fn main() {
     shot("rule-lines", &out, 1.0, |a| {
         a.session.run("view.ruleLines", json!({"kind": "college"})).unwrap();
     });
+    shot("table-page", &out, 1.0, table_page);
+    for (name, mode) in [("table-layout", "simplified"), ("classic-table-layout", "classic")] {
+        shot(name, &out, 1.0, |a| {
+            table_page(a);
+            a.session.run("ui.ribbonMode", json!({"mode": mode})).unwrap();
+            a.ui.tab = "Table Layout".into();
+        });
+    }
+    shot("table-cells-selected", &out, 1.0, |a| {
+        table_page(a);
+        a.session.run("table.selectColumns", json!({})).unwrap();
+        a.session.run("table.hideBorders", json!({})).unwrap();
+        a.ui.tab = "Table Layout".into();
+    });
+    shot_then(
+        "paragraph-handle",
+        &out,
+        1.0,
+        egui::vec2(1366.0, 820.0),
+        |a| {
+            let pid = a.session.notebook().unwrap().sections()[1].pages[0].id;
+            a.session.run("nav.goto", json!({"page": pid.to_string()})).unwrap();
+        },
+        |h| {
+            let pl =
+                h.state().canvas.paras.iter().find(|p| matches!(p.block, notecraft_engine::selection::Block::Outline(_)) && p.para == 1).cloned();
+            if let Some(pl) = pl {
+                h.event(egui::Event::PointerMoved(pl.pos + egui::vec2(6.0, 4.0)));
+            }
+        },
+    );
 }

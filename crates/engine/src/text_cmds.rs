@@ -233,7 +233,7 @@ fn split_at_caret(s: &mut Session, caret: Pos) -> Result<Pos, CmdError> {
 }
 
 /// Enter.
-fn newline(s: &mut Session, _: &Value) -> CmdResult {
+pub(crate) fn newline(s: &mut Session, _: &Value) -> CmdResult {
     // In the title, Enter moves to the page body (the first container, created if needed).
     if s.sel.caret().is_some_and(|c| c.block == Block::Title) {
         let first = s.page().and_then(|p| p.objects.iter().find_map(PageObject::as_outline).map(|o| o.id));
@@ -303,6 +303,22 @@ pub(crate) fn delete_selection(s: &mut Session) -> Result<bool, CmdError> {
         let page = s.page_mut().ok_or_else(no_page)?;
         page.objects.retain(|o| !ids.contains(&o.id()));
         s.sel.on_page = crate::selection::PageSel::None;
+        return Ok(true);
+    }
+    // Selected table cells are emptied (the table stays).
+    if let crate::selection::PageSel::Cells { .. } = s.sel.on_page {
+        let cells = ops::selected_cells(s);
+        let page = s.page_mut().ok_or_else(no_page)?;
+        for (id, _) in cells {
+            if let Some(c) = page.cell_mut(id) {
+                c.paragraphs.truncate(1);
+                if let Some(p) = c.paragraphs.first_mut() {
+                    p.runs.clear();
+                    p.tags.clear();
+                    p.list = None;
+                }
+            }
+        }
         return Ok(true);
     }
     match s.text_range() {

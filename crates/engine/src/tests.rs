@@ -164,6 +164,10 @@ const PARAM_NAMES: &[&str] = &[
     "tag",
     "once",
     "limit",
+    "rows",
+    "cols",
+    "table",
+    "col",
 ];
 
 #[test]
@@ -188,6 +192,19 @@ fn panic_hunt() {
         Box::new(|| {
             let mut s = sample();
             s.sel.focus = crate::selection::FocusArea::PageList;
+            s
+        }),
+        // A table with the caret in a cell, and with cells selected.
+        Box::new(|| {
+            let mut s = sample();
+            run(&mut s, "insert.table", json!({"rows": 2, "cols": 3}));
+            run(&mut s, "text.insert", json!({"text": "b\tc"}));
+            s
+        }),
+        Box::new(|| {
+            let mut s = sample();
+            run(&mut s, "insert.table", json!({"rows": 3, "cols": 2}));
+            run(&mut s, "table.selectColumns", json!({}));
             s
         }),
     ];
