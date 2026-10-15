@@ -44,7 +44,7 @@ pub use notecraft_doc as doc;
 pub use notecraft_search as search;
 pub use notecraft_text as text;
 pub use selection::{Block, Pos, Selection, TextRange};
-pub use session::{Clock, FindState, NbDirty, Prefs, ScopeKind, ScrollRequest, Session, ViewState};
+pub use session::{Clock, FindState, NbDirty, Prefs, RibbonMode, ScopeKind, ScrollRequest, Session, ViewState};
 
 /// Errors a command can return. Commands never panic; bad input is `Params`, an unavailable
 /// command is `Disabled`, everything else `Failed`.

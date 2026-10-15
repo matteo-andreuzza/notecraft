@@ -331,3 +331,45 @@ fn the_title_search_runs_commands_and_hands_text_to_search_notebooks() {
     assert_eq!(h.state().ui.search, "basil", "UI.Window.SearchBox hands the text to Search notebooks");
     assert!(h.state().ui.search_open);
 }
+
+#[test]
+fn the_ribbon_switches_between_simplified_and_classic() {
+    use notecraft_engine::RibbonMode;
+    // UI.Ribbon.Simplified is the default: one row, with the rest in the … overflow menu.
+    let mut a = app();
+    let pid = a.session.notebook().unwrap().sections()[1].pages[0].id;
+    a.session.run("nav.goto", json!({"page": pid.to_string()})).unwrap();
+    a.session.run("nav.pageTitle", json!({})).unwrap();
+    let mut h = Harness::builder().with_size(egui::vec2(900.0, 700.0)).build_ui_state(|ui, app: &mut NoteApp| app.ui(ui), a);
+    h.run();
+    assert_eq!(h.state().session.view.ribbon_mode, RibbonMode::Simplified, "UI.Ribbon.Simplified");
+    present(&h, "UI.Ribbon.Simplified", "Bold");
+    assert!(h.query_by_label("Clipboard").is_none(), "no classic group labels in the simplified ribbon");
+    h.get_by_label("More commands").click();
+    h.run();
+    // Cut is not placed in the row: the overflow menu lists it under its classic group.
+    present(&h, "UI.Ribbon.Simplified", "Cut");
+    h.key_press(egui::Key::Escape);
+    h.run();
+    // UI.Ribbon.DisplayOptions: the ▾ chevron switches to the classic ribbon and back, and shows
+    // only the tabs.
+    h.get_by_label("Ribbon display options").click();
+    h.run();
+    h.get_by_label("Classic ribbon").click();
+    h.run();
+    assert_eq!(h.state().session.view.ribbon_mode, RibbonMode::Classic, "UI.Ribbon.DisplayOptions");
+    present(&h, "UI.Ribbon.Tabs", "Format Painter");
+    h.get_by_label("Ribbon display options").click();
+    h.run();
+    h.get_by_label("Show tabs only").click();
+    h.run();
+    assert!(h.state().session.view.ribbon_collapsed, "UI.Ribbon.DisplayOptions");
+    h.get_by_label("Home").click();
+    h.run();
+    assert!(!h.state().session.view.ribbon_collapsed);
+    h.get_by_label("Ribbon display options").click();
+    h.run();
+    h.get_by_label("Single-line ribbon").click();
+    h.run();
+    assert_eq!(h.state().session.view.ribbon_mode, RibbonMode::Simplified);
+}

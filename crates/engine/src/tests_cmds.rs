@@ -617,6 +617,13 @@ fn view_commands() {
     }
     run(&mut s, "ui.collapseRibbon", json!({}));
     assert!(s.view.ribbon_collapsed);
+    // UI.Ribbon.ModeSwitch: simplified by default; toggles, or takes the mode by name.
+    assert_eq!(s.view.ribbon_mode, crate::RibbonMode::Simplified);
+    run(&mut s, "ui.ribbonMode", json!({}));
+    assert_eq!(s.view.ribbon_mode, crate::RibbonMode::Classic);
+    run(&mut s, "ui.ribbonMode", json!({"mode": "simplified"}));
+    assert_eq!(s.view.ribbon_mode, crate::RibbonMode::Simplified);
+    assert!(s.run("ui.ribbonMode", json!({"mode": "wide"})).is_err(), "unknown modes are refused");
     let w = s.view.page_list_width;
     run(&mut s, "ui.pageListWider", json!({}));
     assert!(s.view.page_list_width > w);

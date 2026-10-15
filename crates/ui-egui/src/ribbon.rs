@@ -1,4 +1,5 @@
-//! The ribbon: the tab strip (File + the tabs) and the selected tab's groups.
+//! The ribbon card and the classic layout of the selected tab's groups (the tab row is in
+//! `chrome`, the one-row layout in `ribbon_simplified`).
 //!
 //! Structure comes from [`crate::ribbon_layout`] (verified against the parity catalog); each
 //! control's label, kind and command come from its catalog row. A control whose command is not
@@ -14,12 +15,14 @@ use notecraft_engine::doc::color::{FONT_THEME, HIGHLIGHT_COLORS, PAGE_COLORS, ST
 use notecraft_engine::doc::{ParaStyle, RuleLines};
 use serde_json::{Value, json};
 
+use notecraft_engine::RibbonMode;
+
 use crate::ribbon_layout::{Group, Item};
-use crate::theme::c32;
+use crate::theme::{TypeRung, c32, radius, size};
 use crate::{NoteApp, Tokens, icons};
 
 /// Height of the ribbon body (controls + group label).
-pub const BODY_H: f32 = 92.0;
+pub const BODY_H: f32 = size::RIBBON_CLASSIC;
 const LABEL_H: f32 = 16.0;
 const CONTENT_H: f32 = BODY_H - LABEL_H - 6.0;
 
@@ -29,18 +32,23 @@ pub fn rows() -> &'static HashMap<String, Row> {
     ROWS.get_or_init(|| catalog::rows().into_iter().map(|r| (r.id.clone(), r)).collect())
 }
 
-fn row(id: &str) -> Option<&'static Row> {
+pub(crate) fn row(id: &str) -> Option<&'static Row> {
     rows().get(id)
 }
 
 /// The label shown on a control: the catalog label without its "Tag: "/"Style: " prefixes.
-fn label(id: &str) -> String {
+pub(crate) fn label(id: &str) -> String {
     let l = row(id).map(|r| r.label.clone()).unwrap_or_else(|| id.to_string());
-    l.trim_start_matches("Tag: ").trim_start_matches("Style: ").trim_start_matches("Recent Edits: ").to_string()
+    let l = l.trim_start_matches("Tag: ").trim_start_matches("Style: ").trim_start_matches("Recent Edits: ");
+    // "Navigation Panes (show/hide)": the parenthetical explains the row, it isn't the label.
+    match l.find(" (") {
+        Some(i) if l.ends_with(')') => l[..i].to_string(),
+        _ => l.to_string(),
+    }
 }
 
 /// The params a control passes to its command (gallery items carry their value).
-fn params_for(id: &str) -> Value {
+pub(crate) fn params_for(id: &str) -> Value {
     let k = id.rsplit('.').next().unwrap_or("");
     match k {
         "FindToday" => json!({"range": "today"}),
@@ -50,12 +58,12 @@ fn params_for(id: &str) -> Value {
 }
 
 /// Command id for a control, if any.
-fn command(id: &str) -> Option<String> {
+pub(crate) fn command(id: &str) -> Option<String> {
     row(id).map(|r| r.command.clone()).filter(|c| !c.is_empty())
 }
 
 /// Whether a toggle control is currently on.
-fn checked(app: &NoteApp, cmd: &str) -> bool {
+pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
     let s = &app.session;
     let fmt = || {
         let r = s.text_range()?;
@@ -87,28 +95,86 @@ fn checked(app: &NoteApp, cmd: &str) -> bool {
     }
 }
 
-/// The ribbon body under the tab row (`crate::chrome::tab_row`): the selected tab's groups.
+/// The ribbon under the tab row (`crate::chrome::tab_row`): a floating rounded card (inset from
+/// the window edges, with a hairline and a shadow) holding the selected tab in the simplified
+/// one-row layout (`ribbon_simplified`, the default) or the classic one with labelled groups, and
+/// the ▾ chevron at its bottom right with the layout and display options (catalog
+/// `UI.Ribbon.ModeSwitch`, `UI.Ribbon.DisplayOptions`, `UI.Ribbon.Simplified`).
 pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     if app.session.view.ribbon_collapsed {
         return;
     }
     let Some(tab) = crate::chrome::current_tab(app) else { return };
+    let simplified = app.session.view.ribbon_mode == RibbonMode::Simplified;
+    let card_h = if simplified { size::RIBBON_SIMPLIFIED } else { BODY_H };
+    let m = size::CARD_MARGIN as i8;
     egui::Panel::top("ribbon_body")
-        .exact_size(BODY_H)
-        .frame(Frame::NONE.fill(t.ribbon_card).inner_margin(Margin::symmetric(4, 3)).stroke(Stroke::new(1.0, t.border)))
+        .show_separator_line(false)
+        .exact_size(card_h + 2.0 + size::CARD_MARGIN + 2.0)
+        .frame(Frame::NONE.fill(t.window_back).inner_margin(Margin { left: m, right: m, top: 2, bottom: m + 2 }))
         .show(ui, |ui| {
-            egui::ScrollArea::horizontal().id_salt("ribbon_scroll").scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden).show(
-                ui,
-                |ui| {
-                    ui.horizontal(|ui| {
-                        ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-                        for g in tab.groups {
-                            group(app, ui, g, t);
-                        }
-                    });
-                },
-            );
+            let card = Rect::from_min_size(ui.max_rect().min, vec2(ui.max_rect().width(), card_h));
+            ui.painter().add(t.card_shadow().as_shape(card, radius::CARD));
+            ui.painter().rect(card, radius::CARD, t.ribbon_card, Stroke::new(1.0, t.card_border), egui::StrokeKind::Inside);
+            let chevron = Rect::from_min_size(pos2(card.max.x - 26.0, card.max.y - 24.0), vec2(20.0, 20.0));
+            let content = Rect::from_min_max(card.min + vec2(6.0, 3.0), pos2(chevron.min.x - 4.0, card.max.y - 3.0));
+            let align = if simplified { egui::Align::Center } else { egui::Align::Min };
+            ui.scope_builder(egui::UiBuilder::new().max_rect(content).layout(egui::Layout::left_to_right(align)), |ui| {
+                ui.set_clip_rect(content.expand(2.0));
+                if simplified {
+                    crate::ribbon_simplified::show(app, ui, tab, content, t);
+                } else {
+                    egui::ScrollArea::horizontal()
+                        .id_salt("ribbon_scroll")
+                        .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
+                        .show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+                                for g in tab.groups {
+                                    group(app, ui, g, t);
+                                }
+                            });
+                        });
+                }
+            });
+            display_options(app, ui, chevron, t);
         });
+}
+
+/// The ▾ chevron at the card's bottom right: Ribbon layout (single-line or classic) and Show
+/// ribbon (always, or tabs only).
+fn display_options(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    let resp = ui.interact(r, ui.id().with("ribbon_options"), Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Ribbon display options"));
+    if resp.hovered() {
+        ui.painter().rect_filled(r, radius::CONTROL, t.hover);
+    }
+    icons::chevron(ui.painter(), r.shrink(3.0), icons::Dir::Down, t.icon);
+    let resp = resp.on_hover_text("Ribbon display options: single-line or classic layout");
+    Popup::menu(&resp).show(|ui| {
+        ui.set_min_width(200.0);
+        let simplified = app.session.view.ribbon_mode == RibbonMode::Simplified;
+        ui.label(RichText::new("Ribbon layout").size(TypeRung::Caption.size()).color(t.text_dim));
+        for (label, mode, on) in [("Single-line ribbon", "simplified", simplified), ("Classic ribbon", "classic", !simplified)] {
+            if ui.add(egui::Button::new(label).selected(on).frame(false)).clicked() {
+                app.run(&ctx, "ui.ribbonMode", json!({"mode": mode}));
+                ui.close();
+            }
+        }
+        ui.separator();
+        ui.label(RichText::new("Show ribbon").size(TypeRung::Caption.size()).color(t.text_dim));
+        let collapsed = app.session.view.ribbon_collapsed;
+        for (label, want_collapsed) in [("Always show", false), ("Show tabs only", true)] {
+            if ui.add(egui::Button::new(label).selected(collapsed == want_collapsed).frame(false)).clicked() {
+                if collapsed != want_collapsed {
+                    app.run(&ctx, "ui.collapseRibbon", json!({}));
+                }
+                ui.close();
+            }
+        }
+        ui.add_enabled(false, egui::Button::new("Automatically hide").frame(false)).on_disabled_hover_text("Not implemented yet in NoteCraft");
+    });
 }
 
 fn group(app: &mut NoteApp, ui: &mut Ui, g: &Group, t: Tokens) {
@@ -126,7 +192,7 @@ fn group(app: &mut NoteApp, ui: &mut Ui, g: &Group, t: Tokens) {
         });
         let w = ui.min_rect().width().max(40.0);
         let (lr, _) = ui.allocate_exact_size(vec2(w, LABEL_H), Sense::hover());
-        ui.painter().text(lr.center(), egui::Align2::CENTER_CENTER, g.name, egui::FontId::proportional(11.0), t.text.gamma_multiply(0.75));
+        ui.painter().text(lr.center(), egui::Align2::CENTER_CENTER, g.name, egui::FontId::proportional(TypeRung::Caption.size()), t.text_dim);
     });
     let end = ui.cursor().min;
     let x = end.x + 1.0;
@@ -191,7 +257,7 @@ fn item(app: &mut NoteApp, ui: &mut Ui, it: &Item, t: Tokens) {
 }
 
 /// Tooltip: label, shortcut, why it is disabled, catalog id (UI.Ribbon.Tooltips).
-fn tooltip(app: &NoteApp, id: &str) -> String {
+pub(crate) fn tooltip(app: &NoteApp, id: &str) -> String {
     let mut s = label(id);
     if let Some(r) = row(id)
         && !r.shortcut.is_empty()
@@ -214,7 +280,7 @@ fn tooltip(app: &NoteApp, id: &str) -> String {
     s
 }
 
-fn enabled(app: &NoteApp, id: &str) -> bool {
+pub(crate) fn enabled(app: &NoteApp, id: &str) -> bool {
     match command(id) {
         Some(c) => app.disabled_reason(&c).is_none(),
         None => false,
@@ -222,7 +288,7 @@ fn enabled(app: &NoteApp, id: &str) -> bool {
 }
 
 /// Controls that open a dialog to collect their command's parameters.
-fn dialog_for(app: &NoteApp, id: &str) -> Option<crate::dialogs::Dialog> {
+pub(crate) fn dialog_for(app: &NoteApp, id: &str) -> Option<crate::dialogs::Dialog> {
     use crate::dialogs::Dialog;
     match id.rsplit('.').next()? {
         "HyperlinkCreateHere" | "HyperlinkCreate" => Some(Dialog::Link { url: String::new(), text: String::new() }),
@@ -238,7 +304,7 @@ fn dialog_for(app: &NoteApp, id: &str) -> Option<crate::dialogs::Dialog> {
     }
 }
 
-fn fire(app: &mut NoteApp, ui: &Ui, id: &str) {
+pub(crate) fn fire(app: &mut NoteApp, ui: &Ui, id: &str) {
     if let Some(d) = dialog_for(app, id) {
         app.ui.dialog = Some(d);
         return;
@@ -307,7 +373,7 @@ fn large(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], t: Tokens) {
 }
 
 /// Controls whose drop-down has its own content (colour grids, galleries).
-fn special_menu(id: &str) -> bool {
+pub(crate) fn special_menu(id: &str) -> bool {
     matches!(
         id.rsplit('.').next(),
         Some(
@@ -324,7 +390,7 @@ fn special_menu(id: &str) -> bool {
 }
 
 /// Draw the special drop-down content; returns true when drawn.
-fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, _t: Tokens) -> bool {
+pub(crate) fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, _t: Tokens) -> bool {
     let ctx = ui.ctx().clone();
     match id.rsplit('.').next() {
         Some("PageColorGallery") => {
@@ -451,7 +517,7 @@ fn swatch_grid(
     });
 }
 
-fn menu_item(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) {
+pub(crate) fn menu_item(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) {
     let on = enabled(app, id);
     let mut text = RichText::new(label(id));
     if !on {
@@ -511,7 +577,7 @@ fn small(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], with_label: bo
     });
 }
 
-fn combo(app: &mut NoteApp, ui: &mut Ui, id: &str, w: f32, t: Tokens) {
+pub(crate) fn combo(app: &mut NoteApp, ui: &mut Ui, id: &str, w: f32, t: Tokens) {
     let ctx = ui.ctx().clone();
     let on = enabled(app, id);
     let key = id.rsplit('.').next().unwrap_or("");
@@ -630,40 +696,47 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
         ui.painter().rect_filled(more, 1.0, t.hover);
     }
     icons::triangle(ui.painter(), more.center(), 7.0, icons::Dir::Down, t.text);
-    Popup::menu(&mresp).show(|ui| {
-        ui.set_min_width(220.0);
-        egui::ScrollArea::vertical().max_height(420.0).show(ui, |ui| {
-            for item in items {
-                let lab = label(item);
-                let enabled_item = command(item).map(|c| app.disabled_reason(&c).is_none()).unwrap_or(on);
-                let resp = ui.horizontal(|ui| {
-                    if is_tags && let Some(def) = defs.iter().find(|d| d.name == lab) {
-                        let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
-                        icons::tag(ui.painter(), r, def.symbol, false, t.text);
-                    }
-                    let shortcut = row(item).map(|r| r.shortcut.replace("Mod", "Ctrl")).unwrap_or_default();
-                    ui.add_enabled(
-                        enabled_item,
-                        egui::Button::new(format!("{lab}{}", if shortcut.is_empty() { String::new() } else { format!("    {shortcut}") }))
-                            .frame(false),
-                    )
-                });
-                if resp.inner.clicked() {
-                    gallery_pick(app, &ctx, id, item);
-                    ui.close();
+    Popup::menu(&mresp).show(|ui| gallery_menu(app, ui, id, items, extra, t));
+}
+
+/// The full gallery in a drop-down: every item (tags with their symbol and shortcut), then the
+/// gallery's extra commands. Used by the classic gallery's ▾ and the simplified ribbon.
+pub(crate) fn gallery_menu(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&str], t: Tokens) {
+    let ctx = ui.ctx().clone();
+    let is_tags = id.ends_with("TagsGallery");
+    let on = app.disabled_reason(command(id).as_deref().unwrap_or("")).is_none();
+    let defs = app.session.tag_defs();
+    ui.set_min_width(220.0);
+    egui::ScrollArea::vertical().max_height(420.0).show(ui, |ui| {
+        for item in items {
+            let lab = label(item);
+            let enabled_item = command(item).map(|c| app.disabled_reason(&c).is_none()).unwrap_or(on);
+            let resp = ui.horizontal(|ui| {
+                if is_tags && let Some(def) = defs.iter().find(|d| d.name == lab) {
+                    let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
+                    icons::tag(ui.painter(), r, def.symbol, false, t.text);
                 }
+                let shortcut = row(item).map(|r| r.shortcut.replace("Mod", "Ctrl")).unwrap_or_default();
+                ui.add_enabled(
+                    enabled_item,
+                    egui::Button::new(format!("{lab}{}", if shortcut.is_empty() { String::new() } else { format!("    {shortcut}") })).frame(false),
+                )
+            });
+            if resp.inner.clicked() {
+                gallery_pick(app, &ctx, id, item);
+                ui.close();
             }
-            if !extra.is_empty() {
-                ui.separator();
-                for e in extra {
-                    menu_item(app, ui, e, t);
-                }
+        }
+        if !extra.is_empty() {
+            ui.separator();
+            for e in extra {
+                menu_item(app, ui, e, t);
             }
-        });
+        }
     });
 }
 
-fn gallery_pick(app: &mut NoteApp, ctx: &egui::Context, gallery_id: &str, item: &str) {
+pub(crate) fn gallery_pick(app: &mut NoteApp, ctx: &egui::Context, gallery_id: &str, item: &str) {
     if let Some(c) = command(item) {
         app.run(ctx, &c, json!({}));
         return;

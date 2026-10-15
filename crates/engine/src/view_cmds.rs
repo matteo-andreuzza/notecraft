@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 
 use crate::ops::{self, need_page, need_text, no_page};
 use crate::selection::{Block, Pos};
-use crate::session::ScrollRequest;
+use crate::session::{RibbonMode, ScrollRequest};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
 
 /// Zoom stops for Zoom In/Out (catalog `BEH.View.Zoom`; unverified stops).
@@ -105,6 +105,20 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             },
         )
         .key("Mod+F1")
+        .pure(),
+        // UI.Ribbon.ModeSwitch — the ▾ chevron at the ribbon's bottom right: simplified (one row,
+        // the 2024 default) or classic. Without `mode` it switches to the other one.
+        CommandSpec::new("ui.ribbonMode", "UI.Ribbon.ModeSwitch", "Ribbon Layout", "Window/Ribbon/Mode Switch", |s, p| {
+            s.view.ribbon_mode = match p.get("mode").and_then(Value::as_str) {
+                Some("simplified") => RibbonMode::Simplified,
+                Some("classic") => RibbonMode::Classic,
+                Some(other) => return Err(CmdError::Params(format!("unknown ribbon mode `{other}` (simplified or classic)"))),
+                None if s.view.ribbon_mode == RibbonMode::Simplified => RibbonMode::Classic,
+                None => RibbonMode::Simplified,
+            };
+            Ok(json!({"mode": if s.view.ribbon_mode == RibbonMode::Simplified { "simplified" } else { "classic" }}))
+        })
+        .params(r#"{"mode"?: "simplified" | "classic"}"#)
         .pure(),
         CommandSpec::new(
             "ui.pageListWider",

@@ -39,8 +39,12 @@ pub struct DesktopSettings {
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Appearance {
-    /// Colorful, White or Dark.
+    /// Colorful, White, Dark Gray, Black or the system's.
     pub theme: ThemeKind,
+    /// Simplified (one row) or classic ribbon (the ▾ chevron's choice).
+    pub ribbon: notecraft_engine::RibbonMode,
+    /// Ribbon collapsed to its tabs (Ctrl+F1, Show tabs only).
+    pub ribbon_collapsed: bool,
 }
 
 /// Open notebooks, as OneNote reopens them.
@@ -176,7 +180,7 @@ pub fn capture(app: &NoteApp, previous: &DesktopSettings) -> DesktopSettings {
         _ => previous.notebooks.last_page.clone(),
     };
     DesktopSettings {
-        appearance: Appearance { theme: app.ui.theme },
+        appearance: Appearance { theme: app.ui.theme, ribbon: s.view.ribbon_mode, ribbon_collapsed: s.view.ribbon_collapsed },
         editing: s.prefs.clone(),
         notebooks: Notebooks { open, last_page },
         layout: Layout { notebook_pane_width: app.ui.notebook_pane_width },
@@ -186,6 +190,8 @@ pub fn capture(app: &NoteApp, previous: &DesktopSettings) -> DesktopSettings {
 /// Apply the remembered look and preferences (not the notebooks: [`reopen`] does that).
 pub fn apply(app: &mut NoteApp, s: &DesktopSettings) {
     app.ui.theme = s.appearance.theme;
+    app.session.view.ribbon_mode = s.appearance.ribbon;
+    app.session.view.ribbon_collapsed = s.appearance.ribbon_collapsed;
     app.session.prefs = s.editing.clone();
     // Options › General › User name starts as the account's name, as in OneNote.
     if app.session.prefs.author.trim().is_empty() {
@@ -287,6 +293,7 @@ mod tests {
         let clock = notecraft_engine::Clock::default();
         let mut app = NoteApp::new(notecraft_engine::Session::with_sample(clock), Box::new(notecraft_ui_egui::FixedHost(clock)));
         app.ui.theme = ThemeKind::White;
+        app.session.view.ribbon_mode = notecraft_engine::RibbonMode::Classic;
         app.session.prefs.author = "Grace".into();
         let s = capture(&app, &DesktopSettings::default());
         // The sample notebook lives in memory: nothing to reopen.
@@ -295,6 +302,8 @@ mod tests {
         let mut other = NoteApp::new(notecraft_engine::Session::new(clock), Box::new(notecraft_ui_egui::FixedHost(clock)));
         apply(&mut other, &s);
         assert_eq!(other.ui.theme, ThemeKind::White);
+        // UI.Ribbon.ModeSwitch: the ribbon layout is remembered.
+        assert_eq!(other.session.view.ribbon_mode, notecraft_engine::RibbonMode::Classic);
         assert_eq!(other.session.prefs.author, "Grace");
         let mut bad = s.clone();
         bad.layout.notebook_pane_width = f32::NAN;

@@ -97,6 +97,17 @@ pub enum ScopeKind {
     AllNotebooks,
 }
 
+/// The ribbon layout (catalog `UI.Ribbon.ModeSwitch`): the one-row simplified ribbon of the 2024
+/// UI (the default) or the classic ribbon with labelled groups.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum RibbonMode {
+    /// One row of controls; what doesn't fit goes into the … overflow menu.
+    #[default]
+    Simplified,
+    /// Groups with labels, large and small buttons.
+    Classic,
+}
+
 /// Find on page (Ctrl+F) state.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct FindState {
@@ -122,6 +133,8 @@ pub struct ViewState {
     pub docked: bool,
     /// Ribbon collapsed.
     pub ribbon_collapsed: bool,
+    /// Simplified or classic ribbon.
+    pub ribbon_mode: RibbonMode,
     /// Notebook pane collapsed.
     pub notebook_pane_collapsed: bool,
     /// Scope of the search box.
@@ -143,6 +156,7 @@ impl Default for ViewState {
             full_page: false,
             docked: false,
             ribbon_collapsed: false,
+            ribbon_mode: RibbonMode::Simplified,
             notebook_pane_collapsed: false,
             scope: ScopeKind::AllNotebooks,
             find: FindState::default(),

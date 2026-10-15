@@ -514,6 +514,58 @@ pub const TABS: &[Tab] = &[
     },
 ];
 
+/// One control of the classic layout with what its drop-down holds — the unit the simplified
+/// ribbon (`ribbon_simplified`) places and the overflow menu lists.
+#[derive(Debug, Clone, Copy)]
+pub struct Control {
+    /// Catalog id.
+    pub id: &'static str,
+    /// The classic group it sits in.
+    pub group: &'static str,
+    /// Children of its drop-down (split buttons and menus).
+    pub kids: &'static [&'static str],
+    /// Gallery items and the extra commands of its drop-down, for galleries.
+    pub gallery: Option<(&'static [&'static str], &'static [&'static str])>,
+    /// Width of a combo box.
+    pub combo: Option<f32>,
+    /// Drawn large in the classic ribbon.
+    pub large: bool,
+}
+
+fn flatten(item: &Item, group: &'static str, out: &mut Vec<Control>) {
+    let c = |id: &'static str| Control { id, group, kids: &[], gallery: None, combo: None, large: false };
+    match *item {
+        Item::Large(id) => out.push(Control { large: true, ..c(id) }),
+        Item::LargeMenu(id, kids) => out.push(Control { kids, large: true, ..c(id) }),
+        Item::Stack(ids) | Item::Row(ids) => out.extend(ids.iter().map(|id| c(id))),
+        Item::SmallMenu(id, kids) | Item::LabeledMenu(id, kids) => out.push(Control { kids, ..c(id) }),
+        Item::Combo(id, w) => out.push(Control { combo: Some(w), ..c(id) }),
+        Item::Gallery(id, items, extra) => out.push(Control { gallery: Some((items, extra)), ..c(id) }),
+        Item::Small(id) => out.push(c(id)),
+        Item::TwoRows(a, b) => {
+            for x in a.iter().chain(b) {
+                flatten(x, group, out);
+            }
+        }
+        Item::Column(items) => {
+            for x in items {
+                flatten(x, group, out);
+            }
+        }
+    }
+}
+
+/// Every control of a tab, left to right.
+pub fn controls(tab: &Tab) -> Vec<Control> {
+    let mut out = Vec::new();
+    for g in tab.groups {
+        for it in g.items {
+            flatten(it, g.name, &mut out);
+        }
+    }
+    out
+}
+
 /// Contextual tabs (shown only for the matching selection; M2 brings their content).
 pub const CONTEXTUAL: &[Tab] = &[
     Tab {

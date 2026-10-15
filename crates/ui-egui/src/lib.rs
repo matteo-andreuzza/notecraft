@@ -20,6 +20,7 @@ pub mod nav;
 pub mod panes;
 pub mod ribbon;
 pub mod ribbon_layout;
+pub mod ribbon_simplified;
 pub mod theme;
 
 use egui::{Color32, Frame, Margin, RichText, Stroke, Ui};
@@ -267,6 +268,8 @@ impl NoteApp {
             "searchPane": self.ui.search_pane,
             "tagsPane": self.session.view.tags_pane,
             "fullPage": self.session.view.full_page,
+            "ribbonMode": if self.session.view.ribbon_mode == notecraft_engine::RibbonMode::Simplified { "simplified" } else { "classic" },
+            "ribbonCollapsed": self.session.view.ribbon_collapsed,
             "status": self.ui.status.as_ref().map(|(m, _)| m.clone()),
             "canvasFocused": self.canvas.focused,
             "window": {"width": size.x, "height": size.y},
