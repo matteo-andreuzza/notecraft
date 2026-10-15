@@ -360,6 +360,19 @@ fn containers_move_resize_and_paragraph_drag() {
     assert_eq!(body_texts(&s), vec!["two", "one"]);
     run(&mut s, "object.select", json!({"ids": [o.to_string()]}));
     assert!(matches!(&s.sel.on_page, PageSel::Objects { ids } if ids == &vec![o]));
+    // Dropped on empty canvas: a new container at the point, one undo step; the last
+    // paragraph leaving a container takes the container with it.
+    let undo_before = s.undo_labels().len();
+    run(&mut s, "outline.moveParagraph", json!({"from": o.to_string(), "para": 1, "x": 300.0, "y": 400.0}));
+    assert_eq!(s.undo_labels().len(), undo_before + 1);
+    let page = s.page().unwrap();
+    assert_eq!(page.objects.len(), 2);
+    let new = page.objects[1].as_outline().unwrap();
+    assert_eq!((new.pos.x, new.pos.y, new.paragraphs[0].text()), (300.0, 400.0, "one".to_string()));
+    let n = new.id;
+    run(&mut s, "outline.moveParagraph", json!({"from": n.to_string(), "para": 0, "to": o.to_string(), "index": 1}));
+    assert_eq!(s.page().unwrap().objects.len(), 1, "the emptied container is gone");
+    assert!(s.run("outline.moveParagraph", json!({"from": o.to_string(), "para": 0})).is_err(), "a target is required");
 }
 
 #[test]

@@ -86,6 +86,20 @@ pub struct OutlineLayout {
     pub bar: Rect,
     /// The resize handle on the right edge.
     pub resize: Rect,
+    /// Left edge of level-0 text (screen x).
+    pub left: f32,
+}
+
+/// Where a dragged paragraph would land (catalog `BEH.Outline.DragParagraph`).
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub(crate) enum ParaDrop {
+    /// Into a container: `index` counts paragraphs after the dragged ones are taken out (what
+    /// `outline.moveParagraph` expects); `line` is the drop indicator on screen.
+    Into { to: Id, index: usize, level: u8, line: [Pos2; 2] },
+    /// On empty canvas: a new container at this page point.
+    NewAt(notecraft_engine::doc::geom::Point),
+    /// Back where it was: nothing to do.
+    Nowhere,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -93,6 +107,7 @@ enum Drag {
     Select,
     Move { id: Id, grab_page: notecraft_engine::doc::geom::Vec2 },
     Resize { id: Id, left: f32 },
+    Para { from: Id, para: usize },
 }
 
 /// Canvas view state.
@@ -113,6 +128,9 @@ pub struct CanvasState {
     pub desired_x: Option<f32>,
     /// IME composition in progress.
     pub preedit: String,
+    /// Size of the page content in the last frame (screen points; the page grows right and
+    /// down with what is on it, catalog `BEH.Canvas.PageGrows`).
+    pub extent: egui::Vec2,
     drag: Option<Drag>,
     scroll_to: Option<Rect>,
     viewport: Rect,
@@ -129,6 +147,7 @@ impl Default for CanvasState {
             blink_from: 0.0,
             desired_x: None,
             preedit: String::new(),
+            extent: egui::Vec2::ZERO,
             drag: None,
             scroll_to: None,
             viewport: Rect::NOTHING,
@@ -283,6 +302,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         app.canvas.viewport = viewport.translate(min.to_vec2());
         // Lay out everything first (needed for the content size).
         let (paras, outlines, extent) = layout_page(app, &ctx, &page, zoom, t, page_text);
+        app.canvas.extent = extent;
         let content = vec2(extent.x.max(avail.width()), extent.y.max(avail.height()));
         let (rect, resp) = ui.allocate_exact_size(content, Sense::click_and_drag());
         let painter = ui.painter_at(rect.union(app.canvas.viewport));
@@ -402,6 +422,23 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         // Drag ghost for a container being moved is the container itself (moved live).
         app.canvas.paras = paras;
         app.canvas.outlines = outlines;
+        // The drop indicator of a paragraph being dragged by its handle.
+        if let Some(Drag::Para { from, para }) = app.canvas.drag
+            && let Some(h) = ctx.pointer_latest_pos()
+        {
+            match para_drop(app, &page, from, para, h) {
+                ParaDrop::Into { line, .. } => {
+                    painter.line_segment(line, Stroke::new(2.0, t.accent));
+                    painter.circle_filled(line[0], 3.0, t.accent);
+                }
+                ParaDrop::NewAt(_) => {
+                    let r = Rect::from_min_size(h + vec2(8.0, 4.0), vec2(48.0, 16.0) * zoom.max(0.5));
+                    painter.rect_stroke(r, crate::theme::radius::CONTROL, Stroke::new(1.0, t.accent), egui::StrokeKind::Inside);
+                }
+                ParaDrop::Nowhere => {}
+            }
+            ctx.set_cursor_icon(CursorIcon::Grabbing);
+        }
         interact(app, ui, &ctx, &resp);
         if let Some(r) = scroll_req {
             let vp = app.canvas.viewport;
@@ -419,6 +456,11 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         }
     });
     let _ = out;
+}
+
+/// The page content size of the last frame (screen points).
+pub fn page_extent(app: &NoteApp) -> egui::Vec2 {
+    app.canvas.extent
 }
 
 fn blink_caret(app: &NoteApp, painter: &egui::Painter, ctx: &egui::Context, r: Rect, color: Color32) {
@@ -519,7 +561,7 @@ fn layout_page(
         let rect = Rect::from_min_max(pos2(x0 - pad - 16.0 * zoom, y0 - pad), pos2(x0 + width_px + pad, y.max(y0 + 14.0 * z) + pad));
         let bar = Rect::from_min_max(pos2(rect.min.x, rect.min.y - 9.0), pos2(rect.max.x, rect.min.y));
         let resize = Rect::from_min_max(pos2(rect.max.x - 3.0, rect.min.y), pos2(rect.max.x + 4.0, rect.max.y));
-        outlines.push(OutlineLayout { id: ol.id, rect, bar, resize });
+        outlines.push(OutlineLayout { id: ol.id, rect, bar, resize, left: x0 });
         extent = extent.max(vec2(rect.max.x - origin.x + 240.0, rect.max.y - origin.y + 240.0));
     }
     (paras, outlines, extent)
@@ -642,6 +684,8 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
             ctx.set_cursor_icon(CursorIcon::ResizeHorizontal);
         } else if app.canvas.outlines.iter().any(|o| o.bar.contains(h)) {
             ctx.set_cursor_icon(CursorIcon::Move);
+        } else if app.canvas.paras.iter().any(|p| p.block != Block::Title && p.handle.contains(h)) {
+            ctx.set_cursor_icon(CursorIcon::Grab);
         } else if app.canvas.paras.iter().any(|p| p.rect().expand2(vec2(2.0, 0.0)).contains(h)) {
             ctx.set_cursor_icon(CursorIcon::Text);
         }
@@ -651,7 +695,10 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
         app.canvas.focused = true;
         app.session.sel.focus = notecraft_engine::selection::FocusArea::Canvas;
         app.canvas.desired_x = None;
-        let Some(p) = resp.interact_pointer_pos() else { return };
+        // A drag is recognised only after the pointer has moved a little: hit-test where the
+        // button went down, not where the pointer is now.
+        let origin = if resp.drag_started() { ui.input(|i| i.pointer.press_origin()) } else { None };
+        let Some(p) = origin.or_else(|| resp.interact_pointer_pos()) else { return };
         // Resize handle.
         if let Some(o) = app.canvas.outlines.iter().find(|o| o.resize.contains(p)).copied() {
             if resp.drag_started() {
@@ -687,6 +734,10 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
             } else {
                 app.run(ctx, "caret.set", json!({"block": oid.to_string(), "para": pl.para, "offset": 0}));
                 app.run(ctx, "outline.selectBranch", json!({}));
+            }
+            // Dragging the handle moves the paragraph with its children (BEH.Outline.DragParagraph).
+            if resp.drag_started() {
+                app.canvas.drag = Some(Drag::Para { from: oid, para: pl.para });
             }
             return;
         }
@@ -742,10 +793,28 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
                 let w = (p.x - left) / (PT * app.canvas.zoom.max(0.1)) - 16.0;
                 app.run(ctx, "outline.resize", json!({"id": id.to_string(), "width": w.max(notecraft_engine::doc::page::MIN_OUTLINE_WIDTH)}));
             }
-            None => {}
+            Some(Drag::Para { .. }) | None => {}
         }
     }
     if resp.drag_stopped() {
+        if let Some(Drag::Para { from, para }) = app.canvas.drag
+            && let Some(p) = resp.interact_pointer_pos().or_else(|| ctx.pointer_latest_pos())
+            && let Some(page) = app.session.page().cloned()
+        {
+            match para_drop(app, &page, from, para, p) {
+                ParaDrop::Into { to, index, level, .. } => {
+                    app.run(
+                        ctx,
+                        "outline.moveParagraph",
+                        json!({"from": from.to_string(), "para": para, "to": to.to_string(), "index": index, "level": level}),
+                    );
+                }
+                ParaDrop::NewAt(pt) => {
+                    app.run(ctx, "outline.moveParagraph", json!({"from": from.to_string(), "para": para, "x": pt.x, "y": pt.y}));
+                }
+                ParaDrop::Nowhere => {}
+            }
+        }
         app.canvas.drag = None;
     }
     // Clicking elsewhere (ribbon, panes) takes focus away from the page.
@@ -755,6 +824,45 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
             app.canvas.focused = false;
         }
     }
+}
+
+/// Where paragraph `para` of container `from` (with its children) lands when dropped at the
+/// screen point `p`: before the visible paragraph whose middle is below the pointer, at the
+/// level the pointer's x suggests (at most one deeper than the paragraph above), or in a new
+/// container when the pointer is away from every container.
+pub(crate) fn para_drop(app: &NoteApp, page: &Page, from: Id, para: usize, p: Pos2) -> ParaDrop {
+    let Some(src) = page.outline(from) else { return ParaDrop::Nowhere };
+    let moved = src.subtree(para);
+    if moved.is_empty() {
+        return ParaDrop::Nowhere;
+    }
+    let base_level = src.paragraphs.get(para).map(|q| q.level).unwrap_or(0);
+    let Some(o) = app.canvas.outlines.iter().find(|o| o.rect.expand(16.0).contains(p)) else {
+        let pt = app.canvas.to_page(p);
+        return ParaDrop::NewAt(notecraft_engine::doc::geom::Point::new(pt.x.max(0.0), pt.y.max(0.0)));
+    };
+    let Some(dst) = page.outline(o.id) else { return ParaDrop::Nowhere };
+    let same = o.id == from;
+    let rows: Vec<&ParaLayout> =
+        app.canvas.paras.iter().filter(|pl| pl.block == Block::Outline(o.id) && !(same && moved.contains(&pl.para))).collect();
+    // Index (before removal) and the y of the indicator.
+    let (index, y) = match rows.iter().find(|pl| p.y < pl.rect().center().y) {
+        Some(pl) => (pl.para, pl.pos.y - 1.0),
+        None => (dst.paragraphs.len(), rows.last().map(|pl| pl.rect().max.y + 1.0).unwrap_or(o.rect.max.y - 4.0)),
+    };
+    let index = if same && index > moved.start && index < moved.end { moved.start } else { index };
+    // The paragraph the dropped one would follow decides how deep it may go.
+    let prev = (0..index).rev().find(|j| !(same && moved.contains(j))).and_then(|j| dst.paragraphs.get(j));
+    let max_level = prev.map(|q| q.level.saturating_add(1)).unwrap_or(0).min(notecraft_engine::doc::text::MAX_LEVEL);
+    let z = PT * app.canvas.zoom.max(0.1);
+    let wanted = ((p.x - o.left) / (INDENT * z)).round().max(0.0) as u8;
+    let level = wanted.min(max_level);
+    let after_removal = if same && index >= moved.end { index - moved.len() } else { index };
+    if same && (index == moved.start || index == moved.end) && level == base_level {
+        return ParaDrop::Nowhere;
+    }
+    let x = o.left + level as f32 * INDENT * z;
+    ParaDrop::Into { to: o.id, index: after_removal, level, line: [pos2(x, y), pos2(o.rect.max.x - 4.0, y)] }
 }
 
 fn dist(pl: &ParaLayout, p: Pos2) -> f32 {

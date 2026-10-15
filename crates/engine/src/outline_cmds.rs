@@ -88,7 +88,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .when(need_page),
         // BEH.Outline.DragParagraph — drop a paragraph (with children) elsewhere.
         CommandSpec::new("outline.moveParagraph", "BEH.Outline.DragParagraph", "Move Paragraph", "Behaviour/Outline", move_paragraph)
-            .params(r#"{"from": outline id, "para": int, "to": outline id, "index": int, "level"?: int}"#)
+            .params(r#"{"from": outline id, "para": int, "to": outline id, "index": int, "level"?: int} | {"from", "para", "x": pt, "y": pt} (a new container there)"#)
             .when(need_page),
         // NC.Object.Select — click a container's top bar.
         CommandSpec::new("object.select", "NC.Object.Select", "Select Note Container", "Mouse/Select container", select_object)
@@ -252,9 +252,16 @@ fn resize_outline(s: &mut Session, v: &Value) -> CmdResult {
 fn move_paragraph(s: &mut Session, v: &Value) -> CmdResult {
     let from = p::req_id(v, "from")?;
     let para = p::req_usize(v, "para")?;
-    let to = p::req_id(v, "to")?;
-    let index = p::req_usize(v, "index")?;
+    let to = p::id(v, "to")?;
+    // Without a target container the paragraph is dropped on empty canvas: a new container
+    // appears there (unverified: the reference's exact drop rule).
+    let at_point = match to {
+        Some(_) => None,
+        None => Some(Point::new(p::req_f32(v, "x")?.max(0.0), p::req_f32(v, "y")?.max(0.0)).sanitized()),
+    };
+    let index = if to.is_some() { p::req_usize(v, "index")? } else { 0 };
     let level = p::usize(v, "level");
+    let new_id = at_point.map(|_| s.new_id());
     let page = s.page_mut().ok_or_else(no_page)?;
     let src = page.outline_mut(from).ok_or_else(|| CmdError::Params("no such source container".into()))?;
     if para >= src.paragraphs.len() {
@@ -263,19 +270,39 @@ fn move_paragraph(s: &mut Session, v: &Value) -> CmdResult {
     let r = src.subtree(para);
     let mut block: Vec<_> = src.paragraphs.drain(r.clone()).collect();
     let base = block.first().map(|p| p.level).unwrap_or(0);
-    if let Some(l) = level {
-        let l = l.min(notecraft_doc::text::MAX_LEVEL as usize) as u8;
+    let target_level = match (level, at_point) {
+        (Some(l), _) => Some(l.min(notecraft_doc::text::MAX_LEVEL as usize) as u8),
+        (None, Some(_)) => Some(0),
+        (None, None) => None,
+    };
+    if let Some(l) = target_level {
         for p in &mut block {
             p.level = (l as i16 + p.level as i16 - base as i16).clamp(0, notecraft_doc::text::MAX_LEVEL as i16) as u8;
         }
     }
-    let dst = page.outline_mut(to).ok_or_else(|| CmdError::Params("no such target container".into()))?;
-    // Moving within the same container: the index refers to the list after removal.
-    let at = index.min(dst.paragraphs.len());
-    for (k, p) in block.into_iter().enumerate() {
-        dst.paragraphs.insert(at + k, p);
+    if src.paragraphs.is_empty() {
+        page.objects.retain(|o| o.id() != from);
     }
-    dst.normalize();
+    let (to, at) = match (to, at_point, new_id) {
+        (Some(to), _, _) => {
+            let dst = page.outline_mut(to).ok_or_else(|| CmdError::Params("no such target container".into()))?;
+            // Moving within the same container: the index refers to the list after removal.
+            let at = index.min(dst.paragraphs.len());
+            for (k, p) in block.into_iter().enumerate() {
+                dst.paragraphs.insert(at + k, p);
+            }
+            dst.normalize();
+            (to, at)
+        }
+        (None, Some(pt), Some(id)) => {
+            let mut o = notecraft_doc::Outline::new(id, pt, notecraft_doc::Id::NIL);
+            o.paragraphs = block;
+            o.normalize();
+            page.objects.push(notecraft_doc::PageObject::Outline(o));
+            (id, 0)
+        }
+        _ => return Err(CmdError::Params("`to` or `x` and `y` are required".into())),
+    };
     s.set_caret(Pos::new(Block::Outline(to), at, 0));
     Ok(Value::Null)
 }

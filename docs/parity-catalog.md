@@ -71,8 +71,8 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Nav.FindOnPage | Find on page bar (Ctrl+F): match count, next/previous, highlights on the page | Window/Navigation/Find on Page | surface |  |  | P0 | wired | KBD365 (Ctrl+F, F3, Shift+F3) | Match highlighting on the page is not pinned by a test (unverified). |
 | UI.Canvas.Page | Page canvas: free-form, white page that grows right and down with content; page title area with date and time | Window/Canvas/Page | surface |  |  | P0 | wired | GK; [MS-ONE] page object |  |
 | UI.Canvas.TitleArea | Page title line with the creation date and time beneath it | Window/Canvas/Title Area | surface |  |  | P0 | wired | GK; [MS-ONE] CachedTitleString, TopologyCreationTimeStamp |  |
-| UI.Canvas.Container | Note container frame on hover/focus: move bar on top, resize handle on the right edge | Window/Canvas/Note Container | surface |  |  | P0 | missing | GK; [MS-ONE] jcidOutlineNode |  |
-| UI.Canvas.ParagraphHandle | Paragraph handle (four-way arrow) left of each paragraph on hover: drag to move, click to select, double-click to collapse | Window/Canvas/Paragraph Handle | surface |  |  | P0 | missing | GK; FLUENT19:ContextMenuOutlineElementHandle |  |
+| UI.Canvas.Container | Note container frame on hover/focus: move bar on top, resize handle on the right edge | Window/Canvas/Note Container | surface |  |  | P0 | verified | GK; [MS-ONE] jcidOutlineNode |  |
+| UI.Canvas.ParagraphHandle | Paragraph handle (four-way arrow) left of each paragraph on hover: drag to move, click to select, double-click to collapse | Window/Canvas/Paragraph Handle | surface |  |  | P0 | verified | GK; FLUENT19:ContextMenuOutlineElementHandle |  |
 | UI.Canvas.Scrollbars | Vertical and horizontal scroll bars; option to put the vertical bar on the left | Window/Canvas/Scroll Bars | surface |  |  | P1 | missing | GK (Options › Display) |  |
 | UI.Canvas.MiniToolbar | Mini toolbar on text selection (font, size, bold, italic, underline, highlight, colour, indent, bullets, styles, tags) | Window/Canvas/Mini Toolbar | surface |  |  | P1 | missing | GK (Options › General) |  |
 | UI.Canvas.PasteOptions | Paste Options button after pasting | Window/Canvas/Paste Options Button | surface |  |  | P1 | missing | GK (Options › Advanced) |  |
@@ -1367,11 +1367,11 @@ Documented (or, where marked, plausible and unverified) behaviour. A behaviour r
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | BEH.Canvas.ClickToType | Click anywhere on a page and start typing: a note container is created at the click | Behaviour/Canvas | behaviour |  |  | P0 | verified | MS Support: "Take notes in OneNote" (basic tasks) |  |
-| BEH.Canvas.ContainerAutoWidth | A new container grows in width with the text up to a maximum, then wraps; it grows in height with content | Behaviour/Canvas | behaviour |  |  | P0 | missing | GK; [MS-ONE] LayoutMaxWidth, IsLayoutSizeSetByUser | unverified maximum (we use 6.5in) |
+| BEH.Canvas.ContainerAutoWidth | A new container grows in width with the text up to a maximum, then wraps; it grows in height with content | Behaviour/Canvas | behaviour |  |  | P0 | wired | GK; [MS-ONE] LayoutMaxWidth, IsLayoutSizeSetByUser | unverified maximum (we use 6.5in) |
 | BEH.Canvas.ContainerResize | Dragging a container's right edge sets a fixed width (text rewraps) | Behaviour/Canvas | behaviour |  |  | P0 | verified | GK; [MS-ONE] IsLayoutSizeSetByUser |  |
 | BEH.Canvas.ContainerMove | Dragging a container's top bar moves it anywhere on the page | Behaviour/Canvas | behaviour |  |  | P0 | verified | GK |  |
 | BEH.Canvas.EmptyContainerRemoved | A container left empty disappears when the caret leaves it | Behaviour/Canvas | behaviour |  |  | P0 | wired | GK | unverified |
-| BEH.Canvas.PageGrows | The page grows right and down as content is added; it never has a fixed size unless Paper Size is set | Behaviour/Canvas | behaviour |  |  | P0 | missing | GK; FLUENT19:PaperSize |  |
+| BEH.Canvas.PageGrows | The page grows right and down as content is added; it never has a fixed size unless Paper Size is set | Behaviour/Canvas | behaviour |  |  | P0 | verified | GK; FLUENT19:PaperSize |  |
 | BEH.Canvas.MergeContainers | Shift-dragging a container onto another merges them | Behaviour/Canvas | behaviour |  |  | P2 | missing | GK | unverified |
 | BEH.Canvas.InsertSpace | Insert Space: drag on the page to push content down or right | Behaviour/Canvas | behaviour |  |  | P1 | missing | FLUENT19:PenInsertSpace |  |
 | BEH.Outline.EnterNewParagraph | Enter splits/creates a paragraph at the same level; it keeps the list format | Behaviour/Outline | behaviour |  |  | P0 | verified | GK |  |
@@ -1380,9 +1380,9 @@ Documented (or, where marked, plausible and unverified) behaviour. A behaviour r
 | BEH.Outline.AutoBullet | Typing "* " or "- " at the start of a paragraph starts a bulleted list (Options › Advanced) | Behaviour/Outline | behaviour |  |  | P0 | verified | GK (Options › Advanced: auto-bulleting) |  |
 | BEH.Outline.AutoNumber | Typing "1. ", "a) ", "i. " at the start of a paragraph starts a numbered list | Behaviour/Outline | behaviour |  |  | P0 | verified | GK (Options › Advanced: auto-numbering) |  |
 | BEH.Outline.NumberingSequence | Numbered lists renumber automatically; levels use 1., a., i. by default | Behaviour/Outline | behaviour |  |  | P0 | missing | GK | unverified default sequence |
-| BEH.Outline.CollapseExpand | Double-clicking a paragraph handle collapses/expands its children; collapsed paragraphs show a + handle | Behaviour/Outline | behaviour |  |  | P1 | missing | GK |  |
+| BEH.Outline.CollapseExpand | Double-clicking a paragraph handle collapses/expands its children; collapsed paragraphs show a + handle | Behaviour/Outline | behaviour |  |  | P1 | wired | GK |  |
 | BEH.Outline.MoveParagraph | Alt+Shift+Up/Down moves the paragraph with its children past its siblings | Behaviour/Outline | behaviour |  |  | P0 | verified | KBD365 |  |
-| BEH.Outline.DragParagraph | Dragging a paragraph handle moves the paragraph (with children) within or between containers | Behaviour/Outline | behaviour |  |  | P1 | verified | GK |  |
+| BEH.Outline.DragParagraph | Dragging a paragraph handle moves the paragraph (with children) within or between containers | Behaviour/Outline | behaviour |  |  | P1 | verified | GK || The pointer's x sets the level; dropped away from every container it starts a new container (unverified). |
 | BEH.Text.Undo | Undo/redo reverse whole user actions; typing coalesces into word-sized steps | Behaviour/Text | behaviour |  |  | P0 | wired | GK | unverified granularity |
 | BEH.Text.FormatToggles | Bold/italic/underline toggle on the selection, or set the format for the next typed text at the caret | Behaviour/Text | behaviour |  |  | P0 | verified | GK |  |
 | BEH.Text.FontSizeSteps | Increase/Decrease Font Size step through 8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72 | Behaviour/Text | behaviour |  |  | P1 | wired | GK (Office font size list) | unverified list for OneNote |
