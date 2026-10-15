@@ -35,35 +35,35 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| UI.Window.TitleBar | Title bar with the page and notebook name | Window/Title Bar | surface |  |  | P0 | missing | GK |  |
-| UI.Window.QAT | Quick Access Toolbar in the title bar (customizable, Back/Undo by default) | Window/Quick Access Toolbar | surface |  |  | P0 | missing | FLUENT19:Quick Access Toolbar |  |
+| UI.Window.TitleBar | Title bar with the page and notebook name | Window/Title Bar | surface |  |  | P0 | wired | GK |  |
+| UI.Window.QAT | Quick Access Toolbar in the title bar (customizable, Back/Undo by default) | Window/Quick Access Toolbar | surface |  |  | P0 | wired | FLUENT19:Quick Access Toolbar | Back, Undo, Redo; customizing the toolbar is not implemented yet. |
 | UI.Window.TellMe | Tell Me / Search box for commands in the title bar | Window/Tell Me | surface |  |  | P2 | missing | GK (Office 2016+) |  |
-| UI.Ribbon.Tabs | Ribbon tab strip: File, Home, Insert, Draw, History, Review, View, Help (+ contextual tabs) | Window/Ribbon/Tabs | surface |  |  | P0 | missing | FLUENT19 (tab list); GK (Help tab, M365) |  |
-| UI.Ribbon.Collapse | Collapse/expand the ribbon (double-click a tab, Ctrl+F1, pin) | Window/Ribbon/Collapse | surface |  |  | P0 | missing | FLUENT19:MinimizeRibbon |  |
+| UI.Ribbon.Tabs | Ribbon tab strip: File, Home, Insert, Draw, History, Review, View, Help (+ contextual tabs) | Window/Ribbon/Tabs | surface |  |  | P0 | verified | FLUENT19 (tab list); GK (Help tab, M365) |  |
+| UI.Ribbon.Collapse | Collapse/expand the ribbon (double-click a tab, Ctrl+F1, pin) | Window/Ribbon/Collapse | surface |  |  | P0 | wired | FLUENT19:MinimizeRibbon | Arrow button and Ctrl+F1; the pin and double-click a tab also work. |
 | UI.Ribbon.DisplayOptions | Ribbon display options (auto-hide, tabs only, tabs and commands) | Window/Ribbon/Display Options | surface |  |  | P2 | missing | GK (Office 2016+) |  |
 | UI.Ribbon.ContextualTabs | Contextual tabs appear with the selection (Table, Equation, Audio & Video) | Window/Ribbon/Contextual Tabs | surface |  |  | P1 | missing | FLUENT19:TabSet* |  |
 | UI.Ribbon.Keytips | Access keys (Alt / F10 show keytips; Alt+N, F etc.) | Window/Ribbon/Keytips | surface |  |  | P2 | missing | KBD365 (Alt+N sequences) |  |
 | UI.Ribbon.Galleries | In-ribbon galleries with live preview (Styles, Tags, Pens) | Window/Ribbon/Galleries | surface |  |  | P1 | missing | FLUENT19 (gallery controls) |  |
 | UI.Ribbon.Tooltips | ScreenTips with the command name, shortcut and description | Window/Ribbon/ScreenTips | surface |  |  | P1 | missing | GK |  |
-| UI.Nav.NotebookPane | Notebook pane on the left: notebooks, their section groups and sections in a tree | Window/Navigation/Notebook Pane | surface |  |  | P0 | missing | GK; FLUENT19:ContextMenuNotebook |  |
-| UI.Nav.NotebookPaneCollapse | Collapse/expand (pin) the notebook pane; notebook drop-down when collapsed | Window/Navigation/Notebook Pane Collapse | surface |  |  | P0 | missing | GK |  |
+| UI.Nav.NotebookPane | Notebook pane on the left: notebooks, their section groups and sections in a tree | Window/Navigation/Notebook Pane | surface |  |  | P0 | wired | GK; FLUENT19:ContextMenuNotebook |  |
+| UI.Nav.NotebookPaneCollapse | Collapse/expand (pin) the notebook pane; notebook drop-down when collapsed | Window/Navigation/Notebook Pane Collapse | surface |  |  | P0 | wired | GK |  |
 | UI.Nav.NotebookList | Notebook drop-down list (switch notebook, Ctrl+G) | Window/Navigation/Notebook List | surface |  |  | P0 | missing | KBD365 (Ctrl+G) |  |
-| UI.Nav.SectionTabs | Section tabs across the top of the page area, coloured by section colour, with section group tabs and the + (Create a New Section) tab | Window/Navigation/Section Tabs | surface |  |  | P0 | missing | GK; FLUENT19:ContextMenuSectionArea |  |
-| UI.Nav.PageList | Page tabs pane (right side by default): titles, subpage indentation, collapse arrows, selected page highlight, resizable width | Window/Navigation/Page List | surface |  |  | P0 | missing | GK; KBD365 (Ctrl+Shift+[ / ]) |  |
-| UI.Nav.AddPage | "+ Add Page" button above the page list; hover insertion line between pages | Window/Navigation/Add Page | surface |  |  | P0 | missing | GK |  |
+| UI.Nav.SectionTabs | Section tabs across the top of the page area, coloured by section colour, with section group tabs and the + (Create a New Section) tab | Window/Navigation/Section Tabs | surface |  |  | P0 | wired | GK; FLUENT19:ContextMenuSectionArea |  |
+| UI.Nav.PageList | Page tabs pane (right side by default): titles, subpage indentation, collapse arrows, selected page highlight, resizable width | Window/Navigation/Page List | surface |  |  | P0 | wired | GK; KBD365 (Ctrl+Shift+[ / ]) |  |
+| UI.Nav.AddPage | "+ Add Page" button above the page list; hover insertion line between pages | Window/Navigation/Add Page | surface |  |  | P0 | wired | GK | The hover insertion line between pages is not implemented yet. |
 | UI.Nav.PageListLeft | Option: page tabs appear on the left | Window/Navigation/Page List Position | surface |  |  | P2 | missing | GK (Options › Display) |  |
 | UI.Nav.SearchBox | Search box above the page list with scope drop-down and as-you-type results | Window/Navigation/Search Box | surface |  |  | P0 | missing | KBD365 (Ctrl+E); FLUENT19:ContextMenuSearchScope |  |
-| UI.Nav.SearchResultsPane | Search Results pane (Alt+O) docked on the right, grouped by section | Window/Navigation/Search Results Pane | surface |  |  | P1 | missing | KBD365 (Alt+O) |  |
-| UI.Nav.FindOnPage | Find on page bar (Ctrl+F): match count, next/previous, highlights on the page | Window/Navigation/Find on Page | surface |  |  | P0 | missing | KBD365 (Ctrl+F, F3, Shift+F3) |  |
-| UI.Canvas.Page | Page canvas: free-form, white page that grows right and down with content; page title area with date and time | Window/Canvas/Page | surface |  |  | P0 | missing | GK; [MS-ONE] page object |  |
-| UI.Canvas.TitleArea | Page title line with the creation date and time beneath it | Window/Canvas/Title Area | surface |  |  | P0 | missing | GK; [MS-ONE] CachedTitleString, TopologyCreationTimeStamp |  |
+| UI.Nav.SearchResultsPane | Search Results pane (Alt+O) docked on the right, grouped by section | Window/Navigation/Search Results Pane | surface |  |  | P1 | wired | KBD365 (Alt+O) | Opened with Pin Search Results (Alt+O) from the search drop-down. |
+| UI.Nav.FindOnPage | Find on page bar (Ctrl+F): match count, next/previous, highlights on the page | Window/Navigation/Find on Page | surface |  |  | P0 | wired | KBD365 (Ctrl+F, F3, Shift+F3) | Match highlighting on the page is not pinned by a test (unverified). |
+| UI.Canvas.Page | Page canvas: free-form, white page that grows right and down with content; page title area with date and time | Window/Canvas/Page | surface |  |  | P0 | wired | GK; [MS-ONE] page object |  |
+| UI.Canvas.TitleArea | Page title line with the creation date and time beneath it | Window/Canvas/Title Area | surface |  |  | P0 | wired | GK; [MS-ONE] CachedTitleString, TopologyCreationTimeStamp |  |
 | UI.Canvas.Container | Note container frame on hover/focus: move bar on top, resize handle on the right edge | Window/Canvas/Note Container | surface |  |  | P0 | missing | GK; [MS-ONE] jcidOutlineNode |  |
 | UI.Canvas.ParagraphHandle | Paragraph handle (four-way arrow) left of each paragraph on hover: drag to move, click to select, double-click to collapse | Window/Canvas/Paragraph Handle | surface |  |  | P0 | missing | GK; FLUENT19:ContextMenuOutlineElementHandle |  |
 | UI.Canvas.Scrollbars | Vertical and horizontal scroll bars; option to put the vertical bar on the left | Window/Canvas/Scroll Bars | surface |  |  | P1 | missing | GK (Options › Display) |  |
 | UI.Canvas.MiniToolbar | Mini toolbar on text selection (font, size, bold, italic, underline, highlight, colour, indent, bullets, styles, tags) | Window/Canvas/Mini Toolbar | surface |  |  | P1 | missing | GK (Options › General) |  |
 | UI.Canvas.PasteOptions | Paste Options button after pasting | Window/Canvas/Paste Options Button | surface |  |  | P1 | missing | GK (Options › Advanced) |  |
 | UI.Canvas.InfoBar | Information bar at the top of the page (Ctrl+Shift+W performs its action) | Window/Canvas/Information Bar | surface |  |  | P2 | missing | KBD365 (Ctrl+Shift+W) |  |
-| UI.Panes.FindTags | Tags Summary pane: group by tag/section/title/date/note text, search scope, Show only unchecked items, Create Summary Page | Window/Panes/Tags Summary | surface |  |  | P0 | missing | FLUENT19:FindTaggedNotes; GK |  |
+| UI.Panes.FindTags | Tags Summary pane: group by tag/section/title/date/note text, search scope, Show only unchecked items, Create Summary Page | Window/Panes/Tags Summary | surface |  |  | P0 | wired | FLUENT19:FindTaggedNotes; GK |  |
 | UI.Panes.CustomizeTags | Customize Tags dialog: new tag, modify (name, symbol, font colour, highlight colour), reorder, remove | Window/Panes/Customize Tags | surface |  |  | P1 | missing | FLUENT19:TagsCustomize; GK |  |
 | UI.Panes.PageVersions | Page versions listed under the page in the page list, by date and author | Window/Panes/Page Versions | surface |  |  | P1 | missing | FLUENT19:PageVersions |  |
 | UI.Panes.RecycleBin | Notebook Recycle Bin as a special section with Deleted Pages / Deleted Sections | Window/Panes/Recycle Bin | surface |  |  | P0 | missing | FLUENT19:RecycleBin; GK |  |
@@ -83,17 +83,17 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Dialogs.Options | OneNote Options dialog with its categories | Window/Dialogs/Options | surface |  |  | P0 | missing | FLUENT19:ApplicationOptionsDialog |  |
 | UI.Dialogs.CustomizeRibbon | Customize the Ribbon page (tabs, groups, commands, reset, import/export) | Window/Dialogs/Customize Ribbon | surface |  |  | P2 | missing | GK (Options) |  |
 | UI.Dialogs.CustomizeQAT | Quick Access Toolbar customization page (and the QAT drop-down) | Window/Dialogs/Customize QAT | surface |  |  | P1 | missing | GK (Options) |  |
-| UI.Window.FullPage | Full Page View: ribbon and navigation hidden, a single button to return | Window/Full Page View | surface |  |  | P0 | missing | FLUENT19:FullPageView |  |
+| UI.Window.FullPage | Full Page View: ribbon and navigation hidden, a single button to return | Window/Full Page View | surface |  |  | P0 | wired | FLUENT19:FullPageView |  |
 | UI.Window.Docked | Docked window: OneNote docked to the side of the desktop with the compact ribbon | Window/Docked | surface |  |  | P2 | missing | FLUENT19:CurrentWindowDock; TabHomeNarrow… |  |
 | UI.Window.QuickNote | Quick Note window: a small borderless page saved to Quick Notes | Window/Quick Note | surface |  |  | P1 | missing | FLUENT19:NewSideNote; KBD365 |  |
-| UI.Window.ContextMenus | Right-click context menus for each object (see CM rows) | Window/Context Menus | surface |  |  | P0 | missing | FLUENT19 (context menus) |  |
+| UI.Window.ContextMenus | Right-click context menus for each object (see CM rows) | Window/Context Menus | surface |  |  | P0 | wired | FLUENT19 (context menus) | Notebook, section group, section, page and pane-area menus; object menus on the page are not implemented yet. |
 | UI.Window.DarkMode | Office theme (Colorful, Dark Gray, Black, White) and dark page canvas | Window/Theme | surface |  |  | P1 | missing | GK |  |
-| UI.Window.HiDPI | HiDPI and fractional scaling (Linux Wayland/X11) | Window/HiDPI | surface |  |  | P0 | missing | brief §4 |  |
-| UI.Window.IME | IME composition for CJK and other input methods | Window/IME | surface |  |  | P0 | missing | brief §4 |  |
+| UI.Window.HiDPI | HiDPI and fractional scaling (Linux Wayland/X11) | Window/HiDPI | surface |  |  | P0 | wired | brief §4 | Rendered at 1.25×, 1.5× and 2× in tests. |
+| UI.Window.IME | IME composition for CJK and other input methods | Window/IME | surface |  |  | P0 | wired | brief §4 | Commit inserts the composed text; the preedit is not drawn in place yet (unverified). |
 | UI.Window.Clipboard | System clipboard: text, rich text (HTML), images | Window/Clipboard | surface |  |  | P0 | missing | brief §4 |  |
 | UI.Window.DragDrop | Drag & drop of files, images and text onto the page; pages/sections in the navigation | Window/Drag and Drop | surface |  |  | P1 | missing | brief §4; GK |  |
 | UI.Window.FileDialogs | Native file dialogs through the XDG desktop portal | Window/File Dialogs | surface |  |  | P0 | missing | brief §4 |  |
-| UI.Window.Accessibility | Screen reader support (AccessKit) for panes, page list and canvas | Window/Accessibility | surface |  |  | P1 | missing | brief §6 M4 |  |
+| UI.Window.Accessibility | Screen reader support (AccessKit) for panes, page list and canvas | Window/Accessibility | surface |  |  | P1 | wired | brief §6 M4 | Controls expose labels through AccessKit (the UI tests query them); not yet tried with a screen reader (unverified). |
 
 ## Quick Access Toolbar
 
@@ -122,7 +122,7 @@ The Home tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | R.Home.Clipboard.PasteMenu | Paste | Home/Clipboard/Paste | split | `Mod+V` | edit.paste | P0 | wired | FLUENT19:PasteMenu |  |
-| R.Home.Clipboard.Paste | Paste | Home/Clipboard/Paste | button | `Mod+V` | edit.paste | P0 | missing | FLUENT19:Paste |  |
+| R.Home.Clipboard.Paste | Paste | Home/Clipboard/Paste | button | `Mod+V` | edit.paste | P0 | wired | FLUENT19:Paste |  |
 | R.Home.Clipboard.PasteGallery | Paste Options | Home/Clipboard/Paste/Paste Options | gallery |  | edit.pasteOptions | P0 | wired | FLUENT19:PasteGallery |  |
 | R.Home.Clipboard.Cut | Cut | Home/Clipboard/Cut | button | `Mod+X` | edit.cut | P0 | verified | FLUENT19:Cut |  |
 | R.Home.Clipboard.CopyOneNote | Copy | Home/Clipboard/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:CopyOneNote |  |
@@ -139,7 +139,7 @@ The Home tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Home.BasicText.Italic | Italic | Home/Basic Text/Italic | toggle | `Mod+I` | format.italic | P0 | verified | FLUENT19:Italic |  |
 | R.Home.BasicText.Underline | Underline | Home/Basic Text/Underline | toggle | `Mod+U` | format.underline | P0 | verified | FLUENT19:Underline |  |
 | R.Home.BasicText.Strikethrough | Strikethrough | Home/Basic Text/Strikethrough | toggle | `Alt+-` | format.strikethrough | P0 | verified | FLUENT19:Strikethrough |  |
-| R.Home.BasicText.ExtendedTextFormattingMenu | Subscript / Superscript | Home/Basic Text/Subscript / Superscript | split |  | format.subscript | P1 | missing | FLUENT19:ExtendedTextFormattingMenu |  |
+| R.Home.BasicText.ExtendedTextFormattingMenu | Subscript / Superscript | Home/Basic Text/Subscript / Superscript | split |  | format.subscript | P1 | wired | FLUENT19:ExtendedTextFormattingMenu |  |
 | R.Home.BasicText.ExtendedTextFormattingMostRecenltyUsed | Most Recently Used (Subscript/Superscript) | Home/Basic Text/Subscript / Superscript/Most Recently Used (Subscript/Superscript) | toggle |  |  | P2 | missing | FLUENT19:ExtendedTextFormattingMostRecenltyUsed |  |
 | R.Home.BasicText.Subscript | Subscript | Home/Basic Text/Subscript / Superscript/Subscript | toggle | `Mod+=` | format.subscript | P1 | verified | FLUENT19:Subscript |  |
 | R.Home.BasicText.Superscript | Superscript | Home/Basic Text/Subscript / Superscript/Superscript | toggle | `Mod+Shift+Plus` | format.superscript | P1 | verified | FLUENT19:Superscript |  |
@@ -155,7 +155,7 @@ The Home tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Home.BasicText.TextDirectionRightToLeft | Right-to-Left | Home/Basic Text/Paragraph Alignment/Right-to-Left | toggle |  | para.rtl | P2 | wired | FLUENT19:TextDirectionRightToLeft |  |
 | R.Home.BasicText.Delete | Delete | Home/Basic Text/Delete | button | `Delete` | edit.delete | P0 | wired | FLUENT19:Delete |  |
 | R.Home.Styles.QuickStylesGallery | Styles | Home/Styles | gallery |  | style.apply | P0 | wired | FLUENT19:QuickStylesGallery |  |
-| R.Home.Styles.ClearFormatting | Clear All Formatting | Home/Styles/Clear All Formatting | button | `Mod+Shift+N` | format.clear | P0 | missing | FLUENT19:ClearFormatting |  |
+| R.Home.Styles.ClearFormatting | Clear All Formatting | Home/Styles/Clear All Formatting | button | `Mod+Shift+N` | format.clear | P0 | wired | FLUENT19:ClearFormatting |  |
 | R.Home.Tags.TagsGallery | Tags | Home/Tags | gallery |  | tag.toggle | P0 | wired | FLUENT19:TagsGallery |  |
 | R.Home.Tags.TagsCustomize | Customize Tags | Home/Tags/Customize Tags | button |  | tag.customize | P1 | wired | FLUENT19:TagsCustomize |  |
 | R.Home.Tags.TagsRemoveAll | Remove Tag | Home/Tags/Remove Tag | button | `Mod+0` | tag.removeAll | P0 | wired | FLUENT19:TagsRemoveAll |  |
@@ -191,7 +191,7 @@ The Home tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Home.Styles.Quote | Style: Quote | Home/Styles/Quote | gallery-item |  | style.quote | P0 | wired | GK (styles gallery contents); KBD365 for the keys | built-in style list from user-visible UI; unverified order |
 | R.Home.Styles.Code | Style: Code | Home/Styles/Code | gallery-item |  | style.code | P0 | wired | GK (styles gallery contents); KBD365 for the keys | built-in style list from user-visible UI; unverified order |
 | R.Home.Styles.Normal | Style: Normal | Home/Styles/Normal | gallery-item |  | style.normal | P0 | wired | GK (styles gallery contents); KBD365 for the keys | built-in style list from user-visible UI; unverified order |
-| R.Home.Tags.ToDo | Tag: To Do | Home/Tags/To Do | gallery-item | `Mod+1` | tag.todo | P0 | missing | GK (built-in tag list, user-visible); KBD365 for Ctrl+1–9 | built-in tag list and order from user-visible UI; unverified |
+| R.Home.Tags.ToDo | Tag: To Do | Home/Tags/To Do | gallery-item | `Mod+1` | tag.todo | P0 | wired | GK (built-in tag list, user-visible); KBD365 for Ctrl+1–9 | built-in tag list and order from user-visible UI; unverified |
 | R.Home.Tags.Important | Tag: Important | Home/Tags/Important | gallery-item | `Mod+2` | tag.important | P0 | wired | GK (built-in tag list, user-visible); KBD365 for Ctrl+1–9 | built-in tag list and order from user-visible UI; unverified |
 | R.Home.Tags.Question | Tag: Question | Home/Tags/Question | gallery-item | `Mod+3` | tag.question | P0 | wired | GK (built-in tag list, user-visible); KBD365 for Ctrl+1–9 | built-in tag list and order from user-visible UI; unverified |
 | R.Home.Tags.RememberForLater | Tag: Remember for later | Home/Tags/Remember for later | gallery-item | `Mod+4` | tag.rememberForLater | P0 | wired | GK (built-in tag list, user-visible); KBD365 for Ctrl+1–9 | built-in tag list and order from user-visible UI; unverified |
@@ -311,7 +311,7 @@ The Draw tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Draw.Shapes.ShapesDuplicate | Lock Drawing Mode | Draw/Shapes/Lock Drawing Mode | toggle |  | draw.lockDrawingMode | P2 | missing | FLUENT19:ShapesDuplicate |  |
 | R.Draw.Shapes.GridSnapTo | Snap to Grid | Draw/Shapes/Snap to Grid | toggle |  | draw.snapToGrid | P2 | missing | FLUENT19:GridSnapTo |  |
 | R.Draw.Edit.PenInsertSpace | Insert Space | Draw/Edit/Insert Space | toggle |  | insert.space | P1 | missing | FLUENT19:PenInsertSpace |  |
-| R.Draw.Edit.Delete | Delete | Draw/Edit/Delete | button | `Delete` | edit.delete | P0 | missing | FLUENT19:Delete |  |
+| R.Draw.Edit.Delete | Delete | Draw/Edit/Delete | button | `Delete` | edit.delete | P0 | wired | FLUENT19:Delete |  |
 | R.Draw.Edit.ObjectsArrangeMenu | Arrange | Draw/Edit/Arrange | menu |  |  | P1 | missing | FLUENT19:ObjectsArrangeMenu |  |
 | R.Draw.Edit.ObjectBringForward | Bring Forward | Draw/Edit/Arrange/Bring Forward | button |  | object.bringForward | P1 | missing | FLUENT19:ObjectBringForward |  |
 | R.Draw.Edit.ObjectBringToFront | Bring to Front | Draw/Edit/Arrange/Bring to Front | button |  | object.bringToFront | P1 | missing | FLUENT19:ObjectBringToFront |  |
@@ -362,7 +362,7 @@ The History tab, group by group, in ribbon order. Rows from the Microsoft 365 ap
 | R.History.History.DeleteAllPageVersionsInNotebook | Delete All Versions in Notebook | History/Page Versions/Delete All Versions in Notebook | button |  | history.deleteVersionsNotebook | P2 | missing | FLUENT19:DeleteAllPageVersionsInNotebook |  |
 | R.History.History.DisableVersionHistory | Disable History for This Notebook | History/Page Versions/Disable History for This Notebook | toggle |  | history.disable | P2 | missing | FLUENT19:DisableVersionHistory |  |
 | R.History.History.RecycleBinMenu | Notebook Recycle Bin | History/Notebook Recycle Bin | split |  | history.recycleBin | P0 | verified | FLUENT19:RecycleBinMenu |  |
-| R.History.History.RecycleBin | Notebook Recycle Bin | History/Notebook Recycle Bin | toggle |  | history.recycleBin | P0 | missing | FLUENT19:RecycleBin |  |
+| R.History.History.RecycleBin | Notebook Recycle Bin | History/Notebook Recycle Bin | toggle |  | history.recycleBin | P0 | wired | FLUENT19:RecycleBin |  |
 | R.History.History.EmptyRecycleBin | Empty Recycle Bin | History/Notebook Recycle Bin/Empty Recycle Bin | button |  | history.emptyRecycleBin | P0 | verified | FLUENT19:EmptyRecycleBin |  |
 | R.History.History.DisableVersionHistory2 | Disable History for This Notebook | History/Notebook Recycle Bin/Disable History for This Notebook | toggle |  | history.disable | P2 | missing | FLUENT19:DisableVersionHistory |  |
 
@@ -818,15 +818,15 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Notebook.MarkAllPagesAsRead | Mark Notebook as Read | Context/Notebook/Mark Notebook as Read | button |  | history.markNotebookRead | P2 | missing | FLUENT19:ContextMenuNotebook/MarkAllPagesAsRead |  |
 | CM.Notebook.NotebookMoveUp | Move Up | Context/Notebook/Move Up | button |  | notebook.moveUp | P1 | wired | FLUENT19:ContextMenuNotebook/NotebookMoveUp |  |
 | CM.Notebook.NotebookMoveDown | Move Down | Context/Notebook/Move Down | button |  | notebook.moveDown | P1 | wired | FLUENT19:ContextMenuNotebook/NotebookMoveDown |  |
-| CM.Notebook.RecycleBin | Notebook Recycle Bin | Context/Notebook/Notebook Recycle Bin | toggle |  | history.recycleBin | P0 | missing | FLUENT19:ContextMenuNotebook/RecycleBin |  |
-| CM.Notebook.NotebookProperties | Properties… | Context/Notebook/Properties… | button |  | notebook.properties | P1 | missing | FLUENT19:ContextMenuNotebook/NotebookProperties |  |
+| CM.Notebook.RecycleBin | Notebook Recycle Bin | Context/Notebook/Notebook Recycle Bin | toggle |  | history.recycleBin | P0 | wired | FLUENT19:ContextMenuNotebook/RecycleBin |  |
+| CM.Notebook.NotebookProperties | Properties… | Context/Notebook/Properties… | button |  | notebook.properties | P1 | wired | FLUENT19:ContextMenuNotebook/NotebookProperties |  |
 | CM.Notebook.NotebookClose | Close This Notebook | Context/Notebook/Close This Notebook | button |  | notebook.close | P0 | wired | FLUENT19:ContextMenuNotebook/NotebookClose |  |
 | CM.SectionGroup.FolderRename | Rename | Context/Section Group/Rename | button |  | sectionGroup.rename | P0 | wired | FLUENT19:ContextMenuSectionGroup/FolderRename |  |
 | CM.SectionGroup.FolderMove | Move… | Context/Section Group/Move… | button |  | sectionGroup.move | P1 | wired | FLUENT19:ContextMenuSectionGroup/FolderMove |  |
 | CM.SectionGroup.FolderDelete | Delete | Context/Section Group/Delete | button |  | sectionGroup.delete | P0 | wired | FLUENT19:ContextMenuSectionGroup/FolderDelete |  |
 | CM.SectionGroup.SectionGroupLinkCreate | Copy Link to Section Group | Context/Section Group/Copy Link to Section Group | button |  | sectionGroup.copyLink | P2 | wired | FLUENT19:ContextMenuSectionGroup/SectionGroupLinkCreate |  |
 | CM.SectionGroup.MarkPageAsRead | Mark as Read | Context/Section Group/Mark as Read | button |  | history.markRead | P2 | missing | FLUENT19:ContextMenuSectionGroup/MarkPageAsRead |  |
-| CM.SectionGroup.SectionInsert | New Section | Context/Section Group/New Section | button | `Mod+T` | section.new | P0 | missing | FLUENT19:ContextMenuSectionGroup/SectionInsert |  |
+| CM.SectionGroup.SectionInsert | New Section | Context/Section Group/New Section | button | `Mod+T` | section.new | P0 | wired | FLUENT19:ContextMenuSectionGroup/SectionInsert |  |
 | CM.SectionGroup.SectionGroupInsert | New Section Group | Context/Section Group/New Section Group | button |  | sectionGroup.new | P0 | wired | FLUENT19:ContextMenuSectionGroup/SectionGroupInsert |  |
 | CM.Section.SectionRenameOneNote | Rename | Context/Section/Rename | button |  | section.rename | P0 | wired | FLUENT19:ContextMenuSection/SectionRenameOneNote |  |
 | CM.Section.FileSaveAsContextualItem | Export… | Context/Section/Export… | button |  | file.exportSection | P1 | missing | FLUENT19:ContextMenuSection/FileSaveAsContextualItem |  |
@@ -837,39 +837,39 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Section.SectionClose | Close (section) | Context/Section/Close (section) | button |  | section.close | P2 | missing | FLUENT19:ContextMenuSection/SectionClose |  |
 | CM.Section.ShortcutCopy | Copy (section) | Context/Section/Copy (section) | button |  | section.copy | P2 | missing | FLUENT19:ContextMenuSection/ShortcutCopy |  |
 | CM.Section.SectionLinkCreate | Copy Link to Section | Context/Section/Copy Link to Section | button |  | section.copyLink | P1 | wired | FLUENT19:ContextMenuSection/SectionLinkCreate |  |
-| CM.Section.SectionInsert | New Section | Context/Section/New Section | button | `Mod+T` | section.new | P0 | missing | FLUENT19:ContextMenuSection/SectionInsert |  |
-| CM.Section.SectionGroupInsert | New Section Group | Context/Section/New Section Group | button |  | sectionGroup.new | P0 | missing | FLUENT19:ContextMenuSection/SectionGroupInsert |  |
+| CM.Section.SectionInsert | New Section | Context/Section/New Section | button | `Mod+T` | section.new | P0 | wired | FLUENT19:ContextMenuSection/SectionInsert |  |
+| CM.Section.SectionGroupInsert | New Section Group | Context/Section/New Section Group | button |  | sectionGroup.new | P0 | wired | FLUENT19:ContextMenuSection/SectionGroupInsert |  |
 | CM.Section.MarkPageAsRead | Mark as Read | Context/Section/Mark as Read | button |  | history.markRead | P2 | missing | FLUENT19:ContextMenuSection/MarkPageAsRead |  |
 | CM.Section.PasswordProtectSectionContextual | Password Protect This Section… | Context/Section/Password Protect This Section… | button |  | review.password | P1 | missing | FLUENT19:ContextMenuSection/PasswordProtectSectionContextual |  |
 | CM.Section.SectionColorMenu | Section Color | Context/Section/Section Color | menu |  | section.color | P0 | verified | FLUENT19:ContextMenuSection/SectionColorMenu |  |
-| CM.Section.NotebookColor4 | Section Color 4 | Context/Section/Section Color/Section Color 4 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor4 |  |
-| CM.Section.NotebookColor2 | Section Color 2 | Context/Section/Section Color/Section Color 2 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor2 |  |
-| CM.Section.NotebookColor3 | Section Color 3 | Context/Section/Section Color/Section Color 3 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor3 |  |
-| CM.Section.NotebookColor7 | Section Color 7 | Context/Section/Section Color/Section Color 7 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor7 |  |
-| CM.Section.NotebookColor5 | Section Color 5 | Context/Section/Section Color/Section Color 5 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor5 |  |
-| CM.Section.NotebookColor8 | Section Color 8 | Context/Section/Section Color/Section Color 8 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor8 |  |
-| CM.Section.NotebookColor6 | Section Color 6 | Context/Section/Section Color/Section Color 6 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor6 |  |
-| CM.Section.NotebookColor1 | Section Color 1 | Context/Section/Section Color/Section Color 1 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor1 |  |
-| CM.Section.NotebookColor9 | Section Color 9 | Context/Section/Section Color/Section Color 9 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor9 |  |
-| CM.Section.NotebookColor10 | Section Color 10 | Context/Section/Section Color/Section Color 10 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor10 |  |
-| CM.Section.NotebookColor11 | Section Color 11 | Context/Section/Section Color/Section Color 11 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor11 |  |
-| CM.Section.NotebookColor12 | Section Color 12 | Context/Section/Section Color/Section Color 12 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor12 |  |
-| CM.Section.NotebookColor13 | Section Color 13 | Context/Section/Section Color/Section Color 13 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor13 |  |
-| CM.Section.NotebookColor14 | Section Color 14 | Context/Section/Section Color/Section Color 14 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor14 |  |
-| CM.Section.NotebookColor15 | Section Color 15 | Context/Section/Section Color/Section Color 15 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor15 |  |
-| CM.Section.NotebookColor16 | Section Color 16 | Context/Section/Section Color/Section Color 16 | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColor16 |  |
-| CM.Section.NotebookColorNone | None (section color) | Context/Section/Section Color/None (section color) | toggle |  | section.color | P0 | missing | FLUENT19:ContextMenuSection/NotebookColorNone |  |
+| CM.Section.NotebookColor4 | Section Color 4 | Context/Section/Section Color/Section Color 4 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor4 |  |
+| CM.Section.NotebookColor2 | Section Color 2 | Context/Section/Section Color/Section Color 2 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor2 |  |
+| CM.Section.NotebookColor3 | Section Color 3 | Context/Section/Section Color/Section Color 3 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor3 |  |
+| CM.Section.NotebookColor7 | Section Color 7 | Context/Section/Section Color/Section Color 7 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor7 |  |
+| CM.Section.NotebookColor5 | Section Color 5 | Context/Section/Section Color/Section Color 5 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor5 |  |
+| CM.Section.NotebookColor8 | Section Color 8 | Context/Section/Section Color/Section Color 8 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor8 |  |
+| CM.Section.NotebookColor6 | Section Color 6 | Context/Section/Section Color/Section Color 6 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor6 |  |
+| CM.Section.NotebookColor1 | Section Color 1 | Context/Section/Section Color/Section Color 1 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor1 |  |
+| CM.Section.NotebookColor9 | Section Color 9 | Context/Section/Section Color/Section Color 9 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor9 |  |
+| CM.Section.NotebookColor10 | Section Color 10 | Context/Section/Section Color/Section Color 10 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor10 |  |
+| CM.Section.NotebookColor11 | Section Color 11 | Context/Section/Section Color/Section Color 11 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor11 |  |
+| CM.Section.NotebookColor12 | Section Color 12 | Context/Section/Section Color/Section Color 12 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor12 |  |
+| CM.Section.NotebookColor13 | Section Color 13 | Context/Section/Section Color/Section Color 13 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor13 |  |
+| CM.Section.NotebookColor14 | Section Color 14 | Context/Section/Section Color/Section Color 14 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor14 |  |
+| CM.Section.NotebookColor15 | Section Color 15 | Context/Section/Section Color/Section Color 15 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor15 |  |
+| CM.Section.NotebookColor16 | Section Color 16 | Context/Section/Section Color/Section Color 16 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor16 |  |
+| CM.Section.NotebookColorNone | None (section color) | Context/Section/Section Color/None (section color) | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColorNone |  |
 | CM.Page.RenamePageOneNote | Rename | Context/Page/Rename | button |  | page.rename | P0 | wired | FLUENT19:ContextMenuPage/RenamePageOneNote |  |
-| CM.Page.Delete | Delete | Context/Page/Delete | button | `Delete` | edit.delete | P0 | missing | FLUENT19:ContextMenuPage/Delete |  |
-| CM.Page.Cut | Cut | Context/Page/Cut | button | `Mod+X` | edit.cut | P0 | missing | FLUENT19:ContextMenuPage/Cut |  |
-| CM.Page.CopyOneNote | Copy | Context/Page/Copy | button | `Mod+C` | edit.copy | P0 | missing | FLUENT19:ContextMenuPage/CopyOneNote |  |
-| CM.Page.Paste | Paste | Context/Page/Paste | button | `Mod+V` | edit.paste | P0 | missing | FLUENT19:ContextMenuPage/Paste |  |
+| CM.Page.Delete | Delete | Context/Page/Delete | button | `Delete` | edit.delete | P0 | wired | FLUENT19:ContextMenuPage/Delete |  |
+| CM.Page.Cut | Cut | Context/Page/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuPage/Cut |  |
+| CM.Page.CopyOneNote | Copy | Context/Page/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuPage/CopyOneNote |  |
+| CM.Page.Paste | Paste | Context/Page/Paste | button | `Mod+V` | edit.paste | P0 | wired | FLUENT19:ContextMenuPage/Paste |  |
 | CM.Page.PageLinkCreate | Copy Link to Page | Context/Page/Copy Link to Page | button |  | page.copyLink | P0 | wired | FLUENT19:ContextMenuPage/PageLinkCreate |  |
-| CM.Page.MoveOrCopyPageContextual | Move or Copy… | Context/Page/Move or Copy… | button | `Mod+Alt+M` | page.moveOrCopy | P0 | missing | FLUENT19:ContextMenuPage/MoveOrCopyPageContextual |  |
+| CM.Page.MoveOrCopyPageContextual | Move or Copy… | Context/Page/Move or Copy… | button | `Mod+Alt+M` | page.moveOrCopy | P0 | wired | FLUENT19:ContextMenuPage/MoveOrCopyPageContextual |  |
 | CM.Page.CopyOrMoveToSection | Move or Copy to Section | Context/Page/Move or Copy to Section | button |  | page.moveOrCopy | P1 | missing | FLUENT19:ContextMenuPage/CopyOrMoveToSection |  |
-| CM.Page.NewPageCtxItem | New Page | Context/Page/New Page | button |  | page.new | P0 | missing | FLUENT19:ContextMenuPage/NewPageCtxItem |  |
-| CM.Page.PagesDemote | Make Subpage | Context/Page/Make Subpage | button | `Mod+Alt+]` | page.demote | P0 | missing | FLUENT19:ContextMenuPage/PagesDemote |  |
-| CM.Page.PagesPromote | Promote Subpage | Context/Page/Promote Subpage | button | `Mod+Alt+[` | page.promote | P0 | missing | FLUENT19:ContextMenuPage/PagesPromote |  |
+| CM.Page.NewPageCtxItem | New Page | Context/Page/New Page | button |  | page.new | P0 | wired | FLUENT19:ContextMenuPage/NewPageCtxItem |  |
+| CM.Page.PagesDemote | Make Subpage | Context/Page/Make Subpage | button | `Mod+Alt+]` | page.demote | P0 | wired | FLUENT19:ContextMenuPage/PagesDemote |  |
+| CM.Page.PagesPromote | Promote Subpage | Context/Page/Promote Subpage | button | `Mod+Alt+[` | page.promote | P0 | wired | FLUENT19:ContextMenuPage/PagesPromote |  |
 | CM.Page.IndentedPagesShow | Expand Subpages | Context/Page/Expand Subpages | button |  | page.expandSubpages | P0 | verified | FLUENT19:ContextMenuPage/IndentedPagesShow |  |
 | CM.Page.IndentedPagesCollapse | Collapse Subpages | Context/Page/Collapse Subpages | button |  | page.collapseSubpages | P0 | verified | FLUENT19:ContextMenuPage/IndentedPagesCollapse |  |
 | CM.Page.MarkPageAsUnreadContextual | Mark as Unread | Context/Page/Mark as Unread | button | `Mod+Q` | history.markUnread | P2 | missing | FLUENT19:ContextMenuPage/MarkPageAsUnreadContextual |  |
@@ -892,14 +892,14 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.PageVersion.DeleteAllPageVersionsInNotebook | Delete All Versions in Notebook | Context/Page Version/Delete All Versions in Notebook | button |  | history.deleteVersionsNotebook | P2 | missing | FLUENT19:ContextMenuVersionPage/DeleteAllPageVersionsInNotebook |  |
 | CM.PageVersion.DisableVersionHistory | Disable History for This Notebook | Context/Page Version/Disable History for This Notebook | toggle |  | history.disable | P2 | missing | FLUENT19:ContextMenuVersionPage/DisableVersionHistory |  |
 | CM.PageVersion.PageVersionsHide | Hide Page Versions | Context/Page Version/Hide Page Versions | button |  | history.pageVersions | P1 | missing | FLUENT19:ContextMenuVersionPage/PageVersionsHide |  |
-| CM.PageListArea.NewPageAtSectionEndContextual | New Page | Context/Page List Area/New Page | button | `Mod+N` | page.new | P0 | missing | FLUENT19:ContextMenuPageArea/NewPageAtSectionEndContextual |  |
+| CM.PageListArea.NewPageAtSectionEndContextual | New Page | Context/Page List Area/New Page | button | `Mod+N` | page.new | P0 | wired | FLUENT19:ContextMenuPageArea/NewPageAtSectionEndContextual |  |
 | CM.PageListArea.PastePage | Paste Page | Context/Page List Area/Paste Page | button |  | page.paste | P1 | wired | FLUENT19:ContextMenuPageArea/PastePage |  |
-| CM.SectionTabsArea.SectionInsert | New Section | Context/Section Tabs Area/New Section | button | `Mod+T` | section.new | P0 | missing | FLUENT19:ContextMenuSectionArea/SectionInsert |  |
-| CM.SectionTabsArea.SectionGroupInsert | New Section Group | Context/Section Tabs Area/New Section Group | button |  | sectionGroup.new | P0 | missing | FLUENT19:ContextMenuSectionArea/SectionGroupInsert |  |
-| CM.NotebookPaneArea.SectionInsert | New Section | Context/Notebook Pane Area/New Section | button | `Mod+T` | section.new | P0 | missing | FLUENT19:ContextMenuNotebookArea/SectionInsert |  |
-| CM.NotebookPaneArea.SectionGroupInsert | New Section Group | Context/Notebook Pane Area/New Section Group | button |  | sectionGroup.new | P0 | missing | FLUENT19:ContextMenuNotebookArea/SectionGroupInsert |  |
-| CM.NotebookPaneArea.NotebookNew | New Notebook | Context/Notebook Pane Area/New Notebook | button |  | file.newNotebook | P0 | missing | FLUENT19:ContextMenuNotebookArea/NotebookNew |  |
-| CM.NotebookPaneArea.NotebookOpen | Open Notebook | Context/Notebook Pane Area/Open Notebook | button | `Mod+O` | file.openNotebook | P0 | missing | FLUENT19:ContextMenuNotebookArea/NotebookOpen |  |
+| CM.SectionTabsArea.SectionInsert | New Section | Context/Section Tabs Area/New Section | button | `Mod+T` | section.new | P0 | wired | FLUENT19:ContextMenuSectionArea/SectionInsert |  |
+| CM.SectionTabsArea.SectionGroupInsert | New Section Group | Context/Section Tabs Area/New Section Group | button |  | sectionGroup.new | P0 | wired | FLUENT19:ContextMenuSectionArea/SectionGroupInsert |  |
+| CM.NotebookPaneArea.SectionInsert | New Section | Context/Notebook Pane Area/New Section | button | `Mod+T` | section.new | P0 | wired | FLUENT19:ContextMenuNotebookArea/SectionInsert |  |
+| CM.NotebookPaneArea.SectionGroupInsert | New Section Group | Context/Notebook Pane Area/New Section Group | button |  | sectionGroup.new | P0 | wired | FLUENT19:ContextMenuNotebookArea/SectionGroupInsert |  |
+| CM.NotebookPaneArea.NotebookNew | New Notebook | Context/Notebook Pane Area/New Notebook | button |  | file.newNotebook | P0 | wired | FLUENT19:ContextMenuNotebookArea/NotebookNew |  |
+| CM.NotebookPaneArea.NotebookOpen | Open Notebook | Context/Notebook Pane Area/Open Notebook | button | `Mod+O` | file.openNotebook | P0 | wired | FLUENT19:ContextMenuNotebookArea/NotebookOpen |  |
 | CM.LegacyFormat.SectionConvertTo2010 | Convert Section to 2010-2016 Format | Context/Legacy Format/Convert Section to 2010-2016 Format | button |  | section.convertLegacy | P3 | missing | FLUENT19:ContextMenuConvertVersion/SectionConvertTo2010 |  |
 | CM.LegacyFormat.NotebookConvertTo2010 | Convert Notebook to 2010-2016 Format | Context/Legacy Format/Convert Notebook to 2010-2016 Format | button |  | notebook.convertLegacy | P3 | missing | FLUENT19:ContextMenuConvertVersion/NotebookConvertTo2010 |  |
 | CM.ShreddedStorage.ConvertShreddedSection | Convert Shredded Section | Context/Shredded Storage/Convert Shredded Section | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuConvertShredded/ConvertShreddedSection |  |
@@ -1087,13 +1087,13 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.General.NewWindow | Open a new window | Keyboard/General/Open a new window | shortcut | `Mod+M` | window.new | P1 | missing | KBD365 |  |
 | KB.General.QuickNote | Create a Quick Note | Keyboard/General/Create a Quick Note | shortcut | `Mod+Shift+M` | window.quickNote | P1 | missing | KBD365 | global Win+Alt+N is a desktop-wide hotkey; registered by the desktop app where the platform allows |
 | KB.General.Dock | Dock the window | Keyboard/General/Dock the window | shortcut | `Mod+Alt+D` | view.dock | P2 | missing | KBD365 |  |
-| KB.General.Undo | Undo the previous action | Keyboard/General/Undo the previous action | shortcut | `Mod+Z` | edit.undo | P0 | missing | KBD365 |  |
-| KB.General.Redo | Redo the previous action | Keyboard/General/Redo the previous action | shortcut | `Mod+Y` | edit.redo | P0 | missing | KBD365 |  |
+| KB.General.Undo | Undo the previous action | Keyboard/General/Undo the previous action | shortcut | `Mod+Z` | edit.undo | P0 | wired | KBD365 |  |
+| KB.General.Redo | Redo the previous action | Keyboard/General/Redo the previous action | shortcut | `Mod+Y` | edit.redo | P0 | wired | KBD365 |  |
 | KB.General.SelectAll | Select all items on the current page (repeat to expand) | Keyboard/General/Select all items on the current page (repeat to expand) | shortcut | `Mod+A` | edit.selectAll | P0 | wired | KBD365 | repeat expands: paragraph → container → page |
-| KB.General.Cut | Cut | Keyboard/General/Cut | shortcut | `Mod+X` | edit.cut | P0 | missing | KBD365 |  |
-| KB.General.Copy | Copy | Keyboard/General/Copy | shortcut | `Mod+C` | edit.copy | P0 | missing | KBD365 |  |
-| KB.General.Paste | Paste | Keyboard/General/Paste | shortcut | `Mod+V` | edit.paste | P0 | missing | KBD365 |  |
-| KB.General.PasteText | Paste text only | Keyboard/General/Paste text only | shortcut | `Mod+Shift+V` | edit.pasteTextOnly | P0 | missing | KBD365 |  |
+| KB.General.Cut | Cut | Keyboard/General/Cut | shortcut | `Mod+X` | edit.cut | P0 | wired | KBD365 |  |
+| KB.General.Copy | Copy | Keyboard/General/Copy | shortcut | `Mod+C` | edit.copy | P0 | wired | KBD365 |  |
+| KB.General.Paste | Paste | Keyboard/General/Paste | shortcut | `Mod+V` | edit.paste | P0 | wired | KBD365 |  |
+| KB.General.PasteText | Paste text only | Keyboard/General/Paste text only | shortcut | `Mod+Shift+V` | edit.pasteTextOnly | P0 | wired | KBD365 |  |
 | KB.General.LineStart | Move to the beginning of the line | Keyboard/General/Move to the beginning of the line | shortcut | `Home` | caret.lineStart | P0 | verified | KBD365 |  |
 | KB.General.LineEnd | Move to the end of the line | Keyboard/General/Move to the end of the line | shortcut | `End` | caret.lineEnd | P0 | wired | KBD365 |  |
 | KB.General.WordLeft | Move one word to the left | Keyboard/General/Move one word to the left | shortcut | `Mod+Left` | caret.wordLeft | P0 | verified | KBD365 |  |
@@ -1111,42 +1111,42 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.General.StopAudio | Stop audio recording playback | Keyboard/General/Stop audio recording playback | shortcut | `Mod+Alt+S` | media.stop | P2 | missing | KBD365 |  |
 | KB.General.Rewind10 | Skip backward 10 seconds | Keyboard/General/Skip backward 10 seconds | shortcut | `Mod+Alt+Y` | media.rewind | P2 | missing | KBD365 |  |
 | KB.General.Forward10 | Skip forward 10 seconds | Keyboard/General/Skip forward 10 seconds | shortcut | `Mod+Alt+U` | media.forward | P2 | missing | KBD365 |  |
-| KB.Format.Highlight | Highlight the selected text | Keyboard/Format notes/Highlight the selected text | shortcut | `Mod+Alt+H` | format.highlight | P0 | missing | KBD365 | the Windows 10 table also lists Ctrl+Shift+H |
-| KB.Format.Link | Insert a hyperlink | Keyboard/Format notes/Insert a hyperlink | shortcut | `Mod+K` | insert.link | P0 | missing | KBD365 |  |
+| KB.Format.Highlight | Highlight the selected text | Keyboard/Format notes/Highlight the selected text | shortcut | `Mod+Alt+H` | format.highlight | P0 | wired | KBD365 | the Windows 10 table also lists Ctrl+Shift+H |
+| KB.Format.Link | Insert a hyperlink | Keyboard/Format notes/Insert a hyperlink | shortcut | `Mod+K` | insert.link | P0 | wired | KBD365 |  |
 | KB.Format.CopyFormat | Copy the formatting of the selected text (Format Painter) | Keyboard/Format notes/Copy the formatting of the selected text (Format Painter) | shortcut | `Mod+Alt+C` | format.copyFormat | P1 | verified | KBD365 | older documentation: Ctrl+Shift+C |
 | KB.Format.PasteFormat | Paste the formatting to the selected text (Format Painter) | Keyboard/Format notes/Paste the formatting to the selected text (Format Painter) | shortcut | `Mod+Alt+V` | format.pasteFormat | P1 | verified | KBD365 | older documentation: Ctrl+Shift+V (now Paste text only) |
 | KB.Format.OpenLink | Open a hyperlink (Enter on the link text) | Keyboard/Format notes/Open a hyperlink (Enter on the link text) | key-behaviour |  | link.open | P0 | wired | KBD365 | context key: Enter while the caret is on a link |
-| KB.Format.Bold | Bold | Keyboard/Format notes/Bold | shortcut | `Mod+B` | format.bold | P0 | missing | KBD365 |  |
-| KB.Format.Italic | Italic | Keyboard/Format notes/Italic | shortcut | `Mod+I` | format.italic | P0 | missing | KBD365 |  |
-| KB.Format.Underline | Underline | Keyboard/Format notes/Underline | shortcut | `Mod+U` | format.underline | P0 | missing | KBD365 |  |
-| KB.Format.Strikethrough | Strikethrough | Keyboard/Format notes/Strikethrough | shortcut | `Alt+-` | format.strikethrough | P0 | missing | KBD365 | the Windows 10 table lists Ctrl+Hyphen |
-| KB.Format.Superscript | Superscript | Keyboard/Format notes/Superscript | shortcut | `Mod+Shift+Plus` | format.superscript | P1 | missing | KBD365 | "Ctrl+Shift+Plus(+)"; the Windows 10 table: Ctrl+Shift+= (same keys on US layouts) |
-| KB.Format.Subscript | Subscript | Keyboard/Format notes/Subscript | shortcut | `Mod+=` | format.subscript | P1 | missing | KBD365 | unverified: the M365 table says Ctrl+Shift+Minus, which collides with KB.Select.Subordinates in the same table; Ctrl+= is the Windows 10 table's key |
-| KB.Format.Bullets | Bulleted list | Keyboard/Format notes/Bulleted list | shortcut | `Mod+.` | para.bullets | P0 | missing | KBD365 |  |
-| KB.Format.Numbering | Numbered list | Keyboard/Format notes/Numbered list | shortcut | `Mod+/` | para.numbering | P0 | missing | KBD365 |  |
-| KB.Format.Heading1 | Apply Heading 1 | Keyboard/Format notes/Apply Heading 1 | shortcut | `Mod+Alt+1` | style.heading1 | P0 | missing | KBD365 |  |
-| KB.Format.Heading2 | Apply Heading 2 | Keyboard/Format notes/Apply Heading 2 | shortcut | `Mod+Alt+2` | style.heading2 | P0 | missing | KBD365 |  |
-| KB.Format.Heading3 | Apply Heading 3 | Keyboard/Format notes/Apply Heading 3 | shortcut | `Mod+Alt+3` | style.heading3 | P0 | missing | KBD365 |  |
-| KB.Format.Heading4 | Apply Heading 4 | Keyboard/Format notes/Apply Heading 4 | shortcut | `Mod+Alt+4` | style.heading4 | P1 | missing | KBD365 |  |
-| KB.Format.Heading5 | Apply Heading 5 | Keyboard/Format notes/Apply Heading 5 | shortcut | `Mod+Alt+5` | style.heading5 | P1 | missing | KBD365 |  |
-| KB.Format.Heading6 | Apply Heading 6 | Keyboard/Format notes/Apply Heading 6 | shortcut | `Mod+Alt+6` | style.heading6 | P1 | missing | KBD365 |  |
-| KB.Format.ClearFormatting | Clear all formatting (apply Normal style) | Keyboard/Format notes/Clear all formatting (apply Normal style) | shortcut | `Mod+Shift+N` | format.clear | P0 | missing | KBD365 |  |
-| KB.Format.Indent | Increase the paragraph indent | Keyboard/Format notes/Increase the paragraph indent | shortcut | `Alt+Shift+Right` | para.indent | P0 | missing | KBD365 | Tab at the beginning of a line too |
-| KB.Format.Outdent | Decrease the paragraph indent | Keyboard/Format notes/Decrease the paragraph indent | shortcut | `Alt+Shift+Left` | para.outdent | P0 | missing | KBD365 | Shift+Tab at the beginning of a line too |
-| KB.Format.AlignLeft | Align left | Keyboard/Format notes/Align left | shortcut | `Mod+L` | para.alignLeft | P0 | missing | KBD365 |  |
-| KB.Format.AlignRight | Align right | Keyboard/Format notes/Align right | shortcut | `Mod+R` | para.alignRight | P0 | missing | KBD365 |  |
-| KB.Format.GrowFont | Increase the font size | Keyboard/Format notes/Increase the font size | shortcut | `Mod+Shift+>` | format.growFont | P0 | missing | KBD365 |  |
-| KB.Format.ShrinkFont | Decrease the font size | Keyboard/Format notes/Decrease the font size | shortcut | `Mod+Shift+<` | format.shrinkFont | P0 | missing | KBD365 |  |
-| KB.Format.RuleLines | Show or hide rule lines on the current page | Keyboard/Format notes/Show or hide rule lines on the current page | shortcut | `Mod+Shift+R` | view.ruleLines | P1 | missing | KBD365 |  |
+| KB.Format.Bold | Bold | Keyboard/Format notes/Bold | shortcut | `Mod+B` | format.bold | P0 | verified | KBD365 |  |
+| KB.Format.Italic | Italic | Keyboard/Format notes/Italic | shortcut | `Mod+I` | format.italic | P0 | wired | KBD365 |  |
+| KB.Format.Underline | Underline | Keyboard/Format notes/Underline | shortcut | `Mod+U` | format.underline | P0 | wired | KBD365 |  |
+| KB.Format.Strikethrough | Strikethrough | Keyboard/Format notes/Strikethrough | shortcut | `Alt+-` | format.strikethrough | P0 | wired | KBD365 | the Windows 10 table lists Ctrl+Hyphen |
+| KB.Format.Superscript | Superscript | Keyboard/Format notes/Superscript | shortcut | `Mod+Shift+Plus` | format.superscript | P1 | wired | KBD365 | "Ctrl+Shift+Plus(+)"; the Windows 10 table: Ctrl+Shift+= (same keys on US layouts) |
+| KB.Format.Subscript | Subscript | Keyboard/Format notes/Subscript | shortcut | `Mod+=` | format.subscript | P1 | wired | KBD365 | unverified: the M365 table says Ctrl+Shift+Minus, which collides with KB.Select.Subordinates in the same table; Ctrl+= is the Windows 10 table's key |
+| KB.Format.Bullets | Bulleted list | Keyboard/Format notes/Bulleted list | shortcut | `Mod+.` | para.bullets | P0 | wired | KBD365 |  |
+| KB.Format.Numbering | Numbered list | Keyboard/Format notes/Numbered list | shortcut | `Mod+/` | para.numbering | P0 | wired | KBD365 |  |
+| KB.Format.Heading1 | Apply Heading 1 | Keyboard/Format notes/Apply Heading 1 | shortcut | `Mod+Alt+1` | style.heading1 | P0 | wired | KBD365 |  |
+| KB.Format.Heading2 | Apply Heading 2 | Keyboard/Format notes/Apply Heading 2 | shortcut | `Mod+Alt+2` | style.heading2 | P0 | wired | KBD365 |  |
+| KB.Format.Heading3 | Apply Heading 3 | Keyboard/Format notes/Apply Heading 3 | shortcut | `Mod+Alt+3` | style.heading3 | P0 | wired | KBD365 |  |
+| KB.Format.Heading4 | Apply Heading 4 | Keyboard/Format notes/Apply Heading 4 | shortcut | `Mod+Alt+4` | style.heading4 | P1 | wired | KBD365 |  |
+| KB.Format.Heading5 | Apply Heading 5 | Keyboard/Format notes/Apply Heading 5 | shortcut | `Mod+Alt+5` | style.heading5 | P1 | wired | KBD365 |  |
+| KB.Format.Heading6 | Apply Heading 6 | Keyboard/Format notes/Apply Heading 6 | shortcut | `Mod+Alt+6` | style.heading6 | P1 | wired | KBD365 |  |
+| KB.Format.ClearFormatting | Clear all formatting (apply Normal style) | Keyboard/Format notes/Clear all formatting (apply Normal style) | shortcut | `Mod+Shift+N` | format.clear | P0 | wired | KBD365 |  |
+| KB.Format.Indent | Increase the paragraph indent | Keyboard/Format notes/Increase the paragraph indent | shortcut | `Alt+Shift+Right` | para.indent | P0 | wired | KBD365 | Tab at the beginning of a line too |
+| KB.Format.Outdent | Decrease the paragraph indent | Keyboard/Format notes/Decrease the paragraph indent | shortcut | `Alt+Shift+Left` | para.outdent | P0 | wired | KBD365 | Shift+Tab at the beginning of a line too |
+| KB.Format.AlignLeft | Align left | Keyboard/Format notes/Align left | shortcut | `Mod+L` | para.alignLeft | P0 | wired | KBD365 |  |
+| KB.Format.AlignRight | Align right | Keyboard/Format notes/Align right | shortcut | `Mod+R` | para.alignRight | P0 | wired | KBD365 |  |
+| KB.Format.GrowFont | Increase the font size | Keyboard/Format notes/Increase the font size | shortcut | `Mod+Shift+>` | format.growFont | P0 | wired | KBD365 |  |
+| KB.Format.ShrinkFont | Decrease the font size | Keyboard/Format notes/Decrease the font size | shortcut | `Mod+Shift+<` | format.shrinkFont | P0 | wired | KBD365 |  |
+| KB.Format.RuleLines | Show or hide rule lines on the current page | Keyboard/Format notes/Show or hide rule lines on the current page | shortcut | `Mod+Shift+R` | view.ruleLines | P1 | verified | KBD365 |  |
 | KB.Insert.FileKeytip | Insert a document or file (Alt+N, F) | Keyboard/Insert items/Insert a document or file (Alt+N, F) | key-behaviour |  | insert.file | P2 | missing | KBD365 | keytip sequence Alt+N, F |
 | KB.Insert.PrintoutKeytip | Insert a file as a printout (Alt+N, O) | Keyboard/Insert items/Insert a file as a printout (Alt+N, O) | key-behaviour |  | insert.printout | P2 | missing | KBD365 | keytip sequence Alt+N, O |
 | KB.Insert.TogglePrintouts | Show or hide document printouts (high contrast) | Keyboard/Insert items/Show or hide document printouts (high contrast) | shortcut | `Alt+Shift+P` | view.togglePrintouts | P3 | missing | KBD365 |  |
 | KB.Insert.PictureKeytip | Insert a picture from a file (Alt+N, P) | Keyboard/Insert items/Insert a picture from a file (Alt+N, P) | key-behaviour |  | insert.picture | P2 | missing | KBD365 | keytip sequence Alt+N, P |
 | KB.Insert.StickerKeytip | Insert a sticker (Alt+N, S) | Keyboard/Insert items/Insert a sticker (Alt+N, S) | key-behaviour |  | insert.sticker | P3 | missing | KBD365 | keytip sequence Alt+N, S |
 | KB.Insert.ScreenClipping | Insert a screen clipping (platform screenshot, then paste) | Keyboard/Insert items/Insert a screen clipping (platform screenshot, then paste) | key-behaviour |  | insert.screenClipping | P2 | missing | KBD365 | Win+Shift+S is the Windows snipping hotkey; on Linux the portal screenshot API |
-| KB.Insert.Date | Insert the current date | Keyboard/Insert items/Insert the current date | shortcut | `Alt+Shift+D` | insert.date | P1 | missing | KBD365 |  |
-| KB.Insert.DateTime | Insert the current date and time | Keyboard/Insert items/Insert the current date and time | shortcut | `Alt+Shift+F` | insert.dateTime | P1 | missing | KBD365 |  |
-| KB.Insert.Time | Insert the current time | Keyboard/Insert items/Insert the current time | shortcut | `Alt+Shift+T` | insert.time | P1 | missing | KBD365 |  |
+| KB.Insert.Date | Insert the current date | Keyboard/Insert items/Insert the current date | shortcut | `Alt+Shift+D` | insert.date | P1 | wired | KBD365 |  |
+| KB.Insert.DateTime | Insert the current date and time | Keyboard/Insert items/Insert the current date and time | shortcut | `Alt+Shift+F` | insert.dateTime | P1 | wired | KBD365 |  |
+| KB.Insert.Time | Insert the current time | Keyboard/Insert items/Insert the current time | shortcut | `Alt+Shift+T` | insert.time | P1 | wired | KBD365 |  |
 | KB.Insert.Equation | Start a math equation or convert the selection | Keyboard/Insert items/Start a math equation or convert the selection | shortcut | `Alt+=` | insert.equation | P2 | missing | KBD365 |  |
 | KB.Table.CreateWithTab | Create a table: Tab after typing text on a new line | Keyboard/Tables/Create a table: Tab after typing text on a new line | key-behaviour |  |  | P1 | missing | KBD365 | behaviour of Tab in text |
 | KB.Table.NewColumnTab | Create another column in a single-row table: Tab | Keyboard/Tables/Create another column in a single-row table: Tab | key-behaviour |  |  | P1 | missing | KBD365 | behaviour of Tab in a table |
@@ -1165,19 +1165,19 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Select.MoveUp | Move the selected paragraphs up | Keyboard/Select/Move the selected paragraphs up | shortcut | `Alt+Shift+Up` | outline.moveUp | P0 | verified | KBD365 |  |
 | KB.Select.MoveDown | Move the selected paragraphs down | Keyboard/Select/Move the selected paragraphs down | shortcut | `Alt+Shift+Down` | outline.moveDown | P0 | wired | KBD365 |  |
 | KB.Select.Subordinates | Select the current paragraph and its subordinate paragraphs | Keyboard/Select/Select the current paragraph and its subordinate paragraphs | shortcut | `Mod+Shift+-` | outline.selectBranch | P1 | verified | KBD365 | see KB.Format.Subscript for the documented collision |
-| KB.Select.Delete | Delete the selected note or object | Keyboard/Select/Delete the selected note or object | shortcut | `Delete` | edit.delete | P0 | missing | KBD365 |  |
-| KB.Select.Back | Go back to the last page visited | Keyboard/Select/Go back to the last page visited | shortcut | `Alt+Left` | nav.back | P0 | missing | KBD365 |  |
-| KB.Select.Forward | Go forward to the next page visited | Keyboard/Select/Go forward to the next page visited | shortcut | `Alt+Right` | nav.forward | P1 | missing | KBD365 |  |
-| KB.Tag.ToDo | Apply, check or clear the To Do tag | Keyboard/Tags/Apply, check or clear the To Do tag | shortcut | `Mod+1` | tag.todo | P0 | missing | KBD365 |  |
-| KB.Tag.Important | Important tag | Keyboard/Tags/Important tag | shortcut | `Mod+2` | tag.important | P0 | missing | KBD365 |  |
-| KB.Tag.Question | Question tag | Keyboard/Tags/Question tag | shortcut | `Mod+3` | tag.question | P0 | missing | KBD365 |  |
-| KB.Tag.RememberForLater | Remember for later tag | Keyboard/Tags/Remember for later tag | shortcut | `Mod+4` | tag.rememberForLater | P0 | missing | KBD365 |  |
-| KB.Tag.Definition | Definition tag | Keyboard/Tags/Definition tag | shortcut | `Mod+5` | tag.definition | P0 | missing | KBD365 |  |
-| KB.Tag.Highlight | Highlight tag | Keyboard/Tags/Highlight tag | shortcut | `Mod+6` | tag.highlight | P0 | missing | KBD365 |  |
-| KB.Tag.Contact | Contact tag | Keyboard/Tags/Contact tag | shortcut | `Mod+7` | tag.contact | P0 | missing | KBD365 |  |
-| KB.Tag.Address | Address tag | Keyboard/Tags/Address tag | shortcut | `Mod+8` | tag.address | P0 | missing | KBD365 |  |
-| KB.Tag.PhoneNumber | Phone number tag | Keyboard/Tags/Phone number tag | shortcut | `Mod+9` | tag.phoneNumber | P0 | missing | KBD365 |  |
-| KB.Tag.RemoveAll | Remove all tags from the selected notes | Keyboard/Tags/Remove all tags from the selected notes | shortcut | `Mod+0` | tag.removeAll | P0 | missing | KBD365 |  |
+| KB.Select.Delete | Delete the selected note or object | Keyboard/Select/Delete the selected note or object | shortcut | `Delete` | edit.delete | P0 | wired | KBD365 |  |
+| KB.Select.Back | Go back to the last page visited | Keyboard/Select/Go back to the last page visited | shortcut | `Alt+Left` | nav.back | P0 | verified | KBD365 |  |
+| KB.Select.Forward | Go forward to the next page visited | Keyboard/Select/Go forward to the next page visited | shortcut | `Alt+Right` | nav.forward | P1 | verified | KBD365 |  |
+| KB.Tag.ToDo | Apply, check or clear the To Do tag | Keyboard/Tags/Apply, check or clear the To Do tag | shortcut | `Mod+1` | tag.todo | P0 | verified | KBD365 |  |
+| KB.Tag.Important | Important tag | Keyboard/Tags/Important tag | shortcut | `Mod+2` | tag.important | P0 | verified | KBD365 |  |
+| KB.Tag.Question | Question tag | Keyboard/Tags/Question tag | shortcut | `Mod+3` | tag.question | P0 | verified | KBD365 |  |
+| KB.Tag.RememberForLater | Remember for later tag | Keyboard/Tags/Remember for later tag | shortcut | `Mod+4` | tag.rememberForLater | P0 | verified | KBD365 |  |
+| KB.Tag.Definition | Definition tag | Keyboard/Tags/Definition tag | shortcut | `Mod+5` | tag.definition | P0 | verified | KBD365 |  |
+| KB.Tag.Highlight | Highlight tag | Keyboard/Tags/Highlight tag | shortcut | `Mod+6` | tag.highlight | P0 | verified | KBD365 |  |
+| KB.Tag.Contact | Contact tag | Keyboard/Tags/Contact tag | shortcut | `Mod+7` | tag.contact | P0 | verified | KBD365 |  |
+| KB.Tag.Address | Address tag | Keyboard/Tags/Address tag | shortcut | `Mod+8` | tag.address | P0 | verified | KBD365 |  |
+| KB.Tag.PhoneNumber | Phone number tag | Keyboard/Tags/Phone number tag | shortcut | `Mod+9` | tag.phoneNumber | P0 | verified | KBD365 |  |
+| KB.Tag.RemoveAll | Remove all tags from the selected notes | Keyboard/Tags/Remove all tags from the selected notes | shortcut | `Mod+0` | tag.removeAll | P0 | verified | KBD365 |  |
 | KB.Outline.Level1 | Collapse the outline to level 1 | Keyboard/Outlines/Collapse the outline to level 1 | shortcut | `Alt+Shift+1` | outline.level1 | P1 | verified | KBD365 |  |
 | KB.Outline.Level2 | Expand the outline to level 2 | Keyboard/Outlines/Expand the outline to level 2 | shortcut | `Alt+Shift+2` | outline.level2 | P1 | wired | KBD365 |  |
 | KB.Outline.Level3 | Expand the outline to level 3 | Keyboard/Outlines/Expand the outline to level 3 | shortcut | `Alt+Shift+3` | outline.level3 | P1 | wired | KBD365 |  |
@@ -1190,11 +1190,11 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Outline.ExpandAll | Expand all levels | Keyboard/Outlines/Expand all levels | shortcut | `Alt+Shift+0` | outline.expandAll | P1 | verified | KBD365 |  |
 | KB.Outline.ExpandHeading | Expand the selected heading | Keyboard/Outlines/Expand the selected heading | shortcut | `Alt+Shift+= / Alt+Shift+Plus` | outline.expand | P1 | verified | KBD365 | two documented spellings of the same keys |
 | KB.Outline.CollapseHeading | Collapse the selected heading | Keyboard/Outlines/Collapse the selected heading | shortcut | `Alt+Shift+-` | outline.collapse | P1 | verified | KBD365 | "Alt+Shift+Hyphen" and "Alt+Shift+Minus" in the table: same keys |
-| KB.Outline.IndentTab | Increase the indent by one level | Keyboard/Outlines/Increase the indent by one level | shortcut | `Tab` | para.indent | P0 | missing | KBD365 | Tab at the start of a paragraph |
-| KB.Outline.OutdentTab | Decrease the indent by one level | Keyboard/Outlines/Decrease the indent by one level | shortcut | `Shift+Tab` | para.outdent | P0 | missing | KBD365 |  |
+| KB.Outline.IndentTab | Increase the indent by one level | Keyboard/Outlines/Increase the indent by one level | shortcut | `Tab` | para.indent | P0 | wired | KBD365 | Tab at the start of a paragraph |
+| KB.Outline.OutdentTab | Decrease the indent by one level | Keyboard/Outlines/Decrease the indent by one level | shortcut | `Shift+Tab` | para.outdent | P0 | wired | KBD365 |  |
 | KB.Language.LTR | Set writing direction left to right | Keyboard/Language/Set writing direction left to right | shortcut | `Mod+LeftShift` | para.ltr | P2 | missing | KBD365 | left Ctrl+Shift chord; needs side-specific modifiers |
 | KB.Language.RTL | Set writing direction right to left | Keyboard/Language/Set writing direction right to left | shortcut | `Mod+RightShift` | para.rtl | P2 | missing | KBD365 | needs side-specific modifiers |
-| KB.Pages.FullPage | Enable or disable full-page view | Keyboard/Pages/Enable or disable full-page view | shortcut | `F11` | view.fullPage | P0 | missing | KBD365 |  |
+| KB.Pages.FullPage | Enable or disable full-page view | Keyboard/Pages/Enable or disable full-page view | shortcut | `F11` | view.fullPage | P0 | wired | KBD365 |  |
 | KB.Pages.ToggleGroup | Expand or collapse a page group in the page list | Keyboard/Pages/Expand or collapse a page group in the page list | shortcut | `Mod+Shift+*` | page.toggleSubpages | P1 | verified | KBD365 |  |
 | KB.Pages.Print | Print the current page | Keyboard/Pages/Print the current page | shortcut | `Mod+P` | file.print | P1 | missing | KBD365 |  |
 | KB.Pages.NewPage | Add a new page at the end of the section | Keyboard/Pages/Add a new page at the end of the section | shortcut | `Mod+N` | page.new | P0 | verified | KBD365 |  |
@@ -1220,24 +1220,24 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Pages.ExpandLeft | Move the cursor left, or expand the page left | Keyboard/Pages/Move the cursor left, or expand the page left | shortcut | `Mod+Alt+Left` | caret.pageLeft | P2 | missing | KBD365 |  |
 | KB.Pages.ExpandRight | Move the cursor right, or expand the page right | Keyboard/Pages/Move the cursor right, or expand the page right | shortcut | `Mod+Alt+Right` | caret.pageRight | P2 | missing | KBD365 |  |
 | KB.Pages.NextContainer | Go to the next note container | Keyboard/Pages/Go to the next note container | shortcut | `Alt+Down` | nav.nextContainer | P1 | verified | KBD365 |  |
-| KB.Pages.ZoomIn | Zoom in | Keyboard/Pages/Zoom in | shortcut | `Mod+Plus` | view.zoomIn | P0 | missing | KBD365 | the Windows 10 table: Ctrl+Alt+Plus (keypad) or Ctrl+Alt+Shift+Plus |
-| KB.Pages.ZoomOut | Zoom out | Keyboard/Pages/Zoom out | shortcut | `Mod+-` | view.zoomOut | P0 | missing | KBD365 | the Windows 10 table: Ctrl+Alt+Minus (keypad) or Ctrl+Alt+Shift+Hyphen |
+| KB.Pages.ZoomIn | Zoom in | Keyboard/Pages/Zoom in | shortcut | `Mod+Plus` | view.zoomIn | P0 | wired | KBD365 | the Windows 10 table: Ctrl+Alt+Plus (keypad) or Ctrl+Alt+Shift+Plus |
+| KB.Pages.ZoomOut | Zoom out | Keyboard/Pages/Zoom out | shortcut | `Mod+-` | view.zoomOut | P0 | wired | KBD365 | the Windows 10 table: Ctrl+Alt+Minus (keypad) or Ctrl+Alt+Shift+Hyphen |
 | KB.Pages.Sync | Synchronize the notebook (notes are saved automatically) | Keyboard/Pages/Synchronize the notebook (notes are saved automatically) | shortcut | `Mod+S` | file.save | P0 | wired | KBD365 | locally: flush pending saves now |
-| KB.Notebooks.Open | Open a notebook | Keyboard/Notebooks and sections/Open a notebook | shortcut | `Mod+O` | file.openNotebook | P0 | missing | KBD365 |  |
+| KB.Notebooks.Open | Open a notebook | Keyboard/Notebooks and sections/Open a notebook | shortcut | `Mod+O` | file.openNotebook | P0 | wired | KBD365 |  |
 | KB.Notebooks.OpenSection | Open a section | Keyboard/Notebooks and sections/Open a section | shortcut | `Mod+Alt+Shift+O` | file.openSection | P1 | missing | KBD365 |  |
 | KB.Notebooks.NewSection | Create a new section | Keyboard/Notebooks and sections/Create a new section | shortcut | `Mod+T` | section.new | P0 | verified | KBD365 |  |
 | KB.Notebooks.NextSection | Go to the next section | Keyboard/Notebooks and sections/Go to the next section | shortcut | `Mod+Tab` | nav.nextSection | P0 | verified | KBD365 |  |
 | KB.Notebooks.PrevSection | Go to the previous section | Keyboard/Notebooks and sections/Go to the previous section | shortcut | `Mod+Shift+Tab` | nav.prevSection | P0 | verified | KBD365 |  |
-| KB.Notebooks.NextPage | Go to the next page in the section | Keyboard/Notebooks and sections/Go to the next page in the section | shortcut | `Mod+PageDown` | nav.nextPage | P0 | missing | KBD365 |  |
-| KB.Notebooks.PrevPage | Go to the previous page in the section | Keyboard/Notebooks and sections/Go to the previous page in the section | shortcut | `Mod+PageUp` | nav.prevPage | P0 | missing | KBD365 |  |
+| KB.Notebooks.NextPage | Go to the next page in the section | Keyboard/Notebooks and sections/Go to the next page in the section | shortcut | `Mod+PageDown` | nav.nextPage | P0 | wired | KBD365 |  |
+| KB.Notebooks.PrevPage | Go to the previous page in the section | Keyboard/Notebooks and sections/Go to the previous page in the section | shortcut | `Mod+PageUp` | nav.prevPage | P0 | wired | KBD365 |  |
 | KB.Notebooks.FirstPage | Go to the first page in the section | Keyboard/Notebooks and sections/Go to the first page in the section | shortcut | `Alt+Home` | nav.firstPage | P0 | verified | KBD365 |  |
 | KB.Notebooks.LastPage | Go to the last page in the section | Keyboard/Notebooks and sections/Go to the last page in the section | shortcut | `Alt+End` | nav.lastPage | P0 | verified | KBD365 |  |
-| KB.Notebooks.MoveCopyPage | Move or copy the current page | Keyboard/Notebooks and sections/Move or copy the current page | shortcut | `Mod+Alt+M` | page.moveOrCopy | P0 | missing | KBD365 |  |
+| KB.Notebooks.MoveCopyPage | Move or copy the current page | Keyboard/Notebooks and sections/Move or copy the current page | shortcut | `Mod+Alt+M` | page.moveOrCopy | P0 | wired | KBD365 |  |
 | KB.Notebooks.FocusPageTab | Put focus on the current page tab | Keyboard/Notebooks and sections/Put focus on the current page tab | shortcut | `Mod+Alt+G` | nav.focusPageTab | P1 | wired | KBD365 |  |
 | KB.Notebooks.FocusSectionTab | Put focus on the current section tab | Keyboard/Notebooks and sections/Put focus on the current section tab | shortcut | `Mod+Shift+G` | nav.focusSectionTab | P1 | wired | KBD365 |  |
 | KB.Notebooks.MoveSection | Move the current section (Ctrl+Shift+G, arrows, Shift+F10) | Keyboard/Notebooks and sections/Move the current section (Ctrl+Shift+G, arrows, Shift+F10) | key-behaviour |  | section.moveOrCopy | P2 | missing | KBD365 | key sequence through the section tab context menu |
 | KB.Notebooks.SwitchNotebook | Switch notebook on the navigation bar | Keyboard/Notebooks and sections/Switch notebook on the navigation bar | shortcut | `Mod+G` | nav.notebookList | P1 | wired | KBD365 | then arrows/Tab and Enter |
-| KB.Search.All | Move to the Search box (all notebooks) | Keyboard/Search/Move to the Search box (all notebooks) | shortcut | `Mod+E` | search.all | P0 | missing | KBD365 |  |
+| KB.Search.All | Move to the Search box (all notebooks) | Keyboard/Search/Move to the Search box (all notebooks) | shortcut | `Mod+E` | search.all | P0 | wired | KBD365 |  |
 | KB.Search.PreviewNext | While searching, preview the next result (Down) | Keyboard/Search/While searching, preview the next result (Down) | key-behaviour |  | search.previewNext | P1 | missing | KBD365 | Down in the search results |
 | KB.Search.GoToResult | Go to the selected result and dismiss search (Enter) | Keyboard/Search/Go to the selected result and dismiss search (Enter) | key-behaviour |  | search.openResult | P0 | wired | KBD365 | Enter in the search results |
 | KB.Search.ChangeScope | Change the search scope (Ctrl+E, Tab, Space) | Keyboard/Search/Change the search scope (Ctrl+E, Tab, Space) | key-behaviour |  | search.scope | P1 | missing | KBD365 | key sequence |
@@ -1260,7 +1260,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Share.MarkUnread | Mark the current page as unread | Keyboard/Share/Mark the current page as unread | shortcut | `Mod+Q` | history.markUnread | P2 | missing | KBD365 |  |
 | KB.Protect.LockAll | Lock all password-protected sections | Keyboard/Protect/Lock all password-protected sections | shortcut | `Mod+Alt+L` | protect.lockAll | P1 | missing | KBD365 |  |
 | KB.App.Help | Help | Keyboard/Application/Help | shortcut | `F1` | help.help | P1 | missing | KBD365 | standard Office key |
-| KB.App.Ribbon | Collapse or expand the ribbon | Keyboard/Application/Collapse or expand the ribbon | shortcut | `Mod+F1` | ui.collapseRibbon | P1 | missing | KBD365 | standard Office key; unverified for OneNote |
+| KB.App.Ribbon | Collapse or expand the ribbon | Keyboard/Application/Collapse or expand the ribbon | shortcut | `Mod+F1` | ui.collapseRibbon | P1 | wired | KBD365 | standard Office key; unverified for OneNote |
 | KB.App.Keytips | Show keytips | Keyboard/Application/Show keytips | shortcut | `F10` | ui.keytips | P2 | missing | KBD365 | Alt alone too |
 
 ## Options
@@ -1355,65 +1355,65 @@ Documented (or, where marked, plausible and unverified) behaviour. A behaviour r
 | BEH.Canvas.ContainerAutoWidth | A new container grows in width with the text up to a maximum, then wraps; it grows in height with content | Behaviour/Canvas | behaviour |  |  | P0 | missing | GK; [MS-ONE] LayoutMaxWidth, IsLayoutSizeSetByUser | unverified maximum (we use 6.5in) |
 | BEH.Canvas.ContainerResize | Dragging a container's right edge sets a fixed width (text rewraps) | Behaviour/Canvas | behaviour |  |  | P0 | verified | GK; [MS-ONE] IsLayoutSizeSetByUser |  |
 | BEH.Canvas.ContainerMove | Dragging a container's top bar moves it anywhere on the page | Behaviour/Canvas | behaviour |  |  | P0 | verified | GK |  |
-| BEH.Canvas.EmptyContainerRemoved | A container left empty disappears when the caret leaves it | Behaviour/Canvas | behaviour |  |  | P0 | missing | GK | unverified |
+| BEH.Canvas.EmptyContainerRemoved | A container left empty disappears when the caret leaves it | Behaviour/Canvas | behaviour |  |  | P0 | wired | GK | unverified |
 | BEH.Canvas.PageGrows | The page grows right and down as content is added; it never has a fixed size unless Paper Size is set | Behaviour/Canvas | behaviour |  |  | P0 | missing | GK; FLUENT19:PaperSize |  |
 | BEH.Canvas.MergeContainers | Shift-dragging a container onto another merges them | Behaviour/Canvas | behaviour |  |  | P2 | missing | GK | unverified |
 | BEH.Canvas.InsertSpace | Insert Space: drag on the page to push content down or right | Behaviour/Canvas | behaviour |  |  | P1 | missing | FLUENT19:PenInsertSpace |  |
-| BEH.Outline.EnterNewParagraph | Enter splits/creates a paragraph at the same level; it keeps the list format | Behaviour/Outline | behaviour |  |  | P0 | missing | GK |  |
-| BEH.Outline.TabIndent | Tab at the start of a paragraph indents it (and its children) one level; Shift+Tab outdents | Behaviour/Outline | behaviour |  |  | P0 | missing | KBD365 |  |
-| BEH.Outline.EmptyBulletEnds | Enter on an empty bulleted or numbered paragraph ends the list (outdents, then removes the bullet) | Behaviour/Outline | behaviour |  |  | P0 | missing | GK | unverified exact sequence |
-| BEH.Outline.AutoBullet | Typing "* " or "- " at the start of a paragraph starts a bulleted list (Options › Advanced) | Behaviour/Outline | behaviour |  |  | P0 | missing | GK (Options › Advanced: auto-bulleting) |  |
-| BEH.Outline.AutoNumber | Typing "1. ", "a) ", "i. " at the start of a paragraph starts a numbered list | Behaviour/Outline | behaviour |  |  | P0 | missing | GK (Options › Advanced: auto-numbering) |  |
+| BEH.Outline.EnterNewParagraph | Enter splits/creates a paragraph at the same level; it keeps the list format | Behaviour/Outline | behaviour |  |  | P0 | verified | GK |  |
+| BEH.Outline.TabIndent | Tab at the start of a paragraph indents it (and its children) one level; Shift+Tab outdents | Behaviour/Outline | behaviour |  |  | P0 | verified | KBD365 |  |
+| BEH.Outline.EmptyBulletEnds | Enter on an empty bulleted or numbered paragraph ends the list (outdents, then removes the bullet) | Behaviour/Outline | behaviour |  |  | P0 | wired | GK | unverified exact sequence |
+| BEH.Outline.AutoBullet | Typing "* " or "- " at the start of a paragraph starts a bulleted list (Options › Advanced) | Behaviour/Outline | behaviour |  |  | P0 | verified | GK (Options › Advanced: auto-bulleting) |  |
+| BEH.Outline.AutoNumber | Typing "1. ", "a) ", "i. " at the start of a paragraph starts a numbered list | Behaviour/Outline | behaviour |  |  | P0 | verified | GK (Options › Advanced: auto-numbering) |  |
 | BEH.Outline.NumberingSequence | Numbered lists renumber automatically; levels use 1., a., i. by default | Behaviour/Outline | behaviour |  |  | P0 | missing | GK | unverified default sequence |
 | BEH.Outline.CollapseExpand | Double-clicking a paragraph handle collapses/expands its children; collapsed paragraphs show a + handle | Behaviour/Outline | behaviour |  |  | P1 | missing | GK |  |
-| BEH.Outline.MoveParagraph | Alt+Shift+Up/Down moves the paragraph with its children past its siblings | Behaviour/Outline | behaviour |  |  | P0 | missing | KBD365 |  |
+| BEH.Outline.MoveParagraph | Alt+Shift+Up/Down moves the paragraph with its children past its siblings | Behaviour/Outline | behaviour |  |  | P0 | verified | KBD365 |  |
 | BEH.Outline.DragParagraph | Dragging a paragraph handle moves the paragraph (with children) within or between containers | Behaviour/Outline | behaviour |  |  | P1 | verified | GK |  |
-| BEH.Text.Undo | Undo/redo reverse whole user actions; typing coalesces into word-sized steps | Behaviour/Text | behaviour |  |  | P0 | missing | GK | unverified granularity |
-| BEH.Text.FormatToggles | Bold/italic/underline toggle on the selection, or set the format for the next typed text at the caret | Behaviour/Text | behaviour |  |  | P0 | missing | GK |  |
-| BEH.Text.FontSizeSteps | Increase/Decrease Font Size step through 8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72 | Behaviour/Text | behaviour |  |  | P1 | missing | GK (Office font size list) | unverified list for OneNote |
+| BEH.Text.Undo | Undo/redo reverse whole user actions; typing coalesces into word-sized steps | Behaviour/Text | behaviour |  |  | P0 | wired | GK | unverified granularity |
+| BEH.Text.FormatToggles | Bold/italic/underline toggle on the selection, or set the format for the next typed text at the caret | Behaviour/Text | behaviour |  |  | P0 | verified | GK |  |
+| BEH.Text.FontSizeSteps | Increase/Decrease Font Size step through 8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72 | Behaviour/Text | behaviour |  |  | P1 | wired | GK (Office font size list) | unverified list for OneNote |
 | BEH.Text.DefaultFont | New text uses the default font (Calibri 11 by default, configurable) | Behaviour/Text | behaviour |  |  | P0 | missing | GK (Options › Advanced › Default font) | Calibri is proprietary: metric-compatible substitute (Carlito) when available |
 | BEH.Text.Styles | Paragraph styles are paragraph-level: applying one replaces character formatting with the style's | Behaviour/Text | behaviour |  |  | P0 | missing | GK | unverified |
 | BEH.Text.HeadingSizes | Built-in styles: Heading 1 16pt blue, Heading 2 14pt blue bold, Heading 3 12pt blue bold, Heading 4 12pt blue bold italic, Heading 5 11pt blue bold, Heading 6 11pt blue italic, Page Title 20pt, Citation 9pt grey, Quote 11pt italic grey, Code Consolas 10pt, Normal 11pt | Behaviour/Text | behaviour |  |  | P1 | missing | GK (user-visible defaults) | unverified exact values |
-| BEH.Text.ClearFormatting | Clear All Formatting returns the selection to the Normal style | Behaviour/Text | behaviour |  |  | P0 | missing | KBD365 ("Apply the Normal style") |  |
-| BEH.Text.HyperlinkAuto | Typing a URL followed by space or Enter turns it into a link | Behaviour/Text | behaviour |  |  | P1 | missing | GK |  |
+| BEH.Text.ClearFormatting | Clear All Formatting returns the selection to the Normal style | Behaviour/Text | behaviour |  |  | P0 | verified | KBD365 ("Apply the Normal style") |  |
+| BEH.Text.HyperlinkAuto | Typing a URL followed by space or Enter turns it into a link | Behaviour/Text | behaviour |  |  | P1 | verified | GK |  |
 | BEH.Text.MathCalc | Typing an expression followed by "=" and Space/Enter inserts the result (e.g. 12*3= → 36) | Behaviour/Text | behaviour |  |  | P1 | missing | GK (Options › Advanced: calculate mathematical expressions) |  |
-| BEH.Links.Wiki | Typing [[Page Name]] creates a link to that page, creating the page in the section if it does not exist | Behaviour/Links | behaviour |  |  | P1 | missing | GK (wiki linking) |  |
+| BEH.Links.Wiki | Typing [[Page Name]] creates a link to that page, creating the page in the section if it does not exist | Behaviour/Links | behaviour |  |  | P1 | verified | GK (wiki linking) |  |
 | BEH.Links.CopyLink | Copy Link to Page/Section/Paragraph produces a link that navigates there (onenote: URI in the reference; notecraft: URI here) | Behaviour/Links | behaviour |  |  | P0 | missing | FLUENT19:PageLinkCreate |  |
 | BEH.Links.PageRenameTracking | Links to pages keep working after the page is renamed or moved | Behaviour/Links | behaviour |  |  | P1 | missing | GK | id-based links |
 | BEH.Tags.Toggle | Applying a tag already on a paragraph removes it; To Do toggles checked → unchecked → removed via Ctrl+1 sequence | Behaviour/Tags | behaviour |  |  | P0 | missing | KBD365 ("Apply, select, or clear the To Do tag") | unverified exact cycle |
 | BEH.Tags.CheckboxClick | Clicking a To Do checkbox checks/unchecks it | Behaviour/Tags | behaviour |  |  | P0 | missing | GK |  |
 | BEH.Tags.MultipleTags | A paragraph can carry several tags; their icons stack left of the paragraph | Behaviour/Tags | behaviour |  |  | P0 | missing | GK |  |
-| BEH.Tags.Summary | Find Tags lists every tagged paragraph in the chosen scope, grouped, with click-to-navigate | Behaviour/Tags | behaviour |  |  | P0 | missing | FLUENT19:FindTaggedNotes |  |
+| BEH.Tags.Summary | Find Tags lists every tagged paragraph in the chosen scope, grouped, with click-to-navigate | Behaviour/Tags | behaviour |  |  | P0 | verified | FLUENT19:FindTaggedNotes |  |
 | BEH.Tags.SummaryPage | Create Summary Page builds a new page with the tagged items | Behaviour/Tags | behaviour |  |  | P1 | verified | GK |  |
-| BEH.Tags.Custom | Custom tags (name, symbol, font colour, highlight colour) are stored per user and apply to any notebook | Behaviour/Tags | behaviour |  |  | P1 | missing | GK | stored in settings, mirrored into the notebook for portability |
-| BEH.Pages.Title | The page title is the page tab name; an untitled page shows "Untitled page" with the first line of content as fallback | Behaviour/Pages | behaviour |  |  | P0 | missing | GK | unverified fallback |
+| BEH.Tags.Custom | Custom tags (name, symbol, font colour, highlight colour) are stored per user and apply to any notebook | Behaviour/Tags | behaviour |  |  | P1 | verified | GK | stored in settings, mirrored into the notebook for portability |
+| BEH.Pages.Title | The page title is the page tab name; an untitled page shows "Untitled page" with the first line of content as fallback | Behaviour/Pages | behaviour |  |  | P0 | wired | GK | unverified fallback |
 | BEH.Pages.DateTime | New pages show their creation date and time under the title; clicking it lets you change them | Behaviour/Pages | behaviour |  |  | P0 | missing | GK; [MS-ONE] TopologyCreationTimeStamp |  |
 | BEH.Pages.Subpages | Pages can be indented up to two levels below a top-level page (3 levels); subpages move with their parent | Behaviour/Pages | behaviour |  |  | P0 | missing | GK; [MS-ONE] PageLevel | unverified max depth |
 | BEH.Pages.Collapse | A page with subpages can be collapsed in the page list | Behaviour/Pages | behaviour |  |  | P0 | missing | FLUENT19:IndentedPagesCollapse |  |
 | BEH.Pages.DragReorder | Pages, sections and notebooks reorder by drag & drop; dragging a page onto another section moves it | Behaviour/Pages | behaviour |  |  | P0 | missing | GK |  |
 | BEH.Pages.NewPageInsertion | Hovering between page tabs shows an insertion point to add a page there | Behaviour/Pages | behaviour |  |  | P1 | missing | GK |  |
-| BEH.Sections.Colors | Sections take one of 16 colours (or None); new sections get the next colour in a rotation | Behaviour/Sections | behaviour |  |  | P0 | missing | FLUENT19:NotebookColor1..16 | unverified rotation order |
+| BEH.Sections.Colors | Sections take one of 16 colours (or None); new sections get the next colour in a rotation | Behaviour/Sections | behaviour |  |  | P0 | wired | FLUENT19:NotebookColor1..16 | unverified rotation order |
 | BEH.Sections.Groups | Section groups nest sections and other section groups; shown as tabs/folders | Behaviour/Sections | behaviour |  |  | P0 | missing | FLUENT19:SectionGroupInsert |  |
-| BEH.Sections.NewSectionName | A new section is named "New Section 1", "New Section 2"… and starts in rename mode with one Untitled page | Behaviour/Sections | behaviour |  |  | P0 | missing | GK | unverified |
+| BEH.Sections.NewSectionName | A new section is named "New Section 1", "New Section 2"… and starts in rename mode with one Untitled page | Behaviour/Sections | behaviour |  |  | P0 | wired | GK | unverified |
 | BEH.Notebooks.Default | A new notebook starts with one section ("New Section 1") holding one Untitled page | Behaviour/Notebooks | behaviour |  |  | P0 | missing | GK | unverified |
 | BEH.Notebooks.QuickNotes | Quick Notes are saved to the Quick Notes section of the default notebook | Behaviour/Notebooks | behaviour |  |  | P1 | missing | GK (Options › Save & Backup) |  |
 | BEH.Recycle.DeletedPages | Deleted pages and sections go to the Notebook Recycle Bin and are kept for 60 days; they can be restored with Move or Copy | Behaviour/Recycle | behaviour |  |  | P0 | wired | GK (MS Support: notebook recycle bin) | unverified 60-day figure |
 | BEH.Recycle.Empty | Empty Recycle Bin permanently deletes after confirmation | Behaviour/Recycle | behaviour |  |  | P0 | missing | FLUENT19:EmptyRecycleBin |  |
 | BEH.Versions.Snapshots | Page versions are kept as edits happen (per author and time); a version can be restored, copied or deleted | Behaviour/Versions | behaviour |  |  | P1 | missing | FLUENT19:PageVersions |  |
-| BEH.Save.Autosave | Notes are saved automatically; there is no Save command needed | Behaviour/Save | behaviour |  |  | P0 | missing | KBD365 note on Ctrl+S |  |
-| BEH.Save.Backups | Automatic backups at the configured interval, N copies; Open Backups shows them | Behaviour/Save | behaviour |  |  | P1 | missing | GK (Options › Save & Backup) |  |
-| BEH.Save.CrashRecovery | After a crash or kill -9 no saved note is lost and the notebook opens cleanly | Behaviour/Save | behaviour |  |  | P0 | missing | brief §6 M1 |  |
-| BEH.Search.Instant | Search finds words as you type across the chosen scope; results show page title and section; matches are highlighted on the page | Behaviour/Search | behaviour |  |  | P0 | missing | KBD365 (search keys); GK |  |
-| BEH.Search.Scope | Scopes: This Page, This Section, This Section Group, This Notebook, All Notebooks; default scope can be set | Behaviour/Search | behaviour |  |  | P0 | missing | FLUENT19:ContextMenuSearchScope |  |
-| BEH.Search.PrefixMatch | Search matches word prefixes, case-insensitively, and finds titles, text, tags and file names | Behaviour/Search | behaviour |  |  | P0 | missing | GK | unverified matching rules |
-| BEH.Search.Quoted | Quoted phrases match exactly; several words match pages that contain all of them | Behaviour/Search | behaviour |  |  | P1 | missing | GK | unverified |
+| BEH.Save.Autosave | Notes are saved automatically; there is no Save command needed | Behaviour/Save | behaviour |  |  | P0 | verified | KBD365 note on Ctrl+S |  |
+| BEH.Save.Backups | Automatic backups at the configured interval, N copies; Open Backups shows them | Behaviour/Save | behaviour |  |  | P1 | verified | GK (Options › Save & Backup) |  |
+| BEH.Save.CrashRecovery | After a crash or kill -9 no saved note is lost and the notebook opens cleanly | Behaviour/Save | behaviour |  |  | P0 | wired | brief §6 M1 | The kill -9 test pins that the notebook reopens with every section whole; that the last completed save survives is not pinned (unverified). |
+| BEH.Search.Instant | Search finds words as you type across the chosen scope; results show page title and section; matches are highlighted on the page | Behaviour/Search | behaviour |  |  | P0 | verified | KBD365 (search keys); GK |  |
+| BEH.Search.Scope | Scopes: This Page, This Section, This Section Group, This Notebook, All Notebooks; default scope can be set | Behaviour/Search | behaviour |  |  | P0 | verified | FLUENT19:ContextMenuSearchScope |  |
+| BEH.Search.PrefixMatch | Search matches word prefixes, case-insensitively, and finds titles, text, tags and file names | Behaviour/Search | behaviour |  |  | P0 | wired | GK | unverified matching rules |
+| BEH.Search.Quoted | Quoted phrases match exactly; several words match pages that contain all of them | Behaviour/Search | behaviour |  |  | P1 | wired | GK | unverified |
 | BEH.Search.LockedExcluded | Locked password-protected sections are not searched | Behaviour/Search | behaviour |  |  | P1 | missing | GK (MS Support: password-protect sections) |  |
 | BEH.Password.Lock | A password-protected section shows a lock; its pages are hidden until unlocked; it relocks after the idle time | Behaviour/Password | behaviour |  |  | P1 | missing | FLUENT19:PasswordProtectSection; KBD365 (Ctrl+Alt+L) |  |
 | BEH.Password.NoRecovery | A forgotten section password cannot be recovered | Behaviour/Password | behaviour |  |  | P1 | missing | GK (MS Support) |  |
 | BEH.View.RuleLines | Rule lines: Narrow, College, Standard, Wide ruled; Small, Medium, Large, Very Large grid; None; colour; optional margin line | Behaviour/View | behaviour |  |  | P1 | missing | FLUENT19:RuleLinesMenu | unverified spacings |
 | BEH.View.PageColor | Page colour: a palette of 16 light colours plus No Color | Behaviour/View | behaviour |  |  | P1 | missing | FLUENT19:PageColorGallery | unverified palette |
 | BEH.View.Zoom | Zoom from 10% to 400%; Zoom In/Out step through fixed stops | Behaviour/View | behaviour |  |  | P0 | missing | FLUENT19:ZoomClassic | unverified stops |
-| BEH.Paste.HTML | Pasting rich text keeps formatting (Keep Source Formatting is the default paste) | Behaviour/Paste | behaviour |  |  | P0 | missing | FLUENT19:PasteSourceFormatting | unverified default |
+| BEH.Paste.HTML | Pasting rich text keeps formatting (Keep Source Formatting is the default paste) | Behaviour/Paste | behaviour |  |  | P0 | wired | FLUENT19:PasteSourceFormatting | unverified default. Formatting survives copy and paste inside NoteCraft; HTML from other applications is not read yet. |
 | BEH.Paste.Images | Pasting an image creates a picture on the page at the caret | Behaviour/Paste | behaviour |  |  | P1 | missing | GK |  |
 | BEH.Paste.Files | Dropping a file asks: attach file / insert printout | Behaviour/Paste | behaviour |  |  | P1 | missing | GK |  |
 | BEH.Table.TabToCreate | Tab after text in a paragraph turns it into a two-column table | Behaviour/Table | behaviour |  |  | P1 | missing | KBD365 ("Create a table") |  |
@@ -1458,7 +1458,7 @@ Interop constructs. Per-construct preserved/degraded/dropped numbers for `.one` 
 | FMT.Import.Enex | Import Evernote .enex | Files/Import | format |  |  | P2 | missing | ENEX (public DTD) |  |
 | FMT.Import.Pdf | Import PDF as printout | Files/Import | format |  |  | P2 | missing | ISO 32000 |  |
 | FMT.Import.Images | Import images | Files/Import | format |  |  | P1 | missing | PNG/JPEG/… |  |
-| FMT.Native.Ncraft | Native notebook: folder of .ncraft section files + notebook.ncraft-toc, atomic saves | Files/Native | format |  |  | P0 | missing | NoteCraft (docs/architecture.md) |  |
+| FMT.Native.Ncraft | Native notebook: folder of .ncraft section files + notebook.ncraft-toc, atomic saves | Files/Native | format |  |  | P0 | verified | NoteCraft (docs/architecture.md) |  |
 
 ## NoteCraft additions
 
@@ -1466,7 +1466,7 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| NC.Text.Insert | Type text | Keyboard/Typing/Type text | key-behaviour |  | text.insert | P0 | wired | NoteCraft | typing; one undo step per word |
+| NC.Text.Insert | Type text | Keyboard/Typing/Type text | key-behaviour |  | text.insert | P0 | verified | NoteCraft | typing; one undo step per word |
 | NC.Text.Enter | New paragraph (Enter) | Keyboard/Typing/New paragraph | key-behaviour | `Enter` | text.newline | P0 | wired | NoteCraft |  |
 | NC.Caret.Set | Place the caret (click in text) | Mouse/Click in text | mouse |  | caret.set | P0 | wired | NoteCraft |  |
 | NC.Caret.Left | Move left | Keyboard/Navigation/Left | key-behaviour | `Left` | caret.left | P0 | wired | NoteCraft | Shift extends |

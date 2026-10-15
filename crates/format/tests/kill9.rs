@@ -78,7 +78,7 @@ fn kill9_never_corrupts_a_notebook() {
         let _ = c.wait();
         let o = NotebookStore::open(&root, &mut IdGen::new(5)).unwrap();
         let sections = o.notebook.sections();
-        assert_eq!(sections.len(), 1, "round {round}: {:?}", o.warnings);
+        assert_eq!(sections.len(), 1, "{}: round {round}: {:?}", "BEH.Save.CrashRecovery", o.warnings);
         assert!(o.warnings.iter().all(|w| !w.contains("skipped")), "round {round}: a section was unreadable: {:?}", o.warnings);
         let page = &sections[0].pages[0];
         let title = page.display_title();
