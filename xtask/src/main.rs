@@ -124,11 +124,12 @@ fn cmd_layers() -> Result<(), String> {
 
 /// Workspace packages that must build for wasm32: every layered crate L0–L6 (brief: "L0–L6
 /// pass `cargo xtask wasm`"), standalone crates included; apps and tooling excluded.
+/// The packages that must build for the browser: every layered crate, and the web app itself.
 fn wasm_set() -> Result<Vec<String>, String> {
     let crates = layers::from_metadata(&metadata()?)?;
     Ok(crates
         .into_iter()
-        .filter(|c| matches!(layers::classify(&c.name), Some(layers::Class::Layer(_)) | Some(layers::Class::Standalone)))
+        .filter(|c| c.name == "notecraft-web" || matches!(layers::classify(&c.name), Some(layers::Class::Layer(_)) | Some(layers::Class::Standalone)))
         .map(|c| c.name)
         .collect())
 }

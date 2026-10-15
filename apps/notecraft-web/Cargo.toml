@@ -1,0 +1,31 @@
+[package]
+name = "notecraft-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "NoteCraft in the browser: the same egui shell compiled to WebAssembly (eframe web runner, WebGPU with a WebGL2 fallback)"
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "notecraft-web"
+path = "src/main.rs"
+
+[dependencies]
+notecraft-engine = { workspace = true }
+notecraft-ui-egui = { workspace = true }
+egui = { workspace = true }
+log = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# `wgpu` brings egui-wgpu's defaults: WebGPU plus the WebGL2 fallback.
+eframe = { workspace = true, features = ["default_fonts", "wgpu", "accesskit"] }
+# The clock: chrono's `wasmbind` reads the browser's Date (std's clock traps on wasm).
+chrono = { workspace = true }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlCanvasElement", "Location", "Event", "EventTarget", "BeforeUnloadEvent"] }

@@ -2201,6 +2201,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "notecraft-web"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "eframe",
+ "egui",
+ "log",
+ "notecraft-engine",
+ "notecraft-ui-egui",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "num-traits"
 version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
