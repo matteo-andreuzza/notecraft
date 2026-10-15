@@ -93,7 +93,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let contextual: Vec<&'static crate::ribbon_layout::Tab> = Vec::new(); // tables/equations/media arrive in M2
     egui::Panel::top("ribbon_tabs")
         .exact_size(28.0)
-        .frame(Frame::NONE.fill(t.chrome).inner_margin(Margin { left: 4, right: 8, top: 0, bottom: 0 }))
+        .frame(Frame::NONE.fill(t.window_back).inner_margin(Margin { left: 4, right: 8, top: 0, bottom: 0 }))
         .show(ui, |ui| {
             ui.horizontal_centered(|ui| {
                 ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
@@ -126,7 +126,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                         r.center(),
                         9.0,
                         if app.session.view.ribbon_collapsed { icons::Dir::Down } else { icons::Dir::Up },
-                        t.chrome_text,
+                        t.text,
                     );
                     if resp.on_hover_text(collapse_label).clicked() {
                         app.run(&ctx, "ui.collapseRibbon", json!({}));
@@ -142,7 +142,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let Some(tab) = tab else { return };
     egui::Panel::top("ribbon_body")
         .exact_size(BODY_H)
-        .frame(Frame::NONE.fill(t.ribbon).inner_margin(Margin::symmetric(4, 3)).stroke(Stroke::new(1.0, t.border)))
+        .frame(Frame::NONE.fill(t.ribbon_card).inner_margin(Margin::symmetric(4, 3)).stroke(Stroke::new(1.0, t.border)))
         .show(ui, |ui| {
             egui::ScrollArea::horizontal().id_salt("ribbon_scroll").scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden).show(
                 ui,
@@ -168,12 +168,12 @@ fn tab_button(ui: &mut Ui, name: &str, selected: bool, t: Tokens, file: bool) ->
         p.rect_filled(
             Rect::from_min_max(pos2(rect.min.x, rect.min.y + 3.0), rect.max),
             egui::CornerRadius { nw: 3, ne: 3, sw: 0, se: 0 },
-            t.tab_selected,
+            t.ribbon_card,
         );
     } else if resp.hovered() || file && resp.hovered() {
-        p.rect_filled(rect.shrink2(vec2(0.0, 3.0)), 2.0, t.tab_hover);
+        p.rect_filled(rect.shrink2(vec2(0.0, 3.0)), 2.0, t.hover);
     }
-    let color = if selected { t.accent } else { t.chrome_text };
+    let color = if selected { t.accent } else { t.text };
     p.text(rect.center() + vec2(0.0, 1.0), egui::Align2::CENTER_CENTER, name, font, color);
     resp
 }
@@ -185,11 +185,11 @@ fn tell_me(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let mut text: String = ui.data_mut(|d| d.get_temp::<String>(id).unwrap_or_default());
     let resp = ui.add(
         egui::TextEdit::singleline(&mut text)
-            .hint_text(RichText::new("Tell me what you want to do").color(t.chrome_text.gamma_multiply(0.75)))
+            .hint_text(RichText::new("Tell me what you want to do").color(t.text.gamma_multiply(0.75)))
             .desired_width(220.0)
-            .background_color(t.tab_hover)
-            .text_color(t.chrome_text)
-            .frame(egui::Frame::NONE.fill(t.tab_hover).inner_margin(egui::Margin::symmetric(6, 3))),
+            .background_color(t.hover)
+            .text_color(t.text)
+            .frame(egui::Frame::NONE.fill(t.hover).inner_margin(egui::Margin::symmetric(6, 3))),
     );
     ui.data_mut(|d| d.insert_temp(id, text.clone()));
     if text.trim().len() >= 2 && resp.has_focus() {
@@ -230,7 +230,7 @@ fn group(app: &mut NoteApp, ui: &mut Ui, g: &Group, t: Tokens) {
         });
         let w = ui.min_rect().width().max(40.0);
         let (lr, _) = ui.allocate_exact_size(vec2(w, LABEL_H), Sense::hover());
-        ui.painter().text(lr.center(), egui::Align2::CENTER_CENTER, g.name, egui::FontId::proportional(11.0), t.ribbon_text.gamma_multiply(0.75));
+        ui.painter().text(lr.center(), egui::Align2::CENTER_CENTER, g.name, egui::FontId::proportional(11.0), t.text.gamma_multiply(0.75));
     });
     let end = ui.cursor().min;
     let x = end.x + 1.0;
@@ -364,11 +364,11 @@ fn large(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], t: Tokens) {
     let is_checked = command(id).is_some_and(|c| checked(app, &c));
     let p = ui.painter();
     if is_checked {
-        p.rect_filled(rect, t.radius, t.checked);
+        p.rect_filled(rect, crate::theme::radius::CONTROL, t.checked);
     } else if resp.hovered() && on {
-        p.rect_filled(rect, t.radius, t.hover);
+        p.rect_filled(rect, crate::theme::radius::CONTROL, t.hover);
     }
-    let color = if on { t.ribbon_text } else { t.disabled };
+    let color = if on { t.text } else { t.text_disabled };
     let icon = Rect::from_center_size(pos2(rect.center().x, rect.min.y + 22.0), vec2(30.0, 30.0));
     icons::draw(p, icon, id, color);
     let has_menu = !kids.is_empty() || special_menu(id);
@@ -542,7 +542,7 @@ fn swatch_grid(
         for (i, (name, c)) in colors.iter().enumerate() {
             let (r, resp) = ui.allocate_exact_size(vec2(16.0, 16.0), Sense::click());
             ui.painter().rect_filled(r, 1.0, c32(*c));
-            ui.painter().rect_stroke(r, 1.0, Stroke::new(1.0, Color32::from_gray(160)), egui::StrokeKind::Inside);
+            ui.painter().rect_stroke(r, 1.0, Stroke::new(1.0, ui.visuals().widgets.inactive.bg_stroke.color), egui::StrokeKind::Inside);
             let resp = if name.is_empty() { resp } else { resp.on_hover_text(*name) };
             if resp.clicked() {
                 pick(*c);
@@ -559,7 +559,7 @@ fn menu_item(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) {
     let on = enabled(app, id);
     let mut text = RichText::new(label(id));
     if !on {
-        text = text.color(t.disabled);
+        text = text.color(t.text_disabled);
     }
     let is_checked = command(id).is_some_and(|c| checked(app, &c));
     let btn = egui::Button::new(text).selected(is_checked).frame(false).min_size(vec2(170.0, 22.0));
@@ -582,11 +582,11 @@ fn small(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], with_label: bo
     let is_checked = command(id).is_some_and(|c| checked(app, &c));
     let p = ui.painter();
     if is_checked {
-        p.rect_filled(rect, t.radius, t.checked);
+        p.rect_filled(rect, crate::theme::radius::CONTROL, t.checked);
     } else if resp.hovered() && on {
-        p.rect_filled(rect, t.radius, t.hover);
+        p.rect_filled(rect, crate::theme::radius::CONTROL, t.hover);
     }
-    let color = if on { t.ribbon_text } else { t.disabled };
+    let color = if on { t.text } else { t.text_disabled };
     icons::draw(p, Rect::from_min_size(rect.min + vec2(3.0, 3.0), vec2(16.0, 16.0)), id, color);
     if with_label {
         p.text(pos2(rect.min.x + 23.0, rect.center().y), egui::Align2::LEFT_CENTER, &lab, font, color);
@@ -702,7 +702,7 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
         if resp.hovered() && enabled_item {
             ui.painter().rect_filled(r, 1.0, t.hover);
         }
-        let color = if enabled_item { t.ribbon_text } else { t.disabled };
+        let color = if enabled_item { t.text } else { t.text_disabled };
         if is_styles {
             let style = ParaStyle::from_name(&label(item)).unwrap_or_default();
             let d = style.def();
@@ -713,7 +713,7 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
                 egui::Align2::LEFT_CENTER,
                 d.name,
                 egui::FontId::proportional(size),
-                if enabled_item { c } else { t.disabled },
+                if enabled_item { c } else { t.text_disabled },
             );
         } else {
             let lab = label(item);
@@ -733,7 +733,7 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
     if mresp.hovered() {
         ui.painter().rect_filled(more, 1.0, t.hover);
     }
-    icons::triangle(ui.painter(), more.center(), 7.0, icons::Dir::Down, t.ribbon_text);
+    icons::triangle(ui.painter(), more.center(), 7.0, icons::Dir::Down, t.text);
     Popup::menu(&mresp).show(|ui| {
         ui.set_min_width(220.0);
         egui::ScrollArea::vertical().max_height(420.0).show(ui, |ui| {
@@ -743,7 +743,7 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
                 let resp = ui.horizontal(|ui| {
                     if is_tags && let Some(def) = defs.iter().find(|d| d.name == lab) {
                         let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
-                        icons::tag(ui.painter(), r, def.symbol, false, t.ribbon_text);
+                        icons::tag(ui.painter(), r, def.symbol, false, t.text);
                     }
                     let shortcut = row(item).map(|r| r.shortcut.replace("Mod", "Ctrl")).unwrap_or_default();
                     ui.add_enabled(

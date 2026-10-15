@@ -6,7 +6,8 @@
 //! ```
 //!
 //! Renders the sample notebook with each ribbon tab, the Tags Summary pane, the backstage, the
-//! dark theme, full page view and a 2× HiDPI frame, and writes one PNG per state.
+//! White, Dark Gray and Black themes, full page view and a 2× HiDPI frame, and writes one PNG per
+//! state. Set `CRAFT_FONTS_DIR` to a folder with Inter to see the preferred interface font.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
 
 use egui_kittest::Harness;
@@ -57,7 +58,9 @@ fn main() {
     });
     shot("backstage-info", &out, 1.0, |a| a.ui.backstage = Some(Backstage::Info));
     shot("backstage-options", &out, 1.0, |a| a.ui.backstage = Some(Backstage::Options));
-    shot("dark", &out, 1.0, |a| a.ui.theme = ThemeKind::Dark);
+    for (name, kind) in [("theme-white", ThemeKind::White), ("theme-dark-gray", ThemeKind::DarkGray), ("theme-black", ThemeKind::Black)] {
+        shot(name, &out, 1.0, |a| a.ui.theme = kind);
+    }
     shot("full-page", &out, 1.0, |a| a.session.view.full_page = true);
     shot("hidpi-2x", &out, 2.0, |_| {});
     shot("rule-lines", &out, 1.0, |a| {

@@ -24,9 +24,8 @@ fn rect(pa: &Painter, r: Rect, x0: f32, y0: f32, x1: f32, y1: f32, fill: Color32
 
 fn text(pa: &Painter, r: Rect, t: &str, scale: f32, color: Color32, bold: bool) {
     let size = r.height() * scale;
-    let family = if bold { egui::FontFamily::Name("bold".into()) } else { egui::FontFamily::Proportional };
-    let fonts_have_bold = pa.ctx().fonts(|f| f.families().iter().any(|fam| *fam == egui::FontFamily::Name("bold".into())));
-    let font = egui::FontId::new(size, if fonts_have_bold { family } else { egui::FontFamily::Proportional });
+    let weight = if bold { crate::theme::Weight::Semibold } else { crate::theme::Weight::Regular };
+    let font = crate::theme::font(pa.ctx(), size, weight);
     pa.text(r.center(), egui::Align2::CENTER_CENTER, t, font, color);
 }
 

@@ -45,6 +45,11 @@ pub trait Host {
     fn backup_folder(&self) -> Option<String> {
         None
     }
+    /// Whether the desktop prefers a dark theme (`None` = it says nothing; egui's own answer is
+    /// used then). Hosts that can ask the desktop (the XDG portal on Linux) override this.
+    fn prefers_dark(&mut self) -> Option<bool> {
+        None
+    }
 }
 
 /// A host for tests and screenshots: fixed clock, no dialogs.
@@ -151,18 +156,38 @@ pub struct NoteApp {
     pub host: Box<dyn Host>,
     /// Whether the app asked to quit (File › Exit).
     pub quit_requested: bool,
+    /// The desktop's light/dark preference (`None` = unknown), for "Use system setting": the
+    /// host's answer, else the one egui reports.
+    pub system_dark: Option<bool>,
     fonts_installed: bool,
+    /// The resolved theme last applied to egui's style (re-applied only when it changes).
+    applied_theme: Option<ThemeKind>,
 }
 
 impl NoteApp {
     /// A new app around a session.
     pub fn new(session: Session, host: Box<dyn Host>) -> NoteApp {
-        NoteApp { session, ui: UiState::default(), canvas: canvas::CanvasState::default(), host, quit_requested: false, fonts_installed: false }
+        NoteApp {
+            session,
+            ui: UiState::default(),
+            canvas: canvas::CanvasState::default(),
+            host,
+            quit_requested: false,
+            system_dark: None,
+            fonts_installed: false,
+            applied_theme: None,
+        }
+    }
+
+    /// The theme being drawn: the chosen one, with "Use system setting" resolved against the
+    /// desktop's preference.
+    pub fn resolved_theme(&self) -> ThemeKind {
+        self.ui.theme.resolve(self.system_dark)
     }
 
     /// Theme tokens for the current theme.
     pub fn tokens(&self) -> Tokens {
-        Tokens::for_theme(self.ui.theme)
+        Tokens::for_theme(self.resolved_theme())
     }
 
     /// Run a command; errors become the status message. Results that need the platform (open
@@ -235,6 +260,7 @@ impl NoteApp {
             "backstage": serde_json::to_value(self.ui.backstage).unwrap_or(Value::Null),
             "dialog": serde_json::to_value(&self.ui.dialog).unwrap_or(Value::Null),
             "theme": serde_json::to_value(self.ui.theme).unwrap_or(Value::Null),
+            "resolvedTheme": serde_json::to_value(self.resolved_theme()).unwrap_or(Value::Null),
             "rename": serde_json::to_value(&self.ui.rename).unwrap_or(Value::Null),
             "search": self.ui.search,
             "searchPane": self.ui.search_pane,
@@ -271,8 +297,12 @@ impl NoteApp {
             fonts::install(&ctx);
             self.fonts_installed = true;
         }
+        self.system_dark = self.host.prefers_dark().or_else(|| ctx.system_theme().map(|t| t == egui::Theme::Dark));
         let t = self.tokens();
-        ctx.set_visuals(t.visuals(self.ui.theme));
+        if self.applied_theme != Some(self.resolved_theme()) {
+            theme::apply(&ctx, &t);
+            self.applied_theme = Some(self.resolved_theme());
+        }
         keymap::handle_input(self, &ctx);
         if self.ui.backstage.is_some() {
             backstage::show(self, ui, t);
@@ -313,7 +343,7 @@ impl NoteApp {
     /// (catalog `UI.Window.TitleBar`, `UI.Window.QAT`).
     fn title_row(&mut self, ui: &mut Ui, t: Tokens) {
         let ctx = ui.ctx().clone();
-        egui::Panel::top("title_row").exact_size(30.0).frame(Frame::NONE.fill(t.chrome).inner_margin(Margin::symmetric(6, 0))).show(ui, |ui| {
+        egui::Panel::top("title_row").exact_size(30.0).frame(Frame::NONE.fill(t.window_back).inner_margin(Margin::symmetric(6, 0))).show(ui, |ui| {
             ui.horizontal_centered(|ui| {
                 ui.spacing_mut().item_spacing = vec2(2.0, 0.0);
                 // UI.Window.QAT — Back, Undo, Redo by default (the reference shows Back and Undo).
@@ -326,9 +356,9 @@ impl NoteApp {
                     let (rect, resp) = ui.allocate_exact_size(vec2(24.0, 24.0), egui::Sense::click());
                     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, tip));
                     if resp.hovered() && enabled {
-                        ui.painter().rect_filled(rect, 2.0, t.tab_hover);
+                        ui.painter().rect_filled(rect, 2.0, t.hover);
                     }
-                    let color = if enabled { t.chrome_text } else { t.chrome_text.gamma_multiply(0.45) };
+                    let color = if enabled { t.text } else { t.text.gamma_multiply(0.45) };
                     let icon_rect = rect.shrink(5.0);
                     match id {
                         "nav.back" => {
@@ -361,7 +391,7 @@ impl NoteApp {
                     _ => "NoteCraft".to_string(),
                 };
                 ui.with_layout(egui::Layout::centered_and_justified(egui::Direction::LeftToRight), |ui| {
-                    ui.label(RichText::new(title).color(t.chrome_text).size(12.5));
+                    ui.label(RichText::new(title).color(t.text).size(12.5));
                 });
             });
         });
@@ -369,18 +399,21 @@ impl NoteApp {
 
     fn full_page_bar(&mut self, ui: &mut Ui, t: Tokens) {
         let ctx = ui.ctx().clone();
-        egui::Panel::top("full_page_bar").exact_size(26.0).frame(Frame::NONE.fill(t.chrome).inner_margin(Margin::symmetric(8, 2))).show(ui, |ui| {
-            ui.horizontal_centered(|ui| {
-                // UI.Window.FullPage — the single button back to Normal View.
-                if ui
-                    .add(egui::Button::new(RichText::new("Normal View").color(t.chrome_text)).fill(Color32::TRANSPARENT))
-                    .on_hover_text("Leave Full Page View (F11)")
-                    .clicked()
-                {
-                    self.run(&ctx, "view.fullPage", json!({}));
-                }
-            });
-        });
+        egui::Panel::top("full_page_bar").exact_size(26.0).frame(Frame::NONE.fill(t.window_back).inner_margin(Margin::symmetric(8, 2))).show(
+            ui,
+            |ui| {
+                ui.horizontal_centered(|ui| {
+                    // UI.Window.FullPage — the single button back to Normal View.
+                    if ui
+                        .add(egui::Button::new(RichText::new("Normal View").color(t.text)).fill(Color32::TRANSPARENT))
+                        .on_hover_text("Leave Full Page View (F11)")
+                        .clicked()
+                    {
+                        self.run(&ctx, "view.fullPage", json!({}));
+                    }
+                });
+            },
+        );
     }
 
     fn status_bar(&mut self, ui: &mut Ui, t: Tokens) {
@@ -392,10 +425,10 @@ impl NoteApp {
         }
         egui::Panel::bottom("status")
             .exact_size(22.0)
-            .frame(Frame::NONE.fill(t.ribbon).inner_margin(Margin::symmetric(10, 2)).stroke(Stroke::new(1.0, t.border)))
+            .frame(Frame::NONE.fill(t.ribbon_card).inner_margin(Margin::symmetric(10, 2)).stroke(Stroke::new(1.0, t.border)))
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
-                    ui.label(RichText::new(msg).color(t.ribbon_text).size(12.0));
+                    ui.label(RichText::new(msg).color(t.text).size(12.0));
                 });
             });
         ui.ctx().request_repaint_after(std::time::Duration::from_millis(500));

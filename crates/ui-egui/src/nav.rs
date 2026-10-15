@@ -31,7 +31,7 @@ pub fn cmd_item(app: &mut NoteApp, ui: &mut Ui, label: &str, cmd: &str, params: 
 pub fn notebook_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let ctx = ui.ctx().clone();
     if app.session.view.notebook_pane_collapsed {
-        egui::Panel::left("notebook_pane_collapsed").exact_size(30.0).frame(Frame::NONE.fill(t.pane).stroke(Stroke::new(1.0, t.border))).show(
+        egui::Panel::left("notebook_pane_collapsed").exact_size(30.0).frame(Frame::NONE.fill(t.window_back).stroke(Stroke::new(1.0, t.border))).show(
             ui,
             |ui| {
                 ui.vertical_centered(|ui| {
@@ -42,7 +42,7 @@ pub fn notebook_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                     let name = app.session.notebook().map(|n| n.name.clone()).unwrap_or_default();
                     ui.add_space(8.0);
                     for ch in name.chars().take(18) {
-                        ui.label(RichText::new(ch.to_string()).size(12.0).color(t.pane_text));
+                        ui.label(RichText::new(ch.to_string()).size(12.0).color(t.text));
                     }
                 });
             },
@@ -53,11 +53,11 @@ pub fn notebook_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         .default_size(app.ui.notebook_pane_width)
         .size_range(150.0..=420.0)
         .resizable(true)
-        .frame(Frame::NONE.fill(t.pane).inner_margin(Margin::symmetric(0, 4)).stroke(Stroke::new(1.0, t.border)))
+        .frame(Frame::NONE.fill(t.window_back).inner_margin(Margin::symmetric(0, 4)).stroke(Stroke::new(1.0, t.border)))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.add_space(8.0);
-                ui.label(RichText::new("Notebooks").size(12.5).color(t.pane_text.gamma_multiply(0.8)));
+                ui.label(RichText::new("Notebooks").size(12.5).color(t.text.gamma_multiply(0.8)));
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     ui.add_space(4.0);
                     // UI.Nav.NotebookPaneCollapse — the pin/collapse button.
@@ -102,19 +102,19 @@ fn notebook_row(app: &mut NoteApp, ui: &mut Ui, nb: &notecraft_engine::doc::Note
     let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 26.0), Sense::click());
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, &nb.name));
     if selected {
-        ui.painter().rect_filled(rect, 0.0, t.pane_selected);
+        ui.painter().rect_filled(rect, 0.0, t.nav_selected);
     } else if resp.hovered() {
         ui.painter().rect_filled(rect, 0.0, t.hover);
     }
     // Notebook icon in the notebook's colour.
     let icon = Rect::from_min_size(rect.min + vec2(10.0, 5.0), vec2(13.0, 16.0));
     ui.painter().rect_filled(icon, 2.0, c32(nb.color.rgba()));
-    ui.painter().rect_stroke(icon, 2.0, Stroke::new(1.0, t.pane_text.gamma_multiply(0.5)), egui::StrokeKind::Inside);
+    ui.painter().rect_stroke(icon, 2.0, Stroke::new(1.0, t.text.gamma_multiply(0.5)), egui::StrokeKind::Inside);
     let renaming = matches!(&app.ui.rename, Some(Rename::Notebook(id, _)) if *id == nb.id);
     if renaming {
         rename_field(app, ui, Rect::from_min_max(rect.min + vec2(30.0, 2.0), rect.max - vec2(4.0, 2.0)));
     } else {
-        ui.painter().text(pos2(rect.min.x + 30.0, rect.center().y), Align2::LEFT_CENTER, &nb.name, FontId::proportional(13.5), t.pane_text);
+        ui.painter().text(pos2(rect.min.x + 30.0, rect.center().y), Align2::LEFT_CENTER, &nb.name, FontId::proportional(13.5), t.text);
     }
     if resp.clicked() {
         app.run(&ctx, "notebook.select", json!({"notebook": nb.id.to_string()}));
@@ -149,7 +149,7 @@ fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: 
                 let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 24.0), Sense::click());
                 resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, &s.name));
                 if selected {
-                    ui.painter().rect_filled(rect, 0.0, t.pane_selected);
+                    ui.painter().rect_filled(rect, 0.0, t.nav_selected);
                 } else if resp.hovered() {
                     ui.painter().rect_filled(rect, 0.0, t.hover);
                 }
@@ -159,7 +159,7 @@ fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: 
                 if renaming {
                     rename_field(app, ui, Rect::from_min_max(pos2(x + 10.0, rect.min.y + 1.0), rect.max - vec2(4.0, 1.0)));
                 } else {
-                    ui.painter().text(pos2(x + 11.0, rect.center().y), Align2::LEFT_CENTER, &s.name, FontId::proportional(13.0), t.pane_text);
+                    ui.painter().text(pos2(x + 11.0, rect.center().y), Align2::LEFT_CENTER, &s.name, FontId::proportional(13.0), t.text);
                 }
                 if resp.clicked() {
                     app.run(&ctx, "section.select", json!({"section": s.id.to_string()}));
@@ -177,13 +177,7 @@ fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: 
                     ui.painter().rect_filled(rect, 0.0, t.hover);
                 }
                 let x = rect.min.x + 10.0 + depth as f32 * 12.0;
-                icons::triangle(
-                    ui.painter(),
-                    pos2(x + 4.0, rect.center().y),
-                    8.0,
-                    if open { icons::Dir::Down } else { icons::Dir::Right },
-                    t.pane_text,
-                );
+                icons::triangle(ui.painter(), pos2(x + 4.0, rect.center().y), 8.0, if open { icons::Dir::Down } else { icons::Dir::Right }, t.text);
                 // A section group: a stack of tabs.
                 for k in 0..3 {
                     ui.painter().rect_filled(
@@ -196,7 +190,7 @@ fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: 
                 if renaming {
                     rename_field(app, ui, Rect::from_min_max(pos2(x + 26.0, rect.min.y + 1.0), rect.max - vec2(4.0, 1.0)));
                 } else {
-                    ui.painter().text(pos2(x + 27.0, rect.center().y), Align2::LEFT_CENTER, &g.name, FontId::proportional(13.0), t.pane_text);
+                    ui.painter().text(pos2(x + 27.0, rect.center().y), Align2::LEFT_CENTER, &g.name, FontId::proportional(13.0), t.text);
                 }
                 if resp.clicked() {
                     ui.data_mut(|d| d.insert_temp(open_id, !open));
@@ -325,7 +319,7 @@ pub fn section_tabs(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         .unwrap_or_default();
     let siblings: Vec<NavNode> = nb.children_at(&parent_path).cloned().unwrap_or_default();
     let (bar, _) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::hover());
-    ui.painter().rect_filled(bar, 0.0, t.ribbon);
+    ui.painter().rect_filled(bar, 0.0, t.ribbon_card);
     ui.painter().line_segment([bar.left_bottom(), bar.right_bottom()], Stroke::new(1.0, t.border));
     let search_w = 260.0_f32.min(bar.width() * 0.35);
     let tabs_rect = Rect::from_min_max(bar.min, pos2(bar.max.x - search_w - 8.0, bar.max.y));
@@ -334,7 +328,7 @@ pub fn section_tabs(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     if !parent_path.is_empty() {
         let r = Rect::from_min_size(pos2(x, bar.min.y + 5.0), vec2(26.0, 25.0));
         let resp = ui.interact(r, ui.id().with("tab_up"), Sense::click()).on_hover_text("Back to the parent section group");
-        icons::triangle(ui.painter(), r.center(), 10.0, icons::Dir::Left, t.ribbon_text);
+        icons::triangle(ui.painter(), r.center(), 10.0, icons::Dir::Left, t.text);
         if resp.clicked() {
             let up = &parent_path[..parent_path.len() - 1];
             let first = nb.children_at(up).and_then(|c| c.iter().find_map(|n| if let NavNode::Section(s) = n { Some(s.id) } else { None }));
@@ -347,7 +341,7 @@ pub fn section_tabs(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     for n in &siblings {
         let (name, color, id, is_group) = match n {
             NavNode::Section(s) => (s.name.clone(), c32(s.color.rgba()), s.id, false),
-            NavNode::Group(g) => (g.name.clone(), t.pane, g.id, true),
+            NavNode::Group(g) => (g.name.clone(), t.window_back, g.id, true),
         };
         let font = FontId::proportional(12.5);
         let w = ui.fonts_mut(|f| f.layout_no_wrap(name.clone(), font.clone(), Color32::BLACK).size().x) + 22.0 + if is_group { 14.0 } else { 0.0 };
@@ -411,7 +405,7 @@ pub fn section_tabs(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     if presp.hovered() {
         ui.painter().rect_filled(plus, 3.0, t.hover);
     }
-    ui.painter().text(plus.center(), Align2::CENTER_CENTER, "+", FontId::proportional(16.0), t.ribbon_text);
+    ui.painter().text(plus.center(), Align2::CENTER_CENTER, "+", FontId::proportional(16.0), t.text);
     if presp.clicked() {
         app.run(&ctx, "section.new", json!({}));
     }
@@ -461,7 +455,7 @@ fn search_box(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: Tokens) {
     let sb = Rect::from_min_max(pos2(r.max.x - 22.0, r.min.y), r.max);
     let sresp = ui.interact(sb, ui.id().with("scope_btn"), Sense::click()).on_hover_text("Change search scope");
     sresp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Change search scope"));
-    icons::triangle(ui.painter(), sb.center(), 8.0, icons::Dir::Down, t.ribbon_text);
+    icons::triangle(ui.painter(), sb.center(), 8.0, icons::Dir::Down, t.text);
     egui::Popup::menu(&sresp).show(|ui| {
         for (label, cmd) in [
             ("This Page", "search.scopePage"),
@@ -490,12 +484,10 @@ pub fn search_dropdown(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
     egui::Area::new(egui::Id::new("search_results")).fixed_pos(anchor.left_bottom() + vec2(0.0, 2.0)).order(egui::Order::Foreground).show(
         ctx,
         |ui| {
-            Frame::popup(ui.style()).fill(t.pane).show(ui, |ui| {
+            Frame::popup(ui.style()).fill(t.window_back).show(ui, |ui| {
                 ui.set_width(anchor.width().max(300.0));
                 ui.label(
-                    RichText::new(format!("{total} results · {}", scope_label(app.session.view.scope)))
-                        .size(11.0)
-                        .color(t.pane_text.gamma_multiply(0.75)),
+                    RichText::new(format!("{total} results · {}", scope_label(app.session.view.scope))).size(11.0).color(t.text.gamma_multiply(0.75)),
                 );
                 ui.separator();
                 egui::ScrollArea::vertical().max_height(360.0).show(ui, |ui| {
@@ -510,8 +502,8 @@ pub fn search_dropdown(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                         let page = it["page"].as_str().unwrap_or("").to_string();
                         let resp = ui
                             .vertical(|ui| {
-                                ui.label(RichText::new(title).strong().color(t.pane_text));
-                                ui.label(RichText::new(format!("{section} · {snippet}")).size(11.0).color(t.pane_text.gamma_multiply(0.7)));
+                                ui.label(RichText::new(title).strong().color(t.text));
+                                ui.label(RichText::new(format!("{section} · {snippet}")).size(11.0).color(t.text.gamma_multiply(0.7)));
                             })
                             .response
                             .interact(Sense::click());
@@ -539,10 +531,10 @@ pub fn search_dropdown(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
 pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let ctx = ui.ctx().clone();
     let width = app.session.view.page_list_width;
-    egui::Panel::right("page_list").exact_size(width).frame(Frame::NONE.fill(t.pane).stroke(Stroke::new(1.0, t.border))).show(ui, |ui| {
+    egui::Panel::right("page_list").exact_size(width).frame(Frame::NONE.fill(t.window_back).stroke(Stroke::new(1.0, t.border))).show(ui, |ui| {
         let Some(section) = app.session.section().cloned() else {
             ui.add_space(10.0);
-            ui.label(RichText::new("No section").color(t.disabled));
+            ui.label(RichText::new("No section").color(t.text_disabled));
             return;
         };
         // "+ Add Page".
@@ -570,7 +562,7 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 let page_title = page.display_title();
                 resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, &page_title));
                 if selected {
-                    ui.painter().rect_filled(r, 0.0, t.pane_selected);
+                    ui.painter().rect_filled(r, 0.0, t.nav_selected);
                     ui.painter().rect_filled(Rect::from_min_size(r.min, vec2(3.0, r.height())), 0.0, t.accent);
                 } else if resp.hovered() {
                     ui.painter().rect_filled(r, 0.0, t.hover);
@@ -580,13 +572,7 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 if has_kids {
                     let arrow = Rect::from_min_size(pos2(r.max.x - 22.0, r.min.y + 4.0), vec2(18.0, 18.0));
                     let aresp = ui.interact(arrow, ui.id().with(("collapse", page.id)), Sense::click());
-                    icons::triangle(
-                        ui.painter(),
-                        arrow.center(),
-                        8.0,
-                        if page.collapsed { icons::Dir::Right } else { icons::Dir::Down },
-                        t.pane_text,
-                    );
+                    icons::triangle(ui.painter(), arrow.center(), 8.0, if page.collapsed { icons::Dir::Right } else { icons::Dir::Down }, t.text);
                     if aresp.clicked() {
                         app.run(&ctx, "page.toggleSubpages", json!({"page": page.id.to_string()}));
                     }
@@ -594,10 +580,10 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 let font = FontId::proportional(13.0);
                 let title = page.display_title();
                 let max_w = r.width() - indent - 28.0;
-                let galley = ui.fonts_mut(|f| f.layout(title, font, t.pane_text, max_w.max(20.0)));
+                let galley = ui.fonts_mut(|f| f.layout(title, font, t.text, max_w.max(20.0)));
                 let row_rect = galley.rows.first().map(|row| row.rect()).unwrap_or(Rect::NOTHING);
                 let _ = row_rect;
-                ui.painter().with_clip_rect(r).galley(pos2(r.min.x + indent, r.center().y - 8.0), galley, t.pane_text);
+                ui.painter().with_clip_rect(r).galley(pos2(r.min.x + indent, r.center().y - 8.0), galley, t.text);
                 if resp.clicked() {
                     let (add, range) = ui.input(|i| (i.modifiers.command, i.modifiers.shift));
                     app.run(&ctx, "nav.goto", json!({"page": page.id.to_string(), "add": add, "range": range}));

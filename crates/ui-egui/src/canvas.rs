@@ -265,7 +265,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let ctx = ui.ctx().clone();
     let Some(page) = app.session.page().cloned() else {
         let r = ui.available_rect_before_wrap();
-        ui.painter().rect_filled(r, 0.0, t.canvas_back);
+        ui.painter().rect_filled(r, 0.0, t.page);
         let msg = if app.session.section().is_some() { "This section has no pages. Press Ctrl+N or click Add Page." } else { "" };
         ui.painter().text(r.center(), Align2::CENTER_CENTER, msg, FontId::proportional(14.0), t.page_meta);
         return;
@@ -552,7 +552,7 @@ fn rule_lines(painter: &egui::Painter, page: &Page, rect: Rect, origin: Pos2, zo
     } else {
         // The margin line of ruled paper.
         let mx = origin.x + 24.0 * PT * zoom;
-        painter.line_segment([pos2(mx, rect.min.y), pos2(mx, rect.max.y)], Stroke::new(1.0, Color32::from_rgb(0xe6, 0x9a, 0x9a)));
+        painter.line_segment([pos2(mx, rect.min.y), pos2(mx, rect.max.y)], Stroke::new(1.0, t.margin_line));
     }
 }
 

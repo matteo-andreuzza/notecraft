@@ -238,7 +238,7 @@ mod tests {
     fn settings_round_trip() {
         let path = tmp("round").join("settings.json");
         let mut want = DesktopSettings::default();
-        want.appearance.theme = ThemeKind::Dark;
+        want.appearance.theme = ThemeKind::DarkGray;
         want.editing.author = "Ada".into();
         want.editing.new_pages_rule_lines = Some(notecraft_engine::doc::RuleLines::College);
         want.editing.custom_tags = notecraft_engine::doc::builtin_tags().into_iter().take(2).collect();
@@ -261,7 +261,7 @@ mod tests {
         // Keys the file lacks take their defaults.
         std::fs::write(&path, br#"{"appearance": {"theme": "Dark"}}"#).unwrap();
         let s = Store::open_at(path.clone());
-        assert_eq!(s.get().appearance.theme, ThemeKind::Dark);
+        assert_eq!(s.get().appearance.theme, ThemeKind::DarkGray);
         assert_eq!(s.get().editing, notecraft_engine::Prefs::default());
     }
 

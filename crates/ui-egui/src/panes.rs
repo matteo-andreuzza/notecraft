@@ -13,10 +13,10 @@ pub fn tags_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     egui::Panel::right("tags_pane")
         .default_size(270.0)
         .resizable(true)
-        .frame(Frame::NONE.fill(t.pane).inner_margin(Margin::same(8)).stroke(Stroke::new(1.0, t.border)))
+        .frame(Frame::NONE.fill(t.window_back).inner_margin(Margin::same(8)).stroke(Stroke::new(1.0, t.border)))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(RichText::new("Tags Summary").size(15.0).strong().color(t.pane_text));
+                ui.label(RichText::new("Tags Summary").size(15.0).strong().color(t.text));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui.button("Close").clicked() {
                         app.session.view.tags_pane = false;
@@ -39,11 +39,11 @@ pub fn tags_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             egui::ScrollArea::vertical().id_salt("tags_scroll").max_height(ui.available_height() - 70.0).show(ui, |ui| {
                 let groups = res["groups"].as_array().cloned().unwrap_or_default();
                 if groups.is_empty() {
-                    ui.label(RichText::new("No tagged notes in this scope.").color(t.disabled));
+                    ui.label(RichText::new("No tagged notes in this scope.").color(t.text_disabled));
                 }
                 let defs = app.session.tag_defs();
                 for g in groups {
-                    ui.label(RichText::new(g["group"].as_str().unwrap_or("")).strong().color(t.pane_text));
+                    ui.label(RichText::new(g["group"].as_str().unwrap_or("")).strong().color(t.text));
                     for it in g["items"].as_array().cloned().unwrap_or_default() {
                         let text = it["text"].as_str().unwrap_or("").to_string();
                         let key = it["key"].as_str().unwrap_or("").to_string();
@@ -52,9 +52,9 @@ pub fn tags_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                             .horizontal(|ui| {
                                 let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
                                 if let Some(d) = defs.iter().find(|d| d.key == key) {
-                                    icons::tag(ui.painter(), r, d.symbol, checked, t.pane_text);
+                                    icons::tag(ui.painter(), r, d.symbol, checked, t.text);
                                 }
-                                ui.label(RichText::new(if text.is_empty() { "(empty)".to_string() } else { text.clone() }).color(t.pane_text));
+                                ui.label(RichText::new(if text.is_empty() { "(empty)".to_string() } else { text.clone() }).color(t.text));
                             })
                             .response
                             .interact(Sense::click());
@@ -112,10 +112,10 @@ pub fn search_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     egui::Panel::right("search_pane")
         .default_size(260.0)
         .resizable(true)
-        .frame(Frame::NONE.fill(t.pane).inner_margin(Margin::same(8)).stroke(Stroke::new(1.0, t.border)))
+        .frame(Frame::NONE.fill(t.window_back).inner_margin(Margin::same(8)).stroke(Stroke::new(1.0, t.border)))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(RichText::new("Search Results").size(15.0).strong().color(t.pane_text));
+                ui.label(RichText::new("Search Results").size(15.0).strong().color(t.text));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui.button("Close").clicked() {
                         app.ui.search_pane = false;
@@ -134,7 +134,7 @@ pub fn search_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 for it in res["results"].as_array().cloned().unwrap_or_default() {
                     let resp = ui
                         .vertical(|ui| {
-                            ui.label(RichText::new(it["title"].as_str().unwrap_or("")).strong().color(t.pane_text));
+                            ui.label(RichText::new(it["title"].as_str().unwrap_or("")).strong().color(t.text));
                             ui.label(RichText::new(it["section"].as_str().unwrap_or("")).size(11.0).color(t.page_meta));
                         })
                         .response

@@ -46,7 +46,7 @@ fn every_tab_and_view_renders() {
     h.state_mut().ui.backstage = Some(crate::Backstage::Options);
     h.run();
     h.state_mut().ui.backstage = None;
-    h.state_mut().ui.theme = crate::ThemeKind::Dark;
+    h.state_mut().ui.theme = crate::ThemeKind::DarkGray;
     h.run();
 }
 
@@ -267,7 +267,7 @@ fn fractional_and_double_scale_render() {
 #[test]
 fn highlighted_text_stays_readable_in_the_dark_theme() {
     let ctx = egui::Context::default();
-    let t = crate::Tokens::for_theme(crate::ThemeKind::Dark);
+    let t = crate::Tokens::for_theme(crate::ThemeKind::DarkGray);
     let page_text = egui::Color32::WHITE;
     let yellow = notecraft_engine::doc::color::Rgba { r: 255, g: 255, b: 0, a: 255 };
     let f = notecraft_engine::doc::CharFormat { highlight: Some(yellow), ..Default::default() };
@@ -275,4 +275,29 @@ fn highlighted_text_stays_readable_in_the_dark_theme() {
     let red = notecraft_engine::doc::color::Rgba { r: 200, g: 0, b: 0, a: 255 };
     let f = notecraft_engine::doc::CharFormat { highlight: Some(yellow), color: Some(red), ..Default::default() };
     assert_eq!(crate::canvas::text_format(&ctx, &f, 1.0, t, page_text).color, crate::theme::c32(red), "an explicit colour is kept");
+}
+
+#[test]
+fn the_office_theme_is_picked_in_the_account_page_and_follows_the_system() {
+    // UI.Window.DarkMode: File › Account › Office Theme lists Colorful, Dark Gray, Black, White
+    // and "Use system setting"; picking one restyles the window at once.
+    let mut h = harness(app());
+    h.state_mut().ui.backstage = Some(crate::Backstage::Account);
+    h.run();
+    for kind in crate::ThemeKind::ALL {
+        present(&h, "UI.Window.DarkMode", kind.label());
+    }
+    h.get_by_label("Dark Gray").click();
+    h.run();
+    h.run();
+    assert_eq!(h.state().ui.theme, crate::ThemeKind::DarkGray, "UI.Window.DarkMode");
+    assert!(h.ctx.global_style().visuals.dark_mode, "the dark theme is applied to egui");
+    h.get_by_label("Use system setting").click();
+    h.run();
+    h.run();
+    // FixedHost states no preference and the test context reports none: Colorful.
+    assert_eq!(h.state().resolved_theme(), crate::ThemeKind::Colorful);
+    assert!(!h.ctx.global_style().visuals.dark_mode);
+    h.state_mut().system_dark = Some(true);
+    assert_eq!(h.state().resolved_theme(), crate::ThemeKind::DarkGray, "System follows a dark desktop");
 }

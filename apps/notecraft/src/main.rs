@@ -21,6 +21,7 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 mod control;
+mod desktop_theme;
 mod host;
 mod settings;
 
@@ -274,7 +275,7 @@ fn main() -> ExitCode {
             let store = Store::open();
             let remembered = store.get().clone();
             let session = if args.sample { Session::with_sample(host::clock()) } else { Session::new(host::clock()) };
-            let mut app = NoteApp::new(session, Box::new(host::DesktopHost));
+            let mut app = NoteApp::new(session, Box::new(host::DesktopHost::new(&cc.egui_ctx)));
             settings::apply(&mut app, &remembered);
             open_notebooks(&mut app, &args, &remembered);
             let (mut control, mut key_file) = (None, None);

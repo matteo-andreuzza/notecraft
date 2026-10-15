@@ -12,58 +12,61 @@ use crate::{Backstage, NoteApp, ThemeKind, Tokens};
 pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let ctx = ui.ctx().clone();
     let page = app.ui.backstage.unwrap_or_default();
-    egui::Panel::left("backstage_nav").exact_size(190.0).frame(Frame::NONE.fill(t.chrome).inner_margin(Margin::symmetric(0, 10))).show(ui, |ui| {
-        let back = ui.add(egui::Button::new(RichText::new("  ←  ").size(20.0).color(t.chrome_text)).frame(false)).on_hover_text("Back (Esc)");
-        if back.clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-            app.ui.backstage = None;
-            return;
-        }
-        ui.add_space(14.0);
-        for (p, label) in [
-            (Backstage::Info, "Info"),
-            (Backstage::New, "New"),
-            (Backstage::Open, "Open"),
-            (Backstage::Export, "Export"),
-            (Backstage::Account, "Account"),
-            (Backstage::Options, "Options"),
-        ] {
-            let sel = page == p;
-            let (r, resp) = ui.allocate_exact_size(vec2(190.0, 38.0), Sense::click());
-            if sel {
-                ui.painter().rect_filled(r, 0.0, t.tab_hover);
-            } else if resp.hovered() {
-                ui.painter().rect_filled(r, 0.0, t.tab_hover.gamma_multiply(0.6));
+    egui::Panel::left("backstage_nav").exact_size(190.0).frame(Frame::NONE.fill(t.window_back).inner_margin(Margin::symmetric(0, 10))).show(
+        ui,
+        |ui| {
+            let back = ui.add(egui::Button::new(RichText::new("  ←  ").size(20.0).color(t.text)).frame(false)).on_hover_text("Back (Esc)");
+            if back.clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                app.ui.backstage = None;
+                return;
             }
-            ui.painter().text(r.left_center() + vec2(26.0, 0.0), egui::Align2::LEFT_CENTER, label, egui::FontId::proportional(15.0), t.chrome_text);
-            if resp.clicked() {
-                app.ui.backstage = Some(p);
+            ui.add_space(14.0);
+            for (p, label) in [
+                (Backstage::Info, "Info"),
+                (Backstage::New, "New"),
+                (Backstage::Open, "Open"),
+                (Backstage::Export, "Export"),
+                (Backstage::Account, "Account"),
+                (Backstage::Options, "Options"),
+            ] {
+                let sel = page == p;
+                let (r, resp) = ui.allocate_exact_size(vec2(190.0, 38.0), Sense::click());
+                if sel {
+                    ui.painter().rect_filled(r, 0.0, t.hover);
+                } else if resp.hovered() {
+                    ui.painter().rect_filled(r, 0.0, t.hover.gamma_multiply(0.6));
+                }
+                ui.painter().text(r.left_center() + vec2(26.0, 0.0), egui::Align2::LEFT_CENTER, label, egui::FontId::proportional(15.0), t.text);
+                if resp.clicked() {
+                    app.ui.backstage = Some(p);
+                }
             }
-        }
-        for (label, why) in [
-            ("Print", "Printing comes with M3 (PDF export first)"),
-            ("Share", "Sharing needs a Microsoft account; NoteCraft syncs folders instead"),
-            ("Send", "Email integration is not available yet"),
-        ] {
-            let (r, resp) = ui.allocate_exact_size(vec2(190.0, 38.0), Sense::hover());
-            ui.painter().text(
-                r.left_center() + vec2(26.0, 0.0),
-                egui::Align2::LEFT_CENTER,
-                label,
-                egui::FontId::proportional(15.0),
-                t.chrome_text.gamma_multiply(0.45),
-            );
-            resp.on_hover_text(why);
-        }
-        ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
-            ui.add_space(8.0);
-            let (r, resp) = ui.allocate_exact_size(vec2(190.0, 34.0), Sense::click());
-            ui.painter().text(r.left_center() + vec2(26.0, 0.0), egui::Align2::LEFT_CENTER, "Exit", egui::FontId::proportional(14.0), t.chrome_text);
-            if resp.clicked() {
-                let _ = app.session.save_dirty();
-                app.quit_requested = true;
+            for (label, why) in [
+                ("Print", "Printing comes with M3 (PDF export first)"),
+                ("Share", "Sharing needs a Microsoft account; NoteCraft syncs folders instead"),
+                ("Send", "Email integration is not available yet"),
+            ] {
+                let (r, resp) = ui.allocate_exact_size(vec2(190.0, 38.0), Sense::hover());
+                ui.painter().text(
+                    r.left_center() + vec2(26.0, 0.0),
+                    egui::Align2::LEFT_CENTER,
+                    label,
+                    egui::FontId::proportional(15.0),
+                    t.text.gamma_multiply(0.45),
+                );
+                resp.on_hover_text(why);
             }
-        });
-    });
+            ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
+                ui.add_space(8.0);
+                let (r, resp) = ui.allocate_exact_size(vec2(190.0, 34.0), Sense::click());
+                ui.painter().text(r.left_center() + vec2(26.0, 0.0), egui::Align2::LEFT_CENTER, "Exit", egui::FontId::proportional(14.0), t.text);
+                if resp.clicked() {
+                    let _ = app.session.save_dirty();
+                    app.quit_requested = true;
+                }
+            });
+        },
+    );
     egui::CentralPanel::default().frame(Frame::NONE.fill(t.page).inner_margin(Margin::symmetric(40, 30))).show(ui, |ui| {
         ui.visuals_mut().override_text_color = Some(t.page_text);
         match page {
@@ -209,8 +212,9 @@ fn account(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     heading(ui, "Account");
     ui.label(RichText::new("Office Theme").strong());
     ui.horizontal(|ui| {
-        for (k, l) in [(ThemeKind::Colorful, "Colorful"), (ThemeKind::White, "White"), (ThemeKind::Dark, "Dark")] {
-            if ui.selectable_label(app.ui.theme == k, l).clicked() {
+        // OPT.General.OfficeTheme / UI.Window.DarkMode.
+        for k in ThemeKind::ALL {
+            if ui.selectable_label(app.ui.theme == k, k.label()).clicked() {
                 app.ui.theme = k;
             }
         }
