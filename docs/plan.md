@@ -1,6 +1,6 @@
 # NoteCraft plan
 
-> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** major (decision D1: the 2024 UI; M1.5 and M5 added) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the 2024 UI)
+> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** minor (M1.5 done; M2–M5 increments) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the 2024 UI)
 
 How NoteCraft gets from nothing to a OneNote replacement a typical user could switch to. The
 inventory of what "OneNote" means is [`parity-catalog.md`](parity-catalog.md) (1,291 rows); the
@@ -81,6 +81,49 @@ reference screenshots (kept locally, never committed: clean room, we only observ
 8. **A7** Tests (ribbon modes, Simplified coverage, contrast, tree, Quick notes, sort, settings)
    and screenshots (every tab in both modes, every theme, narrow window, 2×).
 9. **A8** Parity, docs, devlog; tag `m1.5-modern-ui`.
+
+### M2 increments (in order)
+
+Everything new is built in the 2024 look of M1.5 (tokens, cards, the simplified and classic
+ribbon; [`ui-parity.md`](ui-parity.md)).
+
+1. **Canvas details:** paragraph handle (`UI.Canvas.ParagraphHandle`), containers that grow with
+   their text, a page that grows right and down, the mini toolbar as a card, text and container
+   context menus (`CM.Text.*`, `CM.NoteContainer.*`), Paste Options.
+2. **Tables:** a `PageObject::Table` in `notecraft-doc`, its `.ncraft` schema (version bump),
+   commands, the Table Layout contextual tab in both ribbon layouts (`chrome::contextual_tabs`),
+   sort, borders, convert to/from text.
+3. **Pictures, attachments, printouts:** crate `codecs` (pure-Rust decoders, licences checked with
+   `cargo xtask deny`), crop/rotate/alt text; the rich clipboard (HTML and pictures through
+   `arboard`) and drag and drop of files; screen clipping through the desktop portal.
+4. **Ink:** crates `ink-geom` and `ink` (pens, highlighters, eraser modes, lasso, ruler, pressure
+   from winit; tablet-v2/XInput2 as a risk), crate `render` (CPU oracle for thumbnails and export).
+5. **Insert misc and missing dialogs:** page templates, symbols, equations (`math`), Link with page
+   search, Move/Copy as a tree, Options (with the Office Theme), Recent Notebooks, the notebook
+   list (Ctrl+G); asynchronous file dialogs; window geometry; web persistence (IndexedDB) and
+   exports as downloads.
+6. **Audio** recording in pure Rust where possible; video stays a documented gap.
+
+Exit: the P0/P1 rows of `R.Insert.*`, `R.Draw.*`, `CT.TableLayout.*`, object `CM.*` and
+`BEH.Ink/Table/Paste.*` wired; headless workflows "page with a table and pictures" and
+"handwritten notes"; tag `m2-insert-draw`.
+
+### M3–M5 increments
+
+- **M3 Interop:** crate `onestore` ([MS-ONESTORE]/[MS-ONE], every structure cited, limits against
+  hostile input, fuzzing): read `.one` (pages, outlines, rich text, lists, tags, pictures, tables,
+  ink), `.onetoc2`, `.onepkg` ([MS-CAB]); `.one` export where the specs allow; crate
+  `import-export`: PDF, HTML, Markdown, DOCX, PNG/SVG out; Markdown, HTML, text, ENEX, PDF, pictures
+  in. A fidelity table per construct (kept, degraded, lost) in `parity.md`; tag `m3-interop`.
+- **M4 History, Review, View, power:** page versions with diff, authors, unread; spelling (open
+  dictionaries, licences checked); protected sections (XChaCha20-Poly1305 + Argon2id, with a
+  threat model); full Options; ribbon and QAT customization; keytips (WordCraft's `keytips.rs`);
+  AccessKit tried with a screen reader; en + it; optional sync (folder/WebDAV, CRDT); WASM
+  plug-ins; more MCP tools; drawn window buttons where the compositor draws none; tag `m4-power`.
+- **M5 Release:** Flatpak/AppImage/deb and `craft-launcher`; Windows/macOS builds; the
+  performance budgets (10,000 pages < 2 s, typing < 16 ms, search over 100k pages < 50 ms, 500+
+  ink strokes); 50 real workflows with a measured success rate in `parity.md`; user guide; tag
+  `v1.0`.
 
 ## 3. Crate graph
 
