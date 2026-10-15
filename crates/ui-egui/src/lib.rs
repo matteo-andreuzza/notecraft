@@ -167,48 +167,73 @@ impl NoteApp {
     /// Run a command; errors become the status message. Results that need the platform (open
     /// a URL, copy text) are handled here.
     pub fn run(&mut self, ctx: &egui::Context, id: &str, params: Value) -> Option<Value> {
-        self.session.clock = self.host.clock();
-        match self.session.run(id, params) {
-            Ok(v) => {
-                if let Some(url) = v.get("open_url").and_then(Value::as_str) {
-                    ctx.open_url(egui::OpenUrl::new_tab(url));
-                }
-                if matches!(
-                    id,
-                    "edit.copy"
-                        | "edit.cut"
-                        | "page.copyLink"
-                        | "section.copyLink"
-                        | "notebook.copyLink"
-                        | "link.copy"
-                        | "para.copyLink"
-                        | "sectionGroup.copyLink"
-                ) && let Some(t) = v.get("text").or_else(|| v.get("link")).and_then(Value::as_str)
-                {
-                    ctx.copy_text(t.to_string());
-                }
-                if v.get("rename").and_then(Value::as_bool) == Some(true) {
-                    if let Some(sid) = v.get("section").and_then(Value::as_str).and_then(notecraft_engine::doc::Id::parse) {
-                        let name = self.session.ws.section(sid).map(|s| s.name.clone()).unwrap_or_default();
-                        self.ui.rename = Some(Rename::Section(sid, name));
-                    } else if let Some(gid) = v.get("group").and_then(Value::as_str).and_then(notecraft_engine::doc::Id::parse) {
-                        let name = self.session.notebook().and_then(|n| n.group(gid)).map(|g| g.name.clone()).unwrap_or_default();
-                        self.ui.rename = Some(Rename::Group(gid, name));
-                    }
-                }
-                self.canvas.caret_moved(ctx);
-                Some(v)
-            }
-            Err(e) => {
-                let msg = match &e {
-                    CmdError::Disabled(m) => m.clone(),
-                    other => other.to_string(),
-                };
+        match self.try_run(ctx, id, params) {
+            Ok(v) => Some(v),
+            Err(msg) => {
                 log::info!("{id}: {msg}");
                 self.ui.status = Some((msg, ctx.input(|i| i.time)));
                 None
             }
         }
+    }
+
+    /// Run a command as [`NoteApp::run`] does (platform results handled), but hand the error
+    /// back instead of showing it: the control channel answers with it.
+    pub fn try_run(&mut self, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
+        self.session.clock = self.host.clock();
+        let v = self.session.run(id, params).map_err(|e| match e {
+            CmdError::Disabled(m) => m,
+            other => other.to_string(),
+        })?;
+        if let Some(url) = v.get("open_url").and_then(Value::as_str) {
+            ctx.open_url(egui::OpenUrl::new_tab(url));
+        }
+        if matches!(
+            id,
+            "edit.copy"
+                | "edit.cut"
+                | "page.copyLink"
+                | "section.copyLink"
+                | "notebook.copyLink"
+                | "link.copy"
+                | "para.copyLink"
+                | "sectionGroup.copyLink"
+        ) && let Some(t) = v.get("text").or_else(|| v.get("link")).and_then(Value::as_str)
+        {
+            ctx.copy_text(t.to_string());
+        }
+        if v.get("rename").and_then(Value::as_bool) == Some(true) {
+            if let Some(sid) = v.get("section").and_then(Value::as_str).and_then(notecraft_engine::doc::Id::parse) {
+                let name = self.session.ws.section(sid).map(|s| s.name.clone()).unwrap_or_default();
+                self.ui.rename = Some(Rename::Section(sid, name));
+            } else if let Some(gid) = v.get("group").and_then(Value::as_str).and_then(notecraft_engine::doc::Id::parse) {
+                let name = self.session.notebook().and_then(|n| n.group(gid)).map(|g| g.name.clone()).unwrap_or_default();
+                self.ui.rename = Some(Rename::Group(gid, name));
+            }
+        }
+        self.canvas.caret_moved(ctx);
+        Ok(v)
+    }
+
+    /// The view state for the control channel (`ui.inspect`): the ribbon tab, backstage page,
+    /// open dialog, theme, panes and the last status message, plus the window size in points.
+    pub fn inspect_ui(&self, ctx: &egui::Context) -> Value {
+        let size = ctx.content_rect().size();
+        json!({
+            "tab": self.ui.tab,
+            "backstage": serde_json::to_value(self.ui.backstage).unwrap_or(Value::Null),
+            "dialog": serde_json::to_value(&self.ui.dialog).unwrap_or(Value::Null),
+            "theme": serde_json::to_value(self.ui.theme).unwrap_or(Value::Null),
+            "rename": serde_json::to_value(&self.ui.rename).unwrap_or(Value::Null),
+            "search": self.ui.search,
+            "searchPane": self.ui.search_pane,
+            "tagsPane": self.session.view.tags_pane,
+            "fullPage": self.session.view.full_page,
+            "status": self.ui.status.as_ref().map(|(m, _)| m.clone()),
+            "canvasFocused": self.canvas.focused,
+            "window": {"width": size.x, "height": size.y},
+            "quitRequested": self.quit_requested,
+        })
     }
 
     /// Per-frame logic outside drawing: clock, autosave, notices.

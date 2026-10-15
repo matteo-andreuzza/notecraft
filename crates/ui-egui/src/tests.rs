@@ -85,3 +85,20 @@ fn ribbon_buttons_dispatch_commands() {
     h.run();
     assert!(h.state().session.view.tags_pane, "Find Tags opens the Tags Summary pane");
 }
+
+#[test]
+fn try_run_hands_errors_back_and_run_shows_them() {
+    let ctx = egui::Context::default();
+    let mut a = app();
+    let v = a.try_run(&ctx, "page.new", json!({"title": "From control"})).unwrap();
+    assert!(v.get("page").is_some());
+    assert_eq!(a.session.page().unwrap().display_title(), "From control");
+    let e = a.try_run(&ctx, "no.such.command", json!({})).unwrap_err();
+    assert!(e.contains("no.such.command"), "{e}");
+    assert!(a.ui.status.is_none(), "try_run leaves the status bar alone");
+    assert!(a.run(&ctx, "no.such.command", json!({})).is_none());
+    assert!(a.ui.status.is_some());
+    let ui = a.inspect_ui(&ctx);
+    assert_eq!(ui["tab"], "Home");
+    assert!(ui["status"].is_string());
+}
