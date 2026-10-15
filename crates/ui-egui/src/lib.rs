@@ -11,6 +11,7 @@
 
 pub mod backstage;
 pub mod canvas;
+pub mod chrome;
 pub mod dialogs;
 pub mod fonts;
 pub mod icons;
@@ -21,7 +22,7 @@ pub mod ribbon;
 pub mod ribbon_layout;
 pub mod theme;
 
-use egui::{Color32, Frame, Margin, RichText, Stroke, Ui, vec2};
+use egui::{Color32, Frame, Margin, RichText, Stroke, Ui};
 use notecraft_engine::{Clock, CmdError, Session};
 use serde_json::{Value, json};
 
@@ -310,7 +311,8 @@ impl NoteApp {
             return;
         }
         if !self.session.view.full_page {
-            self.title_row(ui, t);
+            chrome::title_bar(self, ui, t);
+            chrome::tab_row(self, ui, t);
             ribbon::show(self, ui, t);
         } else {
             self.full_page_bar(ui, t);
@@ -337,64 +339,6 @@ impl NoteApp {
         });
         nav::search_dropdown(self, &ctx, t);
         dialogs::show(self, &ctx, t);
-    }
-
-    /// The title row: Quick Access Toolbar on the left, the window title in the middle
-    /// (catalog `UI.Window.TitleBar`, `UI.Window.QAT`).
-    fn title_row(&mut self, ui: &mut Ui, t: Tokens) {
-        let ctx = ui.ctx().clone();
-        egui::Panel::top("title_row").exact_size(30.0).frame(Frame::NONE.fill(t.window_back).inner_margin(Margin::symmetric(6, 0))).show(ui, |ui| {
-            ui.horizontal_centered(|ui| {
-                ui.spacing_mut().item_spacing = vec2(2.0, 0.0);
-                // UI.Window.QAT — Back, Undo, Redo by default (the reference shows Back and Undo).
-                for (id, catalog, tip) in [
-                    ("nav.back", "QAT.ViewGoBack", "Back (Alt+Left)"),
-                    ("edit.undo", "QAT.UndoButton", "Undo (Ctrl+Z)"),
-                    ("edit.redo", "QAT.RedoButton", "Redo (Ctrl+Y)"),
-                ] {
-                    let enabled = notecraft_engine::commands::find(id).is_some_and(|c| (c.enabled)(&self.session).is_none());
-                    let (rect, resp) = ui.allocate_exact_size(vec2(24.0, 24.0), egui::Sense::click());
-                    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, tip));
-                    if resp.hovered() && enabled {
-                        ui.painter().rect_filled(rect, 2.0, t.hover);
-                    }
-                    let color = if enabled { t.text } else { t.text.gamma_multiply(0.45) };
-                    let icon_rect = rect.shrink(5.0);
-                    match id {
-                        "nav.back" => {
-                            ui.painter().arrow(icon_rect.right_center(), vec2(-icon_rect.width(), 0.0), Stroke::new(1.6, color));
-                        }
-                        "edit.undo" | "edit.redo" => {
-                            let flip = if id == "edit.redo" { -1.0 } else { 1.0 };
-                            let c = icon_rect.center();
-                            let pts: Vec<egui::Pos2> = (0..=10)
-                                .map(|i| {
-                                    let a = std::f32::consts::PI * (1.1 - 1.2 * i as f32 / 10.0);
-                                    c + vec2(flip * a.cos(), -a.sin()) * icon_rect.width() * 0.42
-                                })
-                                .collect();
-                            if let Some(first) = pts.first().copied() {
-                                ui.painter().add(egui::Shape::line(pts, Stroke::new(1.6, color)));
-                                ui.painter().line_segment([first, first + vec2(flip * 4.0, -3.0)], Stroke::new(1.6, color));
-                            }
-                        }
-                        _ => {}
-                    }
-                    let resp = resp.on_hover_text(format!("{tip}\n{catalog}"));
-                    if resp.clicked() && enabled {
-                        self.run(&ctx, id, json!({}));
-                    }
-                }
-                let title = match (self.session.page(), self.session.notebook()) {
-                    (Some(p), Some(nb)) => format!("{} - {} - NoteCraft", p.display_title(), nb.name),
-                    (None, Some(nb)) => format!("{} - NoteCraft", nb.name),
-                    _ => "NoteCraft".to_string(),
-                };
-                ui.with_layout(egui::Layout::centered_and_justified(egui::Direction::LeftToRight), |ui| {
-                    ui.label(RichText::new(title).color(t.text).size(12.5));
-                });
-            });
-        });
     }
 
     fn full_page_bar(&mut self, ui: &mut Ui, t: Tokens) {

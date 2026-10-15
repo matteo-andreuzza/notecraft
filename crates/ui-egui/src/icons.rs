@@ -722,3 +722,92 @@ pub fn bullet(pa: &Painter, center: Pos2, size: f32, b: notecraft_engine::doc::B
         }
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Interface glyphs of the 2024 look (decision D1, `docs/ui-parity.md` §3 row 24): line drawings on
+// a 20 × 20 grid with a 1.25 stroke (scaled with the rect), in the WordCraft style. Coordinates
+// below are in grid units.
+// ---------------------------------------------------------------------------------------------
+
+/// The stroke for a glyph drawn in `r` (1.25 grid units).
+fn glyph_stroke(r: Rect, color: Color32) -> Stroke {
+    Stroke::new((1.25 * r.width() / 20.0).max(1.0), color)
+}
+
+/// A point of the 20 × 20 grid inside `r`.
+fn g(r: Rect, x: f32, y: f32) -> Pos2 {
+    pos2(r.min.x + x * r.width() / 20.0, r.min.y + y * r.height() / 20.0)
+}
+
+/// A polyline on the grid.
+fn gline(pa: &Painter, r: Rect, pts: &[(f32, f32)], s: Stroke) {
+    pa.add(Shape::line(pts.iter().map(|&(x, y)| g(r, x, y)).collect(), s));
+}
+
+/// A stroked chevron (drop-downs, tree expanders, the ribbon mode switch).
+pub fn chevron(pa: &Painter, r: Rect, dir: Dir, color: Color32) {
+    let s = glyph_stroke(r, color);
+    let pts: &[(f32, f32)] = match dir {
+        Dir::Down => &[(5.0, 7.5), (10.0, 12.5), (15.0, 7.5)],
+        Dir::Up => &[(5.0, 12.5), (10.0, 7.5), (15.0, 12.5)],
+        Dir::Right => &[(7.5, 5.0), (12.5, 10.0), (7.5, 15.0)],
+        Dir::Left => &[(12.5, 5.0), (7.5, 10.0), (12.5, 15.0)],
+    };
+    gline(pa, r, pts, s);
+}
+
+/// Back: an arrow in a circle (Quick Access Toolbar).
+pub fn back(pa: &Painter, r: Rect, color: Color32) {
+    let s = glyph_stroke(r, color);
+    pa.circle_stroke(g(r, 10.0, 10.0), 7.5 * r.width() / 20.0, s);
+    gline(pa, r, &[(14.0, 10.0), (6.5, 10.0)], s);
+    gline(pa, r, &[(9.5, 7.0), (6.5, 10.0), (9.5, 13.0)], s);
+}
+
+/// Undo (or, mirrored, Redo): a hooked arrow.
+pub fn undo(pa: &Painter, r: Rect, redo: bool, color: Color32) {
+    let s = glyph_stroke(r, color);
+    let fx = |x: f32| if redo { 20.0 - x } else { x };
+    let arc: Vec<Pos2> = (0..=12)
+        .map(|i| {
+            let a = std::f32::consts::PI * (1.0 - i as f32 / 12.0);
+            g(r, fx(10.5 - 5.5 * a.cos()), 12.0 - 5.0 * a.sin())
+        })
+        .collect();
+    let mut pts = vec![g(r, fx(5.0), 15.5)];
+    pts.extend(arc);
+    pa.add(Shape::line(pts, s));
+    gline(pa, r, &[(fx(4.0), 8.5), (fx(5.0), 12.0), (fx(8.5), 11.0)], s);
+}
+
+/// A magnifying glass (Search).
+pub fn search(pa: &Painter, r: Rect, color: Color32) {
+    let s = glyph_stroke(r, color);
+    pa.circle_stroke(g(r, 8.5, 8.5), 5.0 * r.width() / 20.0, s);
+    gline(pa, r, &[(12.2, 12.2), (16.5, 16.5)], s);
+}
+
+/// ☰: three bars (show/hide the navigation).
+pub fn hamburger(pa: &Painter, r: Rect, color: Color32) {
+    let s = glyph_stroke(r, color);
+    for y in [5.5, 10.0, 14.5] {
+        gline(pa, r, &[(3.5, y), (16.5, y)], s);
+    }
+}
+
+/// Share: a box with an arrow leaving it.
+pub fn share(pa: &Painter, r: Rect, color: Color32) {
+    let s = glyph_stroke(r, color);
+    gline(pa, r, &[(9.0, 4.5), (4.5, 4.5), (4.5, 15.5), (15.5, 15.5), (15.5, 11.0)], s);
+    gline(pa, r, &[(9.0, 11.0), (15.5, 4.5)], s);
+    gline(pa, r, &[(11.0, 4.5), (15.5, 4.5), (15.5, 9.0)], s);
+}
+
+/// NoteCraft's own app mark (no product logo): an accent tile with a folded page and two lines.
+pub fn app_mark(pa: &Painter, r: Rect, accent: Color32, on_accent: Color32) {
+    pa.rect_filled(r, egui::CornerRadius::same((r.width() * 0.22) as u8), accent);
+    let s = glyph_stroke(r, on_accent);
+    gline(pa, r, &[(6.0, 4.5), (11.5, 4.5), (14.5, 7.5), (14.5, 15.5), (6.0, 15.5), (6.0, 4.5)], s);
+    gline(pa, r, &[(8.0, 10.0), (12.5, 10.0)], s);
+    gline(pa, r, &[(8.0, 12.8), (12.5, 12.8)], s);
+}

@@ -142,9 +142,13 @@ fn window_parts_are_present_and_work() {
     let mut h = harness(app());
     h.run();
     let has = |h: &Harness<'static, NoteApp>, label: &str| h.query_by_label(label).is_some();
-    assert!(h.query_by_label_contains(" - Sample Notebook - NoteCraft").is_some(), "UI.Window.TitleBar");
-    for l in ["Back (Alt+Left)", "Undo (Ctrl+Z)", "Redo (Ctrl+Y)"] {
+    assert!(h.query_by_label_contains(" - Sample Notebook").is_some(), "UI.Window.TitleBar");
+    for l in ["Back (Alt+Left)", "Undo (Ctrl+Z)", "Customize Quick Access Toolbar"] {
         present(&h, "UI.Window.QAT", l);
+    }
+    // The 2024 title bar: Search in the middle, the author's initials, Share (disabled).
+    for (row, l) in [("UI.Window.SearchBox", "Search"), ("UI.Window.Account", "Account: Tester"), ("UI.Window.Share", "Share")] {
+        present(&h, row, l);
     }
     // Custom-drawn controls are labelled for screen readers too.
     for l in ["Bold", "Collapse the Ribbon (Ctrl+F1)", "Create a New Section", "Add Page", "Change search scope"] {
@@ -300,4 +304,30 @@ fn the_office_theme_is_picked_in_the_account_page_and_follows_the_system() {
     assert!(!h.ctx.global_style().visuals.dark_mode);
     h.state_mut().system_dark = Some(true);
     assert_eq!(h.state().resolved_theme(), crate::ThemeKind::DarkGray, "System follows a dark desktop");
+}
+
+#[test]
+fn the_title_search_runs_commands_and_hands_text_to_search_notebooks() {
+    // UI.Window.SearchBox / UI.Window.TellMe: Alt+Q focuses the Search; typing lists matching
+    // commands and Enter runs the first one; the last row searches the notebooks instead.
+    let mut h = harness(app());
+    h.run();
+    let sections = h.state().session.notebook().unwrap().sections().len();
+    h.event(egui::Event::Key { key: egui::Key::Q, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::ALT });
+    h.run();
+    h.event(egui::Event::Text("new section".into()));
+    h.run();
+    assert!(h.query_by_label_contains("Search notebooks for").is_some(), "UI.Window.SearchBox lists a notes row");
+    h.key_press(egui::Key::Enter);
+    h.run();
+    h.run();
+    assert_eq!(h.state().session.notebook().unwrap().sections().len(), sections + 1, "UI.Window.TellMe");
+    h.event(egui::Event::Key { key: egui::Key::Q, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::ALT });
+    h.run();
+    h.event(egui::Event::Text("basil".into()));
+    h.run();
+    h.get_by_label_contains("Search notebooks for").click();
+    h.run();
+    assert_eq!(h.state().ui.search, "basil", "UI.Window.SearchBox hands the text to Search notebooks");
+    assert!(h.state().ui.search_open);
 }

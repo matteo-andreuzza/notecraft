@@ -40,8 +40,8 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 |---|---|---|---|---|---|---|---|---|---|
 | UI.Window.TitleBar | Title bar with the page and notebook name | Window/Title Bar | surface |  |  | P0 | wired | GK |  |
 | UI.Window.QAT | Quick Access Toolbar in the title bar (customizable, Back/Undo by default) | Window/Quick Access Toolbar | surface |  |  | P0 | wired | FLUENT19:Quick Access Toolbar | Back, Undo, Redo; customizing the toolbar is not implemented yet. |
-| UI.Window.TellMe | Tell Me / Search box for commands in the title bar | Window/Tell Me | surface |  |  | P2 | missing | GK (Office 2016+) | In the 2024 UI this is the title-bar Search box (UI.Window.SearchBox). |
-| UI.Window.SearchBox | Search box centred in the title bar: finds commands (Tell Me) and notes | Window/Title Bar/Search | surface |  |  | P1 | missing | M365-2024 |  |
+| UI.Window.TellMe | Tell Me / Search box for commands in the title bar | Window/Tell Me | surface |  |  | P2 | wired | GK (Office 2016+) | In the 2024 UI this is the title-bar Search box (UI.Window.SearchBox). |
+| UI.Window.SearchBox | Search box centred in the title bar: finds commands (Tell Me) and notes | Window/Title Bar/Search | surface |  |  | P1 | wired | M365-2024 | Alt+Q focuses it; it lists matching commands (Enter runs the first) and hands the text to Search notebooks for notes. |
 | UI.Window.Share | Share button at the right of the tab row (share the notebook through OneDrive) | Window/Title Bar/Share | button |  |  | P3 | out-of-scope | M365-2024 | Needs a Microsoft cloud service; drawn disabled. |
 | UI.Window.Copilot | Copilot button (ribbon and title bar) | Window/Title Bar/Copilot | button |  |  | P3 | out-of-scope | M365-2024 | Needs a Microsoft cloud service; drawn disabled. |
 | UI.Window.Account | Account button with the user's picture or initials (Microsoft account sign-in) | Window/Title Bar/Account | button |  |  | P3 | out-of-scope | M365-2024 | Sign-in needs a Microsoft account; NoteCraft shows the author's initials, disabled. |

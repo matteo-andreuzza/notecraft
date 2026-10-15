@@ -247,6 +247,12 @@ fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) ->
             run(app, ctx, if key == Key::ArrowUp { "nav.prevPage" } else { "nav.nextPage" }, json!({}));
             true
         }
+        Key::Q if m.alt && !m.command && !m.ctrl && !m.shift => {
+            // Alt+Q: the title-bar Search (UI.Window.SearchBox), as in the reference.
+            ctx.memory_mut(|mem| mem.request_focus(egui::Id::new(crate::chrome::SEARCH_ID)));
+            app.canvas.focused = false;
+            true
+        }
         Key::E if (m.command || m.ctrl) && !m.alt && !m.shift => {
             // Ctrl+E: the search box.
             ctx.memory_mut(|mem| mem.request_focus(egui::Id::new("search_box")));

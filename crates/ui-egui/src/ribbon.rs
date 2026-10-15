@@ -8,13 +8,13 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use egui::{Align, Color32, Frame, Layout, Margin, Popup, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
+use egui::{Color32, Frame, Margin, Popup, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
 use notecraft_engine::catalog::{self, Row};
 use notecraft_engine::doc::color::{FONT_THEME, HIGHLIGHT_COLORS, PAGE_COLORS, STANDARD_COLORS, font_grid};
 use notecraft_engine::doc::{ParaStyle, RuleLines};
 use serde_json::{Value, json};
 
-use crate::ribbon_layout::{CONTEXTUAL, Group, Item, TABS};
+use crate::ribbon_layout::{Group, Item};
 use crate::theme::c32;
 use crate::{NoteApp, Tokens, icons};
 
@@ -87,59 +87,12 @@ fn checked(app: &NoteApp, cmd: &str) -> bool {
     }
 }
 
-/// The tab strip and the ribbon body (catalog `UI.Ribbon.Tabs`, `UI.Ribbon.Collapse`).
+/// The ribbon body under the tab row (`crate::chrome::tab_row`): the selected tab's groups.
 pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
-    let ctx = ui.ctx().clone();
-    let contextual: Vec<&'static crate::ribbon_layout::Tab> = Vec::new(); // tables/equations/media arrive in M2
-    egui::Panel::top("ribbon_tabs")
-        .exact_size(28.0)
-        .frame(Frame::NONE.fill(t.window_back).inner_margin(Margin { left: 4, right: 8, top: 0, bottom: 0 }))
-        .show(ui, |ui| {
-            ui.horizontal_centered(|ui| {
-                ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-                // File opens the backstage.
-                if tab_button(ui, "File", false, t, true).clicked() {
-                    app.ui.backstage = Some(crate::Backstage::Info);
-                }
-                for tab in TABS.iter().chain(contextual.iter().copied()) {
-                    let sel = app.ui.tab == tab.name && !app.session.view.ribbon_collapsed;
-                    let r = tab_button(ui, tab.name, sel, t, false);
-                    if r.clicked() {
-                        if app.session.view.ribbon_collapsed {
-                            app.session.view.ribbon_collapsed = false;
-                        }
-                        app.ui.tab = tab.name.to_string();
-                    }
-                    if r.double_clicked() {
-                        app.run(&ctx, "ui.collapseRibbon", json!({}));
-                    }
-                }
-                ui.add_space(16.0);
-                // UI.Window.TellMe — search for a command by name.
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    let (r, resp) = ui.allocate_exact_size(vec2(22.0, 22.0), Sense::click());
-                    let collapse_label =
-                        if app.session.view.ribbon_collapsed { "Expand the Ribbon (Ctrl+F1)" } else { "Collapse the Ribbon (Ctrl+F1)" };
-                    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, collapse_label));
-                    icons::triangle(
-                        ui.painter(),
-                        r.center(),
-                        9.0,
-                        if app.session.view.ribbon_collapsed { icons::Dir::Down } else { icons::Dir::Up },
-                        t.text,
-                    );
-                    if resp.on_hover_text(collapse_label).clicked() {
-                        app.run(&ctx, "ui.collapseRibbon", json!({}));
-                    }
-                    tell_me(app, ui, t);
-                });
-            });
-        });
     if app.session.view.ribbon_collapsed {
         return;
     }
-    let tab = TABS.iter().chain(CONTEXTUAL).find(|x| x.name == app.ui.tab).copied().or_else(|| TABS.first().copied());
-    let Some(tab) = tab else { return };
+    let Some(tab) = crate::chrome::current_tab(app) else { return };
     egui::Panel::top("ribbon_body")
         .exact_size(BODY_H)
         .frame(Frame::NONE.fill(t.ribbon_card).inner_margin(Margin::symmetric(4, 3)).stroke(Stroke::new(1.0, t.border)))
@@ -156,63 +109,6 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 },
             );
         });
-}
-
-fn tab_button(ui: &mut Ui, name: &str, selected: bool, t: Tokens, file: bool) -> egui::Response {
-    let font = egui::FontId::proportional(13.0);
-    let w = ui.fonts_mut(|f| f.layout_no_wrap(name.to_string(), font.clone(), Color32::WHITE).size().x) + 22.0;
-    let (rect, resp) = ui.allocate_exact_size(vec2(w, 28.0), Sense::click());
-    resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, name));
-    let p = ui.painter();
-    if selected {
-        p.rect_filled(
-            Rect::from_min_max(pos2(rect.min.x, rect.min.y + 3.0), rect.max),
-            egui::CornerRadius { nw: 3, ne: 3, sw: 0, se: 0 },
-            t.ribbon_card,
-        );
-    } else if resp.hovered() || file && resp.hovered() {
-        p.rect_filled(rect.shrink2(vec2(0.0, 3.0)), 2.0, t.hover);
-    }
-    let color = if selected { t.accent } else { t.text };
-    p.text(rect.center() + vec2(0.0, 1.0), egui::Align2::CENTER_CENTER, name, font, color);
-    resp
-}
-
-/// The "Tell me what you want to do" box: type a command name, pick it to run it
-/// (catalog `UI.Window.TellMe`).
-fn tell_me(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
-    let id = egui::Id::new("tell_me");
-    let mut text: String = ui.data_mut(|d| d.get_temp::<String>(id).unwrap_or_default());
-    let resp = ui.add(
-        egui::TextEdit::singleline(&mut text)
-            .hint_text(RichText::new("Tell me what you want to do").color(t.text.gamma_multiply(0.75)))
-            .desired_width(220.0)
-            .background_color(t.hover)
-            .text_color(t.text)
-            .frame(egui::Frame::NONE.fill(t.hover).inner_margin(egui::Margin::symmetric(6, 3))),
-    );
-    ui.data_mut(|d| d.insert_temp(id, text.clone()));
-    if text.trim().len() >= 2 && resp.has_focus() {
-        let q = text.to_lowercase();
-        let hits: Vec<&notecraft_engine::CommandSpec> = notecraft_engine::commands::all()
-            .iter()
-            .filter(|c| c.label.to_lowercase().contains(&q) && !c.menu.starts_with("Behaviour"))
-            .take(8)
-            .collect();
-        let ctx = ui.ctx().clone();
-        egui::Area::new(id.with("results")).fixed_pos(resp.rect.left_bottom() + vec2(0.0, 2.0)).order(egui::Order::Foreground).show(&ctx, |ui| {
-            Frame::popup(ui.style()).show(ui, |ui| {
-                ui.set_width(260.0);
-                for c in hits {
-                    let enabled = (c.enabled)(&app.session).is_none();
-                    if ui.add_enabled(enabled, egui::Button::new(c.label).frame(false)).clicked() {
-                        app.run(&ctx, c.id, json!({}));
-                        ui.data_mut(|d| d.insert_temp(id, String::new()));
-                    }
-                }
-            });
-        });
-    }
 }
 
 fn group(app: &mut NoteApp, ui: &mut Ui, g: &Group, t: Tokens) {
