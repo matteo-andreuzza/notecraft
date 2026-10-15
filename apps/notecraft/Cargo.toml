@@ -1,0 +1,33 @@
+[package]
+name = "notecraft"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+default-run = "notecraft"
+description = "NoteCraft desktop app: the egui shell in a native window (eframe/wgpu), with the loopback control channel"
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "notecraft"
+path = "src/main.rs"
+
+[dependencies]
+notecraft-engine = { workspace = true }
+notecraft-ui-egui = { workspace = true }
+notecraft-automation = { workspace = true }
+eframe = { workspace = true, features = ["default_fonts", "wgpu", "accesskit", "wayland", "x11", "links"] }
+egui = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+chrono = { workspace = true }
+craft-atomic = { workspace = true }
+rfd = { workspace = true }
+# Screenshots for the control channel (`ui.screenshot`). Already in the build through eframe's
+# icon loading, at this version.
+png = "0.18"

@@ -55,7 +55,7 @@
 cargo run --release -p notecraft                               # desktop app
 cargo run --release -p notecraft -- --sample                   # open the sample notebook
 cargo run --release -p notecraft -- ~/Notebooks/Work           # open a notebook folder
-cargo run --release -p notecraft -- --sample --control 7985    # + JSON control channel
+cargo run --release -p notecraft -- --sample --control 7990    # + JSON control channel
 cargo xtask ci                                                 # fmt, clippy, tests, assets, layers, wasm, parity, deny
 ```
 

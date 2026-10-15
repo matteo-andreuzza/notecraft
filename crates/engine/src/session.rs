@@ -394,6 +394,13 @@ impl Session {
         !self.redo.is_empty()
     }
 
+    /// Forget the undo and redo history (a host's start-up work, like creating the first
+    /// notebook, is not an edit to undo).
+    pub fn clear_history(&mut self) {
+        self.undo.clear();
+        self.redo.clear();
+    }
+
     /// Add a notebook to the workspace (in memory) and select its first page.
     pub fn add_notebook(&mut self, nb: Notebook) {
         let first_section = nb.sections().first().map(|s| (s.id, s.pages.first().map(|p| p.id)));
