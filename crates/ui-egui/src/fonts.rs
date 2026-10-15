@@ -70,6 +70,7 @@ const SYMBOLS: &[&[&str]] = &[
 ];
 
 /// Largest font file accepted (hostile or broken files are skipped).
+#[cfg(not(target_arch = "wasm32"))]
 const MAX_FONT_BYTES: u64 = 64 << 20;
 
 #[cfg(not(target_arch = "wasm32"))]

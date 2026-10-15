@@ -181,10 +181,20 @@ impl NoteApp {
     /// back instead of showing it: the control channel answers with it.
     pub fn try_run(&mut self, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
         self.session.clock = self.host.clock();
+        let sel_before = self.session.sel.clone();
         let v = self.session.run(id, params).map_err(|e| match e {
             CmdError::Disabled(m) => m,
             other => other.to_string(),
         })?;
+        // A command that puts the caret on the page (New Page, Ctrl+Shift+T, Undo…) gives the
+        // page the keyboard, as OneNote does: typing goes on there. A command that leaves the
+        // selection alone (a ribbon button) or moves focus to a pane (a page tab) doesn't.
+        if self.session.sel != sel_before
+            && self.session.sel.focus == notecraft_engine::selection::FocusArea::Canvas
+            && self.session.text_range().is_some()
+        {
+            self.canvas.focused = true;
+        }
         if let Some(url) = v.get("open_url").and_then(Value::as_str) {
             ctx.open_url(egui::OpenUrl::new_tab(url));
         }

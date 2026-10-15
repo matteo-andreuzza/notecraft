@@ -102,3 +102,28 @@ fn try_run_hands_errors_back_and_run_shows_them() {
     assert_eq!(ui["tab"], "Home");
     assert!(ui["status"].is_string());
 }
+
+#[test]
+fn a_new_page_takes_the_keyboard() {
+    // parity: KB.Pages.NewPage — after Ctrl+N the caret is in the new page's title and typing
+    // goes there, without a click.
+    let ctx = egui::Context::default();
+    let mut a = app();
+    a.canvas.focused = false;
+    a.try_run(&ctx, "page.new", json!({})).unwrap();
+    assert!(a.canvas.focused);
+    // A page tab moves focus to the page list; a ribbon button leaves focus where it was.
+    let other = a.session.section().unwrap().pages[0].id.to_string();
+    a.canvas.focused = false;
+    a.try_run(&ctx, "nav.goto", json!({"page": other})).unwrap();
+    assert!(!a.canvas.focused);
+    a.try_run(&ctx, "format.bold", json!({})).ok();
+    assert!(!a.canvas.focused);
+    let mut h = harness(a);
+    h.run();
+    h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::N);
+    h.run();
+    h.event(egui::Event::Text("Typed title".into()));
+    h.run();
+    assert_eq!(h.state().session.page().unwrap().display_title(), "Typed title");
+}
