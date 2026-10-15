@@ -60,7 +60,8 @@ pub struct ParaLayout {
 }
 
 impl ParaLayout {
-    fn rect(&self) -> Rect {
+    /// The paragraph's screen rectangle (galley bounds at its laid-out position).
+    pub(crate) fn rect(&self) -> Rect {
         Rect::from_min_size(self.pos, self.galley.size().max(vec2(4.0, self.galley.size().y)))
     }
 
@@ -230,6 +231,13 @@ impl CanvasState {
     /// The layout of a paragraph.
     pub fn para(&self, block: Block, para: usize) -> Option<&ParaLayout> {
         self.paras.iter().find(|p| p.block == block && p.para == para)
+    }
+
+    /// Whether a drag (selection, move, resize, paragraph or column) is in progress: UI that
+    /// floats near the selection (the mini toolbar) stays hidden while one is, so it doesn't
+    /// flicker under the pointer.
+    pub(crate) fn is_dragging(&self) -> bool {
+        self.drag.is_some()
     }
 }
 

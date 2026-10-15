@@ -632,7 +632,7 @@ pub(crate) fn menu_item(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) {
     }
 }
 
-fn small(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], with_label: bool, t: Tokens) {
+pub(crate) fn small(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], with_label: bool, t: Tokens) {
     let lab = label(id);
     let font = egui::FontId::proportional(11.5);
     let tw = if with_label { ui.fonts_mut(|f| f.layout_no_wrap(lab.clone(), font.clone(), Color32::WHITE).size().x) + 6.0 } else { 0.0 };

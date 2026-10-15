@@ -132,6 +132,21 @@ fn main() {
         a.ui.tab = "Table Layout".into();
     });
     shot_then(
+        "mini-toolbar",
+        &out,
+        1.0,
+        egui::vec2(1366.0, 820.0),
+        |a| {
+            let pid = a.session.notebook().unwrap().sections()[1].pages[0].id;
+            a.session.run("nav.goto", json!({"page": pid.to_string()})).unwrap();
+            let oid = a.session.page().unwrap().objects[0].id();
+            a.session.run("caret.set", json!({"block": oid.to_string(), "para": 0, "offset": 0})).unwrap();
+            a.session.run("caret.set", json!({"block": oid.to_string(), "para": 0, "offset": 20, "extend": true})).unwrap();
+            a.canvas.focused = true;
+        },
+        |_| {},
+    );
+    shot_then(
         "paragraph-handle",
         &out,
         1.0,

@@ -17,6 +17,7 @@ pub mod fonts;
 pub mod icons;
 pub mod icons_set;
 pub mod keymap;
+pub mod mini_toolbar;
 pub mod nav;
 pub mod panes;
 pub mod ribbon;
@@ -355,6 +356,7 @@ impl NoteApp {
                 nav::empty_state(self, ui, t);
             }
             canvas::show(self, ui, t);
+            mini_toolbar::show(self, ui, area, t);
             if self.session.view.find.active {
                 panes::find_bar(self, ui, area, t);
             }

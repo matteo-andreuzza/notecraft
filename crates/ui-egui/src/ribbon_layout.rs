@@ -53,7 +53,7 @@ pub struct Tab {
     pub groups: &'static [Group],
 }
 
-const STYLE_ITEMS: &[&str] = &[
+pub(crate) const STYLE_ITEMS: &[&str] = &[
     "R.Home.Styles.Heading1",
     "R.Home.Styles.Heading2",
     "R.Home.Styles.Heading3",
@@ -67,7 +67,7 @@ const STYLE_ITEMS: &[&str] = &[
     "R.Home.Styles.Normal",
 ];
 
-const TAG_ITEMS: &[&str] = &[
+pub(crate) const TAG_ITEMS: &[&str] = &[
     "R.Home.Tags.ToDo",
     "R.Home.Tags.Important",
     "R.Home.Tags.Question",

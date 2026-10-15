@@ -271,3 +271,28 @@ fn the_insert_table_grid_inserts_below_the_caret_container() {
     assert_eq!(t.pos.x, ol.pos.x);
     assert!(t.pos.y > ol.pos.y + 10.0, "below the container: {} vs {}", t.pos.y, ol.pos.y);
 }
+
+#[test]
+fn the_mini_toolbar_shows_on_a_text_selection_and_formats_it() {
+    // parity: UI.Canvas.MiniToolbar
+    let (mut a, o) = page_with("Hello world");
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 0})).unwrap();
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 5, "extend": true})).unwrap();
+    // The Home tab would show the same controls; switch away so the labels are unambiguous.
+    a.ui.tab = "View".into();
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Bold").is_some(), "the mini toolbar shows on a text selection");
+    h.get_by_label("Bold").click();
+    h.run();
+    let p = &h.state().session.page().unwrap().objects[0].as_outline().unwrap().paragraphs[0];
+    assert!(p.runs.iter().any(|r| r.text == "Hello" && r.fmt.bold == Some(true)), "Bold in the mini toolbar applies to the selection");
+    // A caret alone (no selection) hides it.
+    h.state_mut().session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 0})).unwrap();
+    h.run();
+    assert!(h.query_by_label("Bold").is_none(), "no mini toolbar on a plain caret");
+    // So does a selection in the page title.
+    h.state_mut().session.run("nav.pageTitle", json!({})).unwrap();
+    h.run();
+    assert!(h.query_by_label("Bold").is_none(), "UI.Canvas.MiniToolbar: not in the title");
+}
