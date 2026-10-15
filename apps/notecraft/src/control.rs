@@ -110,7 +110,7 @@ impl Control {
 }
 
 /// Answer one request (everything but `ui.screenshot`). `input` collects the events that
-/// `ui.key`, `ui.text` and `ui.click` queue for the next frame.
+/// `ui.key`, `ui.text`, `ui.click` and `ui.pointer` queue for the next frame.
 pub fn handle(app: &mut NoteApp, ctx: &egui::Context, input: &mut Vec<egui::Event>, method: &str, p: &Value) -> Result<Value, String> {
     if let Some(r) = headless::engine_query(&app.session, method, p) {
         return r;
@@ -163,6 +163,25 @@ pub fn handle(app: &mut NoteApp, ctx: &egui::Context, input: &mut Vec<egui::Even
             for _ in 0..count {
                 input.push(egui::Event::PointerButton { pos, button, pressed: true, modifiers: m });
                 input.push(egui::Event::PointerButton { pos, button, pressed: false, modifiers: m });
+            }
+            Ok(json!({"queued": true}))
+        }
+        // A pointer step for drags spread over frames: move there, and press or release the
+        // primary button when `button` is "down" or "up".
+        "ui.pointer" => {
+            let (Some(x), Some(y)) = (f("x"), f("y")) else { return Err("missing `x`/`y`".into()) };
+            room(input, 2)?;
+            let pos = egui::pos2(x, y);
+            input.push(egui::Event::PointerMoved(pos));
+            match s("button") {
+                Some("down") => {
+                    input.push(egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed: true, modifiers: mods(p) })
+                }
+                Some("up") => {
+                    input.push(egui::Event::PointerButton { pos, button: egui::PointerButton::Primary, pressed: false, modifiers: mods(p) })
+                }
+                None => {}
+                Some(other) => return Err(format!("`button` is \"down\" or \"up\", not `{other}`")),
             }
             Ok(json!({"queued": true}))
         }
@@ -288,6 +307,9 @@ mod tests {
         assert!(handle(&mut a, &ctx, &mut input, "ui.key", &json!({"key": "NotAKey"})).unwrap_err().contains("unknown key"));
         assert!(handle(&mut a, &ctx, &mut input, "ui.click", &json!({"x": "a"})).is_err());
         assert!(handle(&mut a, &ctx, &mut input, "ui.click", &json!({"x": f64::MAX, "y": 1})).is_ok());
+        assert!(handle(&mut a, &ctx, &mut input, "ui.pointer", &json!({"x": 5, "y": 5, "button": "down"})).is_ok());
+        assert!(handle(&mut a, &ctx, &mut input, "ui.pointer", &json!({"x": 9, "y": 5})).is_ok());
+        assert!(handle(&mut a, &ctx, &mut input, "ui.pointer", &json!({"x": 9, "y": 5, "button": "sideways"})).is_err());
         input.resize(MAX_QUEUED_EVENTS, egui::Event::Copy);
         assert!(handle(&mut a, &ctx, &mut input, "ui.text", &json!({"text": "more"})).unwrap_err().contains("too much input"));
     }

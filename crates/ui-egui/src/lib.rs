@@ -24,7 +24,7 @@ pub mod ribbon_layout;
 pub mod ribbon_simplified;
 pub mod theme;
 
-use egui::{Frame, Margin, RichText, Ui};
+use egui::{Frame, Margin, Rect, RichText, Ui};
 use notecraft_engine::{Clock, CmdError, Session};
 use serde_json::{Value, json};
 
@@ -259,7 +259,9 @@ impl NoteApp {
 
     /// The view state for the control channel (`ui.inspect`): the ribbon tab and layout, backstage
     /// page, open dialog, theme, panes, whether the navigation shows and the last status message,
-    /// plus the window size in points.
+    /// the window size in points, the contextual tabs shown, and where the last frame put the
+    /// tables (cells, column borders) and the paragraph handles, in screen points, so a driver
+    /// can click and drag them.
     pub fn inspect_ui(&self, ctx: &egui::Context) -> Value {
         let size = ctx.content_rect().size();
         json!({
@@ -280,6 +282,20 @@ impl NoteApp {
             "canvasFocused": self.canvas.focused,
             "window": {"width": size.x, "height": size.y},
             "quitRequested": self.quit_requested,
+            "contextualTabs": chrome::contextual_tabs(self).iter().map(|t| t.name).collect::<Vec<_>>(),
+            "tables": self.canvas.tables.iter().take(50).map(|tl| json!({
+                "id": tl.id,
+                "rect": rect_json(tl.rect),
+                "colEdges": tl.col_edges,
+                "cells": tl.cells.iter().take(500).map(|c| json!({"id": c.id, "row": c.row, "col": c.col, "rect": rect_json(c.rect)})).collect::<Vec<_>>(),
+            })).collect::<Vec<_>>(),
+            "handles": self.canvas.paras.iter().filter(|p| matches!(p.block, notecraft_engine::selection::Block::Outline(_))).take(500).map(|p| json!({
+                "block": match p.block { notecraft_engine::selection::Block::Outline(id) => id.to_string(), _ => String::new() },
+                "para": p.para,
+                "x": p.handle.center().x,
+                "y": p.handle.center().y,
+                "text": rect_json(Rect::from_min_size(p.pos, p.galley.size())),
+            })).collect::<Vec<_>>(),
         })
     }
 
@@ -398,6 +414,10 @@ impl NoteApp {
             Some(c) => (c.enabled)(&self.session).map(str::to_string),
         }
     }
+}
+
+fn rect_json(r: Rect) -> Value {
+    json!({"x": r.min.x, "y": r.min.y, "w": r.width(), "h": r.height()})
 }
 
 #[cfg(test)]
