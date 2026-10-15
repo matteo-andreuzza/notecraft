@@ -1,6 +1,6 @@
 # NoteCraft parity with Microsoft OneNote
 
-> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** major (M1: shell and core editing) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows, in its 2024 look (decision D1 in [`plan.md`](plan.md); the look is specified in [`ui-parity.md`](ui-parity.md)); the command inventory descends from OneNote 2016/2019, gaps filled from OneNote for Windows 10, recorded per row
+> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** major (M1.5: the 2024 look) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows, in its 2024 look (decision D1 in [`plan.md`](plan.md); the look is specified in [`ui-parity.md`](ui-parity.md)); the command inventory descends from OneNote 2016/2019, gaps filled from OneNote for Windows 10, recorded per row
 
 This is the assessment page (the siblings call it `target-app-parity.md`). Every number here is
 computed by `cargo xtask parity` from [`parity-catalog.md`](parity-catalog.md) — the inventory of
@@ -32,6 +32,13 @@ plain-text-only clipboard exchange with other applications, no printing, sync or
 and an unpolished web build that keeps nothing between visits. Estimate: a user who starts new
 notebooks and writes mostly text could switch for that; anyone with existing notebooks or rich
 pages could not.
+
+Since M1.5 the window has the look of the current Microsoft 365 app (decision D1 in
+[`plan.md`](plan.md), surface by surface in [`ui-parity.md`](ui-parity.md)): a neutral title bar
+with Search, the one-row simplified ribbon by default (classic on demand), every notebook in a
+tree on the left with Quick notes, the page column beside it and no section tabs, panes as cards,
+five themes. Someone used to today's OneNote now finds things where they expect them; the
+2016-only surfaces (section tabs, their area menu, the page-tabs-left option) are out of scope.
 
 ## Unverified assumptions
 
@@ -93,3 +100,6 @@ notebook each time.
 |---|---|---|
 | 2026-10-15 | major | M1: shell and core editing; wiring 28.1%, behaviour 8.4%; unverified list and switch estimate |
 | 2026-10-14 | major | First version |
+| UI.Nav.QuickNotes | Quick notes, pinned at the bottom of the navigation pane | Opens (or creates) the Quick Notes section of the first open notebook; the reference lets Options choose the location (unverified). |
+| UI.Nav.SortPages | Sort pages button beside Add page | Title A→Z, dates newest first; subpages stay under their page (unverified). |
+| R.View.Views.NavigationPanes | Navigation Panes (show/hide) | Hides the notebook tree and the page column together, as ☰ does (unverified). |

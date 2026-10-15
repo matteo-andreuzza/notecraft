@@ -61,3 +61,35 @@ this log plus a green tree is how the next agent picks up.
   rich clipboard; canvas details (paragraph handle, auto-width containers, mini toolbar,
   text context menus); Move/Copy, Link and Options dialogs; web persistence; async file dialogs;
   section-tab overflow; Tell Me and ScreenTips tests.
+
+## 2026-10-15 — M1.5: the 2024 look (tag `m1.5-modern-ui`)
+
+- Decision D1 (user directive): the visual model is the current OneNote for Microsoft 365 (2024
+  UI), not OneNote 2016; it overrides the brief's layout (recorded in `docs/plan.md` §6, the brief
+  untouched). New `docs/ui-parity.md` (structure, tokens, type, 24 surfaces with status); catalog
+  source `M365-2024`, 12 new rows, 2016-only surfaces out of scope naming their replacement.
+- A1 theme tokens after WordCraft (window background, ribbon card, page column, selection, text
+  ramp, our violet accent #7A3DB8 / lilac in the dark themes, radii, sizes, type ramp); themes
+  Colorful, White, Dark Gray, Black and "Use system setting" (XDG portal watcher ported from
+  WordCraft; zbus was already in the tree via rfd); UI font Inter (CRAFT_FONTS_DIR or system) →
+  Noto Sans, separate from the page's Carlito stack; contrast and no-colour-literal tests.
+- A2 `chrome.rs`: neutral title bar (own drawn mark, Back, Undo, ▾ menu, title, centred Search
+  for commands that hands text to Search notebooks, Alt+Q; author initials), tab row with the
+  3 pt accent underline, Share disabled.
+- A3 ribbon as a floating rounded card; `ui.ribbonMode` + `ViewState.ribbon_mode` (Simplified
+  default), the ▾ chevron menu (layout, Always show / Show tabs only), remembered;
+  `ribbon_simplified.rs` (own design: placements by priority, … overflow with every unplaced
+  classic control, contextual tabs derived; coverage test).
+- A4 navigation: ☰ + Search notebooks row, tree of every notebook (folds, colour bars, + New
+  section, Quick notes), page column with Add page and sort; section tabs removed; new commands
+  `view.navigationPanes`, `nav.quickNotes`, `page.sort`; the dragged pane width is now saved
+  (bug), folds and the page column width too.
+- A5 expand/restore button on the page, panes as cards, floating find card, toasts instead of the
+  status bar, accent primary buttons, backstage rail restyled. A6 WordCraft's line icon set
+  (`icons_set.rs`, ATTRIBUTION.md) mapped onto ~60 controls; the rest recoloured from the theme.
+  A7 `ui.inspect` reports `ribbonMode`/`navigation`; snapshots of every tab in both layouts, all
+  themes, narrow, nav hidden; e2e of the real app under Xvfb 8/8 (driver in `plan/research`).
+- Numbers: wiring 377/1314 (28.7%), behaviour 109/1314 (8.3%), 231 commands (was 366/1302,
+  227); in-scope 30.5% / 8.8%.
+- Still open: see `docs/gaps.md` item 8 (older icons on ~135 controls, default combo boxes,
+  auto-hide, QAT customization, Options dialog, drawn window buttons). Next: M2 Insert and Draw.
