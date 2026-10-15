@@ -1,6 +1,6 @@
 # NoteCraft plan
 
-> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** minor (M1.5 done; M2–M5 increments) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the 2024 UI)
+> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** minor (M2: canvas structure and tables; decision D2) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the 2024 UI)
 
 How NoteCraft gets from nothing to a OneNote replacement a typical user could switch to. The
 inventory of what "OneNote" means is [`parity-catalog.md`](parity-catalog.md) (1,291 rows); the
@@ -88,11 +88,12 @@ Everything new is built in the 2024 look of M1.5 (tokens, cards, the simplified 
 ribbon; [`ui-parity.md`](ui-parity.md)).
 
 1. **Canvas details:** paragraph handle (`UI.Canvas.ParagraphHandle`), containers that grow with
-   their text, a page that grows right and down, the mini toolbar as a card, text and container
-   context menus (`CM.Text.*`, `CM.NoteContainer.*`), Paste Options.
-2. **Tables:** a `PageObject::Table` in `notecraft-doc`, its `.ncraft` schema (version bump),
-   commands, the Table Layout contextual tab in both ribbon layouts (`chrome::contextual_tabs`),
-   sort, borders, convert to/from text.
+   their text, a page that grows right and down (done), the mini toolbar as a card, text and
+   container context menus (`CM.Text.*`, `CM.NoteContainer.*`), Paste Options.
+2. **Tables (done, decision D2 / §4.8):** a `PageObject::Table` in `notecraft-doc`, its `.ncraft`
+   schema (format 2), commands, the Table Layout contextual tab in both ribbon layouts
+   (`chrome::contextual_tabs`), sort, borders, convert to/from text. Left for later: the Insert
+   Table dialog, Tab-after-text table creation, merged cells, the table context menus.
 3. **Pictures, attachments, printouts:** crate `codecs` (pure-Rust decoders, licences checked with
    `cargo xtask deny`), crop/rotate/alt text; the rich clipboard (HTML and pictures through
    `arboard`) and drag and drop of files; screen clipping through the desktop portal.

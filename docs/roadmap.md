@@ -1,6 +1,6 @@
 # NoteCraft roadmap: milestones and what's next
 
-> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** major (M1.5 done) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (2024 UI)
+> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** minor (M2 started: canvas structure, tables) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (2024 UI)
 
 Forward-looking plan; details and rationale are in [`plan.md`](plan.md).
 
@@ -18,7 +18,7 @@ Forward-looking plan; details and rationale are in [`plan.md`](plan.md).
 |---|---|---|
 | M1 | Shell and core editing (layout, hierarchy, canvas + outlines, Home tab, tags, search, persistence) | done 2026-10-15 (tag `m1-core`): wiring 28.1%, behaviour 8.4% |
 | M1.5 | Modern UI: the 2024 look (decision D1) | done 2026-10-15 (tag `m1.5-modern-ui`): wiring 28.7%, behaviour 8.3% |
-| M2 | Insert and Draw tabs | not started |
+| M2 | Insert and Draw tabs | in progress on `m2/insert-draw`: paragraph handle, growing containers and page, tables with the Table Layout tab done; mini toolbar, context menus, Paste Options, dialogs, pictures, clipboard, ink to go |
 | M3 | Interop (`.one`/`.onetoc2`/`.onepkg`, exports, imports) | not started |
 | M4 | History, Review, View, Help and power features | not started |
 | M5 | Release: packaging, other platforms, performance budgets, 50 real workflows, user guide | not started |
@@ -27,6 +27,7 @@ Forward-looking plan; details and rationale are in [`plan.md`](plan.md).
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-15 | minor | M2 in progress: canvas structure and tables |
 | 2026-10-15 | major | M1.5 done; focus moves to M2 |
 | 2026-10-15 | major | Decision D1 (the 2024 UI): M1.5 inserted before M2; M5 added |
 | 2026-10-15 | major | M1 done; focus moves to M2 |

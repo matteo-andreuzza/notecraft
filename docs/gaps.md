@@ -1,6 +1,6 @@
 # Gaps: what NoteCraft lacks, ranked
 
-> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** major (M1.5 done: the 2024 look)
+> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** minor (M2: tables and the paragraph handle done)
 
 The ranked work list. The exhaustive per-control list is the generated
 [`parity-checklist.md`](parity-checklist.md) (missing P0/P1 rows); this page ranks the big pieces.
@@ -8,9 +8,9 @@ The ranked work list. The exhaustive per-control list is the generated
 | # | Gap | Why it matters | Milestone |
 |---|---|---|---|
 | 1 | `.one`/`.onetoc2`/`.onepkg` import (then export) | Switching needs the user's existing notebooks | M3 |
-| 2 | Insert and Draw: tables, pictures, file attachments, ink, equations, and their context menus | Second most used surface; rich pages can't be written yet | M2 |
+| 2 | Insert and Draw: pictures, file attachments, ink, equations, and the context menus of objects (tables are in: Insert › Table, the Table Layout tab, keys, sort, borders, shading, conversion) | Second most used surface; rich pages can't be written yet | M2 |
 | 3 | System clipboard beyond plain text: HTML in and out, pictures, files; drag and drop of files and images onto the page | Copying between NoteCraft and a browser or office suite loses formatting | M2 |
-| 4 | Canvas details: paragraph handle (drag/select), containers that grow with their text, the page growing right and down, mini toolbar, paste options, right-click menus on text and containers | Day-to-day editing feel (catalog `UI.Canvas.*`, `BEH.Canvas.*`, `CM.Text/NoteContainer/ParagraphHandle.*`) | M2 |
+| 4 | Canvas details still missing: the mini toolbar, Paste Options, right-click menus on text, containers and paragraph handles (the handle itself, growing containers and the growing page are in) | Day-to-day editing feel (catalog `UI.Canvas.*`, `CM.Text/NoteContainer/ParagraphHandle.*`) | M2 |
 | 5 | Dialogs still missing or partial: Move or Copy Pages/Section (a tree, not just a command), Link (search pages), the full Options dialog, Recent Notebooks, notebook drop-down (Ctrl+G) | P0 rows in `UI.Dialogs.*`, `BS.Open.RecentNotebooks` | M2 |
 | 6 | The web build keeps nothing between visits (no browser storage yet), can't download exports, and has no bold (no font files) | The web app is a demo until notebooks persist | M2 |
 | 7 | File dialogs block the window while open (`rfd` blocking); the window size and position are not remembered | Desktop polish | M2 |
@@ -26,6 +26,9 @@ Smaller known shortfalls:
   `missing`.
 - `--automation-read-root`/`--automation-write-root` confine the headless MCP server only; a
   running desktop app reached through `--control` is not confined.
+- Tables: no Insert Table dialog (the size grid works), no Tab-after-text table creation
+  (`BEH.Table.TabToCreate`), no merged cells, no Sort… dialog; a table is a page object beside
+  containers rather than inside one (decision D2); tables copy and paste as tab-separated text.
 - Ctrl+Shift+Minus for subscript (the M365 shortcut table) collides with another row in the same
   table; NoteCraft uses Ctrl+= (unverified).
 
@@ -33,5 +36,6 @@ Smaller known shortfalls:
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-15 | minor | M2: tables and the paragraph handle done |
 | 2026-10-15 | major | Re-ranked after M1 |
 | 2026-10-14 | major | First version |

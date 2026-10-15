@@ -93,3 +93,31 @@ this log plus a green tree is how the next agent picks up.
   227); in-scope 30.5% / 8.8%.
 - Still open: see `docs/gaps.md` item 8 (older icons on ~135 controls, default combo boxes,
   auto-hide, QAT customization, Options dialog, drawn window buttons). Next: M2 Insert and Draw.
+
+## 2026-10-15 — M2 (part 1): canvas structure and tables (branch `m2/insert-draw`)
+
+- Canvas: the paragraph handle drags the paragraph with its children (pointer x sets the level,
+  a 2 pt accent drop line; dropped on empty canvas it starts a new container:
+  `outline.moveParagraph` takes x/y); click selects, double-click collapses. Drags hit-test the
+  press origin, so a quick drag of a handle, bar or edge no longer misses. Kittest tests drive the
+  real canvas with pointer events (handle, container bar and edge, growing containers and page).
+- Tables (decision D2, `docs/plan.md` §4.8): `PageObject::Table` (rows, cells with paragraphs and
+  shading, column widths, borders, header row; limits 5,000 rows / 64 columns / 50,000 cells),
+  `Block::Cell` (cells are ordinary text blocks), `PageSel::Cells`; `.ncraft` format 2 with a
+  byte-exact format-1 file test; loaded pages are now normalised in full (`normalize_pages`: the
+  old loader only fixed page levels). `table_cmds.rs`, 25 commands: Insert › Table (size grid),
+  select table/columns/rows/cell/range, delete, insert above/below/left/right, hide borders,
+  shading, sort, header row, column width, convert text ↔ table, Tab/Shift+Tab/Enter/Alt+Enter;
+  arrows cross cells; copy, delete, find and search see cells. Canvas layout per cell, borders,
+  shading, selected cells, column-border drag, drag across cells; `chrome::contextual_tabs`
+  shows Table Layout in both ribbon layouts with icons drawn on a 3 × 3 grid.
+- Fixed: a Tab used by the page (indent, next cell) let egui move focus to the search box, so the
+  next keystrokes went there.
+- `ui.inspect` reports contextual tabs, tables and handles; control method `ui.pointer` for drags;
+  e2e under Xvfb 16/16 (8 new); snapshots add a table page, Table Layout simplified and classic,
+  selected cells, a hovered handle. `panic_hunt` gains two table states.
+- Numbers: wiring 416/1320 (31.5%), behaviour 134/1320 (10.2%), 256 commands (was 377/1314,
+  109, 231).
+- Not done here (next, in order, `plan/handoff.md` §7): mini toolbar, text/container context
+  menus, Paste Options, dialogs (Insert Table included), Insert misc, gaps item 8; then pictures
+  and the rich clipboard, then ink. M2 exit criteria not met: no merge, no tag.
