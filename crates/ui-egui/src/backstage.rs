@@ -15,7 +15,15 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     egui::Panel::left("backstage_nav").exact_size(190.0).frame(Frame::NONE.fill(t.window_back).inner_margin(Margin::symmetric(0, 10))).show(
         ui,
         |ui| {
-            let back = ui.add(egui::Button::new(RichText::new("  ←  ").size(20.0).color(t.text)).frame(false)).on_hover_text("Back (Esc)");
+            let back = ui
+                .horizontal(|ui| {
+                    ui.add_space(14.0);
+                    let (resp, rect, color) = crate::chrome::icon_button(ui, 32.0, "Back", true, &t);
+                    crate::icons::back(ui.painter(), rect.shrink(5.0), color);
+                    resp
+                })
+                .inner
+                .on_hover_text("Back (Esc)");
             if back.clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
                 app.ui.backstage = None;
                 return;
@@ -30,13 +38,20 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 (Backstage::Options, "Options"),
             ] {
                 let sel = page == p;
-                let (r, resp) = ui.allocate_exact_size(vec2(190.0, 38.0), Sense::click());
+                let (r, resp) = ui.allocate_exact_size(vec2(190.0, 36.0), Sense::click());
+                resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, sel, label));
+                let pill = r.shrink2(vec2(8.0, 2.0));
                 if sel {
-                    ui.painter().rect_filled(r, 0.0, t.hover);
+                    ui.painter().rect_filled(pill, crate::theme::radius::CONTROL, t.nav_selected);
+                    ui.painter().rect_filled(
+                        egui::Rect::from_min_size(pill.min + vec2(0.0, 9.0), vec2(3.0, pill.height() - 18.0)),
+                        egui::CornerRadius::same(2),
+                        t.accent,
+                    );
                 } else if resp.hovered() {
-                    ui.painter().rect_filled(r, 0.0, t.hover.gamma_multiply(0.6));
+                    ui.painter().rect_filled(pill, crate::theme::radius::CONTROL, t.nav_hover);
                 }
-                ui.painter().text(r.left_center() + vec2(26.0, 0.0), egui::Align2::LEFT_CENTER, label, egui::FontId::proportional(15.0), t.text);
+                ui.painter().text(r.left_center() + vec2(26.0, 0.0), egui::Align2::LEFT_CENTER, label, egui::FontId::proportional(14.0), t.text);
                 if resp.clicked() {
                     app.ui.backstage = Some(p);
                 }
@@ -51,8 +66,8 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                     r.left_center() + vec2(26.0, 0.0),
                     egui::Align2::LEFT_CENTER,
                     label,
-                    egui::FontId::proportional(15.0),
-                    t.text.gamma_multiply(0.45),
+                    egui::FontId::proportional(14.0),
+                    t.text_disabled,
                 );
                 resp.on_hover_text(why);
             }
@@ -67,8 +82,8 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             });
         },
     );
-    egui::CentralPanel::default().frame(Frame::NONE.fill(t.page).inner_margin(Margin::symmetric(40, 30))).show(ui, |ui| {
-        ui.visuals_mut().override_text_color = Some(t.page_text);
+    egui::CentralPanel::default().frame(Frame::NONE.fill(t.ribbon_card).inner_margin(Margin::symmetric(40, 30))).show(ui, |ui| {
+        ui.visuals_mut().override_text_color = Some(t.text);
         match page {
             Backstage::Info => info(app, ui, &ctx, t),
             Backstage::New => new_notebook(app, ui, &ctx, t),

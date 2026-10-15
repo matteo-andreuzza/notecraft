@@ -321,3 +321,40 @@ fn share(ui: &mut Ui, t: &Tokens) {
     ui.painter().text(pos2(r.min.x + 25.0, r.center().y), Align2::LEFT_CENTER, "Share", font, t.on_accent);
     resp.on_hover_text("Sharing needs OneDrive, a Microsoft service; not available in NoteCraft");
 }
+
+/// A primary (accent-filled) dialog button.
+pub fn primary_button(ui: &mut Ui, label: &str, t: &Tokens) -> egui::Response {
+    ui.add(
+        egui::Button::new(egui::RichText::new(label).color(t.on_accent))
+            .fill(t.accent)
+            .stroke(Stroke::NONE)
+            .corner_radius(radius::CONTROL)
+            .min_size(vec2(76.0, 28.0)),
+    )
+}
+
+/// A card on the window background — the panes and the find bar of the 2024 look: the card
+/// colour, rounded corners, a hairline and the card shadow.
+pub fn card_frame(t: &Tokens) -> Frame {
+    Frame::NONE
+        .fill(t.ribbon_card)
+        .corner_radius(radius::CARD)
+        .stroke(Stroke::new(1.0, t.card_border))
+        .shadow(t.card_shadow())
+        .inner_margin(Margin::same(12))
+}
+
+/// A card's title row: the title in the heading rung and a ✕ that returns true when clicked.
+pub fn card_header(ui: &mut Ui, title: &str, t: &Tokens) -> bool {
+    let ctx = ui.ctx().clone();
+    let mut closed = false;
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new(title).font(TypeRung::Heading.font(&ctx, Weight::Semibold)).color(t.text));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            let (resp, rect, color) = icon_button(ui, 24.0, "Close", true, t);
+            icons::cross(ui.painter(), rect.shrink(3.0), color);
+            closed = resp.on_hover_text("Close").clicked();
+        });
+    });
+    closed
+}

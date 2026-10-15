@@ -125,13 +125,13 @@ Status: **done** (built in the 2024 style and tested), **partial**, **planned** 
 | 11 | Notebook tree | every open notebook: chevron, notebook icon in its colour, name; sections indented with a 4 × 14 colour bar radius 2; section groups with chevrons; thin separator between notebooks; selected row `nav_selected` radius 4; + New section in `accent` after each notebook's sections | UI.Nav.NotebookTree, UI.Nav.NewSectionLink, UI.Nav.NotebookPane | done (A4); folds and widths remembered |
 | 12 | Quick notes | pinned at the bottom of the navigation pane above a separator; opens the Quick Notes section | UI.Nav.QuickNotes | done (A4) |
 | 13 | Page column | `page_list`; Add page (outlined, radius 4, pencil icon, `accent` text) and sort (⇅) on top; rows 28 radius 4, subpages indented 16, stroke chevrons; drag to resize (remembered) | UI.Nav.PageList, UI.Nav.AddPage, UI.Nav.SortPages | done (A4) |
-| 14 | Page | `canvas`; title in `page_title` with a hairline under it, date and time in `caption` `text_dim`; expand ⤢ at the top right (full page view, restore ⤡) | UI.Canvas.Page, UI.Canvas.TitleArea, UI.Canvas.ExpandButton | planned (A5) |
-| 15 | Panes | Tags summary and Search results as cards at the right of the page: `heading` title, ✕ close | UI.Panes.FindTags, UI.Nav.SearchResultsPane | planned (A5) |
-| 16 | Find on page | floating card at the top right of the page: box, count, ↑ ↓, ✕ | UI.Nav.FindOnPage | planned (A5) |
-| 17 | Menus | `ribbon_card`, `radius.menu`, shadow (0, 4) blur 16, rows 28, shortcuts in `text_dim`, separators | UI.Window.ContextMenus | planned (A5) |
-| 18 | Dialogs | modal card `radius.card`, `heading` title, primary button `accent` / `on_accent`, secondary outlined | UI.Dialogs.* | planned (A5) |
-| 19 | File (backstage) | left rail on `window_back` with ← and the entries, content on `ribbon_card` | BS.* | planned (A5) |
-| 20 | Notifications | toasts at the bottom centre (card, 4 s) instead of a status bar | — | planned (A5) |
+| 14 | Page | `canvas`; title in `page_title` with a hairline under it, date and time in `caption` `text_dim`; expand ⤢ at the top right (full page view, restore ⤡) | UI.Canvas.Page, UI.Canvas.TitleArea, UI.Canvas.ExpandButton | done (A5); the title bar stays in Full Page View |
+| 15 | Panes | Tags summary and Search results as cards at the right of the page: `heading` title, ✕ close | UI.Panes.FindTags, UI.Nav.SearchResultsPane | done (A5) |
+| 16 | Find on page | floating card at the top right of the page: box, count, ↑ ↓, ✕ | UI.Nav.FindOnPage | done (A5) |
+| 17 | Menus | `ribbon_card`, `radius.menu`, shadow (0, 4) blur 16, rows 28, shortcuts in `text_dim`, separators | UI.Window.ContextMenus | done (A1/A5): egui menus take the radius, shadow and colours from the theme |
+| 18 | Dialogs | modal card `radius.card`, `heading` title, primary button `accent` / `on_accent`, secondary outlined | UI.Dialogs.* | done (A5) |
+| 19 | File (backstage) | left rail on `window_back` with ← and the entries, content on `ribbon_card` | BS.* | done (A5) |
+| 20 | Notifications | toasts at the bottom centre (card, 4 s) instead of a status bar | — | done (A5) |
 | 21 | Copilot | not drawn: a Microsoft service with no NoteCraft counterpart | UI.Window.Copilot | out-of-scope |
 | 22 | Window buttons | the compositor's; drawn buttons where none are drawn | — | gap (M4) |
 | 23 | Themes | Colorful (default), White, Dark Gray, Black, Use system setting; remembered | UI.Window.DarkMode, OPT.General.OfficeTheme | done (A1): tokens and contrast tests, picked in File › Account, remembered; the Options dialog entry is still missing |

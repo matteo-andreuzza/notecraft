@@ -1,29 +1,34 @@
 //! Task panes: the Tags Summary (Find Tags), the pinned search results, and the find-on-page
-//! bar (catalog `UI.Panes.FindTags`, `UI.Nav.SearchResultsPane`, `UI.Nav.FindOnPage`).
+//! bar (catalog `UI.Panes.FindTags`, `UI.Nav.SearchResultsPane`, `UI.Nav.FindOnPage`). In the 2024
+//! look (`docs/ui-parity.md` §3 rows 15–16) the panes are cards at the right of the page with a
+//! title and ✕, and the find bar is a card floating over the page's top right corner.
 
-use egui::{Frame, Margin, RichText, Sense, Stroke, Ui, vec2};
+use egui::{Frame, Margin, RichText, Sense, Ui, vec2};
 use serde_json::json;
 
+use crate::chrome::{card_frame, card_header, icon_button};
 use crate::{NoteApp, Tokens, icons};
+
+/// The right-hand strip that holds a pane card.
+fn pane_panel(id: &'static str, width: f32, t: &Tokens) -> egui::Panel {
+    egui::Panel::right(id)
+        .default_size(width)
+        .resizable(true)
+        .show_separator_line(false)
+        .frame(Frame::NONE.fill(t.window_back).inner_margin(Margin { left: 6, right: 8, top: 6, bottom: 8 }))
+}
 
 /// The Tags Summary pane: grouped tagged notes in a scope, click to go there, Create Summary
 /// Page (catalog `BEH.Tags.Summary`, `BEH.Tags.SummaryPage`).
 pub fn tags_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let ctx = ui.ctx().clone();
-    egui::Panel::right("tags_pane")
-        .default_size(270.0)
-        .resizable(true)
-        .frame(Frame::NONE.fill(t.window_back).inner_margin(Margin::same(8)).stroke(Stroke::new(1.0, t.border)))
-        .show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(RichText::new("Tags Summary").size(15.0).strong().color(t.text));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Close").clicked() {
-                        app.session.view.tags_pane = false;
-                    }
-                });
-            });
-            ui.separator();
+    pane_panel("tags_pane", 280.0, &t).show(ui, |ui| {
+        card_frame(&t).show(ui, |ui| {
+            ui.set_min_size(ui.available_size());
+            if card_header(ui, "Tags Summary", &t) {
+                app.session.view.tags_pane = false;
+            }
+            ui.add_space(4.0);
             ui.horizontal(|ui| {
                 ui.label("Group tags by:");
                 egui::ComboBox::from_id_salt("tags_group").selected_text(group_label(&app.ui.tags_group)).show_ui(ui, |ui| {
@@ -36,7 +41,7 @@ pub fn tags_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             let q = json!({"group": app.ui.tags_group, "unchecked": app.ui.tags_unchecked, "scope": app.ui.tags_scope});
             let Some(res) = app.run(&ctx, "tag.findTags", q.clone()) else { return };
             ui.separator();
-            egui::ScrollArea::vertical().id_salt("tags_scroll").max_height(ui.available_height() - 70.0).show(ui, |ui| {
+            egui::ScrollArea::vertical().id_salt("tags_scroll").max_height((ui.available_height() - 80.0).max(60.0)).show(ui, |ui| {
                 let groups = res["groups"].as_array().cloned().unwrap_or_default();
                 if groups.is_empty() {
                     ui.label(RichText::new("No tagged notes in this scope.").color(t.text_disabled));
@@ -84,6 +89,7 @@ pub fn tags_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 app.run(&ctx, "tag.summaryPage", q);
             }
         });
+    });
 }
 
 fn group_label(g: &str) -> &'static str {
@@ -109,19 +115,13 @@ fn scope_label(s: &str) -> &'static str {
 /// The pinned search results (Alt+O).
 pub fn search_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let ctx = ui.ctx().clone();
-    egui::Panel::right("search_pane")
-        .default_size(260.0)
-        .resizable(true)
-        .frame(Frame::NONE.fill(t.window_back).inner_margin(Margin::same(8)).stroke(Stroke::new(1.0, t.border)))
-        .show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(RichText::new("Search Results").size(15.0).strong().color(t.text));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.button("Close").clicked() {
-                        app.ui.search_pane = false;
-                    }
-                });
-            });
+    pane_panel("search_pane", 270.0, &t).show(ui, |ui| {
+        card_frame(&t).show(ui, |ui| {
+            ui.set_min_size(ui.available_size());
+            if card_header(ui, "Search Results", &t) {
+                app.ui.search_pane = false;
+            }
+            ui.add_space(4.0);
             ui.text_edit_singleline(&mut app.ui.search);
             ui.separator();
             if app.ui.search.trim().is_empty() {
@@ -145,35 +145,51 @@ pub fn search_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 }
             });
         });
+    });
 }
 
-/// The find-on-page bar (Ctrl+F): query, match count, previous/next, close.
-pub fn find_bar(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+/// The find-on-page bar (Ctrl+F): a card floating over the page's top right corner with the
+/// query, the match count, previous/next and close. `area` is the page area.
+pub fn find_bar(app: &mut NoteApp, ui: &mut Ui, area: egui::Rect, t: Tokens) {
     let ctx = ui.ctx().clone();
-    Frame::NONE.fill(t.find.gamma_multiply(0.35)).inner_margin(Margin::symmetric(8, 3)).show(ui, |ui| {
-        ui.horizontal(|ui| {
-            ui.label("Find on page:");
-            let resp = ui.add(egui::TextEdit::singleline(&mut app.ui.find).id(egui::Id::new("find_box")).desired_width(220.0));
-            if resp.changed() {
-                let q = app.ui.find.clone();
-                app.run(&ctx, "search.page", json!({"query": q}));
-            }
-            if resp.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                app.run(&ctx, "search.next", json!({}));
-                resp.request_focus();
-            }
-            let n = app.session.view.find.matches.len();
-            ui.label(if n == 0 { "No matches".to_string() } else { format!("{} of {n}", app.session.view.find.current + 1) });
-            if ui.add_enabled(n > 0, egui::Button::new("Previous")).on_hover_text("Previous (Shift+F3)").clicked() {
-                app.run(&ctx, "search.prev", json!({}));
-            }
-            if ui.add_enabled(n > 0, egui::Button::new("Next")).on_hover_text("Next (F3)").clicked() {
-                app.run(&ctx, "search.next", json!({}));
-            }
-            if ui.button("Close").on_hover_text("Close (Esc)").clicked() || (resp.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Escape))) {
-                app.run(&ctx, "search.dismiss", json!({}));
-                app.canvas.focused = true;
-            }
+    let pos = egui::pos2(area.max.x - 440.0, area.min.y + 8.0).max(area.min + vec2(8.0, 8.0));
+    egui::Area::new(egui::Id::new("find_bar")).fixed_pos(pos).order(egui::Order::Foreground).show(&ctx, |ui| {
+        card_frame(&t).inner_margin(Margin::symmetric(10, 6)).show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing = vec2(4.0, 0.0);
+                let resp = ui.add(
+                    egui::TextEdit::singleline(&mut app.ui.find)
+                        .id(egui::Id::new("find_box"))
+                        .hint_text(RichText::new("Find on page").color(t.text_dim))
+                        .desired_width(200.0),
+                );
+                if resp.changed() {
+                    let q = app.ui.find.clone();
+                    app.run(&ctx, "search.page", json!({"query": q}));
+                }
+                if resp.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    app.run(&ctx, "search.next", json!({}));
+                    resp.request_focus();
+                }
+                let n = app.session.view.find.matches.len();
+                let count = if n == 0 { "No matches".to_string() } else { format!("{} of {n}", app.session.view.find.current + 1) };
+                ui.label(RichText::new(count).color(t.text_dim));
+                for (label, tip, cmd, dir) in
+                    [("Previous", "Previous (Shift+F3)", "search.prev", icons::Dir::Up), ("Next", "Next (F3)", "search.next", icons::Dir::Down)]
+                {
+                    let (b, rect, color) = icon_button(ui, 26.0, label, n > 0, &t);
+                    icons::chevron(ui.painter(), rect.shrink(5.0), dir, color);
+                    if b.on_hover_text(tip).clicked() && n > 0 {
+                        app.run(&ctx, cmd, json!({}));
+                    }
+                }
+                let (b, rect, color) = icon_button(ui, 26.0, "Close", true, &t);
+                icons::cross(ui.painter(), rect.shrink(4.0), color);
+                if b.on_hover_text("Close (Esc)").clicked() || (resp.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Escape))) {
+                    app.run(&ctx, "search.dismiss", json!({}));
+                    app.canvas.focused = true;
+                }
+            });
         });
     });
 }

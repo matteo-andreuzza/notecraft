@@ -238,6 +238,13 @@ fn window_parts_are_present_and_work() {
     h.get_by_label("Normal View").click();
     h.run();
     assert!(!h.state().session.view.full_page, "UI.Window.FullPage");
+    // UI.Canvas.ExpandButton: the expand button at the page's top right does the same.
+    h.get_by_label("Full Page View").click();
+    h.run();
+    assert!(h.state().session.view.full_page, "UI.Canvas.ExpandButton");
+    h.get_by_label("Normal View").click();
+    h.run();
+    assert!(!h.state().session.view.full_page, "UI.Canvas.ExpandButton");
 }
 
 #[test]

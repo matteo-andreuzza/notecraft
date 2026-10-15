@@ -94,7 +94,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                     }
                 });
                 ui.horizontal(|ui| {
-                    if ui.button("OK").clicked() && !url.trim().is_empty() {
+                    if crate::chrome::primary_button(ui, "OK", &t).clicked() && !url.trim().is_empty() {
                         let mut p = json!({"url": url.trim()});
                         if !text.is_empty() {
                             p["text"] = json!(text);
@@ -119,7 +119,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                                     app.run(ctx, "page.moveOrCopy", json!({"page": pid.to_string(), "section": id.to_string(), "copy": true}));
                                     close = true;
                                 }
-                                if ui.button("Move").clicked() {
+                                if crate::chrome::primary_button(ui, "Move", &t).clicked() {
                                     app.run(ctx, "page.moveOrCopy", json!({"page": pid.to_string(), "section": id.to_string()}));
                                     close = true;
                                 }
@@ -141,7 +141,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                             app.run(ctx, "section.moveOrCopy", json!({"section": sid.to_string(), "notebook": nb.id.to_string(), "copy": true}));
                             close = true;
                         }
-                        if ui.button("Move").clicked() {
+                        if crate::chrome::primary_button(ui, "Move", &t).clicked() {
                             app.run(ctx, "section.moveOrCopy", json!({"section": sid.to_string(), "notebook": nb.id.to_string()}));
                             close = true;
                         }
@@ -182,7 +182,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                     }
                 });
                 ui.horizontal(|ui| {
-                    if ui.button("OK").clicked() {
+                    if crate::chrome::primary_button(ui, "OK", &t).clicked() {
                         app.run(ctx, "notebook.properties", json!({"notebook": nid.to_string(), "name": name}));
                         close = true;
                     }
@@ -204,7 +204,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                     ui.end_row();
                 });
                 ui.horizontal(|ui| {
-                    if ui.button("OK").clicked() {
+                    if crate::chrome::primary_button(ui, "OK", &t).clicked() {
                         app.run(ctx, "para.spacingDialog", json!({"before": b, "after": a, "line": l}));
                         close = true;
                     }
@@ -227,7 +227,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                 ui.label("New Tag › Display name:");
                 ui.text_edit_singleline(name);
                 ui.horizontal(|ui| {
-                    if ui.button("Add").clicked() && !name.trim().is_empty() {
+                    if crate::chrome::primary_button(ui, "Add", &t).clicked() && !name.trim().is_empty() {
                         app.run(ctx, "tag.customize", json!({"action": "add", "name": name.trim()}));
                         name.clear();
                     }
@@ -239,7 +239,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
             Dialog::ConfirmEmptyBin => {
                 ui.label("Permanently delete every page and section in this notebook's recycle bin?");
                 ui.horizontal(|ui| {
-                    if ui.button("Delete").clicked() {
+                    if crate::chrome::primary_button(ui, "Delete", &t).clicked() {
                         app.run(ctx, "history.emptyRecycleBin", json!({}));
                         close = true;
                     }

@@ -23,7 +23,7 @@ pub mod ribbon_layout;
 pub mod ribbon_simplified;
 pub mod theme;
 
-use egui::{Color32, Frame, Margin, RichText, Stroke, Ui};
+use egui::{Frame, Margin, RichText, Ui};
 use notecraft_engine::{Clock, CmdError, Session};
 use serde_json::{Value, json};
 
@@ -316,16 +316,11 @@ impl NoteApp {
             dialogs::show(self, &ctx, t);
             return;
         }
+        chrome::title_bar(self, ui, t);
         if !self.session.view.full_page {
-            chrome::title_bar(self, ui, t);
             chrome::tab_row(self, ui, t);
             ribbon::show(self, ui, t);
             nav::nav_row(self, ui, t);
-        } else {
-            self.full_page_bar(ui, t);
-        }
-        self.status_bar(ui, t);
-        if !self.session.view.full_page {
             nav::notebook_pane(self, ui, t);
             nav::page_list(self, ui, t);
             if self.session.view.tags_pane {
@@ -336,53 +331,61 @@ impl NoteApp {
             }
         }
         egui::CentralPanel::no_frame().show(ui, |ui| {
+            let area = ui.max_rect();
             if self.session.notebook().is_none() {
                 nav::empty_state(self, ui, t);
             }
-            if self.session.view.find.active {
-                panes::find_bar(self, ui, t);
-            }
             canvas::show(self, ui, t);
+            if self.session.view.find.active {
+                panes::find_bar(self, ui, area, t);
+            }
+            self.expand_button(ui, area, t);
         });
+        self.toast(&ctx, t);
         nav::search_dropdown(self, &ctx, t);
         dialogs::show(self, &ctx, t);
     }
 
-    fn full_page_bar(&mut self, ui: &mut Ui, t: Tokens) {
+    /// The expand / restore button at the page's top right (catalog `UI.Canvas.ExpandButton`,
+    /// `UI.Window.FullPage`): Full Page View hides the ribbon and the navigation.
+    fn expand_button(&mut self, ui: &mut Ui, area: egui::Rect, t: Tokens) {
         let ctx = ui.ctx().clone();
-        egui::Panel::top("full_page_bar").exact_size(26.0).frame(Frame::NONE.fill(t.window_back).inner_margin(Margin::symmetric(8, 2))).show(
-            ui,
-            |ui| {
-                ui.horizontal_centered(|ui| {
-                    // UI.Window.FullPage — the single button back to Normal View.
-                    if ui
-                        .add(egui::Button::new(RichText::new("Normal View").color(t.text)).fill(Color32::TRANSPARENT))
-                        .on_hover_text("Leave Full Page View (F11)")
-                        .clicked()
-                    {
-                        self.run(&ctx, "view.fullPage", json!({}));
-                    }
-                });
-            },
-        );
+        let full = self.session.view.full_page;
+        let label = if full { "Normal View" } else { "Full Page View" };
+        let r = egui::Rect::from_min_size(egui::pos2(area.max.x - 40.0, area.min.y + 8.0), egui::vec2(28.0, 28.0));
+        ui.scope_builder(egui::UiBuilder::new().max_rect(r), |ui| {
+            let (resp, rect, color) = chrome::icon_button(ui, 28.0, label, true, &t);
+            icons::expand(ui.painter(), rect.shrink(6.0), full, color);
+            if resp.on_hover_text(format!("{label} (F11)")).clicked() {
+                self.run(&ctx, "view.fullPage", json!({}));
+            }
+        });
     }
 
-    fn status_bar(&mut self, ui: &mut Ui, t: Tokens) {
-        let now = ui.ctx().input(|i| i.time);
+    /// The last notice or error as a toast at the bottom centre for a few seconds (the 2024 look
+    /// has no status bar).
+    fn toast(&mut self, ctx: &egui::Context, t: Tokens) {
+        let now = ctx.input(|i| i.time);
         let Some((msg, at)) = self.ui.status.clone() else { return };
         if now - at > 6.0 {
             self.ui.status = None;
             return;
         }
-        egui::Panel::bottom("status")
-            .exact_size(22.0)
-            .frame(Frame::NONE.fill(t.ribbon_card).inner_margin(Margin::symmetric(10, 2)).stroke(Stroke::new(1.0, t.border)))
-            .show(ui, |ui| {
-                ui.horizontal_centered(|ui| {
-                    ui.label(RichText::new(msg).color(t.text).size(12.0));
-                });
+        let screen = ctx.content_rect();
+        egui::Area::new(egui::Id::new("toast"))
+            .order(egui::Order::Tooltip)
+            .anchor(egui::Align2::CENTER_BOTTOM, egui::vec2(0.0, -24.0))
+            .interactable(false)
+            .show(ctx, |ui| {
+                Frame::NONE.fill(t.text).corner_radius(theme::radius::CARD).shadow(t.card_shadow()).inner_margin(Margin::symmetric(16, 10)).show(
+                    ui,
+                    |ui| {
+                        ui.set_max_width((screen.width() * 0.6).max(200.0));
+                        ui.label(RichText::new(msg).color(t.ribbon_card));
+                    },
+                );
             });
-        ui.ctx().request_repaint_after(std::time::Duration::from_millis(500));
+        ctx.request_repaint_after(std::time::Duration::from_millis(500));
     }
 
     /// Whether a command is enabled right now (`None`) or why not.

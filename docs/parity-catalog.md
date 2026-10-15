@@ -77,7 +77,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Canvas.MiniToolbar | Mini toolbar on text selection (font, size, bold, italic, underline, highlight, colour, indent, bullets, styles, tags) | Window/Canvas/Mini Toolbar | surface |  |  | P1 | missing | GK (Options › General) |  |
 | UI.Canvas.PasteOptions | Paste Options button after pasting | Window/Canvas/Paste Options Button | surface |  |  | P1 | missing | GK (Options › Advanced) |  |
 | UI.Canvas.InfoBar | Information bar at the top of the page (Ctrl+Shift+W performs its action) | Window/Canvas/Information Bar | surface |  |  | P2 | missing | KBD365 (Ctrl+Shift+W) |  |
-| UI.Canvas.ExpandButton | Expand / restore button at the top right of the page (full page view) | Window/Canvas/Expand | surface |  |  | P1 | missing | M365-2024 | Runs `view.fullPage`. |
+| UI.Canvas.ExpandButton | Expand / restore button at the top right of the page (full page view) | Window/Canvas/Expand | surface |  |  | P1 | wired | M365-2024 | Runs `view.fullPage`. |
 | UI.Panes.FindTags | Tags Summary pane: group by tag/section/title/date/note text, search scope, Show only unchecked items, Create Summary Page | Window/Panes/Tags Summary | surface |  |  | P0 | wired | FLUENT19:FindTaggedNotes; GK |  |
 | UI.Panes.CustomizeTags | Customize Tags dialog: new tag, modify (name, symbol, font colour, highlight colour), reorder, remove | Window/Panes/Customize Tags | surface |  |  | P1 | missing | FLUENT19:TagsCustomize; GK |  |
 | UI.Panes.PageVersions | Page versions listed under the page in the page list, by date and author | Window/Panes/Page Versions | surface |  |  | P1 | missing | FLUENT19:PageVersions |  |
