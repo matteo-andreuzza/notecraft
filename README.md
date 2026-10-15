@@ -5,8 +5,9 @@
 </p>
 
 <p align="center">
-  A fast, local-first, open-source take on the OneNote workflow: the same ribbon, the same
-  notebook → section → page structure, the same free-form canvas and the same keyboard shortcuts.
+  A fast, local-first, open-source take on the OneNote workflow in its current Microsoft 365 look:
+  the same ribbon (simplified or classic), the same notebook → section → page structure, the same
+  free-form canvas and the same keyboard shortcuts.
   It runs natively on Linux (Wayland and X11), macOS and Windows, and in the browser via
   WebAssembly.<br>
   <i>The 14th Crafting App, by the ArtCraft team and community.</i>
@@ -38,7 +39,8 @@
 ## Why NoteCraft
 
 - **A 1:1 replacement, not a look-alike.** The ribbon tabs (Home, Insert, Draw, History, Review,
-  View, Help), their groups and controls, the notebook pane, the section tabs, the page list, the
+  View, Help), their groups and controls in the one-row simplified ribbon or the classic one, the
+  navigation on the left (every notebook, its sections, Quick notes, the page column), the
   free-form canvas with note containers, tags and the Find Tags pane, and OneNote's documented
   keyboard shortcuts — catalogued from public documentation and implemented to match.
 - **Your notes stay yours.** Local-first, no telemetry, no account. Notebooks are folders of

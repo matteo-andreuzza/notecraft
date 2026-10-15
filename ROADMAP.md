@@ -1,12 +1,12 @@
 # NoteCraft roadmap
 
-**Stage: alpha** (M1: shell and core editing) · next: M2 (Insert and Draw)
+**Stage: alpha** (M1.5: the 2024 look) · next: M2 (Insert and Draw)
 
-> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** major (M1 done) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows
+> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** major (decision D1: the 2024 UI) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (2024 UI)
 
 NoteCraft aims for 1:1 parity with Microsoft OneNote. This page is the summary; the assessment is
 [`docs/parity.md`](docs/parity.md), the inventory [`docs/parity-catalog.md`](docs/parity-catalog.md),
-the plan [`docs/plan.md`](docs/plan.md), milestones and the current focus
+the plan [`docs/plan.md`](docs/plan.md), the look [`docs/ui-parity.md`](docs/ui-parity.md), milestones and the current focus
 [`docs/roadmap.md`](docs/roadmap.md), and the ranked work list [`docs/gaps.md`](docs/gaps.md).
 
 ## Headline numbers

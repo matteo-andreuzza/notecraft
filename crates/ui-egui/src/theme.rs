@@ -1,9 +1,9 @@
 //! Design tokens: every colour and size the shell uses comes from here, never hard-coded at the
 //! call site (AGENTS.md › Other rules).
 //!
-//! The layout follows the reference's "Colorful" Office theme (coloured title bar and tab strip,
-//! light ribbon body, white page, light navigation panes) with NoteCraft's own violet as the
-//! accent; the dark theme follows the reference's dark theme structure.
+//! Being rebuilt for the 2024 look (decision D1, `docs/ui-parity.md` §2): a neutral window
+//! background, the ribbon as a white card, NoteCraft's own violet as the accent, and the themes
+//! Colorful, White, Dark Gray, Black and the system setting.
 
 use egui::{Color32, CornerRadius, Stroke, Visuals};
 

@@ -1,5 +1,6 @@
-//! NoteCraft's egui front end (layer **L6**): the OneNote-style window — title row with the
-//! Quick Access Toolbar, the ribbon, the notebook pane, section tabs, the page list and the page
+//! NoteCraft's egui front end (layer **L6**): the OneNote-style window in the 2024 look
+//! (decision D1, `docs/ui-parity.md`) — title bar with the Quick Access Toolbar and Search, the
+//! tab row and the ribbon card, the navigation (notebook tree and page column) and the page
 //! canvas — plus the backstage, panes and dialogs.
 //!
 //! The UI is thin: every action is an engine command run through [`NoteApp::run`] (AGENTS.md ›

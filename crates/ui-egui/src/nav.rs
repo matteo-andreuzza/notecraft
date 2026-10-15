@@ -1,5 +1,7 @@
-//! Navigation: the notebook pane (left), the section tabs (top of the page area), the search
-//! box, and the page list (right) — catalog `UI.Nav.*` — with their context menus (`CM.Notebook`,
+//! Navigation — catalog `UI.Nav.*`. Being rebuilt for the 2024 look (decision D1,
+//! `docs/ui-parity.md`): the notebook tree and the page column move to the left and the section
+//! tabs go away. Today: the notebook pane (left), the section tabs (top of the page area), the
+//! search box, and the page list (right), with their context menus (`CM.Notebook`,
 //! `CM.SectionGroup`, `CM.Section`, `CM.Page`, `CM.PageListArea`, `CM.SectionTabsArea`,
 //! `CM.NotebookPaneArea`).
 

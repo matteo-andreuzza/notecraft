@@ -1,8 +1,8 @@
 # Parity catalog: Microsoft OneNote → NoteCraft
 
-> **Last reviewed:** 2026-10-14 · **Last updated:** 2026-10-14 · **Change:** major (first version, bootstrapped from the public sources below) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (OneNote 2016/2019-style ribbon app)
+> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** major (decision D1: the 2024 UI; source `M365-2024`) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows, in its 2024 look (command inventory from the OneNote 2016/2019 ribbon app)
 
-This is the **source of truth for parity** (brief §0): 1291 rows, one per ribbon control, context-menu item, backstage entry, keyboard shortcut, option, documented behaviour, file-format construct and UI surface of the reference product. `cargo xtask parity` joins it with the command registry and the tests and computes every number in [`parity.md`](parity.md); the generated per-area table and work list are in [`parity-checklist.md`](parity-checklist.md).
+This is the **source of truth for parity** (brief §0): 1314 rows, one per ribbon control, context-menu item, backstage entry, keyboard shortcut, option, documented behaviour, file-format construct and UI surface of the reference product. `cargo xtask parity` joins it with the command registry and the tests and computes every number in [`parity.md`](parity.md); the generated per-area table and work list are in [`parity-checklist.md`](parity-checklist.md).
 
 ## How to read it
 
@@ -16,14 +16,17 @@ This is the **source of truth for parity** (brief §0): 1291 rows, one per ribbo
 | **Command** | The NoteCraft command id that implements the row (planned ids are filled in ahead of time) |
 | **Pri** | P0 daily core workflow · P1 important · P2 secondary · P3 niche or legacy |
 | **Status** | `missing` · `disabled` (shown for layout parity, does nothing yet) · `wired` (works; a test mentions the command or the ID) · `verified` (a test carrying `// parity: <ID>` pins the documented behaviour) · `out-of-scope` (needs a Microsoft cloud service, Outlook or the Office Store; still drawn, disabled, where it has a placement) |
-| **Source** | `FLUENT19:<Control>` = Office Fluent UI control identifiers for OneNote 2019 (Microsoft, MIT, github.com/OfficeDev/office-fluent-ui-command-identifiers); `KBD365` / `KBD-W10` = the "OneNote for Windows" / "OneNote for Windows 10" tables of Microsoft's "Keyboard shortcuts in OneNote" support article; `[MS-…]` = Open Specifications; `GK` = general knowledge of the user-visible product (always flagged `unverified` where it fixes a detail) |
+| **Source** | `FLUENT19:<Control>` = Office Fluent UI control identifiers for OneNote 2019 (Microsoft, MIT, github.com/OfficeDev/office-fluent-ui-command-identifiers); `KBD365` / `KBD-W10` = the "OneNote for Windows" / "OneNote for Windows 10" tables of Microsoft's "Keyboard shortcuts in OneNote" support article; `[MS-…]` = Open Specifications; `M365-2024` = observed in the current Microsoft 365 app (2024 UI, desktop and web) on screenshots taken by the maintainers: only observed and measured, never copied or traced (no Microsoft asset enters the repo); `GK` = general knowledge of the user-visible product (always flagged `unverified` where it fixes a detail) |
 | **Notes** | Variant that defined the row, conflicts in the sources, `unverified` assumptions |
 
 **Variant policy.** The Microsoft 365 desktop app is the reference. Its ribbon descends from
 OneNote 2016/2019, whose complete control inventory Microsoft publishes (FLUENT19); rows that exist
 only in the Microsoft 365 app (Help tab, newer Draw controls, Sticker, Immersive Reader…) are added
 from general knowledge and marked so. Where a detail is undocumented, NoteCraft implements the most
-plausible behaviour and the row says `unverified`.
+plausible behaviour and the row says `unverified`. **The look and layout follow the 2024 UI**
+(decision D1 in [`plan.md`](plan.md); per-surface specification in [`ui-parity.md`](ui-parity.md)):
+surfaces that exist only in the 2016 layout are `out-of-scope` and their Notes name the 2024
+surface that replaces them; the commands behind them stay.
 
 **Counting.** Wiring coverage = (`wired` + `verified`) / all rows; behavioural coverage =
 `verified` / all rows. Out-of-scope rows stay in the denominator of the headline numbers (an
@@ -37,22 +40,33 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 |---|---|---|---|---|---|---|---|---|---|
 | UI.Window.TitleBar | Title bar with the page and notebook name | Window/Title Bar | surface |  |  | P0 | wired | GK |  |
 | UI.Window.QAT | Quick Access Toolbar in the title bar (customizable, Back/Undo by default) | Window/Quick Access Toolbar | surface |  |  | P0 | wired | FLUENT19:Quick Access Toolbar | Back, Undo, Redo; customizing the toolbar is not implemented yet. |
-| UI.Window.TellMe | Tell Me / Search box for commands in the title bar | Window/Tell Me | surface |  |  | P2 | missing | GK (Office 2016+) |  |
+| UI.Window.TellMe | Tell Me / Search box for commands in the title bar | Window/Tell Me | surface |  |  | P2 | missing | GK (Office 2016+) | In the 2024 UI this is the title-bar Search box (UI.Window.SearchBox). |
+| UI.Window.SearchBox | Search box centred in the title bar: finds commands (Tell Me) and notes | Window/Title Bar/Search | surface |  |  | P1 | missing | M365-2024 |  |
+| UI.Window.Share | Share button at the right of the tab row (share the notebook through OneDrive) | Window/Title Bar/Share | button |  |  | P3 | out-of-scope | M365-2024 | Needs a Microsoft cloud service; drawn disabled. |
+| UI.Window.Copilot | Copilot button (ribbon and title bar) | Window/Title Bar/Copilot | button |  |  | P3 | out-of-scope | M365-2024 | Needs a Microsoft cloud service; drawn disabled. |
+| UI.Window.Account | Account button with the user's picture or initials (Microsoft account sign-in) | Window/Title Bar/Account | button |  |  | P3 | out-of-scope | M365-2024 | Sign-in needs a Microsoft account; NoteCraft shows the author's initials, disabled. |
 | UI.Ribbon.Tabs | Ribbon tab strip: File, Home, Insert, Draw, History, Review, View, Help (+ contextual tabs) | Window/Ribbon/Tabs | surface |  |  | P0 | verified | FLUENT19 (tab list); GK (Help tab, M365) |  |
 | UI.Ribbon.Collapse | Collapse/expand the ribbon (double-click a tab, Ctrl+F1, pin) | Window/Ribbon/Collapse | surface |  |  | P0 | wired | FLUENT19:MinimizeRibbon | Arrow button and Ctrl+F1; the pin and double-click a tab also work. |
 | UI.Ribbon.DisplayOptions | Ribbon display options (auto-hide, tabs only, tabs and commands) | Window/Ribbon/Display Options | surface |  |  | P2 | missing | GK (Office 2016+) |  |
+| UI.Ribbon.Simplified | Simplified ribbon: one row of 16 px icons with labels only where needed, font and size boxes, split ▾ buttons, separators and an overflow … menu with what doesn't fit | Window/Ribbon/Simplified | surface |  |  | P0 | missing | M365-2024 | The default ribbon in the 2024 UI. |
+| UI.Ribbon.ModeSwitch | Switch between the simplified and the classic ribbon (▾ chevron at the ribbon's bottom right); the choice is remembered | Window/Ribbon/Mode Switch | surface |  | ui.ribbonMode | P0 | missing | M365-2024 |  |
 | UI.Ribbon.ContextualTabs | Contextual tabs appear with the selection (Table, Equation, Audio & Video) | Window/Ribbon/Contextual Tabs | surface |  |  | P1 | missing | FLUENT19:TabSet* |  |
 | UI.Ribbon.Keytips | Access keys (Alt / F10 show keytips; Alt+N, F etc.) | Window/Ribbon/Keytips | surface |  |  | P2 | missing | KBD365 (Alt+N sequences) |  |
 | UI.Ribbon.Galleries | In-ribbon galleries with live preview (Styles, Tags, Pens) | Window/Ribbon/Galleries | surface |  |  | P1 | missing | FLUENT19 (gallery controls) |  |
 | UI.Ribbon.Tooltips | ScreenTips with the command name, shortcut and description | Window/Ribbon/ScreenTips | surface |  |  | P1 | missing | GK |  |
 | UI.Nav.NotebookPane | Notebook pane on the left: notebooks, their section groups and sections in a tree | Window/Navigation/Notebook Pane | surface |  |  | P0 | wired | GK; FLUENT19:ContextMenuNotebook |  |
-| UI.Nav.NotebookPaneCollapse | Collapse/expand (pin) the notebook pane; notebook drop-down when collapsed | Window/Navigation/Notebook Pane Collapse | surface |  |  | P0 | wired | GK |  |
+| UI.Nav.NotebookPaneCollapse | Collapse/expand (pin) the notebook pane; notebook drop-down when collapsed | Window/Navigation/Notebook Pane Collapse | surface |  |  | P0 | wired | GK | In the 2024 UI the ☰ button (UI.Nav.Toggle) shows and hides the navigation. |
+| UI.Nav.Toggle | ☰ button under the ribbon that shows and hides the navigation (notebook tree and page column) | Window/Navigation/Toggle | surface |  |  | P0 | missing | M365-2024 | Runs `view.navigationPanes` (R.View.Views.NavigationPanes). |
+| UI.Nav.NotebookTree | Tree of every open notebook: chevrons, notebook icon in the notebook's colour, sections with a coloured bar, section groups with chevrons, separators between notebooks, selection as a rounded grey background | Window/Navigation/Notebook Tree | surface |  |  | P0 | missing | M365-2024 |  |
+| UI.Nav.NewSectionLink | "+ New section" link at the end of each notebook's sections | Window/Navigation/New Section | surface |  |  | P0 | missing | M365-2024 |  |
+| UI.Nav.QuickNotes | Quick notes, pinned at the bottom of the navigation pane | Window/Navigation/Quick Notes | surface |  | nav.quickNotes | P1 | missing | M365-2024 | Opens (creating it if needed) the Quick Notes section of the default notebook; unverified where the reference keeps it. |
+| UI.Nav.SortPages | Sort pages button beside Add page (by title, date created, date modified) | Window/Navigation/Sort Pages | surface |  | page.sort | P1 | missing | M365-2024 | Sort orders unverified. |
 | UI.Nav.NotebookList | Notebook drop-down list (switch notebook, Ctrl+G) | Window/Navigation/Notebook List | surface |  |  | P0 | missing | KBD365 (Ctrl+G) |  |
-| UI.Nav.SectionTabs | Section tabs across the top of the page area, coloured by section colour, with section group tabs and the + (Create a New Section) tab | Window/Navigation/Section Tabs | surface |  |  | P0 | wired | GK; FLUENT19:ContextMenuSectionArea |  |
-| UI.Nav.PageList | Page tabs pane (right side by default): titles, subpage indentation, collapse arrows, selected page highlight, resizable width | Window/Navigation/Page List | surface |  |  | P0 | wired | GK; KBD365 (Ctrl+Shift+[ / ]) |  |
-| UI.Nav.AddPage | "+ Add Page" button above the page list; hover insertion line between pages | Window/Navigation/Add Page | surface |  |  | P0 | wired | GK | The hover insertion line between pages is not implemented yet. |
-| UI.Nav.PageListLeft | Option: page tabs appear on the left | Window/Navigation/Page List Position | surface |  |  | P2 | missing | GK (Options › Display) |  |
-| UI.Nav.SearchBox | Search box above the page list with scope drop-down and as-you-type results | Window/Navigation/Search Box | surface |  |  | P0 | missing | KBD365 (Ctrl+E); FLUENT19:ContextMenuSearchScope |  |
+| UI.Nav.SectionTabs | Section tabs across the top of the page area, coloured by section colour, with section group tabs and the + (Create a New Section) tab | Window/Navigation/Section Tabs | surface |  |  | P0 | out-of-scope | GK; FLUENT19:ContextMenuSectionArea | Not present in the 2024 UI (decision D1); replaced by the sections in the notebook tree (UI.Nav.NotebookTree) and + New section (UI.Nav.NewSectionLink). |
+| UI.Nav.PageList | Page list: titles, subpage indentation, collapse arrows, selected page highlight, resizable width (2024 UI: a column between the notebook tree and the page) | Window/Navigation/Page List | surface |  |  | P0 | wired | GK; KBD365 (Ctrl+Shift+[ / ]); M365-2024 (placement) |  |
+| UI.Nav.AddPage | "Add page" button above the page list (2024 UI: outlined, with the sort button beside it); hover insertion line between pages | Window/Navigation/Add Page | surface |  |  | P0 | wired | GK; M365-2024 (look) | The hover insertion line between pages is not implemented yet. |
+| UI.Nav.PageListLeft | Option: page tabs appear on the left | Window/Navigation/Page List Position | surface |  |  | P2 | out-of-scope | GK (Options › Display) | Not present in the 2024 UI (decision D1): the page column is always beside the notebook tree (unverified). |
+| UI.Nav.SearchBox | Search notebooks box (2024 UI: under the ribbon, at the right) with scope drop-down and as-you-type results | Window/Navigation/Search Box | surface |  |  | P0 | missing | KBD365 (Ctrl+E); FLUENT19:ContextMenuSearchScope; M365-2024 (placement) |  |
 | UI.Nav.SearchResultsPane | Search Results pane (Alt+O) docked on the right, grouped by section | Window/Navigation/Search Results Pane | surface |  |  | P1 | wired | KBD365 (Alt+O) | Opened with Pin Search Results (Alt+O) from the search drop-down. |
 | UI.Nav.FindOnPage | Find on page bar (Ctrl+F): match count, next/previous, highlights on the page | Window/Navigation/Find on Page | surface |  |  | P0 | wired | KBD365 (Ctrl+F, F3, Shift+F3) | Match highlighting on the page is not pinned by a test (unverified). |
 | UI.Canvas.Page | Page canvas: free-form, white page that grows right and down with content; page title area with date and time | Window/Canvas/Page | surface |  |  | P0 | wired | GK; [MS-ONE] page object |  |
@@ -63,6 +77,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Canvas.MiniToolbar | Mini toolbar on text selection (font, size, bold, italic, underline, highlight, colour, indent, bullets, styles, tags) | Window/Canvas/Mini Toolbar | surface |  |  | P1 | missing | GK (Options › General) |  |
 | UI.Canvas.PasteOptions | Paste Options button after pasting | Window/Canvas/Paste Options Button | surface |  |  | P1 | missing | GK (Options › Advanced) |  |
 | UI.Canvas.InfoBar | Information bar at the top of the page (Ctrl+Shift+W performs its action) | Window/Canvas/Information Bar | surface |  |  | P2 | missing | KBD365 (Ctrl+Shift+W) |  |
+| UI.Canvas.ExpandButton | Expand / restore button at the top right of the page (full page view) | Window/Canvas/Expand | surface |  |  | P1 | missing | M365-2024 | Runs `view.fullPage`. |
 | UI.Panes.FindTags | Tags Summary pane: group by tag/section/title/date/note text, search scope, Show only unchecked items, Create Summary Page | Window/Panes/Tags Summary | surface |  |  | P0 | wired | FLUENT19:FindTaggedNotes; GK |  |
 | UI.Panes.CustomizeTags | Customize Tags dialog: new tag, modify (name, symbol, font colour, highlight colour), reorder, remove | Window/Panes/Customize Tags | surface |  |  | P1 | missing | FLUENT19:TagsCustomize; GK |  |
 | UI.Panes.PageVersions | Page versions listed under the page in the page list, by date and author | Window/Panes/Page Versions | surface |  |  | P1 | missing | FLUENT19:PageVersions |  |
@@ -87,7 +102,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Window.Docked | Docked window: OneNote docked to the side of the desktop with the compact ribbon | Window/Docked | surface |  |  | P2 | missing | FLUENT19:CurrentWindowDock; TabHomeNarrow… |  |
 | UI.Window.QuickNote | Quick Note window: a small borderless page saved to Quick Notes | Window/Quick Note | surface |  |  | P1 | missing | FLUENT19:NewSideNote; KBD365 |  |
 | UI.Window.ContextMenus | Right-click context menus for each object (see CM rows) | Window/Context Menus | surface |  |  | P0 | wired | FLUENT19 (context menus) | Notebook, section group, section, page and pane-area menus; object menus on the page are not implemented yet. |
-| UI.Window.DarkMode | Office theme (Colorful, Dark Gray, Black, White) and dark page canvas | Window/Theme | surface |  |  | P1 | missing | GK |  |
+| UI.Window.DarkMode | Office theme (Colorful, Dark Gray, Black, White, Use system setting) and dark page canvas | Window/Theme | surface |  |  | P1 | missing | GK; M365-2024 |  |
 | UI.Window.HiDPI | HiDPI and fractional scaling (Linux Wayland/X11) | Window/HiDPI | surface |  |  | P0 | wired | brief §4 | Rendered at 1.25×, 1.5× and 2× in tests. |
 | UI.Window.IME | IME composition for CJK and other input methods | Window/IME | surface |  |  | P0 | wired | brief §4 | Commit inserts the composed text; the preedit is not drawn in place yet (unverified). |
 | UI.Window.Clipboard | System clipboard: text, rich text (HTML), images | Window/Clipboard | surface |  |  | P0 | missing | brief §4 |  |
@@ -894,8 +909,8 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.PageVersion.PageVersionsHide | Hide Page Versions | Context/Page Version/Hide Page Versions | button |  | history.pageVersions | P1 | missing | FLUENT19:ContextMenuVersionPage/PageVersionsHide |  |
 | CM.PageListArea.NewPageAtSectionEndContextual | New Page | Context/Page List Area/New Page | button | `Mod+N` | page.new | P0 | wired | FLUENT19:ContextMenuPageArea/NewPageAtSectionEndContextual |  |
 | CM.PageListArea.PastePage | Paste Page | Context/Page List Area/Paste Page | button |  | page.paste | P1 | wired | FLUENT19:ContextMenuPageArea/PastePage |  |
-| CM.SectionTabsArea.SectionInsert | New Section | Context/Section Tabs Area/New Section | button | `Mod+T` | section.new | P0 | wired | FLUENT19:ContextMenuSectionArea/SectionInsert |  |
-| CM.SectionTabsArea.SectionGroupInsert | New Section Group | Context/Section Tabs Area/New Section Group | button |  | sectionGroup.new | P0 | wired | FLUENT19:ContextMenuSectionArea/SectionGroupInsert |  |
+| CM.SectionTabsArea.SectionInsert | New Section | Context/Section Tabs Area/New Section | button | `Mod+T` | section.new | P0 | out-of-scope | FLUENT19:ContextMenuSectionArea/SectionInsert | No section tabs area in the 2024 UI (decision D1); the same command is in CM.NotebookPaneArea.SectionInsert. |
+| CM.SectionTabsArea.SectionGroupInsert | New Section Group | Context/Section Tabs Area/New Section Group | button |  | sectionGroup.new | P0 | out-of-scope | FLUENT19:ContextMenuSectionArea/SectionGroupInsert | No section tabs area in the 2024 UI (decision D1); the same command is in CM.NotebookPaneArea.SectionGroupInsert. |
 | CM.NotebookPaneArea.SectionInsert | New Section | Context/Notebook Pane Area/New Section | button | `Mod+T` | section.new | P0 | wired | FLUENT19:ContextMenuNotebookArea/SectionInsert |  |
 | CM.NotebookPaneArea.SectionGroupInsert | New Section Group | Context/Notebook Pane Area/New Section Group | button |  | sectionGroup.new | P0 | wired | FLUENT19:ContextMenuNotebookArea/SectionGroupInsert |  |
 | CM.NotebookPaneArea.NotebookNew | New Notebook | Context/Notebook Pane Area/New Notebook | button |  | file.newNotebook | P0 | wired | FLUENT19:ContextMenuNotebookArea/NotebookNew |  |
@@ -1234,7 +1249,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Notebooks.LastPage | Go to the last page in the section | Keyboard/Notebooks and sections/Go to the last page in the section | shortcut | `Alt+End` | nav.lastPage | P0 | verified | KBD365 |  |
 | KB.Notebooks.MoveCopyPage | Move or copy the current page | Keyboard/Notebooks and sections/Move or copy the current page | shortcut | `Mod+Alt+M` | page.moveOrCopy | P0 | wired | KBD365 |  |
 | KB.Notebooks.FocusPageTab | Put focus on the current page tab | Keyboard/Notebooks and sections/Put focus on the current page tab | shortcut | `Mod+Alt+G` | nav.focusPageTab | P1 | wired | KBD365 |  |
-| KB.Notebooks.FocusSectionTab | Put focus on the current section tab | Keyboard/Notebooks and sections/Put focus on the current section tab | shortcut | `Mod+Shift+G` | nav.focusSectionTab | P1 | wired | KBD365 |  |
+| KB.Notebooks.FocusSectionTab | Put focus on the current section tab | Keyboard/Notebooks and sections/Put focus on the current section tab | shortcut | `Mod+Shift+G` | nav.focusSectionTab | P1 | wired | KBD365 | In the 2024 UI the focus goes to the current section in the notebook tree. |
 | KB.Notebooks.MoveSection | Move the current section (Ctrl+Shift+G, arrows, Shift+F10) | Keyboard/Notebooks and sections/Move the current section (Ctrl+Shift+G, arrows, Shift+F10) | key-behaviour |  | section.moveOrCopy | P2 | missing | KBD365 | key sequence through the section tab context menu |
 | KB.Notebooks.SwitchNotebook | Switch notebook on the navigation bar | Keyboard/Notebooks and sections/Switch notebook on the navigation bar | shortcut | `Mod+G` | nav.notebookList | P1 | wired | KBD365 | then arrows/Tab and Enter |
 | KB.Search.All | Move to the Search box (all notebooks) | Keyboard/Search/Move to the Search box (all notebooks) | shortcut | `Mod+E` | search.all | P0 | wired | KBD365 |  |
@@ -1274,13 +1289,13 @@ The OneNote Options dialog, category by category. Setting names are functional d
 | OPT.General.ScreenTipStyle | ScreenTip style | File/Options/General/ScreenTip style | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.General.UserName | User name (author of edits) | File/Options/General/User name (author of edits) | option |  |  | P1 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.General.Initials | Initials | File/Options/General/Initials | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.General.OfficeTheme | Office Theme (Colorful, Dark Gray, Black, White) | File/Options/General/Office Theme (Colorful, Dark Gray, Black, White) | option |  |  | P1 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.General.OfficeTheme | Office Theme (Colorful, Dark Gray, Black, White, Use system setting) | File/Options/General/Office Theme (Colorful, Dark Gray, Black, White, Use system setting) | option |  |  | P1 | missing | GK (OneNote Options dialog, user-visible); M365-2024 | unverified wording |
 | OPT.General.OfficeBackground | Office Background | File/Options/General/Office Background | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.General.Privacy | Privacy settings | File/Options/General/Privacy settings | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Display.TrayIcon | Place OneNote icon in the notification area of the taskbar | File/Options/Display/Place OneNote icon in the notification area of the taskbar | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Display.NewPagesRuleLines | Create all new pages with rule lines | File/Options/Display/Create all new pages with rule lines | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Display.DockNewWindows | Dock new OneNote windows to the side of the desktop | File/Options/Display/Dock new OneNote windows to the side of the desktop | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.Display.PageTabsLeft | Page tabs appear on the left | File/Options/Display/Page tabs appear on the left | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.Display.PageTabsLeft | Page tabs appear on the left | File/Options/Display/Page tabs appear on the left | option |  |  | P2 | out-of-scope | GK (OneNote Options dialog, user-visible) | unverified wording; not present in the 2024 UI (decision D1): the page column is always beside the notebook tree (unverified). |
 | OPT.Display.NavBarLeft | Navigation bar appears on the left | File/Options/Display/Navigation bar appears on the left | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Display.ScrollBarLeft | Vertical scroll bar appears on the left | File/Options/Display/Vertical scroll bar appears on the left | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Display.FloatingNewPage | Show the floating New Page button near page tabs | File/Options/Display/Show the floating New Page button near page tabs | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
@@ -1475,7 +1490,7 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 | NC.Caret.Down | Move down | Keyboard/Navigation/Down | key-behaviour | `Down` | caret.down | P0 | wired | NoteCraft | visual lines come from the UI |
 | NC.Object.Select | Select a note container (click its top bar) | Mouse/Select container | mouse |  | object.select | P0 | wired | NoteCraft |  |
 | NC.Page.Select | Open a page (click its tab) | Mouse/Page tab | mouse |  | nav.goto | P0 | wired | NoteCraft | Ctrl/Shift+click select several |
-| NC.Section.Select | Open a section (click its tab) | Mouse/Section tab | mouse |  | section.select | P0 | wired | NoteCraft |  |
+| NC.Section.Select | Open a section (click it in the notebook tree) | Mouse/Section tab | mouse |  | section.select | P0 | wired | NoteCraft |  |
 | NC.Notebook.Select | Open a notebook (click it in the notebook pane) | Mouse/Notebook pane | mouse |  | notebook.select | P0 | wired | NoteCraft |  |
 
 ## Revision history
@@ -1483,3 +1498,4 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 | Date | Change | Summary |
 |---|---|---|
 | 2026-10-14 | major | First version: FLUENT19 inventory (ribbon, contextual tabs, backstage, context menus, commands not in the ribbon, docked ribbon), KBD365 shortcuts, Microsoft 365 additions, UI surfaces, options, behaviour and formats |
+| 2026-10-15 | major | Decision D1 (the 2024 UI): source `M365-2024`; 12 new rows (title-bar Search, Share/Copilot/Account out-of-scope, Simplified ribbon and mode switch, ☰ toggle, notebook tree, + New section, Quick notes, sort pages, expand button); 2016-only surfaces (section tabs, their area menu, page-tabs-left option) out-of-scope with their replacement named |

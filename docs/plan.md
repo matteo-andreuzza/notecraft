@@ -1,11 +1,17 @@
 # NoteCraft plan
 
-> **Last reviewed:** 2026-10-14 · **Last updated:** 2026-10-14 · **Change:** major (first version) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows
+> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** major (decision D1: the 2024 UI; M1.5 and M5 added) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the 2024 UI)
 
 How NoteCraft gets from nothing to a OneNote replacement a typical user could switch to. The
 inventory of what "OneNote" means is [`parity-catalog.md`](parity-catalog.md) (1,291 rows); the
 numbers are in [`parity.md`](parity.md); the sibling conventions we follow are in
 [`structure-audit.md`](structure-audit.md).
+
+> **Decision D1 (2026-10-15):** the visual model is the **current OneNote for Microsoft 365 (2024
+> UI)**, not OneNote 2016 / Windows 10. It overrides the window layout fixed in the original brief
+> (section tabs on top, page list on the right); the brief stays verbatim and §6 records the
+> override. Commands, shortcuts and behaviour are unaffected. The per-surface specification is
+> [`ui-parity.md`](ui-parity.md).
 
 ## 1. Principles
 
@@ -25,9 +31,11 @@ numbers are in [`parity.md`](parity.md); the sibling conventions we follow are i
 | # | Milestone | Catalog rows it targets | Exit criteria |
 |---|---|---|---|
 | **M1** | **Shell and core editing** | `UI.*` (window, ribbon with every tab/group present, navigation pane, section tabs, page list, canvas, search box, Find Tags pane); notebook/section group/section/page `CM.*` and `QAT.NR.*` rows; `R.Home.*` (clipboard, basic text, styles, tags); `KB.*` for editing, formatting, selection, tags, outlines, pages, notebooks, search; `BEH.Canvas/Outline/Text/Tags/Pages/Sections/Notebooks/Recycle/Save/Search.*`; `FMT.Native.Ncraft` | Every P0 row of those areas wired; the core workflows (meeting notes, task list with To Do tags, find a note by search, reorganise pages) pass headlessly; kill -9 recovery test green; screenshots of every tab reviewed |
+| **M1.5** | **Modern UI (the 2024 look, decision D1)** | `UI.*` surfaces (title bar with Search, tab row, ribbon card in Simplified and Classic modes, left navigation with the notebook tree, page column, Quick notes), `OPT.General.OfficeTheme`, `R.View.Views.NavigationPanes`; every surface in [`ui-parity.md`](ui-parity.md) | Every surface of `ui-parity.md` built in the 2024 style in light and dark; the Simplified ribbon reaches every Classic control (inline or in the **…** overflow); themes Colorful, White, Dark Gray, Black and system; screenshots of every tab in both ribbon modes and every theme reviewed beside the references; no colour literal outside `theme.rs`/`icons.rs` |
 | M2 | Insert and Draw | `R.Insert.*`, `R.Draw.*`, `CT.TableLayout.*`, `CT.Equation.*`, `CT.AudioVideo.*`, picture/attachment/ink `CM.*`, `BEH.Ink/Table/Paste.*` | Tables with all Table Layout tools, pictures, attachments, printouts, date/time, templates, rule lines/grid, symbols, ink with pressure, lasso, eraser modes |
 | M3 | Interop | `FMT.*`, `BS.Export.*`, `BS.Open.OpenSection` | `.one`/`.onetoc2`/`.onepkg` import with measured fidelity per construct; `.one` export where the specs allow; PDF/DOCX/HTML/Markdown exports; Markdown/HTML/text/ENEX/PDF/image imports |
-| M4 | History, Review, View, Help, power features | `R.History.*`, `R.Review.*`, `R.View.*`, `R.Help.*`, `OPT.*`, `UI.Dialogs.Customize*`, `UI.Ribbon.Keytips`, `BEH.Password/Versions/History.*` | Page versions with diff, spelling, password-protected sections (XChaCha20-Poly1305 + Argon2id), full Options, customizable ribbon and QAT, keytips, AccessKit, en + it localization, optional folder/WebDAV sync, WASM plug-ins, MCP tools |
+| M4 | History, Review, View, Help, power features | `R.History.*`, `R.Review.*`, `R.View.*`, `R.Help.*`, `OPT.*`, `UI.Dialogs.Customize*`, `UI.Ribbon.Keytips`, `BEH.Password/Versions/History.*` | Page versions with diff, spelling, password-protected sections (XChaCha20-Poly1305 + Argon2id), full Options, customizable ribbon and QAT, keytips, AccessKit, en + it localization, optional folder/WebDAV sync, WASM plug-ins, MCP tools; drawn window buttons where the compositor draws none |
+| M5 | Release | Performance targets, packaging | Flatpak/AppImage/deb and `craft-launcher` integration; Windows/macOS builds; the performance budgets (10,000 pages open < 2 s, typing < 16 ms, search over 100k pages < 50 ms, 500+ ink strokes); 50 real workflows with a measured success rate in `parity.md`; user guide; tag `v1.0` |
 
 ### M1 increments (in order)
 
@@ -51,6 +59,28 @@ numbers are in [`parity.md`](parity.md); the sibling conventions we follow are i
    Find Tags pane, dialogs; offscreen screenshot example.
 8. `apps/notecraft` (desktop, control channel) and `apps/notecraft-web` (trunk).
 9. Gates, parity numbers, devlog, tag `m1-core`.
+
+### M1.5 increments (in order)
+
+Each step is its own commit with `cargo xtask ci` green and its screenshots reviewed beside the
+reference screenshots (kept locally, never committed: clean room, we only observe and measure).
+
+1. **A0** Mandate and documents: decision D1, the catalog's `M365-2024` source, new and
+   reclassified rows, [`ui-parity.md`](ui-parity.md).
+2. **A1** Theme foundations: tokens (colours, radii, spacing, heights, type ramp) for Colorful,
+   White, Dark Gray, Black and the system theme; a separate UI font family (Inter from
+   `CRAFT_FONTS_DIR` or the system, else Noto Sans); no colour literals outside `theme.rs`/`icons.rs`.
+3. **A2** Title bar (neutral, centred Search for commands and notes) and the tab row (semibold
+   active tab with an accent underline; Share disabled).
+4. **A3** The ribbon in a floating rounded card with two modes: Simplified (one row, overflow
+   **…**, default) and Classic (labelled groups), switched by the ▾ chevron and remembered.
+5. **A4** Navigation: ☰ and Search notebooks under the ribbon; the tree of every notebook with
+   + New section and Quick notes; the page column with Add page and sort; section tabs removed.
+6. **A5** Canvas (expand button), panes as cards, Find bar, menus, dialogs, backstage, toasts.
+7. **A6** Icons in the WordCraft style (20×20 grid, 1.25 stroke, line + accent), drawn in code.
+8. **A7** Tests (ribbon modes, Simplified coverage, contrast, tree, Quick notes, sort, settings)
+   and screenshots (every tab in both modes, every theme, narrow window, 2×).
+9. **A8** Parity, docs, devlog; tag `m1.5-modern-ui`.
 
 ## 3. Crate graph
 
@@ -150,7 +180,13 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | Undocumented behaviour (exact list sequences, rule-line spacings, default palettes) | Parity claims | Mark `unverified`, list in parity.md, never count them as verified |
 | Memory on the dev machine (15 GB, often ~3 GB free) | Slow builds | One target dir, modest parallelism, no parallel agents building at once |
 
-## 6. Assumptions
+## 6. Decisions
+
+| # | Date | Decision | Overrides | Why |
+|---|---|---|---|---|
+| D1 | 2026-10-15 | The visual model is the current OneNote for Microsoft 365 desktop app (the 2024 UI): neutral title bar with a centred Search box; a tab row whose active tab is semibold with an accent underline; the ribbon in a floating rounded card, **Simplified (one row) by default** with a ▾ chevron to the **Classic** ribbon (both in the modern style, the choice remembered); navigation on the left (a tree of every notebook with coloured section bars, + New section, Quick notes pinned at the bottom; the page column with Add page and sort); **no section tabs above the page**; panes as cards. Surfaces that only exist in the 2016 layout become `out-of-scope` rows that name their replacement. | The window layout of the original brief (OneNote 2016-style: section tabs across the top, page list on the right) | The user's directive: like the other ArtCraft apps follow the latest Office. The brief is kept verbatim; this table records the override. The command set, menu paths, shortcuts and behaviour mandate are unchanged. |
+
+## 7. Assumptions
 
 - The Microsoft 365 desktop app's ribbon equals OneNote 2019's control inventory (FLUENT19) plus
   the Help tab and a few newer Draw/View controls; differences are marked per row.

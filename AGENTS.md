@@ -1,7 +1,7 @@
 # AGENTS.md: guide for AI agents and contributors
 
 NoteCraft is an open-source, native, **1:1 replacement for Microsoft OneNote** (the Microsoft 365
-desktop app for Windows, the OneNote 2016-style ribbon UI) written in **Rust only** (no
+desktop app for Windows in its current, 2024 look: decision D1 in `docs/plan.md`) written in **Rust only** (no
 JavaScript or TypeScript). **No Tauri, Electron or webview shells:** the desktop app is native
 egui/eframe on wgpu, and the web build is the same Rust compiled to WebAssembly (trunk +
 wasm-bindgen). The product name is always written **NoteCraft** (`{Function}Craft`, like its
@@ -19,7 +19,8 @@ file first, then `docs/`.
 
 | Read | Why |
 |---|---|
-| `docs/plan.md` | Milestones ordered by parity value, crate graph, risks, assumptions |
+| `docs/plan.md` | Milestones ordered by parity value, crate graph, risks, decisions (D1: the 2024 UI), assumptions |
+| `docs/ui-parity.md` | The 2024 look surface by surface: measures, radii, colours, type ramp, states, status |
 | `docs/architecture.md` | Crate map, layers, the engine/UI seam, the document model |
 | `docs/contributing.md` | Rules: clean-room, tests, layering, style, commits; the "add a command" checklist |
 | `docs/parity-catalog.md` | **The source of truth for parity**: every ribbon control, menu item, shortcut, option, behaviour and format construct of OneNote, with id, source, priority and status |
