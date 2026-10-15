@@ -49,6 +49,7 @@ fn main() {
             // Open the meeting page with a caret so the formatting controls are live.
             let pid = a.session.notebook().unwrap().sections()[1].pages[0].id;
             a.session.run("nav.goto", json!({"page": pid.to_string()})).unwrap();
+            a.session.run("nav.pageTitle", json!({})).unwrap();
         });
     }
     shot("tags-summary", &out, 1.0, |a| {

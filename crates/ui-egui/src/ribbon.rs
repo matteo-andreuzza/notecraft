@@ -118,6 +118,9 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 // UI.Window.TellMe — search for a command by name.
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     let (r, resp) = ui.allocate_exact_size(vec2(22.0, 22.0), Sense::click());
+                    let collapse_label =
+                        if app.session.view.ribbon_collapsed { "Expand the Ribbon (Ctrl+F1)" } else { "Collapse the Ribbon (Ctrl+F1)" };
+                    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, collapse_label));
                     icons::triangle(
                         ui.painter(),
                         r.center(),
@@ -125,7 +128,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                         if app.session.view.ribbon_collapsed { icons::Dir::Down } else { icons::Dir::Up },
                         t.chrome_text,
                     );
-                    if resp.on_hover_text("Collapse the Ribbon (Ctrl+F1)").clicked() {
+                    if resp.on_hover_text(collapse_label).clicked() {
                         app.run(&ctx, "ui.collapseRibbon", json!({}));
                     }
                     tell_me(app, ui, t);

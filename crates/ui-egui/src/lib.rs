@@ -323,6 +323,7 @@ impl NoteApp {
                 ] {
                     let enabled = notecraft_engine::commands::find(id).is_some_and(|c| (c.enabled)(&self.session).is_none());
                     let (rect, resp) = ui.allocate_exact_size(vec2(24.0, 24.0), egui::Sense::click());
+                    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, tip));
                     if resp.hovered() && enabled {
                         ui.painter().rect_filled(rect, 2.0, t.tab_hover);
                     }

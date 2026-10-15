@@ -65,7 +65,10 @@ pub fn notebook_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 });
             });
             ui.add_space(2.0);
-            let resp = egui::ScrollArea::vertical().id_salt("nb_scroll").show(ui, |ui| {
+            // CM.NotebookPaneArea — right-click on the empty pane. Registered before the rows,
+            // so a row (registered later, so on top) keeps its own menu.
+            let area = ui.interact(ui.available_rect_before_wrap(), ui.id().with("nb_area"), Sense::click());
+            egui::ScrollArea::vertical().id_salt("nb_scroll").show(ui, |ui| {
                 let notebooks: Vec<_> = app.session.ws.notebooks.clone();
                 for nb in notebooks {
                     notebook_row(app, ui, &nb, t);
@@ -75,8 +78,6 @@ pub fn notebook_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 }
                 ui.allocate_space(vec2(ui.available_width(), 40.0))
             });
-            // CM.NotebookPaneArea — right-click on the empty pane.
-            let area = ui.interact(resp.inner_rect, ui.id().with("nb_area"), Sense::click());
             area.context_menu(|ui| {
                 cmd_item(app, ui, "New Section", "section.new", json!({}));
                 cmd_item(app, ui, "New Section Group", "sectionGroup.new", json!({}));
@@ -348,7 +349,8 @@ pub fn section_tabs(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         };
         let font = FontId::proportional(12.5);
         let w = ui.fonts_mut(|f| f.layout_no_wrap(name.clone(), font.clone(), Color32::BLACK).size().x) + 22.0 + if is_group { 14.0 } else { 0.0 };
-        if x + w > tabs_rect.max.x {
+        // Leave room for the "+" tab after the last one shown.
+        if x + w > tabs_rect.max.x - 32.0 {
             break;
         }
         let selected = app.session.sel.section == Some(id);
@@ -403,6 +405,7 @@ pub fn section_tabs(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     // The "+" tab: Create a New Section.
     let plus = Rect::from_min_size(pos2(x + 2.0, bar.min.y + 6.0), vec2(26.0, 24.0));
     let presp = ui.interact(plus, ui.id().with("tab_plus"), Sense::click()).on_hover_text("Create a New Section (Ctrl+T)");
+    presp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Create a New Section"));
     if presp.hovered() {
         ui.painter().rect_filled(plus, 3.0, t.hover);
     }
@@ -455,6 +458,7 @@ fn search_box(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: Tokens) {
     // Scope drop-down (catalog CM.SearchScope.*).
     let sb = Rect::from_min_max(pos2(r.max.x - 22.0, r.min.y), r.max);
     let sresp = ui.interact(sb, ui.id().with("scope_btn"), Sense::click()).on_hover_text("Change search scope");
+    sresp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Change search scope"));
     icons::triangle(ui.painter(), sb.center(), 8.0, icons::Dir::Down, t.ribbon_text);
     egui::Popup::menu(&sresp).show(|ui| {
         for (label, cmd) in [
@@ -541,6 +545,7 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         };
         // "+ Add Page".
         let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 30.0), Sense::click());
+        resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Add Page"));
         if resp.hovered() {
             ui.painter().rect_filled(r, 0.0, t.hover);
         }
@@ -550,7 +555,10 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             app.run(&ctx, "page.new", json!({}));
         }
         ui.painter().line_segment([r.left_bottom(), r.right_bottom()], Stroke::new(1.0, t.border));
-        let scroll = egui::ScrollArea::vertical().id_salt("pages_scroll").show(ui, |ui| {
+        // CM.PageListArea — right-click below or between the page tabs. Registered before the
+        // tabs, so a tab (registered later, so on top) keeps its own menu.
+        let area = ui.interact(ui.available_rect_before_wrap(), ui.id().with("pages_area"), Sense::click());
+        egui::ScrollArea::vertical().id_salt("pages_scroll").show(ui, |ui| {
             for (i, page) in section.pages.iter().enumerate() {
                 if section.page_hidden(i) {
                     continue;
@@ -607,8 +615,6 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             }
             ui.allocate_space(vec2(ui.available_width(), 60.0))
         });
-        // CM.PageListArea.
-        let area = ui.interact(scroll.inner_rect, ui.id().with("pages_area"), Sense::click());
         area.context_menu(|ui| {
             cmd_item(app, ui, "New Page", "page.new", json!({}));
             cmd_item(app, ui, "Paste Page", "page.paste", json!({}));

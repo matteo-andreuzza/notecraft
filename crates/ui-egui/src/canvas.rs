@@ -169,7 +169,7 @@ fn char_to_byte(text: &str, ci: usize) -> usize {
 }
 
 /// The egui text format for a run's effective format.
-fn text_format(ctx: &egui::Context, f: &CharFormat, zoom: f32, t: Tokens, page_text: Color32) -> TextFormat {
+pub(crate) fn text_format(ctx: &egui::Context, f: &CharFormat, zoom: f32, t: Tokens, page_text: Color32) -> TextFormat {
     let size = f.size.unwrap_or(11.0).clamp(1.0, 1638.0);
     let script = f.script.unwrap_or(Script::Normal);
     let shown = if script == Script::Normal { size } else { size * 0.65 };
@@ -183,6 +183,11 @@ fn text_format(ctx: &egui::Context, f: &CharFormat, zoom: f32, t: Tokens, page_t
     };
     if let Some(h) = f.highlight {
         tf.background = c32(h);
+        // Automatic text stays readable on the highlight: dark on yellow in the dark theme too.
+        // An explicit font colour is kept.
+        if tf.color == page_text {
+            tf.color = crate::theme::text_on(tf.background);
+        }
     }
     if f.link.is_some() {
         tf.color = t.link;

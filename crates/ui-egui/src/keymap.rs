@@ -389,7 +389,6 @@ mod tests {
 
     #[test]
     fn every_registry_shortcut_is_typeable() {
-        // parity: UI.Window.IME
         // Each key in the registry parses to a combination this keymap can produce, so no
         // documented shortcut is unreachable from the keyboard (side-specific modifiers excepted).
         for c in commands::all() {

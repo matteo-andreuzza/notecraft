@@ -18,13 +18,20 @@ pub(crate) fn app() -> NoteApp {
     NoteApp::new(s, Box::new(FixedHost(clock())))
 }
 
+/// Assert that the control labelled `label` is in the accessibility tree; `row` is the catalog
+/// row it belongs to.
+fn present(h: &Harness<'static, NoteApp>, row: &str, label: &str) {
+    assert!(h.query_by_label(label).is_some(), "{row}: no control labelled `{label}`");
+}
+
 fn harness(app: NoteApp) -> Harness<'static, NoteApp> {
     Harness::builder().with_size(egui::vec2(1280.0, 800.0)).build_ui_state(|ui, app: &mut NoteApp| app.ui(ui), app)
 }
 
 #[test]
 fn every_tab_and_view_renders() {
-    // parity: UI.Ribbon.Tabs, UI.Nav.NotebookPane, UI.Nav.SectionTabs, UI.Nav.PageList, UI.Canvas.Page
+    // Rendering only (no panic in any state); what each part does is pinned by
+    // `window_parts_are_present_and_work`.
     let mut h = harness(app());
     h.run();
     for tab in ["Home", "Insert", "Draw", "History", "Review", "View", "Help"] {
@@ -45,7 +52,7 @@ fn every_tab_and_view_renders() {
 
 #[test]
 fn typing_through_the_keyboard_reaches_the_page() {
-    // parity: NC.Text.Insert, UI.Canvas.Container
+    // parity: NC.Text.Insert
     let mut a = app();
     a.session.run("page.new", json!({})).unwrap();
     a.session.run("outline.new", json!({"x": 60.0, "y": 120.0})).unwrap();
@@ -58,14 +65,13 @@ fn typing_through_the_keyboard_reaches_the_page() {
     h.event(egui::Event::Text(" bold".into()));
     h.run();
     let text = h.state().session.page().unwrap().plain_text();
-    assert!(text.contains("Hello bold"), "{text}");
+    assert!(text.contains("Hello bold"), "{}: {text}", "UI.Canvas.Page");
     let p = &h.state().session.page().unwrap().objects[0].as_outline().unwrap().paragraphs[0];
     assert!(p.runs.iter().any(|r| r.text.contains("bold") && r.fmt.bold == Some(true)), "Ctrl+B applied to typed text");
 }
 
 #[test]
 fn ribbon_buttons_dispatch_commands() {
-    // parity: UI.Ribbon.Galleries
     let mut a = app();
     a.session.run("page.new", json!({})).unwrap();
     // The caret starts in the new page's title.
@@ -83,7 +89,8 @@ fn ribbon_buttons_dispatch_commands() {
     h.run();
     h.get_by_label("Find Tags").click();
     h.run();
-    assert!(h.state().session.view.tags_pane, "Find Tags opens the Tags Summary pane");
+    assert!(h.state().session.view.tags_pane, "UI.Panes.FindTags: Find Tags opens the Tags Summary pane");
+    assert!(h.query_by_label("Create Summary Page").is_some(), "UI.Panes.FindTags");
 }
 
 #[test]
@@ -125,5 +132,147 @@ fn a_new_page_takes_the_keyboard() {
     h.run();
     h.event(egui::Event::Text("Typed title".into()));
     h.run();
-    assert_eq!(h.state().session.page().unwrap().display_title(), "Typed title");
+    assert_eq!(h.state().session.page().unwrap().display_title(), "Typed title", "UI.Canvas.TitleArea");
+}
+
+/// The window's parts (catalog `UI.*` rows), found through the accessibility tree — what a
+/// screen reader sees (`UI.Window.Accessibility`) — and, where they do something, used once.
+#[test]
+fn window_parts_are_present_and_work() {
+    let mut h = harness(app());
+    h.run();
+    let has = |h: &Harness<'static, NoteApp>, label: &str| h.query_by_label(label).is_some();
+    assert!(h.query_by_label_contains(" - Sample Notebook - NoteCraft").is_some(), "UI.Window.TitleBar");
+    for l in ["Back (Alt+Left)", "Undo (Ctrl+Z)", "Redo (Ctrl+Y)"] {
+        present(&h, "UI.Window.QAT", l);
+    }
+    // Custom-drawn controls are labelled for screen readers too.
+    for l in ["Bold", "Collapse the Ribbon (Ctrl+F1)", "Create a New Section", "Add Page", "Change search scope"] {
+        present(&h, "UI.Window.Accessibility", l);
+    }
+    for tab in ["File", "Home", "Insert", "Draw", "History", "Review", "View", "Help"] {
+        assert!(has(&h, tab), "UI.Ribbon.Tabs: {tab}");
+    }
+    assert!(has(&h, "Sample Notebook"), "UI.Nav.NotebookPane");
+    // A section is listed in the notebook pane and has a tab.
+    assert!(h.query_all_by_label("Meetings").count() >= 2, "UI.Nav.NotebookPane, UI.Nav.SectionTabs");
+    assert!(has(&h, "Welcome to NoteCraft") && has(&h, "Handy shortcuts"), "UI.Nav.PageList");
+
+    // UI.Window.ContextMenus: right-click a page tab and a section tab.
+    h.get_by_label("Handy shortcuts").click_secondary();
+    h.run();
+    for l in ["Make Subpage", "Promote Subpage", "Move or Copy…", "Copy Link to Page"] {
+        present(&h, "UI.Window.ContextMenus", l);
+    }
+    h.key_press(egui::Key::Escape);
+    h.run();
+    h.get_all_by_label("Meetings").last().unwrap().click_secondary();
+    h.run();
+    for l in ["Rename", "Move or Copy…", "Copy Link to Section", "Password Protect This Section…"] {
+        present(&h, "UI.Window.ContextMenus", l);
+    }
+    assert!(h.query_by_label_contains("Section Color").is_some(), "UI.Window.ContextMenus (section)");
+    h.key_press(egui::Key::Escape);
+    h.run();
+
+    // UI.Nav.AddPage: one more page at the end of the section.
+    let pages = h.state().session.section().unwrap().pages.len();
+    h.get_by_label("Add Page").click();
+    h.run();
+    assert_eq!(h.state().session.section().unwrap().pages.len(), pages + 1, "UI.Nav.AddPage");
+
+    // UI.Nav.SectionTabs: the "+" tab adds a section.
+    let sections = h.state().session.notebook().unwrap().sections().len();
+    h.get_by_label("Create a New Section").click();
+    h.run();
+    assert_eq!(h.state().session.notebook().unwrap().sections().len(), sections + 1, "UI.Nav.SectionTabs");
+    h.key_press(egui::Key::Escape);
+    h.run();
+
+    // UI.Ribbon.Collapse: the arrow at the right of the tab strip, both ways.
+    h.get_by_label("Collapse the Ribbon (Ctrl+F1)").click();
+    h.run();
+    assert!(h.state().session.view.ribbon_collapsed, "UI.Ribbon.Collapse");
+    h.get_by_label("Expand the Ribbon (Ctrl+F1)").click();
+    h.run();
+    assert!(!h.state().session.view.ribbon_collapsed, "UI.Ribbon.Collapse");
+
+    // UI.Nav.NotebookPaneCollapse.
+    h.get_by_label("«").click();
+    h.run();
+    assert!(h.state().session.view.notebook_pane_collapsed, "UI.Nav.NotebookPaneCollapse");
+    h.get_by_label("»").click();
+    h.run();
+    assert!(!h.state().session.view.notebook_pane_collapsed, "UI.Nav.NotebookPaneCollapse");
+
+    // UI.Nav.FindOnPage: Ctrl+F opens the bar with its buttons.
+    h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::F);
+    h.run();
+    for l in ["Previous", "Next", "Close"] {
+        assert!(has(&h, l), "UI.Nav.FindOnPage: {l}");
+    }
+    h.get_by_label("Close").click();
+    h.run();
+    assert!(!h.state().session.view.find.active, "UI.Nav.FindOnPage closes");
+
+    // UI.Nav.SearchResultsPane: the docked pane.
+    h.state_mut().ui.search_pane = true;
+    h.run();
+    assert!(has(&h, "Search Results"), "UI.Nav.SearchResultsPane");
+    h.state_mut().ui.search_pane = false;
+
+    // UI.Window.FullPage: F11 hides the ribbon and navigation; one button returns.
+    h.key_press(egui::Key::F11);
+    h.run();
+    assert!(h.state().session.view.full_page, "UI.Window.FullPage");
+    assert!(!has(&h, "Home"), "UI.Window.FullPage hides the ribbon");
+    h.get_by_label("Normal View").click();
+    h.run();
+    assert!(!h.state().session.view.full_page, "UI.Window.FullPage");
+}
+
+#[test]
+fn ime_commits_reach_the_page() {
+    // UI.Window.IME: composed text (CJK input methods) is inserted on commit; the preedit
+    // string is not inserted.
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.canvas.focused = true;
+    let mut h = harness(a);
+    h.run();
+    h.event(egui::Event::Ime(egui::ImeEvent::Preedit { text: "にほ".into(), active_range_chars: None }));
+    h.run();
+    assert_eq!(h.state().session.page().unwrap().title.text(), "", "preedit text is not inserted");
+    h.event(egui::Event::Ime(egui::ImeEvent::Commit("日本".into())));
+    h.run();
+    assert_eq!(h.state().session.page().unwrap().title.text(), "日本", "UI.Window.IME");
+}
+
+#[test]
+fn fractional_and_double_scale_render() {
+    // UI.Window.HiDPI: the window lays out and renders at 1.25×, 1.5× and 2× (Wayland and X11
+    // fractional scales) without clipping the ribbon tabs.
+    for ppp in [1.25, 1.5, 2.0] {
+        let mut h = Harness::builder()
+            .with_size(egui::vec2(1280.0, 800.0))
+            .with_pixels_per_point(ppp)
+            .build_ui_state(|ui, app: &mut NoteApp| app.ui(ui), app());
+        h.run();
+        for tab in ["Home", "Help"] {
+            present(&h, "UI.Window.HiDPI", tab);
+        }
+    }
+}
+
+#[test]
+fn highlighted_text_stays_readable_in_the_dark_theme() {
+    let ctx = egui::Context::default();
+    let t = crate::Tokens::for_theme(crate::ThemeKind::Dark);
+    let page_text = egui::Color32::WHITE;
+    let yellow = notecraft_engine::doc::color::Rgba { r: 255, g: 255, b: 0, a: 255 };
+    let f = notecraft_engine::doc::CharFormat { highlight: Some(yellow), ..Default::default() };
+    assert_eq!(crate::canvas::text_format(&ctx, &f, 1.0, t, page_text).color, egui::Color32::BLACK, "automatic text on yellow");
+    let red = notecraft_engine::doc::color::Rgba { r: 200, g: 0, b: 0, a: 255 };
+    let f = notecraft_engine::doc::CharFormat { highlight: Some(yellow), color: Some(red), ..Default::default() };
+    assert_eq!(crate::canvas::text_format(&ctx, &f, 1.0, t, page_text).color, crate::theme::c32(red), "an explicit colour is kept");
 }
