@@ -58,6 +58,9 @@ fn main() {
         }
     }
     shot_sized("narrow-home", &out, 1.0, egui::vec2(820.0, 640.0), |_| {});
+    shot("nav-hidden", &out, 1.0, |a| {
+        a.session.run("view.navigationPanes", json!({})).unwrap();
+    });
     shot("tags-summary", &out, 1.0, |a| {
         a.session.view.tags_pane = true;
     });

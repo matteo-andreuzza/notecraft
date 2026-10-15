@@ -257,8 +257,9 @@ impl NoteApp {
         Ok(v)
     }
 
-    /// The view state for the control channel (`ui.inspect`): the ribbon tab, backstage page,
-    /// open dialog, theme, panes and the last status message, plus the window size in points.
+    /// The view state for the control channel (`ui.inspect`): the ribbon tab and layout, backstage
+    /// page, open dialog, theme, panes, whether the navigation shows and the last status message,
+    /// plus the window size in points.
     pub fn inspect_ui(&self, ctx: &egui::Context) -> Value {
         let size = ctx.content_rect().size();
         json!({
@@ -274,6 +275,7 @@ impl NoteApp {
             "fullPage": self.session.view.full_page,
             "ribbonMode": if self.session.view.ribbon_mode == notecraft_engine::RibbonMode::Simplified { "simplified" } else { "classic" },
             "ribbonCollapsed": self.session.view.ribbon_collapsed,
+            "navigation": !self.session.view.notebook_pane_collapsed,
             "status": self.ui.status.as_ref().map(|(m, _)| m.clone()),
             "canvasFocused": self.canvas.focused,
             "window": {"width": size.x, "height": size.y},

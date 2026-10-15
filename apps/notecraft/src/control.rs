@@ -263,7 +263,13 @@ mod tests {
         assert!(handle(&mut a, &ctx, &mut input, "no.such", &json!({})).unwrap_err().starts_with("no.such:"));
         assert!(handle(&mut a, &ctx, &mut input, "engine.execute", &json!({})).unwrap_err().contains("missing"));
         assert_eq!(handle(&mut a, &ctx, &mut input, "notebook.save", &json!({})).unwrap(), json!({"saved": true}));
-        assert_eq!(handle(&mut a, &ctx, &mut input, "ui.inspect", &json!({})).unwrap()["tab"], "Home");
+        let ui = handle(&mut a, &ctx, &mut input, "ui.inspect", &json!({})).unwrap();
+        assert_eq!(ui["tab"], "Home");
+        // The 2024 layout: the simplified ribbon and the navigation are reported.
+        assert_eq!(ui["ribbonMode"], "simplified");
+        assert_eq!(ui["navigation"], true);
+        handle(&mut a, &ctx, &mut input, "engine.execute", &json!({"command": "ui.ribbonMode", "params": {"mode": "classic"}})).unwrap();
+        assert_eq!(handle(&mut a, &ctx, &mut input, "ui.inspect", &json!({})).unwrap()["ribbonMode"], "classic");
         assert!(handle(&mut a, &ctx, &mut input, "ui.nope", &json!({})).is_err());
         assert!(input.is_empty());
         handle(&mut a, &ctx, &mut input, "app.quit", &json!({})).unwrap();

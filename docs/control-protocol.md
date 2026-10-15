@@ -66,7 +66,7 @@ and set `NOTECRAFT_CONTROL_KEY` to that app's key.
 | `ui.text` | `text` | text typed through the window |
 | `ui.click` | `x`, `y` (window points), `button?` (`primary`/`secondary`), `count?` (1 or 2) | a real pointer click |
 | `ui.screenshot` | `path?` | PNG of the window: written to `path`, or without one returned as base64 `png` with `width` and `height` |
-| `ui.inspect` | — | window size, ribbon tab, open dialog, backstage, theme |
+| `ui.inspect` | — | window size, ribbon tab, `ribbonMode` (`simplified`/`classic`), `ribbonCollapsed`, `navigation` (shown), open dialog, backstage, `theme` and `resolvedTheme`, panes, search text, status |
 | `app.quit` | — | save and close the window |
 
 Any other method name is treated as a command id: `{"method": "format.bold"}` works.
