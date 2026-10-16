@@ -1,6 +1,6 @@
 # NoteCraft plan
 
-> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** minor (M2: canvas structure and tables; decision D2) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the 2024 UI)
+> **Last reviewed:** 2026-10-16 · **Last updated:** 2026-10-16 · **Change:** minor (M2: Dialogs done; `KB.Table.DeleteEmptyRow`) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the 2024 UI)
 
 How NoteCraft gets from nothing to a OneNote replacement a typical user could switch to. The
 inventory of what "OneNote" means is [`parity-catalog.md`](parity-catalog.md) (1,291 rows); the
@@ -93,17 +93,18 @@ ribbon; [`ui-parity.md`](ui-parity.md)).
    `CM.ParagraphHandle.*`, generated from the catalog's own `Path` column), Paste Options.
 2. **Tables (done, decision D2 / §4.8):** a `PageObject::Table` in `notecraft-doc`, its `.ncraft`
    schema (format 2), commands, the Table Layout contextual tab in both ribbon layouts
-   (`chrome::contextual_tabs`), sort, borders, convert to/from text. Left for later: the Insert
-   Table dialog, Tab-after-text table creation, merged cells.
+   (`chrome::contextual_tabs`), sort, borders, convert to/from text, the Insert Table dialog,
+   `KB.Table.DeleteEmptyRow`. Left for later: Tab-after-text table creation, merged cells.
 3. **Pictures, attachments, printouts:** crate `codecs` (pure-Rust decoders, licences checked with
    `cargo xtask deny`), crop/rotate/alt text; the rich clipboard (HTML and pictures through
    `arboard`) and drag and drop of files; screen clipping through the desktop portal.
 4. **Ink:** crates `ink-geom` and `ink` (pens, highlighters, eraser modes, lasso, ruler, pressure
    from winit; tablet-v2/XInput2 as a risk), crate `render` (CPU oracle for thumbnails and export).
-5. **Insert misc and missing dialogs:** page templates, symbols, equations (`math`), Link with page
-   search, Move/Copy as a tree, Options (with the Office Theme), Recent Notebooks, the notebook
-   list (Ctrl+G); asynchronous file dialogs; window geometry; web persistence (IndexedDB) and
-   exports as downloads.
+5. **Dialogs (done):** Insert Table, Link with page search, Move/Copy as a flat searchable list
+   (not a tree — simplest compatible choice, noted in the catalog), Options (with the Office
+   Theme), Recent Notebooks, the notebook list (Ctrl+G), Symbol. Left for later: page templates,
+   equations (`math`), asynchronous file dialogs, window geometry, web persistence (IndexedDB)
+   and exports as downloads.
 6. **Audio** recording in pure Rust where possible; video stays a documented gap.
 
 Exit: the P0/P1 rows of `R.Insert.*`, `R.Draw.*`, `CT.TableLayout.*`, object `CM.*` and

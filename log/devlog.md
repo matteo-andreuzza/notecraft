@@ -161,3 +161,53 @@ this log plus a green tree is how the next agent picks up.
   search, Move/Copy as a tree, notebook list, Recent Notebooks, Symbol, Options), small table
   leftovers, gaps item 8, the `link.open` fix. Stopped after three complete, committed steps on a
   long session, before starting the larger dialogs arc. M2 exit criteria not met: no merge, no tag.
+
+## 2026-10-16 — M2 (part 3): Dialogs, `KB.Table.DeleteEmptyRow` (branch `m2/insert-draw`)
+
+- Dialogs, three commits (`e18c0c1`, `c2ba2db`, `f2c539d`), one `egui::Modal` driven by
+  `app.ui.dialog: Option<Dialog>` (`dialogs.rs`) and `ribbon::dialog_for` intercepting the
+  matching ribbon/context-menu click:
+  - Insert Table (`R.Insert.Tables.TableInsert`): `insert.tableDialog` reuses `insert_table`
+    (made `pub(crate)`), same pattern as `para.spacingDialog`.
+  - Link (`UI.Dialogs.Link`) and Move/Copy Page/Section (`UI.Dialogs.MoveCopyPage/Section`):
+    page/section/notebook search added. Shipped as a flat, searchable, full-breadcrumb-path list
+    rather than a collapsible tree — the catalog's own "simplest compatible choice" per
+    `AGENTS.md`, and the catalog Notes say so rather than overclaiming "tree" fidelity.
+  - Notebook List (`Ctrl+G`, `UI.Nav.NotebookList`) and Recent Notebooks (`BS.Open.RecentNotebooks`):
+    a new engine command `file.openRecent`, `UiState.recent_notebooks` (capped at 8, tracked in
+    `NoteApp::try_run`'s single after-every-command hook), a Recent Notebooks section in the Open
+    backstage page, and a desktop-settings round trip (`settings.rs`).
+  - Symbol (`UI.Dialogs.Symbol`, `R.Insert.Symbols.*`): a 10-per-row button grid of Unicode
+    symbols (clean-room: plain Unicode, nothing derived from Microsoft glyphs); both the gallery
+    and full-dialog ribbon entries map to the same `Dialog::Symbol` so there's one implementation,
+    not two.
+  - Options (`UI.Dialogs.Options`, `OPT.General.OfficeTheme`): the theme picker also appears on
+    the Options page (it already existed on Account); `OPT.General.OfficeTheme`'s own pre-existing
+    "unverified wording" catalog note correctly keeps it at `wired`, not `verified`.
+  - Recurring kittest snag: a dialog's row label (a breadcrumb, a plain notebook name) can exactly
+    match an always-rendered background control (the nav tree), so an exact `query_by_label`
+    panics on 2+ matches — fixed per-case with `_contains` substrings, `query_all_by_label(...)
+    .count()`, or collapsing the competing pane first.
+  - Investigated, not applied: `link.open`'s missing `enabled` predicate (noted in part 2). Its
+    body already takes an optional `url` override (wiki-link follow, `para.copyLink`'s navigate-
+    back) used from a caret position that is *not* on a link — both paths are tested
+    (`wiki_links_create_and_follow_pages`, `links_insert_edit_remove_copy_select`). `Enabled` is
+    `fn(&Session) -> Option<&'static str>`, blind to params, and `Session::run` checks it
+    unconditionally; a caret-only predicate would disable those explicit-`url` calls too. No safe
+    one-line fix exists without either breaking that navigation or widening `Enabled` to see
+    params (too big for a P2 nicety) — left as is.
+- `KB.Table.DeleteEmptyRow` (`03503fa`): Delete at the very start of a wholly empty table row
+  removes it (`table_cmds::delete_empty_row`, called from `text_cmds::delete_forward`'s existing
+  "nothing left to merge forward" branch). Simplified to one press, not the reference's reported
+  two — the end state is the same and a cross-call key-repeat counter is a lot of state for a P2
+  behaviour; the catalog Note says so.
+- Not done, judged not worth it this session: `BEH.Table.TabToCreate` (Tab after text makes a
+  table) needs a real design decision (first Tab must create the table and keep "creating" mode
+  for further Tabs/columns, Enter must exit it) rather than a one-line change, so it stays a gap.
+- Docs updated to match: `gaps.md` gap 5 (Dialogs) closed and renumbered; `roadmap.md`,
+  `plan.md`'s M2 increments 2 and 5.
+- Numbers: wiring 494/1320 (37.4%), behaviour 153/1320 (11.6%), 264 commands (was 481/1320, 142,
+  260).
+- Not done here (next, `plan/handoff.md` §7): gaps item 8 (leftovers of the look) if a future
+  session has room; then pictures, the rich clipboard, then ink. M2 exit criteria not met: no
+  merge, no tag.
