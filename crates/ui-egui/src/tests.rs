@@ -420,3 +420,59 @@ fn the_notebook_tree_quick_notes_and_sort_work() {
     sorted.sort();
     assert_eq!(titles, sorted, "UI.Nav.SortPages (was led by {first})");
 }
+
+#[test]
+fn insert_table_dialog_opens_from_the_ribbon_and_inserts() {
+    // parity: UI.Dialogs.InsertTable, R.Insert.Tables.TableInsert
+    let a = app();
+    assert_eq!(crate::ribbon::dialog_for(&a, "R.Insert.Tables.TableInsert"), Some(crate::dialogs::Dialog::InsertTable(2, 2)));
+    let mut a = a;
+    a.session.run("page.new", json!({})).unwrap();
+    a.ui.dialog = Some(crate::dialogs::Dialog::InsertTable(4, 3));
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Insert Table").is_some(), "UI.Dialogs.InsertTable shows");
+    h.get_by_label("OK").click();
+    h.run();
+    let page = h.state().session.page().unwrap().clone();
+    let t = page.objects.iter().find_map(|o| o.as_table()).expect("a table was inserted");
+    assert_eq!((t.n_rows(), t.n_cols()), (3, 4), "the dialog's rows/columns reached insert.tableDialog");
+    assert!(h.state().ui.dialog.is_none(), "OK closes the dialog");
+}
+
+#[test]
+fn link_dialog_searches_pages_and_sections() {
+    // parity: UI.Dialogs.Link
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.ui.dialog = Some(crate::dialogs::Dialog::Link { url: String::new(), text: String::new(), filter: "retrospective".into() });
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label_contains("Retrospective").is_some(), "the page search narrows to a matching page");
+    // "› Garden" (the dialog's breadcrumb row), not a bare "Garden" (also the nav tree's own
+    // section row, always on screen behind the modal).
+    assert!(h.query_by_label_contains("› Garden").is_none(), "and excludes a non-matching one");
+    h.get_by_label_contains("Retrospective").click();
+    h.run();
+    let dialog = h.state().ui.dialog.clone();
+    let Some(crate::dialogs::Dialog::Link { url, .. }) = dialog else { panic!("dialog closed unexpectedly") };
+    assert!(url.starts_with("notecraft:page/"), "picking a page sets a notecraft:page/ link: {url}");
+}
+
+#[test]
+fn move_or_copy_dialogs_search_sections_and_notebooks() {
+    // parity: UI.Dialogs.MoveCopyPage, UI.Dialogs.MoveCopySection
+    let mut a = app();
+    let pid = a.session.page().unwrap().id;
+    a.ui.dialog = Some(crate::dialogs::Dialog::MovePage(pid, "garden".into()));
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label_contains("› Garden").is_some(), "UI.Dialogs.MoveCopyPage: the search matches a section");
+    assert!(h.query_by_label_contains("› Meetings").is_none(), "and excludes a non-matching one");
+    let sid = h.state().session.section().unwrap().id;
+    h.state_mut().ui.dialog = Some(crate::dialogs::Dialog::MoveSection(sid, "sample".into()));
+    h.run();
+    // Ambiguous as an exact label (the nav tree has its own "Sample Notebook" row behind the
+    // modal), so count instead of a single query.
+    assert!(h.query_all_by_label("Sample Notebook").count() >= 1, "UI.Dialogs.MoveCopySection: the search matches a notebook");
+}

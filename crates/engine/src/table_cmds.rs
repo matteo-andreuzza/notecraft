@@ -90,6 +90,11 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("insert.table", "R.Insert.Tables.TableInsertGallery", "Table", "Insert/Tables/Table", insert_table)
             .params(r#"{"rows": int (1..5000, default 2), "cols": int (1..64, default 2), "x"?: pt, "y"?: pt}"#)
             .when(need_page),
+        // R.Insert.Tables.TableInsert — Insert Table…, the dialog version (same insert, just
+        // chosen from a dialog's row/column fields instead of the size grid).
+        CommandSpec::new("insert.tableDialog", "R.Insert.Tables.TableInsert", "Insert Table", "Insert/Tables/Table/Insert Table", insert_table)
+            .params(r#"{"rows": int (1..5000, default 2), "cols": int (1..64, default 2)}"#)
+            .when(need_page),
         // NC.Table.ConvertTextToTable — the selected paragraphs become rows, tabs split cells.
         CommandSpec::new(
             "insert.convertTextToTable",
@@ -291,7 +296,7 @@ fn cur(s: &Session) -> Result<TableSel, CmdError> {
     table_sel(s).ok_or_else(|| CmdError::Disabled("click in a table first".into()))
 }
 
-fn insert_table(s: &mut Session, v: &Value) -> CmdResult {
+pub(crate) fn insert_table(s: &mut Session, v: &Value) -> CmdResult {
     let rows = p::usize(v, "rows").unwrap_or(2);
     let cols = p::usize(v, "cols").unwrap_or(2);
     if rows == 0 || cols == 0 || rows > MAX_ROWS || cols > MAX_COLS || rows.saturating_mul(cols) > MAX_CELLS {

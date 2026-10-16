@@ -88,12 +88,12 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Panes.Research | Research / Thesaurus pane | Window/Panes/Research | surface |  |  | P3 | missing | FLUENT19:ResearchPane |  |
 | UI.Panes.RecentEdits | Search results pane listing recently edited pages by date | Window/Panes/Recent Edits | surface |  |  | P1 | missing | FLUENT19:FindByDateMenu |  |
 | UI.Panes.ColorThickness | Color & Thickness dialog (pen/highlighter, thickness, colour) | Window/Panes/Color & Thickness | surface |  |  | P1 | missing | FLUENT19:MoreColorAndThicknessOptions |  |
-| UI.Dialogs.MoveCopyPage | Move or Copy Pages dialog (notebook tree, Move/Copy buttons, search box) | Window/Dialogs/Move or Copy Pages | surface |  |  | P0 | missing | FLUENT19:MoveOrCopyPage |  |
-| UI.Dialogs.MoveCopySection | Move or Copy Section dialog | Window/Dialogs/Move or Copy Section | surface |  |  | P0 | missing | FLUENT19:SectionMove |  |
-| UI.Dialogs.Link | Link dialog (text to display, address, search pages, pick a location in OneNote) | Window/Dialogs/Link | surface |  |  | P0 | missing | FLUENT19:HyperlinkCreateHere |  |
+| UI.Dialogs.MoveCopyPage | Move or Copy Pages dialog (notebook tree, Move/Copy buttons, search box) | Window/Dialogs/Move or Copy Pages | surface |  |  | P0 | verified | FLUENT19:MoveOrCopyPage | A flat, searchable list of every section with its full notebook path, not a collapsible tree. |
+| UI.Dialogs.MoveCopySection | Move or Copy Section dialog | Window/Dialogs/Move or Copy Section | surface |  |  | P0 | verified | FLUENT19:SectionMove | A flat, searchable list of notebooks, not a tree. |
+| UI.Dialogs.Link | Link dialog (text to display, address, search pages, pick a location in OneNote) | Window/Dialogs/Link | surface |  |  | P0 | verified | FLUENT19:HyperlinkCreateHere |  |
 | UI.Dialogs.NotebookProperties | Notebook Properties dialog (display name, colour, location, default format) | Window/Dialogs/Notebook Properties | surface |  |  | P1 | missing | FLUENT19:NotebookProperties |  |
 | UI.Dialogs.ParagraphSpacing | Paragraph Spacing dialog (before, after, line spacing at least) | Window/Dialogs/Paragraph Spacing | surface |  |  | P1 | missing | FLUENT19:ParagraphSpacingOptions |  |
-| UI.Dialogs.InsertTable | Insert Table dialog (columns, rows) | Window/Dialogs/Insert Table | surface |  |  | P1 | missing | FLUENT19:TableInsert |  |
+| UI.Dialogs.InsertTable | Insert Table dialog (columns, rows) | Window/Dialogs/Insert Table | surface |  |  | P1 | verified | FLUENT19:TableInsert |  |
 | UI.Dialogs.Symbol | Symbol dialog | Window/Dialogs/Symbol | surface |  |  | P2 | missing | FLUENT19:SymbolsDialog |  |
 | UI.Dialogs.Options | OneNote Options dialog with its categories | Window/Dialogs/Options | surface |  |  | P0 | missing | FLUENT19:ApplicationOptionsDialog |  |
 | UI.Dialogs.CustomizeRibbon | Customize the Ribbon page (tabs, groups, commands, reset, import/export) | Window/Dialogs/Customize Ribbon | surface |  |  | P2 | missing | GK (Options) |  |
@@ -244,7 +244,7 @@ The Insert tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 |---|---|---|---|---|---|---|---|---|---|
 | R.Insert.Insert.PenInsertSpace | Insert Space | Insert/Insert Space | toggle |  | insert.space | P1 | missing | FLUENT19:PenInsertSpace |  |
 | R.Insert.Tables.TableInsertGallery | Table | Insert/Tables/Table | gallery |  | insert.table | P1 | verified | FLUENT19:TableInsertGallery |  |
-| R.Insert.Tables.TableInsert | Insert Table | Insert/Tables/Table/Insert Table | button |  | insert.tableDialog | P1 | missing | FLUENT19:TableInsert |  |
+| R.Insert.Tables.TableInsert | Insert Table | Insert/Tables/Table/Insert Table | button |  | insert.tableDialog | P1 | verified | FLUENT19:TableInsert |  |
 | R.Insert.Tables.InsertNewExcelSpreadsheetWithPreview | New Excel Spreadsheet | Insert/Tables/Table/New Excel Spreadsheet | button |  | insert.newSpreadsheet | P3 | missing | FLUENT19:InsertNewExcelSpreadsheetWithPreview |  |
 | R.Insert.Files.PrintoutFromFileInsert | File Printout | Insert/Files/File Printout | button |  | insert.printout | P1 | missing | FLUENT19:PrintoutFromFileInsert |  |
 | R.Insert.Files.FileAttachmentInsert | File Attachment | Insert/Files/File Attachment | button |  | insert.file | P1 | missing | FLUENT19:FileAttachmentInsert |  |

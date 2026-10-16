@@ -332,7 +332,7 @@ fn section_menu(app: &mut NoteApp, resp: &egui::Response, sid: Id, name: &str) {
         cmd_item(app, ui, "Delete", "section.delete", json!({"section": s}));
         ui.separator();
         if ui.button("Move or Copy…").clicked() {
-            app.ui.dialog = Some(crate::dialogs::Dialog::MoveSection(sid));
+            app.ui.dialog = Some(crate::dialogs::Dialog::MoveSection(sid, String::new()));
             ui.close();
         }
         if ui.button("Merge into Another Section…").clicked() {
@@ -688,7 +688,7 @@ fn page_menu(app: &mut NoteApp, resp: &egui::Response, pid: Id, has_kids: bool, 
         cmd_item(app, ui, "Paste", "page.paste", json!({}));
         cmd_item(app, ui, "Copy Link to Page", "page.copyLink", json!({"page": p}));
         if ui.button("Move or Copy…").clicked() {
-            app.ui.dialog = Some(crate::dialogs::Dialog::MovePage(pid));
+            app.ui.dialog = Some(crate::dialogs::Dialog::MovePage(pid, String::new()));
             ui.close();
         }
         ui.separator();

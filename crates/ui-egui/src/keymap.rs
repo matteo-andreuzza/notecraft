@@ -280,12 +280,12 @@ fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) ->
             true
         }
         Key::K if (m.command || m.ctrl) && !m.alt && !m.shift => {
-            app.ui.dialog = Some(crate::dialogs::Dialog::Link { url: String::new(), text: selected_text(app) });
+            app.ui.dialog = Some(crate::dialogs::Dialog::Link { url: String::new(), text: selected_text(app), filter: String::new() });
             true
         }
         Key::M if (m.command || m.ctrl) && m.alt && !m.shift => {
             if let Some(p) = app.session.sel.page {
-                app.ui.dialog = Some(crate::dialogs::Dialog::MovePage(p));
+                app.ui.dialog = Some(crate::dialogs::Dialog::MovePage(p, String::new()));
             }
             true
         }

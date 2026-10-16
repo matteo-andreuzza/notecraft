@@ -11,17 +11,21 @@ use crate::{NoteApp, Tokens};
 /// An open dialog and its in-progress values.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Dialog {
-    /// Link (Ctrl+K): address and text to display.
+    /// Link (Ctrl+K): address, text to display, and the page/section search filter.
     Link {
         /// Address.
         url: String,
         /// Text to display.
         text: String,
+        /// Filters the picker below by name.
+        filter: String,
     },
-    /// Move or Copy Pages (Ctrl+Alt+M).
-    MovePage(Id),
-    /// Move or Copy a section.
-    MoveSection(Id),
+    /// Insert Table: columns, rows.
+    InsertTable(usize, usize),
+    /// Move or Copy Pages (Ctrl+Alt+M): the page, and the search filter.
+    MovePage(Id, String),
+    /// Move or Copy a section: the section, and the search filter.
+    MoveSection(Id, String),
     /// Merge a section into another.
     MergeSection(Id),
     /// Notebook Properties: display name.
@@ -53,6 +57,31 @@ fn sections(app: &NoteApp) -> Vec<(Id, String)> {
     out
 }
 
+/// Every page, named `Notebook › … › Section › Page` (for the Link dialog's page search;
+/// `UI.Dialogs.Link`).
+fn pages(app: &NoteApp) -> Vec<(Id, String)> {
+    let mut out = Vec::new();
+    for nb in &app.session.ws.notebooks {
+        fn walk(nodes: &[NavNode], prefix: &str, out: &mut Vec<(Id, String)>, depth: usize) {
+            if depth > 16 {
+                return;
+            }
+            for n in nodes {
+                match n {
+                    NavNode::Section(s) => {
+                        for p in &s.pages {
+                            out.push((p.id, format!("{prefix}{} › {}", s.name, p.display_title())));
+                        }
+                    }
+                    NavNode::Group(g) => walk(&g.children, &format!("{prefix}{} › ", g.name), out, depth + 1),
+                }
+            }
+        }
+        walk(&nb.children, &format!("{} › ", nb.name), &mut out, 0);
+    }
+    out
+}
+
 /// Draw the open dialog, if any.
 pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
     let Some(dialog) = app.ui.dialog.clone() else { return };
@@ -60,8 +89,9 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
     let mut next = dialog.clone();
     let title = match &dialog {
         Dialog::Link { .. } => "Link",
-        Dialog::MovePage(_) => "Move or Copy Pages",
-        Dialog::MoveSection(_) => "Move or Copy Section",
+        Dialog::InsertTable(..) => "Insert Table",
+        Dialog::MovePage(..) => "Move or Copy Pages",
+        Dialog::MoveSection(..) => "Move or Copy Section",
         Dialog::MergeSection(_) => "Merge Section",
         Dialog::NotebookProperties(..) => "Notebook Properties",
         Dialog::Spacing(..) => "Paragraph Spacing",
@@ -73,7 +103,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
         ui.label(RichText::new(title).size(16.0).strong());
         ui.add_space(8.0);
         match &mut next {
-            Dialog::Link { url, text } => {
+            Dialog::Link { url, text, filter } => {
                 ui.label("Text to display:");
                 ui.text_edit_singleline(text);
                 ui.label("Address:");
@@ -82,9 +112,20 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                     r.request_focus();
                 }
                 ui.add_space(4.0);
-                ui.label(RichText::new("Or pick a location in your notebooks:").size(12.0).color(t.page_meta));
-                egui::ScrollArea::vertical().max_height(140.0).show(ui, |ui| {
-                    for (id, name) in sections(app) {
+                ui.label(RichText::new("Or search for a page or section in your notebooks:").size(12.0).color(t.page_meta));
+                ui.add(egui::TextEdit::singleline(filter).hint_text("Search pages and sections"));
+                let needle = filter.to_lowercase();
+                let matches = |name: &str| needle.is_empty() || name.to_lowercase().contains(&needle);
+                egui::ScrollArea::vertical().max_height(180.0).show(ui, |ui| {
+                    for (id, name) in pages(app).into_iter().filter(|(_, n)| matches(n)) {
+                        if ui.selectable_label(false, &name).clicked() {
+                            *url = format!("notecraft:page/{id}");
+                            if text.is_empty() {
+                                *text = name.rsplit(" › ").next().unwrap_or("").to_string();
+                            }
+                        }
+                    }
+                    for (id, name) in sections(app).into_iter().filter(|(_, n)| matches(n)) {
                         if ui.selectable_label(false, &name).clicked() {
                             *url = format!("notecraft:section/{id}");
                             if text.is_empty() {
@@ -107,11 +148,32 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                     }
                 });
             }
-            Dialog::MovePage(pid) => {
+            Dialog::InsertTable(cols, rows) => {
+                egui::Grid::new("insert_table").show(ui, |ui| {
+                    ui.label("Columns:");
+                    ui.add(egui::DragValue::new(cols).range(1..=notecraft_engine::doc::table::MAX_COLS));
+                    ui.end_row();
+                    ui.label("Rows:");
+                    ui.add(egui::DragValue::new(rows).range(1..=notecraft_engine::doc::table::MAX_ROWS));
+                    ui.end_row();
+                });
+                ui.horizontal(|ui| {
+                    if crate::chrome::primary_button(ui, "OK", &t).clicked() {
+                        app.run(ctx, "insert.tableDialog", json!({"cols": *cols, "rows": *rows}));
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::MovePage(pid, filter) => {
                 ui.label("Pick a section:");
                 let pid = *pid;
+                ui.add(egui::TextEdit::singleline(filter).hint_text("Search sections"));
+                let needle = filter.to_lowercase();
                 egui::ScrollArea::vertical().max_height(260.0).show(ui, |ui| {
-                    for (id, name) in sections(app) {
+                    for (id, name) in sections(app).into_iter().filter(|(_, n)| needle.is_empty() || n.to_lowercase().contains(&needle)) {
                         ui.horizontal(|ui| {
                             ui.label(&name);
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -131,10 +193,20 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                     close = true;
                 }
             }
-            Dialog::MoveSection(sid) => {
+            Dialog::MoveSection(sid, filter) => {
                 let sid = *sid;
                 ui.label("Move or copy into a notebook:");
-                for nb in app.session.ws.notebooks.clone() {
+                ui.add(egui::TextEdit::singleline(filter).hint_text("Search notebooks"));
+                let needle = filter.to_lowercase();
+                for nb in app
+                    .session
+                    .ws
+                    .notebooks
+                    .iter()
+                    .filter(|nb| needle.is_empty() || nb.name.to_lowercase().contains(&needle))
+                    .cloned()
+                    .collect::<Vec<_>>()
+                {
                     ui.horizontal(|ui| {
                         ui.label(&nb.name);
                         if ui.button("Copy").clicked() {

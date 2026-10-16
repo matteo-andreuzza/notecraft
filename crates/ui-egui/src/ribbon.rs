@@ -308,7 +308,8 @@ pub(crate) fn enabled(app: &NoteApp, id: &str) -> bool {
 pub(crate) fn dialog_for(app: &NoteApp, id: &str) -> Option<crate::dialogs::Dialog> {
     use crate::dialogs::Dialog;
     match id.rsplit('.').next()? {
-        "HyperlinkCreateHere" | "HyperlinkCreate" => Some(Dialog::Link { url: String::new(), text: String::new() }),
+        "HyperlinkCreateHere" | "HyperlinkCreate" => Some(Dialog::Link { url: String::new(), text: String::new(), filter: String::new() }),
+        "TableInsert" => Some(Dialog::InsertTable(2, 2)),
         "ParagraphSpacingOptions" => {
             let p = app.session.text_range().and_then(|r| {
                 app.session.page().and_then(|pg| notecraft_engine::Session::block_paras(pg, r.head.block).and_then(|ps| ps.get(r.head.para).cloned()))
