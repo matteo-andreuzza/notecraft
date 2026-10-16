@@ -419,6 +419,7 @@ fn delete_forward(s: &mut Session, _: &Value) -> CmdResult {
         return Ok(Value::Null);
     }
     if caret.para + 1 >= n_paras {
+        crate::table_cmds::delete_empty_row(s);
         return Ok(Value::Null);
     }
     let page = s.page_mut().ok_or_else(no_page)?;

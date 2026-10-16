@@ -292,6 +292,31 @@ fn table_mut(s: &mut Session, id: Id) -> Result<&mut Table, CmdError> {
     s.page_mut().ok_or_else(no_page)?.table_mut(id).ok_or_else(|| CmdError::Failed("the table is gone".into()))
 }
 
+/// KB.Table.DeleteEmptyRow — Delete at the very start of a wholly empty row removes that row
+/// (simplified to one press, not the reference's reported two: the end state is the same and a
+/// cross-call key-repeat counter would be a lot of state for a P2 behaviour). Called from
+/// `text_cmds::delete_forward` when there is nothing else left for Delete to do.
+pub(crate) fn delete_empty_row(s: &mut Session) -> bool {
+    let Some(caret) = s.text_range().map(|r| r.head) else { return false };
+    if caret.para != 0 || caret.offset != 0 {
+        return false;
+    }
+    let Block::Cell(cell) = caret.block else { return false };
+    let Some((t, row, _)) = s.page().and_then(|p| p.table_of_cell(cell)) else { return false };
+    if t.n_rows() <= 1 || !t.rows[row].is_empty() {
+        return false;
+    }
+    let table_id = t.id;
+    let Some(t) = s.page_mut().and_then(|p| p.table_mut(table_id)) else { return false };
+    t.rows.remove(row);
+    let n_rows = t.n_rows();
+    let target = t.cell(row.min(n_rows - 1), 0).map(|c| c.id);
+    if let Some(c) = target {
+        caret_in(s, c, false);
+    }
+    true
+}
+
 fn cur(s: &Session) -> Result<TableSel, CmdError> {
     table_sel(s).ok_or_else(|| CmdError::Disabled("click in a table first".into()))
 }

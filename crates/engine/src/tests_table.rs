@@ -320,3 +320,27 @@ fn tables_copy_with_their_page_and_survive_undo() {
     let cell = table(&s).rows[0].cells[0].id;
     assert_eq!(s.clamp_pos(Pos::new(Block::Cell(cell), 9, 999)).map(|p| (p.para, p.offset)), Some((0, 4)));
 }
+
+#[test]
+fn delete_at_the_start_of_an_empty_row_removes_it() {
+    // parity: KB.Table.DeleteEmptyRow
+    let mut s = sample();
+    blank_page(&mut s);
+    run(&mut s, "insert.table", json!({"rows": 3, "cols": 2}));
+    at(&mut s, 0, 0);
+    run(&mut s, "text.insert", json!({"text": "top"}));
+    at(&mut s, 2, 0);
+    run(&mut s, "text.insert", json!({"text": "bottom"}));
+    at(&mut s, 1, 0);
+    run(&mut s, "text.deleteForward", json!({}));
+    assert_eq!(grid(&s), vec![vec!["top", ""], vec!["bottom", ""]], "the empty middle row is gone");
+    assert_eq!(caret_cell(&s), (1, 0), "the caret lands in the row that took its place");
+    // A table with only one row is left alone (nothing to collapse into).
+    let mut s2 = sample();
+    blank_page(&mut s2);
+    run(&mut s2, "insert.table", json!({"rows": 1, "cols": 2}));
+    at(&mut s2, 0, 0);
+    run(&mut s2, "text.deleteForward", json!({}));
+    assert_eq!(table(&s2).n_rows(), 1, "the only row stays");
+    assert!(s2.page().unwrap().objects.iter().any(|o| o.as_table().is_some()), "the table stays");
+}
