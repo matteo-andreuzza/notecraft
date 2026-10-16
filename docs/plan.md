@@ -87,13 +87,14 @@ reference screenshots (kept locally, never committed: clean room, we only observ
 Everything new is built in the 2024 look of M1.5 (tokens, cards, the simplified and classic
 ribbon; [`ui-parity.md`](ui-parity.md)).
 
-1. **Canvas details:** paragraph handle (`UI.Canvas.ParagraphHandle`), containers that grow with
-   their text, a page that grows right and down (done), the mini toolbar as a card, text and
-   container context menus (`CM.Text.*`, `CM.NoteContainer.*`), Paste Options.
+1. **Canvas details (done):** paragraph handle (`UI.Canvas.ParagraphHandle`), containers that
+   grow with their text, a page that grows right and down, the mini toolbar as a card, text,
+   container and paragraph-handle context menus (`CM.Text.*`, `CM.NoteContainer.*`,
+   `CM.ParagraphHandle.*`, generated from the catalog's own `Path` column), Paste Options.
 2. **Tables (done, decision D2 / §4.8):** a `PageObject::Table` in `notecraft-doc`, its `.ncraft`
    schema (format 2), commands, the Table Layout contextual tab in both ribbon layouts
    (`chrome::contextual_tabs`), sort, borders, convert to/from text. Left for later: the Insert
-   Table dialog, Tab-after-text table creation, merged cells, the table context menus.
+   Table dialog, Tab-after-text table creation, merged cells.
 3. **Pictures, attachments, printouts:** crate `codecs` (pure-Rust decoders, licences checked with
    `cargo xtask deny`), crop/rotate/alt text; the rich clipboard (HTML and pictures through
    `arboard`) and drag and drop of files; screen clipping through the desktop portal.

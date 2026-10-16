@@ -121,3 +121,43 @@ this log plus a green tree is how the next agent picks up.
 - Not done here (next, in order, `plan/handoff.md` §7): mini toolbar, text/container context
   menus, Paste Options, dialogs (Insert Table included), Insert misc, gaps item 8; then pictures
   and the rich clipboard, then ink. M2 exit criteria not met: no merge, no tag.
+
+## 2026-10-16 — M2 (part 2): mini toolbar, context menus, Paste Options (branch `m2/insert-draw`)
+
+- Mini toolbar (`UI.Canvas.MiniToolbar`, `mini_toolbar.rs`): a card above a text selection with
+  font, size, bold, italic, underline, highlight, font colour, outdent, indent, bullets,
+  numbering, styles and tags — reuses the Home ribbon's own `pub(crate)` helpers (`combo`,
+  `small`, `gallery_menu`), so it's the same commands, `enabled` and tooltips as the ribbon, not
+  a parallel implementation. Works in table cells too (read-only off `CanvasState.paras`; no
+  change to canvas layout or hit-test).
+- Context menus (`CM.Text.*`, `CM.NoteContainer.*`, `CM.ParagraphHandle.*`, `context_menu.rs`):
+  built straight from the catalog's own `Path` column (a one-off Python script turned 134 rows
+  into `Entry::Item`/`Submenu` trees), so the menus can't drift out of sync with the catalog;
+  `menus_cover_every_context_row` checks placement both ways. Every entry is the ribbon's own
+  catalog control (`menu_item`/`special`); unimplemented ones (ink, OCR, linked notes, picture
+  rotation, spelling, translate, Excel/Visio) show disabled with a reason. A right click resolves
+  to the paragraph handle, else a container's bar, else the text/cell under the pointer (`hit_para`
+  already covers cells, so a cell's right click gets the Text menu with a working Table submenu);
+  it places the caret/selection there as a left click would, unless the point is already inside
+  an existing selection. New commands `object.bringForward/bringToFront/sendBackward/sendToBack`
+  (the Note Container menu's Order submenu) reorder within `Page::objects`'s existing z-order, no
+  model change; a boundary no-op is checked read-only before `page_mut` so it costs no undo step
+  (`Arc::make_mut`'s copy-on-write would otherwise record one from the clone alone).
+- Paste Options (`UI.Canvas.PasteOptions`, `paste_options.rs`): a button near the caret for 6 s
+  after any paste, opening the ribbon's own three choices (Keep Source/Merge/Text Only).
+- Found and fixed along the way: egui's `Response::context_menu`, reused for a *second* right
+  click on the canvas's one shared response within a kittest session, closes the popup again
+  within a frame or two (not a production bug — reproduced down to a minimal repro, a single
+  right click stays open indefinitely, and real use always has real frames between two clicks);
+  worked around with one right click per kittest harness. Found, not fixed: `link.open` has no
+  `enabled` predicate, so "Open Link" shows enabled even off a link.
+- Tests: 7 new kittest tests (mini toolbar, 4 context-menu targets, a table-cell right click,
+  Paste Options) plus an engine test for the 4 z-order commands; e2e under Xvfb 18/18 (2 new:
+  a table-cell right click, Paste Options after a title paste), new screenshots `mini-toolbar`,
+  `context-menu-text`, `paste-options`.
+- Numbers: wiring 481/1320 (36.4%), behaviour 142/1320 (10.8%), 260 commands (was 416/1320,
+  134, 256).
+- Not done here (next, in order, `plan/handoff.md` §7): the dialogs (Insert Table, Link with page
+  search, Move/Copy as a tree, notebook list, Recent Notebooks, Symbol, Options), small table
+  leftovers, gaps item 8, the `link.open` fix. Stopped after three complete, committed steps on a
+  long session, before starting the larger dialogs arc. M2 exit criteria not met: no merge, no tag.
