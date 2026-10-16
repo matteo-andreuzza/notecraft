@@ -418,3 +418,27 @@ fn right_click_in_a_table_cell_opens_the_text_menu_with_the_table_submenu() {
     h.run();
     assert_eq!(h.state().session.sel.on_page, notecraft_engine::selection::PageSel::Cells { table: tid, rows: (0, 1), cols: (0, 2) });
 }
+
+#[test]
+fn paste_options_shows_after_a_paste_and_offers_the_three_modes() {
+    // parity: UI.Canvas.PasteOptions
+    let (mut a, o) = page_with("Hello");
+    a.ui.tab = "View".into();
+    let mut h = harness(a);
+    h.run();
+    h.state_mut().session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 0})).unwrap();
+    assert!(h.state().ui.paste_shown_at.is_none(), "nothing pasted yet");
+    let ctx = h.ctx.clone();
+    h.state_mut().try_run(&ctx, "edit.paste", json!({"text": "Hi "})).unwrap();
+    h.run();
+    assert_eq!(table_texts(&h, o), vec!["Hi Hello"]);
+    assert!(h.state().ui.paste_shown_at.is_some(), "UI.Canvas.PasteOptions: shown after a paste");
+    h.get_by_label("Paste Options").click();
+    h.run();
+    assert!(h.query_by_label("Paste: Keep Text Only").is_some());
+    h.get_by_label("Paste: Keep Text Only").click();
+    h.run();
+    // Still "Hi Hello": Keep Text Only re-pastes the same plain text, just stripped of any
+    // formatting (there is none here yet — no rich clipboard, catalog gaps.md item 3).
+    assert_eq!(table_texts(&h, o), vec!["Hi Hello"]);
+}

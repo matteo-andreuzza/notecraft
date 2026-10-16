@@ -185,4 +185,13 @@ fn main() {
             }
         },
     );
+    shot("paste-options", &out, 1.0, |a| {
+        let pid = a.session.notebook().unwrap().sections()[1].pages[0].id;
+        a.session.run("nav.goto", json!({"page": pid.to_string()})).unwrap();
+        a.canvas.focused = true;
+        let oid = a.session.page().unwrap().objects[0].id();
+        a.session.run("caret.set", json!({"block": oid.to_string(), "para": 0, "offset": 0})).unwrap();
+        a.session.run("edit.paste", json!({"text": "pasted text"})).unwrap();
+        a.ui.paste_shown_at = Some(0.0);
+    });
 }

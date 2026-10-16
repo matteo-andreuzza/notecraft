@@ -21,6 +21,7 @@ pub mod keymap;
 pub mod mini_toolbar;
 pub mod nav;
 pub mod panes;
+pub mod paste_options;
 pub mod ribbon;
 pub mod ribbon_layout;
 pub mod ribbon_simplified;
@@ -128,6 +129,9 @@ pub struct UiState {
     pub tags_unchecked: bool,
     /// Find Tags pane scope.
     pub tags_scope: String,
+    /// When a paste command last ran (seconds, `ctx` time): the Paste Options button
+    /// (`UI.Canvas.PasteOptions`) shows near the caret for a few seconds after.
+    pub paste_shown_at: Option<f64>,
 }
 
 impl Default for UiState {
@@ -148,6 +152,7 @@ impl Default for UiState {
             tags_group: "tag".into(),
             tags_unchecked: false,
             tags_scope: "all".into(),
+            paste_shown_at: None,
         }
     }
 }
@@ -246,6 +251,11 @@ impl NoteApp {
         {
             ctx.copy_text(t.to_string());
         }
+        // UI.Canvas.PasteOptions: the button shows near the caret for a few seconds after any
+        // paste, letting the choice be changed after the fact.
+        if matches!(id, "edit.paste" | "edit.pasteKeepSource" | "edit.pasteMerge" | "edit.pasteTextOnly" | "edit.pasteOptions") {
+            self.ui.paste_shown_at = Some(ctx.input(|i| i.time));
+        }
         if v.get("rename").and_then(Value::as_bool) == Some(true) {
             if let Some(sid) = v.get("section").and_then(Value::as_str).and_then(notecraft_engine::doc::Id::parse) {
                 let name = self.session.ws.section(sid).map(|s| s.name.clone()).unwrap_or_default();
@@ -261,9 +271,9 @@ impl NoteApp {
 
     /// The view state for the control channel (`ui.inspect`): the ribbon tab and layout, backstage
     /// page, open dialog, theme, panes, whether the navigation shows and the last status message,
-    /// the window size in points, the contextual tabs shown, and where the last frame put the
-    /// tables (cells, column borders) and the paragraph handles, in screen points, so a driver
-    /// can click and drag them.
+    /// the window size in points, whether the Paste Options button is showing, the contextual
+    /// tabs shown, and where the last frame put the tables (cells, column borders) and the
+    /// paragraph handles, in screen points, so a driver can click and drag them.
     pub fn inspect_ui(&self, ctx: &egui::Context) -> Value {
         let size = ctx.content_rect().size();
         json!({
@@ -284,6 +294,7 @@ impl NoteApp {
             "canvasFocused": self.canvas.focused,
             "window": {"width": size.x, "height": size.y},
             "quitRequested": self.quit_requested,
+            "pasteShown": self.ui.paste_shown_at.is_some(),
             "contextualTabs": chrome::contextual_tabs(self).iter().map(|t| t.name).collect::<Vec<_>>(),
             "tables": self.canvas.tables.iter().take(50).map(|tl| json!({
                 "id": tl.id,
@@ -358,6 +369,7 @@ impl NoteApp {
             }
             canvas::show(self, ui, t);
             mini_toolbar::show(self, ui, area, t);
+            paste_options::show(self, ui, area, t);
             if self.session.view.find.active {
                 panes::find_bar(self, ui, area, t);
             }

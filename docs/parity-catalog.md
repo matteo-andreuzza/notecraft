@@ -75,7 +75,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Canvas.ParagraphHandle | Paragraph handle (four-way arrow) left of each paragraph on hover: drag to move, click to select, double-click to collapse | Window/Canvas/Paragraph Handle | surface |  |  | P0 | verified | GK; FLUENT19:ContextMenuOutlineElementHandle |  |
 | UI.Canvas.Scrollbars | Vertical and horizontal scroll bars; option to put the vertical bar on the left | Window/Canvas/Scroll Bars | surface |  |  | P1 | missing | GK (Options › Display) |  |
 | UI.Canvas.MiniToolbar | Mini toolbar on text selection (font, size, bold, italic, underline, highlight, colour, indent, bullets, styles, tags) | Window/Canvas/Mini Toolbar | surface |  |  | P1 | verified | GK (Options › General) |  |
-| UI.Canvas.PasteOptions | Paste Options button after pasting | Window/Canvas/Paste Options Button | surface |  |  | P1 | missing | GK (Options › Advanced) |  |
+| UI.Canvas.PasteOptions | Paste Options button after pasting | Window/Canvas/Paste Options Button | surface |  |  | P1 | verified | GK (Options › Advanced) |  |
 | UI.Canvas.InfoBar | Information bar at the top of the page (Ctrl+Shift+W performs its action) | Window/Canvas/Information Bar | surface |  |  | P2 | missing | KBD365 (Ctrl+Shift+W) |  |
 | UI.Canvas.ExpandButton | Expand / restore button at the top right of the page (full page view) | Window/Canvas/Expand | surface |  |  | P1 | wired | M365-2024 | Runs `view.fullPage`. |
 | UI.Panes.FindTags | Tags Summary pane: group by tag/section/title/date/note text, search scope, Show only unchecked items, Create Summary Page | Window/Panes/Tags Summary | surface |  |  | P0 | wired | FLUENT19:FindTaggedNotes; GK |  |
