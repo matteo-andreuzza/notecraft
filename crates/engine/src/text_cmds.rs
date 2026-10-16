@@ -19,6 +19,21 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("text.insert", "NC.Text.Insert", "Type Text", "Keyboard/Typing/Type text", insert)
             .params(r#"{"text": string}"#)
             .when(need_page),
+        // R.Insert.Symbols.SymbolInsertGallery — the quick symbol gallery; both this and the
+        // dialog below insert one symbol at the caret, same as typing it.
+        CommandSpec::new("insert.symbol", "R.Insert.Symbols.SymbolInsertGallery", "Symbol", "Insert/Symbols/Symbol", insert_symbol)
+            .params(r#"{"char": string}"#)
+            .when(need_page),
+        // R.Insert.Symbols.SymbolsDialog — More Symbols…, the dialog's own Insert button.
+        CommandSpec::new(
+            "insert.symbolDialog",
+            "R.Insert.Symbols.SymbolsDialog",
+            "More Symbols…",
+            "Insert/Symbols/Symbol/More Symbols…",
+            insert_symbol,
+        )
+        .params(r#"{"char": string}"#)
+        .when(need_page),
         // NC.Text.Enter — Enter: new paragraph (BEH.Outline.EnterNewParagraph, EmptyBulletEnds).
         CommandSpec::new("text.newline", "NC.Text.Enter", "New Paragraph", "Keyboard/Typing/New paragraph", newline).key("Enter").when(need_page),
         // KB.General.LineBreak — Shift+Enter: soft line break inside the paragraph.
@@ -76,6 +91,15 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
 
 fn coalesce_key(pos: Pos, page: Option<notecraft_doc::Id>) -> String {
     format!("type:{}:{:?}:{}", page.unwrap_or_default(), pos.block, pos.para)
+}
+
+/// Insert one symbol at the caret — the same as typing it (`R.Insert.Symbols.*`).
+fn insert_symbol(s: &mut Session, v: &Value) -> CmdResult {
+    let ch = p::req_str(v, "char")?;
+    if ch.chars().count() > 8 {
+        return Err(CmdError::Params("`char` is more than a symbol".into()));
+    }
+    insert(s, &json!({"text": ch}))
 }
 
 /// Type `text` at the caret. Newlines start new paragraphs (as pressing Enter would).

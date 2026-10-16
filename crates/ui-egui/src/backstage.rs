@@ -270,6 +270,16 @@ fn options(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
                 app.run(ctx, "file.options", json!({"set": {"author": author}}));
             }
         });
+        ui.add_space(6.0);
+        // OPT.General.OfficeTheme (also in File › Account, UI.Window.DarkMode).
+        ui.label("Office Theme");
+        ui.horizontal(|ui| {
+            for k in ThemeKind::ALL {
+                if ui.selectable_label(app.ui.theme == k, k.label()).clicked() {
+                    app.ui.theme = k;
+                }
+            }
+        });
         ui.add_space(10.0);
         ui.label(RichText::new("Advanced › Editing").strong());
         let mut bullets = app.session.prefs.auto_bullets;

@@ -512,3 +512,37 @@ fn recent_notebooks_show_in_the_open_backstage_page() {
     // file.openRecent, which is what this row is about.
     assert!(h.state().ui.status.is_some(), "clicking a recent notebook ran file.openRecent");
 }
+
+#[test]
+fn symbol_dialog_inserts_a_symbol_at_the_caret() {
+    // parity: UI.Dialogs.Symbol, R.Insert.Symbols.SymbolsDialog
+    let a = app();
+    assert_eq!(crate::ribbon::dialog_for(&a, "R.Insert.Symbols.SymbolsDialog"), Some(crate::dialogs::Dialog::Symbol));
+    // R.Insert.Symbols.SymbolInsertGallery: the gallery trigger opens the same dialog (a plain
+    // inline gallery would need its own popup; this is the simpler, still-honest choice).
+    assert_eq!(crate::ribbon::dialog_for(&a, "R.Insert.Symbols.SymbolInsertGallery"), Some(crate::dialogs::Dialog::Symbol));
+    let mut a = a;
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 40.0, "y": 100.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "Price: "})).unwrap();
+    a.ui.dialog = Some(crate::dialogs::Dialog::Symbol);
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("€").is_some(), "UI.Dialogs.Symbol shows the symbol grid");
+    h.get_by_label("€").click();
+    h.run();
+    assert_eq!(h.state().session.page().unwrap().plain_text().trim(), "Price: €");
+    assert!(h.state().ui.dialog.is_none(), "picking a symbol closes the dialog");
+}
+
+#[test]
+fn options_page_has_the_office_theme_too() {
+    // parity: UI.Dialogs.Options, OPT.General.OfficeTheme
+    let mut h = harness(app());
+    h.state_mut().ui.backstage = Some(crate::Backstage::Options);
+    h.run();
+    present(&h, "UI.Dialogs.Options", "Office Theme");
+    h.get_by_label("Black").click();
+    h.run();
+    assert_eq!(h.state().ui.theme, crate::ThemeKind::Black, "OPT.General.OfficeTheme: picked from the Options page too");
+}

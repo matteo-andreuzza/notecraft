@@ -94,8 +94,8 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Dialogs.NotebookProperties | Notebook Properties dialog (display name, colour, location, default format) | Window/Dialogs/Notebook Properties | surface |  |  | P1 | missing | FLUENT19:NotebookProperties |  |
 | UI.Dialogs.ParagraphSpacing | Paragraph Spacing dialog (before, after, line spacing at least) | Window/Dialogs/Paragraph Spacing | surface |  |  | P1 | missing | FLUENT19:ParagraphSpacingOptions |  |
 | UI.Dialogs.InsertTable | Insert Table dialog (columns, rows) | Window/Dialogs/Insert Table | surface |  |  | P1 | verified | FLUENT19:TableInsert |  |
-| UI.Dialogs.Symbol | Symbol dialog | Window/Dialogs/Symbol | surface |  |  | P2 | missing | FLUENT19:SymbolsDialog |  |
-| UI.Dialogs.Options | OneNote Options dialog with its categories | Window/Dialogs/Options | surface |  |  | P0 | missing | FLUENT19:ApplicationOptionsDialog |  |
+| UI.Dialogs.Symbol | Symbol dialog | Window/Dialogs/Symbol | surface |  |  | P2 | verified | FLUENT19:SymbolsDialog |  |
+| UI.Dialogs.Options | OneNote Options dialog with its categories | Window/Dialogs/Options | surface |  |  | P0 | verified | FLUENT19:ApplicationOptionsDialog |  |
 | UI.Dialogs.CustomizeRibbon | Customize the Ribbon page (tabs, groups, commands, reset, import/export) | Window/Dialogs/Customize Ribbon | surface |  |  | P2 | missing | GK (Options) |  |
 | UI.Dialogs.CustomizeQAT | Quick Access Toolbar customization page (and the QAT drop-down) | Window/Dialogs/Customize QAT | surface |  |  | P1 | missing | GK (Options) |  |
 | UI.Window.FullPage | Full Page View: ribbon and navigation hidden, a single button to return | Window/Full Page View | surface |  |  | P0 | wired | FLUENT19:FullPageView |  |
@@ -279,8 +279,8 @@ The Insert tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Insert.Pages.NewPageFromStationery | Page from Template | Insert/Pages/Page Templates/Page from Template | button |  | page.newFromTemplate | P2 | missing | FLUENT19:NewPageFromStationery |  |
 | R.Insert.Symbols.InsertBuildingBlocksEquationsGallery | Equation | Insert/Symbols/Equation | gallery | `Alt+=` | insert.equation | P2 | missing | FLUENT19:InsertBuildingBlocksEquationsGallery |  |
 | R.Insert.Symbols.EquationInsertNew | Insert New Equation | Insert/Symbols/Equation/Insert New Equation | button | `Alt+=` | insert.equation | P2 | missing | FLUENT19:EquationInsertNew |  |
-| R.Insert.Symbols.SymbolInsertGallery | Symbol | Insert/Symbols/Symbol | gallery |  | insert.symbol | P2 | missing | FLUENT19:SymbolInsertGallery |  |
-| R.Insert.Symbols.SymbolsDialog | More Symbols… | Insert/Symbols/Symbol/More Symbols… | button |  | insert.symbolDialog | P2 | missing | FLUENT19:SymbolsDialog |  |
+| R.Insert.Symbols.SymbolInsertGallery | Symbol | Insert/Symbols/Symbol | gallery |  | insert.symbol | P2 | wired | FLUENT19:SymbolInsertGallery |  |
+| R.Insert.Symbols.SymbolsDialog | More Symbols… | Insert/Symbols/Symbol/More Symbols… | button |  | insert.symbolDialog | P2 | verified | FLUENT19:SymbolsDialog |  |
 | R.Insert.Stickers.Sticker | Sticker | Insert/Stickers/Sticker | gallery |  | insert.sticker | P3 | missing | KBD365 ("Insert a sticker": Alt+N, S) | unverified group name |
 
 ## Ribbon › Draw
@@ -1289,7 +1289,7 @@ The OneNote Options dialog, category by category. Setting names are functional d
 | OPT.General.ScreenTipStyle | ScreenTip style | File/Options/General/ScreenTip style | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.General.UserName | User name (author of edits) | File/Options/General/User name (author of edits) | option |  |  | P1 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.General.Initials | Initials | File/Options/General/Initials | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.General.OfficeTheme | Office Theme (Colorful, Dark Gray, Black, White, Use system setting) | File/Options/General/Office Theme (Colorful, Dark Gray, Black, White, Use system setting) | option |  |  | P1 | missing | GK (OneNote Options dialog, user-visible); M365-2024 | unverified wording |
+| OPT.General.OfficeTheme | Office Theme (Colorful, Dark Gray, Black, White, Use system setting) | File/Options/General/Office Theme (Colorful, Dark Gray, Black, White, Use system setting) | option |  |  | P1 | wired | GK (OneNote Options dialog, user-visible); M365-2024 | unverified wording |
 | OPT.General.OfficeBackground | Office Background | File/Options/General/Office Background | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.General.Privacy | Privacy settings | File/Options/General/Privacy settings | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Display.TrayIcon | Place OneNote icon in the notification area of the taskbar | File/Options/Display/Place OneNote icon in the notification area of the taskbar | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |

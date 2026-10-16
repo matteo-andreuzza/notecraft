@@ -24,6 +24,8 @@ pub enum Dialog {
     InsertTable(usize, usize),
     /// Notebook List (Ctrl+G): pick a notebook to switch to.
     NotebookList,
+    /// Symbol: pick a symbol to insert.
+    Symbol,
     /// Move or Copy Pages (Ctrl+Alt+M): the page, and the search filter.
     MovePage(Id, String),
     /// Move or Copy a section: the section, and the search filter.
@@ -39,6 +41,13 @@ pub enum Dialog {
     /// Confirm emptying the recycle bin.
     ConfirmEmptyBin,
 }
+
+/// A curated set of common symbols for the Symbol dialog (`UI.Dialogs.Symbol`); plain Unicode
+/// characters, not from any Microsoft font or symbol set (clean room).
+const SYMBOLS: &[&str] = &[
+    "©", "®", "™", "€", "£", "¥", "¢", "§", "¶", "†", "‡", "•", "…", "‰", "′", "″", "°", "±", "×", "÷", "≤", "≥", "≠", "≈", "∞", "√", "∑", "π", "Ω",
+    "α", "β", "γ", "Δ", "←", "→", "↑", "↓", "↔", "⇒", "★", "☆", "♥", "♦", "♣", "♠", "✓", "✗", "¼", "½", "¾",
+];
 
 fn sections(app: &NoteApp) -> Vec<(Id, String)> {
     let mut out = Vec::new();
@@ -93,6 +102,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
         Dialog::Link { .. } => "Link",
         Dialog::InsertTable(..) => "Insert Table",
         Dialog::NotebookList => "Notebooks",
+        Dialog::Symbol => "Symbol",
         Dialog::MovePage(..) => "Move or Copy Pages",
         Dialog::MoveSection(..) => "Move or Copy Section",
         Dialog::MergeSection(_) => "Merge Section",
@@ -178,6 +188,24 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                         if ui.selectable_label(Some(nb.id) == current, &nb.name).clicked() {
                             app.run(ctx, "notebook.select", json!({"notebook": nb.id.to_string()}));
                             close = true;
+                        }
+                    }
+                });
+                if ui.button("Cancel").clicked() {
+                    close = true;
+                }
+            }
+            Dialog::Symbol => {
+                ui.label("Click a symbol to insert it:");
+                ui.add_space(4.0);
+                egui::Grid::new("symbol_grid").spacing(vec2(4.0, 4.0)).show(ui, |ui| {
+                    for (i, sym) in SYMBOLS.iter().enumerate() {
+                        if ui.add(egui::Button::new(RichText::new(*sym).size(16.0)).min_size(vec2(28.0, 28.0))).clicked() {
+                            app.run(ctx, "insert.symbolDialog", json!({"char": sym}));
+                            close = true;
+                        }
+                        if (i + 1) % 10 == 0 {
+                            ui.end_row();
                         }
                     }
                 });
