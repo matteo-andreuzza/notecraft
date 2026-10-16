@@ -376,6 +376,52 @@ fn containers_move_resize_and_paragraph_drag() {
 }
 
 #[test]
+fn object_z_order_commands() {
+    // parity: CM.NoteContainer.ObjectBringForward, CM.NoteContainer.ObjectBringToFront, CM.NoteContainer.ObjectSendBackward, CM.NoteContainer.ObjectSendToBack
+    let (mut s, a) = page_with("a");
+    run(&mut s, "outline.new", json!({"x": 40.0, "y": 300.0}));
+    run(&mut s, "text.insert", json!({"text": "b"}));
+    let b = match s.sel.caret().unwrap().block {
+        Block::Outline(id) => id,
+        _ => panic!("expected a new container"),
+    };
+    run(&mut s, "outline.new", json!({"x": 40.0, "y": 500.0}));
+    run(&mut s, "text.insert", json!({"text": "c"}));
+    let c = match s.sel.caret().unwrap().block {
+        Block::Outline(id) => id,
+        _ => panic!("expected a new container"),
+    };
+    let order = |s: &Session| s.page().unwrap().objects.iter().map(|x| x.id()).collect::<Vec<_>>();
+    assert_eq!(order(&s), vec![a, b, c], "z-order is page creation order (back to front)");
+
+    run(&mut s, "object.select", json!({"ids": [a.to_string()]}));
+    let undo = s.undo_labels().len();
+    run(&mut s, "object.bringForward", json!({}));
+    assert_eq!(order(&s), vec![b, a, c]);
+    assert_eq!(s.undo_labels().len(), undo + 1, "one undo step");
+
+    // Already at the front: a no-op, no undo step.
+    run(&mut s, "object.select", json!({"ids": [c.to_string()]}));
+    let undo = s.undo_labels().len();
+    run(&mut s, "object.bringForward", json!({}));
+    assert_eq!(order(&s), vec![b, a, c]);
+    assert_eq!(s.undo_labels().len(), undo, "no-op at the boundary records nothing");
+
+    run(&mut s, "object.sendToBack", json!({}));
+    assert_eq!(order(&s), vec![c, b, a]);
+
+    run(&mut s, "object.select", json!({"ids": [b.to_string()]}));
+    run(&mut s, "object.bringToFront", json!({}));
+    assert_eq!(order(&s), vec![c, a, b]);
+    run(&mut s, "object.sendBackward", json!({}));
+    assert_eq!(order(&s), vec![c, b, a]);
+
+    // Disabled without a selected note container or table.
+    run(&mut s, "nav.pageTitle", json!({}));
+    assert!(s.run("object.bringForward", json!({})).is_err());
+}
+
+#[test]
 fn page_creation_variants() {
     // parity: KB.Pages.NewSubpage, KB.Pages.NewPageBelow
     let mut s = sample();

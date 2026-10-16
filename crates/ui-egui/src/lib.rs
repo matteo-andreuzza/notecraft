@@ -12,6 +12,7 @@
 pub mod backstage;
 pub mod canvas;
 pub mod chrome;
+pub mod context_menu;
 pub mod dialogs;
 pub mod fonts;
 pub mod icons;

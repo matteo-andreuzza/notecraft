@@ -95,7 +95,89 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .params(r#"{"ids": [outline id], "add"?: bool}"#)
             .pure()
             .when(need_page),
+        // CM.NoteContainer.Order* — z-order of the selected object among the page's objects
+        // (`Page::objects` is already back-to-front; no model change). Acts on the first
+        // selected object (unverified: the reference's exact rule for several at once).
+        CommandSpec::new(
+            "object.bringForward",
+            "CM.NoteContainer.ObjectBringForward",
+            "Bring Forward",
+            "Context/Note Container/Order/Bring Forward",
+            |s, _| reorder(s, bring_forward_target),
+        )
+        .when(need_object_selected),
+        CommandSpec::new(
+            "object.bringToFront",
+            "CM.NoteContainer.ObjectBringToFront",
+            "Bring to Front",
+            "Context/Note Container/Order/Bring to Front",
+            |s, _| reorder(s, bring_to_front_target),
+        )
+        .when(need_object_selected),
+        CommandSpec::new(
+            "object.sendBackward",
+            "CM.NoteContainer.ObjectSendBackward",
+            "Send Backward",
+            "Context/Note Container/Order/Send Backward",
+            |s, _| reorder(s, send_backward_target),
+        )
+        .when(need_object_selected),
+        CommandSpec::new(
+            "object.sendToBack",
+            "CM.NoteContainer.ObjectSendToBack",
+            "Send to Back",
+            "Context/Note Container/Order/Send to Back",
+            |s, _| reorder(s, send_to_back_target),
+        )
+        .when(need_object_selected),
     ]
+}
+
+fn need_object_selected(s: &Session) -> Option<&'static str> {
+    if let Some(w) = need_page(s) {
+        return Some(w);
+    }
+    match &s.sel.on_page {
+        PageSel::Objects { ids } if !ids.is_empty() => None,
+        _ => Some("Select a note container or table first"),
+    }
+}
+
+/// The new index for an object currently at `i` of `len`, or `None` at the boundary (already
+/// frontmost/backmost: a no-op). Kept apart from the actual move so `reorder` can tell a no-op
+/// without ever calling `page_mut` for one — `Arc::make_mut`'s copy-on-write would otherwise
+/// record an undo step for a command that changed nothing (`before_ws`, Session::run's
+/// snapshot, still holds the old `Arc`, so any `page_mut` call clones, pointer-unequal or not).
+fn bring_forward_target(len: usize, i: usize) -> Option<usize> {
+    (i + 1 < len).then_some(i + 1)
+}
+
+fn send_backward_target(_len: usize, i: usize) -> Option<usize> {
+    (i > 0).then_some(i - 1)
+}
+
+fn bring_to_front_target(len: usize, i: usize) -> Option<usize> {
+    (i + 1 < len).then_some(len - 1)
+}
+
+fn send_to_back_target(_len: usize, i: usize) -> Option<usize> {
+    (i > 0).then_some(0)
+}
+
+/// Move the first selected object to a new index in `page.objects`'s z-order (back to front).
+/// `target` is one of the four functions above; removing index `i` and inserting at the target
+/// index it returns (computed against the length *before* removal) swaps, promotes to the
+/// front or demotes to the back, with no special-casing needed between the four.
+fn reorder(s: &mut Session, target: fn(usize, usize) -> Option<usize>) -> CmdResult {
+    let PageSel::Objects { ids } = &s.sel.on_page else { return Err(CmdError::Disabled("select a note container or table first".into())) };
+    let id = *ids.first().ok_or_else(|| CmdError::Disabled("select a note container or table first".into()))?;
+    let page = s.page().ok_or_else(no_page)?;
+    let Some(i) = page.object_index(id) else { return Ok(Value::Null) };
+    let Some(at) = target(page.objects.len(), i) else { return Ok(Value::Null) };
+    let page = s.page_mut().ok_or_else(no_page)?;
+    let obj = page.objects.remove(i);
+    page.objects.insert(at, obj);
+    Ok(Value::Null)
 }
 
 /// The outlines a whole-outline command applies to: the caret's, the selected containers, or

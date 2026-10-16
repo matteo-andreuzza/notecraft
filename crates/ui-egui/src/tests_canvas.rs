@@ -62,6 +62,15 @@ pub(crate) fn double_click(h: &mut Harness<'static, NoteApp>, p: Pos2) {
     h.run();
 }
 
+pub(crate) fn right_click(h: &mut Harness<'static, NoteApp>, p: Pos2) {
+    h.event(egui::Event::PointerMoved(p));
+    h.run_steps(60);
+    for pressed in [true, false] {
+        h.event(egui::Event::PointerButton { pos: p, button: egui::PointerButton::Secondary, pressed, modifiers: egui::Modifiers::NONE });
+    }
+    h.run();
+}
+
 pub(crate) fn drag(h: &mut Harness<'static, NoteApp>, from: Pos2, to: Pos2) {
     press(h, from, true);
     for k in 1..=6 {
@@ -295,4 +304,117 @@ fn the_mini_toolbar_shows_on_a_text_selection_and_formats_it() {
     h.state_mut().session.run("nav.pageTitle", json!({})).unwrap();
     h.run();
     assert!(h.query_by_label("Bold").is_none(), "UI.Canvas.MiniToolbar: not in the title");
+}
+
+/// A fresh page with a container well down the page (room above it for the mini toolbar, which
+/// pops up over a text selection and would otherwise cover the very click a test is about to
+/// make), on the View tab (so the Home ribbon's identical catalog labels — Cut, Order… — don't
+/// make a context-menu label ambiguous).
+fn page_for_context_menu(text: &str) -> (NoteApp, Id) {
+    let (mut a, o) = page_with(text);
+    a.session.run("outline.move", json!({"id": o.to_string(), "x": 60.0, "y": 400.0})).unwrap();
+    a.ui.tab = "View".into();
+    (a, o)
+}
+
+fn table_texts(h: &Harness<'static, NoteApp>, o: Id) -> Vec<String> {
+    h.state().session.page().unwrap().outline(o).unwrap().paragraphs.iter().map(|p| p.text()).collect()
+}
+
+// One right click per harness in these tests, each its own `app()`/`harness()`: a *second*
+// secondary click on the canvas's one shared response, reopening the popup within the same
+// kittest session, closes it again within a frame or two regardless of target or timing (a
+// kittest/egui interaction, not a real one — a single right click stays open indefinitely, and
+// real interactive use always has real frames with other input between two right clicks).
+
+#[test]
+fn right_click_on_text_moves_the_caret_and_opens_the_text_menu() {
+    let (a, o) = page_for_context_menu("Alpha\nBeta");
+    let mut h = harness(a);
+    h.run();
+    // No existing selection: the caret moves to the click (Cut/Copy are then correctly
+    // disabled — honestly, not fake UI), and the Table submenu is there.
+    let pl = h.state().canvas.para(Block::Outline(o), 1).unwrap().clone();
+    right_click(&mut h, pl.pos + egui::vec2(4.0, 2.0));
+    assert!(h.query_by_label("Cut").is_some(), "CM.Text: right click opens the context menu");
+    // Submenu triggers carry a "▸" suffix (egui's own `menu_button`), matched with `_contains`.
+    assert!(h.query_by_label_contains("Table").is_some(), "the Text menu has the Table submenu");
+    let c = h.state().session.sel.caret().unwrap();
+    assert_eq!((c.block, c.para, c.offset), (Block::Outline(o), 1, 0), "the caret follows the right click");
+}
+
+#[test]
+fn right_click_inside_a_selection_keeps_it_and_cut_acts_on_it() {
+    // parity: CM.Text.Cut
+    let (mut a, o) = page_for_context_menu("Alpha\nBeta");
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 1, "offset": 0})).unwrap();
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 1, "offset": 4, "extend": true})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    let pl = h.state().canvas.para(Block::Outline(o), 1).unwrap().clone();
+    right_click(&mut h, pl.pos + egui::vec2(4.0, 2.0));
+    let r = h.state().session.text_range().unwrap();
+    assert!(!r.is_caret(), "a right click inside a selection keeps it, unlike a click outside one");
+    h.get_by_label("Cut").click();
+    h.run();
+    assert_eq!(table_texts(&h, o), vec!["Alpha", ""], "Cut from the context menu acted on the kept selection");
+}
+
+#[test]
+fn right_click_on_the_paragraph_handle_selects_the_branch_and_opens_the_handle_menu() {
+    let (a, o) = page_for_context_menu("Alpha\nBeta");
+    let mut h = harness(a);
+    h.run();
+    let handle = h.state().canvas.para(Block::Outline(o), 0).unwrap().handle.center();
+    right_click(&mut h, handle);
+    assert!(h.query_by_label("Cut").is_some(), "CM.ParagraphHandle also has Cut");
+    assert!(h.query_by_label_contains("Select Outline Levels").is_some());
+    // CM.ParagraphHandle has its own Table submenu too (inserting a table from the handle).
+    assert!(h.query_by_label_contains("Table").is_some());
+    let r = h.state().session.text_range().unwrap();
+    assert_eq!((r.ordered().0.para, r.ordered().1.para), (0, 0), "right-clicking the handle selects its paragraph");
+}
+
+#[test]
+fn right_click_on_a_container_bar_selects_it_opens_the_note_container_menu_and_reorders() {
+    // parity: CM.NoteContainer.ObjectBringToFront
+    let (mut a, o) = page_for_context_menu("Alpha\nBeta");
+    a.session.run("insert.table", json!({"rows": 1, "cols": 1, "x": 60.0, "y": 400.0})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    let ol = h.state().canvas.outlines.iter().find(|o| !o.table).copied().unwrap();
+    right_click(&mut h, ol.bar.center());
+    assert!(h.query_by_label_contains("Order").is_some(), "CM.NoteContainer has the Order submenu");
+    assert!(h.query_by_label("Cut").is_some(), "CM.NoteContainer also has Cut");
+    assert!(h.query_by_label_contains("Table").is_none(), "no Table submenu on a container's own bar");
+    let sel = h.state().session.sel.on_page.clone();
+    assert!(matches!(sel, notecraft_engine::selection::PageSel::Objects { ids } if ids == vec![o]), "the bar selects the container");
+    let before = h.state().session.page().unwrap().objects.iter().map(|x| x.id()).collect::<Vec<_>>();
+    h.get_by_label_contains("Order").click();
+    h.run();
+    h.get_by_label("Bring to Front").click();
+    h.run();
+    let after = h.state().session.page().unwrap().objects.iter().map(|x| x.id()).collect::<Vec<_>>();
+    assert_ne!(before, after, "Order/Bring to Front from the context menu reordered the objects");
+    assert_eq!(after.last(), Some(&o));
+}
+
+#[test]
+fn right_click_in_a_table_cell_opens_the_text_menu_with_the_table_submenu() {
+    // parity: CM.Text.SelectTableOneNote
+    let (mut a, tid) = page_with_table();
+    a.ui.tab = "View".into();
+    let mut h = harness(a);
+    h.run();
+    let cell = h.state().canvas.tables[0].cells[0];
+    right_click(&mut h, cell.rect.center());
+    assert_eq!(h.state().session.sel.caret().map(|c| c.block), Some(Block::Cell(cell.id)), "the caret follows the click into the cell");
+    assert!(h.query_by_label("Cut").is_some(), "CM.Text in a table cell");
+    // "Table ⏵" (the submenu trigger), not "Table Layout" (the contextual ribbon tab's name,
+    // shown in the tab row even while another tab is selected) or "Select Table" (a child).
+    h.get_by_label_contains("Table ⏵").click();
+    h.run();
+    h.get_by_label("Select Table").click();
+    h.run();
+    assert_eq!(h.state().session.sel.on_page, notecraft_engine::selection::PageSel::Cells { table: tid, rows: (0, 1), cols: (0, 2) });
 }

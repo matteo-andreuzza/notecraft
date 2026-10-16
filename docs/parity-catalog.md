@@ -572,62 +572,62 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| CM.NoteContainer.Cut | Cut | Context/Note Container/Cut | button | `Mod+X` | edit.cut | P0 | missing | FLUENT19:ContextMenuOutlineHandle/Cut |  |
-| CM.NoteContainer.CopyOneNote | Copy | Context/Note Container/Copy | button | `Mod+C` | edit.copy | P0 | missing | FLUENT19:ContextMenuOutlineHandle/CopyOneNote |  |
-| CM.NoteContainer.PasteGalleryMini | Paste Options | Context/Note Container/Paste Options | gallery |  | edit.pasteOptions | P0 | missing | FLUENT19:ContextMenuOutlineHandle/PasteGalleryMini |  |
-| CM.NoteContainer.Delete | Delete | Context/Note Container/Delete | button | `Delete` | edit.delete | P0 | missing | FLUENT19:ContextMenuOutlineHandle/Delete |  |
-| CM.NoteContainer.HyperlinkCreate | Link… | Context/Note Container/Link… | button | `Mod+K` | insert.link | P0 | missing | FLUENT19:ContextMenuOutlineHandle/HyperlinkCreate |  |
+| CM.NoteContainer.Cut | Cut | Context/Note Container/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuOutlineHandle/Cut |  |
+| CM.NoteContainer.CopyOneNote | Copy | Context/Note Container/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuOutlineHandle/CopyOneNote |  |
+| CM.NoteContainer.PasteGalleryMini | Paste Options | Context/Note Container/Paste Options | gallery |  | edit.pasteOptions | P0 | wired | FLUENT19:ContextMenuOutlineHandle/PasteGalleryMini |  |
+| CM.NoteContainer.Delete | Delete | Context/Note Container/Delete | button | `Delete` | edit.delete | P0 | wired | FLUENT19:ContextMenuOutlineHandle/Delete |  |
+| CM.NoteContainer.HyperlinkCreate | Link… | Context/Note Container/Link… | button | `Mod+K` | insert.link | P0 | wired | FLUENT19:ContextMenuOutlineHandle/HyperlinkCreate |  |
 | CM.NoteContainer.SelectOutlineLevelsMenu | Select Outline Levels | Context/Note Container/Select Outline Levels | menu |  |  | P2 | missing | FLUENT19:ContextMenuOutlineHandle/SelectOutlineLevelsMenu |  |
-| CM.NoteContainer.OutlineSelectLevel1 | Show Level 1 | Context/Note Container/Select Outline Levels/Show Level 1 | button |  | outline.level1 | P1 | missing | FLUENT19:ContextMenuOutlineHandle/OutlineSelectLevel1 |  |
-| CM.NoteContainer.OutlineSelectLevel2 | Show Level 2 | Context/Note Container/Select Outline Levels/Show Level 2 | button |  | outline.level2 | P1 | missing | FLUENT19:ContextMenuOutlineHandle/OutlineSelectLevel2 |  |
-| CM.NoteContainer.OutlineSelectLevel3 | Show Level 3 | Context/Note Container/Select Outline Levels/Show Level 3 | button |  | outline.level3 | P1 | missing | FLUENT19:ContextMenuOutlineHandle/OutlineSelectLevel3 |  |
-| CM.NoteContainer.OutlineSelectLevel4 | Show Level 4 | Context/Note Container/Select Outline Levels/Show Level 4 | button |  | outline.level4 | P1 | missing | FLUENT19:ContextMenuOutlineHandle/OutlineSelectLevel4 |  |
-| CM.NoteContainer.OutlineSelectLevel5 | Show Level 5 | Context/Note Container/Select Outline Levels/Show Level 5 | button |  | outline.level5 | P1 | missing | FLUENT19:ContextMenuOutlineHandle/OutlineSelectLevel5 |  |
-| CM.NoteContainer.OutlineSelectLevelAll | Show All Levels | Context/Note Container/Select Outline Levels/Show All Levels | button | `Alt+Shift+0` | outline.expandAll | P1 | missing | FLUENT19:ContextMenuOutlineHandle/OutlineSelectLevelAll |  |
+| CM.NoteContainer.OutlineSelectLevel1 | Show Level 1 | Context/Note Container/Select Outline Levels/Show Level 1 | button |  | outline.level1 | P1 | wired | FLUENT19:ContextMenuOutlineHandle/OutlineSelectLevel1 |  |
+| CM.NoteContainer.OutlineSelectLevel2 | Show Level 2 | Context/Note Container/Select Outline Levels/Show Level 2 | button |  | outline.level2 | P1 | wired | FLUENT19:ContextMenuOutlineHandle/OutlineSelectLevel2 |  |
+| CM.NoteContainer.OutlineSelectLevel3 | Show Level 3 | Context/Note Container/Select Outline Levels/Show Level 3 | button |  | outline.level3 | P1 | wired | FLUENT19:ContextMenuOutlineHandle/OutlineSelectLevel3 |  |
+| CM.NoteContainer.OutlineSelectLevel4 | Show Level 4 | Context/Note Container/Select Outline Levels/Show Level 4 | button |  | outline.level4 | P1 | wired | FLUENT19:ContextMenuOutlineHandle/OutlineSelectLevel4 |  |
+| CM.NoteContainer.OutlineSelectLevel5 | Show Level 5 | Context/Note Container/Select Outline Levels/Show Level 5 | button |  | outline.level5 | P1 | wired | FLUENT19:ContextMenuOutlineHandle/OutlineSelectLevel5 |  |
+| CM.NoteContainer.OutlineSelectLevelAll | Show All Levels | Context/Note Container/Select Outline Levels/Show All Levels | button | `Alt+Shift+0` | outline.expandAll | P1 | wired | FLUENT19:ContextMenuOutlineHandle/OutlineSelectLevelAll |  |
 | CM.NoteContainer.OrderObjectsMenu | Order | Context/Note Container/Order | menu |  |  | P1 | missing | FLUENT19:ContextMenuOutlineHandle/OrderObjectsMenu |  |
-| CM.NoteContainer.ObjectBringForward | Bring Forward | Context/Note Container/Order/Bring Forward | button |  | object.bringForward | P1 | missing | FLUENT19:ContextMenuOutlineHandle/ObjectBringForward |  |
-| CM.NoteContainer.ObjectBringToFront | Bring to Front | Context/Note Container/Order/Bring to Front | button |  | object.bringToFront | P1 | missing | FLUENT19:ContextMenuOutlineHandle/ObjectBringToFront |  |
-| CM.NoteContainer.ObjectSendBackward | Send Backward | Context/Note Container/Order/Send Backward | button |  | object.sendBackward | P1 | missing | FLUENT19:ContextMenuOutlineHandle/ObjectSendBackward |  |
-| CM.NoteContainer.ObjectSendToBack | Send to Back | Context/Note Container/Order/Send to Back | button |  | object.sendToBack | P1 | missing | FLUENT19:ContextMenuOutlineHandle/ObjectSendToBack |  |
+| CM.NoteContainer.ObjectBringForward | Bring Forward | Context/Note Container/Order/Bring Forward | button |  | object.bringForward | P1 | verified | FLUENT19:ContextMenuOutlineHandle/ObjectBringForward |  |
+| CM.NoteContainer.ObjectBringToFront | Bring to Front | Context/Note Container/Order/Bring to Front | button |  | object.bringToFront | P1 | verified | FLUENT19:ContextMenuOutlineHandle/ObjectBringToFront |  |
+| CM.NoteContainer.ObjectSendBackward | Send Backward | Context/Note Container/Order/Send Backward | button |  | object.sendBackward | P1 | verified | FLUENT19:ContextMenuOutlineHandle/ObjectSendBackward |  |
+| CM.NoteContainer.ObjectSendToBack | Send to Back | Context/Note Container/Order/Send to Back | button |  | object.sendToBack | P1 | verified | FLUENT19:ContextMenuOutlineHandle/ObjectSendToBack |  |
 | CM.NoteContainer.ObjectMove | Move | Context/Note Container/Move | button |  | object.move | P1 | missing | FLUENT19:ContextMenuOutlineHandle/ObjectMove |  |
 | CM.NoteContainer.ObjectResize | Resize | Context/Note Container/Resize | button |  | object.resize | P1 | missing | FLUENT19:ContextMenuOutlineHandle/ObjectResize |  |
 | CM.NoteContainer.ConvertInkMenu | Convert Ink | Context/Note Container/Convert Ink | menu |  |  | P2 | missing | FLUENT19:ContextMenuOutlineHandle/ConvertInkMenu |  |
 | CM.NoteContainer.SelectionToTextConvert | Ink to Text | Context/Note Container/Convert Ink/Ink to Text | button |  | draw.inkToText | P2 | missing | FLUENT19:ContextMenuOutlineHandle/SelectionToTextConvert |  |
 | CM.NoteContainer.SelectionToMathConvert | Ink to Math | Context/Note Container/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuOutlineHandle/SelectionToMathConvert |  |
-| CM.ParagraphHandle.Cut | Cut | Context/Paragraph Handle/Cut | button | `Mod+X` | edit.cut | P0 | missing | FLUENT19:ContextMenuOutlineElementHandle/Cut |  |
-| CM.ParagraphHandle.CopyOneNote | Copy | Context/Paragraph Handle/Copy | button | `Mod+C` | edit.copy | P0 | missing | FLUENT19:ContextMenuOutlineElementHandle/CopyOneNote |  |
-| CM.ParagraphHandle.PasteGalleryMini | Paste Options | Context/Paragraph Handle/Paste Options | gallery |  | edit.pasteOptions | P0 | missing | FLUENT19:ContextMenuOutlineElementHandle/PasteGalleryMini |  |
-| CM.ParagraphHandle.Delete | Delete | Context/Paragraph Handle/Delete | button | `Delete` | edit.delete | P0 | missing | FLUENT19:ContextMenuOutlineElementHandle/Delete |  |
-| CM.ParagraphHandle.HyperlinkCreate | Link… | Context/Paragraph Handle/Link… | button | `Mod+K` | insert.link | P0 | missing | FLUENT19:ContextMenuOutlineElementHandle/HyperlinkCreate |  |
+| CM.ParagraphHandle.Cut | Cut | Context/Paragraph Handle/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuOutlineElementHandle/Cut |  |
+| CM.ParagraphHandle.CopyOneNote | Copy | Context/Paragraph Handle/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuOutlineElementHandle/CopyOneNote |  |
+| CM.ParagraphHandle.PasteGalleryMini | Paste Options | Context/Paragraph Handle/Paste Options | gallery |  | edit.pasteOptions | P0 | wired | FLUENT19:ContextMenuOutlineElementHandle/PasteGalleryMini |  |
+| CM.ParagraphHandle.Delete | Delete | Context/Paragraph Handle/Delete | button | `Delete` | edit.delete | P0 | wired | FLUENT19:ContextMenuOutlineElementHandle/Delete |  |
+| CM.ParagraphHandle.HyperlinkCreate | Link… | Context/Paragraph Handle/Link… | button | `Mod+K` | insert.link | P0 | wired | FLUENT19:ContextMenuOutlineElementHandle/HyperlinkCreate |  |
 | CM.ParagraphHandle.CopyTextFromPicture | Copy Text from Picture | Context/Paragraph Handle/Copy Text from Picture | button |  | object.copyTextFromPicture | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/CopyTextFromPicture |  |
 | CM.ParagraphHandle.AlternativeText | Alt Text | Context/Paragraph Handle/Alt Text | button |  | object.altText | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/AlternativeText |  |
 | CM.ParagraphHandle.ImageSaveAs | Save As (picture) | Context/Paragraph Handle/Save As (picture) | button |  | object.saveAs | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/ImageSaveAs |  |
 | CM.ParagraphHandle.TableMenu | Table | Context/Paragraph Handle/Table | menu |  |  | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/TableMenu |  |
 | CM.ParagraphHandle.TableInsert | Insert Table | Context/Paragraph Handle/Table/Insert Table | button |  | insert.tableDialog | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/TableInsert |  |
-| CM.ParagraphHandle.TableInsertColumnsLeft | Insert Left | Context/Paragraph Handle/Table/Insert Left | button | `Mod+Alt+E` | table.insertLeft | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/TableInsertColumnsLeft |  |
-| CM.ParagraphHandle.TableInsertColumnsRight | Insert Right | Context/Paragraph Handle/Table/Insert Right | button | `Mod+Alt+R` | table.insertRight | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/TableInsertColumnsRight |  |
-| CM.ParagraphHandle.TableInsertRowsAbove | Insert Above | Context/Paragraph Handle/Table/Insert Above | button |  | table.insertAbove | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/TableInsertRowsAbove |  |
-| CM.ParagraphHandle.TableInsertRowsBelow | Insert Below | Context/Paragraph Handle/Table/Insert Below | button | `Mod+Enter` | table.insertBelow | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/TableInsertRowsBelow |  |
-| CM.ParagraphHandle.DeleteTableOneNote | Delete Table | Context/Paragraph Handle/Table/Delete Table | button |  | table.delete | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/DeleteTableOneNote |  |
-| CM.ParagraphHandle.DeleteColumnsOneNote | Delete Columns | Context/Paragraph Handle/Table/Delete Columns | button |  | table.deleteColumns | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/DeleteColumnsOneNote |  |
-| CM.ParagraphHandle.DeleteRowsOneNote | Delete Rows | Context/Paragraph Handle/Table/Delete Rows | button |  | table.deleteRows | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/DeleteRowsOneNote |  |
-| CM.ParagraphHandle.SelectTableOneNote | Select Table | Context/Paragraph Handle/Table/Select Table | button |  | table.selectTable | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/SelectTableOneNote |  |
-| CM.ParagraphHandle.SelectColumns | Select Columns | Context/Paragraph Handle/Table/Select Columns | button |  | table.selectColumns | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/SelectColumns |  |
-| CM.ParagraphHandle.SelectRows | Select Rows | Context/Paragraph Handle/Table/Select Rows | button |  | table.selectRows | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/SelectRows |  |
-| CM.ParagraphHandle.SelectCell | Select Cell | Context/Paragraph Handle/Table/Select Cell | button |  | table.selectCell | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/SelectCell |  |
-| CM.ParagraphHandle.TableBordersHide | Hide Borders | Context/Paragraph Handle/Table/Hide Borders | toggle |  | table.hideBorders | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/TableBordersHide |  |
-| CM.ParagraphHandle.ShadingColorPicker | Shading | Context/Paragraph Handle/Table/Shading | gallery |  | table.shading | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/ShadingColorPicker |  |
-| CM.ParagraphHandle.SortUp | Sort Ascending | Context/Paragraph Handle/Table/Sort Ascending | button |  | table.sortAscending | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/SortUp |  |
-| CM.ParagraphHandle.SortDown | Sort Descending | Context/Paragraph Handle/Table/Sort Descending | button |  | table.sortDescending | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/SortDown |  |
+| CM.ParagraphHandle.TableInsertColumnsLeft | Insert Left | Context/Paragraph Handle/Table/Insert Left | button | `Mod+Alt+E` | table.insertLeft | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/TableInsertColumnsLeft |  |
+| CM.ParagraphHandle.TableInsertColumnsRight | Insert Right | Context/Paragraph Handle/Table/Insert Right | button | `Mod+Alt+R` | table.insertRight | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/TableInsertColumnsRight |  |
+| CM.ParagraphHandle.TableInsertRowsAbove | Insert Above | Context/Paragraph Handle/Table/Insert Above | button |  | table.insertAbove | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/TableInsertRowsAbove |  |
+| CM.ParagraphHandle.TableInsertRowsBelow | Insert Below | Context/Paragraph Handle/Table/Insert Below | button | `Mod+Enter` | table.insertBelow | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/TableInsertRowsBelow |  |
+| CM.ParagraphHandle.DeleteTableOneNote | Delete Table | Context/Paragraph Handle/Table/Delete Table | button |  | table.delete | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/DeleteTableOneNote |  |
+| CM.ParagraphHandle.DeleteColumnsOneNote | Delete Columns | Context/Paragraph Handle/Table/Delete Columns | button |  | table.deleteColumns | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/DeleteColumnsOneNote |  |
+| CM.ParagraphHandle.DeleteRowsOneNote | Delete Rows | Context/Paragraph Handle/Table/Delete Rows | button |  | table.deleteRows | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/DeleteRowsOneNote |  |
+| CM.ParagraphHandle.SelectTableOneNote | Select Table | Context/Paragraph Handle/Table/Select Table | button |  | table.selectTable | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/SelectTableOneNote |  |
+| CM.ParagraphHandle.SelectColumns | Select Columns | Context/Paragraph Handle/Table/Select Columns | button |  | table.selectColumns | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/SelectColumns |  |
+| CM.ParagraphHandle.SelectRows | Select Rows | Context/Paragraph Handle/Table/Select Rows | button |  | table.selectRows | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/SelectRows |  |
+| CM.ParagraphHandle.SelectCell | Select Cell | Context/Paragraph Handle/Table/Select Cell | button |  | table.selectCell | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/SelectCell |  |
+| CM.ParagraphHandle.TableBordersHide | Hide Borders | Context/Paragraph Handle/Table/Hide Borders | toggle |  | table.hideBorders | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/TableBordersHide |  |
+| CM.ParagraphHandle.ShadingColorPicker | Shading | Context/Paragraph Handle/Table/Shading | gallery |  | table.shading | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/ShadingColorPicker |  |
+| CM.ParagraphHandle.SortUp | Sort Ascending | Context/Paragraph Handle/Table/Sort Ascending | button |  | table.sortAscending | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/SortUp |  |
+| CM.ParagraphHandle.SortDown | Sort Descending | Context/Paragraph Handle/Table/Sort Descending | button |  | table.sortDescending | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/SortDown |  |
 | CM.ParagraphHandle.ShowSortTableRowsDialog | Sort… | Context/Paragraph Handle/Table/Sort… | button |  | table.sortDialog | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/ShowSortTableRowsDialog |  |
-| CM.ParagraphHandle.HeaderRowNoFormatting | Header Row (excluded from sort) | Context/Paragraph Handle/Table/Header Row (excluded from sort) | check |  | table.headerRow | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/HeaderRowNoFormatting |  |
+| CM.ParagraphHandle.HeaderRowNoFormatting | Header Row (excluded from sort) | Context/Paragraph Handle/Table/Header Row (excluded from sort) | check |  | table.headerRow | P2 | wired | FLUENT19:ContextMenuOutlineElementHandle/HeaderRowNoFormatting |  |
 | CM.ParagraphHandle.SelectOutlineLevelsMenu | Select Outline Levels | Context/Paragraph Handle/Select Outline Levels | menu |  |  | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/SelectOutlineLevelsMenu |  |
-| CM.ParagraphHandle.OutlineSelectLevel1 | Show Level 1 | Context/Paragraph Handle/Select Outline Levels/Show Level 1 | button |  | outline.level1 | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevel1 |  |
-| CM.ParagraphHandle.OutlineSelectLevel2 | Show Level 2 | Context/Paragraph Handle/Select Outline Levels/Show Level 2 | button |  | outline.level2 | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevel2 |  |
-| CM.ParagraphHandle.OutlineSelectLevel3 | Show Level 3 | Context/Paragraph Handle/Select Outline Levels/Show Level 3 | button |  | outline.level3 | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevel3 |  |
-| CM.ParagraphHandle.OutlineSelectLevel4 | Show Level 4 | Context/Paragraph Handle/Select Outline Levels/Show Level 4 | button |  | outline.level4 | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevel4 |  |
-| CM.ParagraphHandle.OutlineSelectLevel5 | Show Level 5 | Context/Paragraph Handle/Select Outline Levels/Show Level 5 | button |  | outline.level5 | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevel5 |  |
-| CM.ParagraphHandle.OutlineSelectLevelAll | Show All Levels | Context/Paragraph Handle/Select Outline Levels/Show All Levels | button | `Alt+Shift+0` | outline.expandAll | P1 | missing | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevelAll |  |
+| CM.ParagraphHandle.OutlineSelectLevel1 | Show Level 1 | Context/Paragraph Handle/Select Outline Levels/Show Level 1 | button |  | outline.level1 | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevel1 |  |
+| CM.ParagraphHandle.OutlineSelectLevel2 | Show Level 2 | Context/Paragraph Handle/Select Outline Levels/Show Level 2 | button |  | outline.level2 | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevel2 |  |
+| CM.ParagraphHandle.OutlineSelectLevel3 | Show Level 3 | Context/Paragraph Handle/Select Outline Levels/Show Level 3 | button |  | outline.level3 | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevel3 |  |
+| CM.ParagraphHandle.OutlineSelectLevel4 | Show Level 4 | Context/Paragraph Handle/Select Outline Levels/Show Level 4 | button |  | outline.level4 | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevel4 |  |
+| CM.ParagraphHandle.OutlineSelectLevel5 | Show Level 5 | Context/Paragraph Handle/Select Outline Levels/Show Level 5 | button |  | outline.level5 | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevel5 |  |
+| CM.ParagraphHandle.OutlineSelectLevelAll | Show All Levels | Context/Paragraph Handle/Select Outline Levels/Show All Levels | button | `Alt+Shift+0` | outline.expandAll | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevelAll |  |
 | CM.ParagraphHandle.ConvertInkMenu | Convert Ink | Context/Paragraph Handle/Convert Ink | menu |  |  | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/ConvertInkMenu |  |
 | CM.ParagraphHandle.SelectionToTextConvert | Ink to Text | Context/Paragraph Handle/Convert Ink/Ink to Text | button |  | draw.inkToText | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/SelectionToTextConvert |  |
 | CM.ParagraphHandle.SelectionToMathConvert | Ink to Math | Context/Paragraph Handle/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/SelectionToMathConvert |  |
@@ -647,12 +647,12 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Text.InkAlternate4 | Ink Recognition Alternate 4 | Context/Text/Ink Recognition Alternate 4 | button |  | draw.inkAlternate | P3 | missing | FLUENT19:ContextMenuText/InkAlternate4 |  |
 | CM.Text.InkAlternate5 | Ink Recognition Alternate 5 | Context/Text/Ink Recognition Alternate 5 | button |  | draw.inkAlternate | P3 | missing | FLUENT19:ContextMenuText/InkAlternate5 |  |
 | CM.Text.MoreInkResults | More Ink Results | Context/Text/More Ink Results | button |  | draw.inkAlternate | P3 | missing | FLUENT19:ContextMenuText/MoreInkResults |  |
-| CM.Text.Cut | Cut | Context/Text/Cut | button | `Mod+X` | edit.cut | P0 | missing | FLUENT19:ContextMenuText/Cut |  |
-| CM.Text.CopyOneNote | Copy | Context/Text/Copy | button | `Mod+C` | edit.copy | P0 | missing | FLUENT19:ContextMenuText/CopyOneNote |  |
-| CM.Text.PasteGalleryMini | Paste Options | Context/Text/Paste Options | gallery |  | edit.pasteOptions | P0 | missing | FLUENT19:ContextMenuText/PasteGalleryMini |  |
-| CM.Text.HyperlinkOpen | Open Link | Context/Text/Open Link | button | `Enter` | link.open | P0 | missing | FLUENT19:ContextMenuText/HyperlinkOpen |  |
+| CM.Text.Cut | Cut | Context/Text/Cut | button | `Mod+X` | edit.cut | P0 | verified | FLUENT19:ContextMenuText/Cut |  |
+| CM.Text.CopyOneNote | Copy | Context/Text/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuText/CopyOneNote |  |
+| CM.Text.PasteGalleryMini | Paste Options | Context/Text/Paste Options | gallery |  | edit.pasteOptions | P0 | wired | FLUENT19:ContextMenuText/PasteGalleryMini |  |
+| CM.Text.HyperlinkOpen | Open Link | Context/Text/Open Link | button | `Enter` | link.open | P0 | wired | FLUENT19:ContextMenuText/HyperlinkOpen |  |
 | CM.Text.LinkEdit | Edit Link… | Context/Text/Edit Link… | button |  | link.edit | P0 | verified | FLUENT19:ContextMenuText/LinkEdit |  |
-| CM.Text.HyperlinkCreate | Link… | Context/Text/Link… | button | `Mod+K` | insert.link | P0 | missing | FLUENT19:ContextMenuText/HyperlinkCreate |  |
+| CM.Text.HyperlinkCreate | Link… | Context/Text/Link… | button | `Mod+K` | insert.link | P0 | wired | FLUENT19:ContextMenuText/HyperlinkCreate |  |
 | CM.Text.ToPageLink | Link to Page (wiki link) | Context/Text/Link to Page (wiki link) | button |  | link.toPage | P1 | missing | FLUENT19:ContextMenuText/ToPageLink |  |
 | CM.Text.LinkCopyOneNote | Copy Link | Context/Text/Copy Link | button |  | link.copy | P0 | verified | FLUENT19:ContextMenuText/LinkCopyOneNote |  |
 | CM.Text.LinkSelect | Select Link | Context/Text/Select Link | button |  | link.select | P1 | verified | FLUENT19:ContextMenuText/LinkSelect |  |
@@ -680,23 +680,23 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Text.OCRLanguageListMenu | Make Text in Image Searchable | Context/Text/Make Text in Image Searchable | menu |  | object.ocrLanguage | P2 | missing | FLUENT19:ContextMenuText/OCRLanguageListMenu |  |
 | CM.Text.TableMenu | Table | Context/Text/Table | menu |  |  | P1 | missing | FLUENT19:ContextMenuText/TableMenu |  |
 | CM.Text.TableInsert | Insert Table | Context/Text/Table/Insert Table | button |  | insert.tableDialog | P1 | missing | FLUENT19:ContextMenuText/TableInsert |  |
-| CM.Text.TableInsertColumnsLeft | Insert Left | Context/Text/Table/Insert Left | button | `Mod+Alt+E` | table.insertLeft | P1 | missing | FLUENT19:ContextMenuText/TableInsertColumnsLeft |  |
-| CM.Text.TableInsertColumnsRight | Insert Right | Context/Text/Table/Insert Right | button | `Mod+Alt+R` | table.insertRight | P1 | missing | FLUENT19:ContextMenuText/TableInsertColumnsRight |  |
-| CM.Text.TableInsertRowsAbove | Insert Above | Context/Text/Table/Insert Above | button |  | table.insertAbove | P1 | missing | FLUENT19:ContextMenuText/TableInsertRowsAbove |  |
-| CM.Text.TableInsertRowsBelow | Insert Below | Context/Text/Table/Insert Below | button | `Mod+Enter` | table.insertBelow | P1 | missing | FLUENT19:ContextMenuText/TableInsertRowsBelow |  |
-| CM.Text.DeleteTableOneNote | Delete Table | Context/Text/Table/Delete Table | button |  | table.delete | P1 | missing | FLUENT19:ContextMenuText/DeleteTableOneNote |  |
-| CM.Text.DeleteColumnsOneNote | Delete Columns | Context/Text/Table/Delete Columns | button |  | table.deleteColumns | P1 | missing | FLUENT19:ContextMenuText/DeleteColumnsOneNote |  |
-| CM.Text.DeleteRowsOneNote | Delete Rows | Context/Text/Table/Delete Rows | button |  | table.deleteRows | P1 | missing | FLUENT19:ContextMenuText/DeleteRowsOneNote |  |
-| CM.Text.SelectTableOneNote | Select Table | Context/Text/Table/Select Table | button |  | table.selectTable | P1 | missing | FLUENT19:ContextMenuText/SelectTableOneNote |  |
-| CM.Text.SelectColumns | Select Columns | Context/Text/Table/Select Columns | button |  | table.selectColumns | P1 | missing | FLUENT19:ContextMenuText/SelectColumns |  |
-| CM.Text.SelectRows | Select Rows | Context/Text/Table/Select Rows | button |  | table.selectRows | P1 | missing | FLUENT19:ContextMenuText/SelectRows |  |
-| CM.Text.SelectCell | Select Cell | Context/Text/Table/Select Cell | button |  | table.selectCell | P1 | missing | FLUENT19:ContextMenuText/SelectCell |  |
-| CM.Text.TableBordersHide | Hide Borders | Context/Text/Table/Hide Borders | toggle |  | table.hideBorders | P1 | missing | FLUENT19:ContextMenuText/TableBordersHide |  |
-| CM.Text.ShadingColorPicker | Shading | Context/Text/Table/Shading | gallery |  | table.shading | P1 | missing | FLUENT19:ContextMenuText/ShadingColorPicker |  |
-| CM.Text.SortUp | Sort Ascending | Context/Text/Table/Sort Ascending | button |  | table.sortAscending | P1 | missing | FLUENT19:ContextMenuText/SortUp |  |
-| CM.Text.SortDown | Sort Descending | Context/Text/Table/Sort Descending | button |  | table.sortDescending | P1 | missing | FLUENT19:ContextMenuText/SortDown |  |
+| CM.Text.TableInsertColumnsLeft | Insert Left | Context/Text/Table/Insert Left | button | `Mod+Alt+E` | table.insertLeft | P1 | wired | FLUENT19:ContextMenuText/TableInsertColumnsLeft |  |
+| CM.Text.TableInsertColumnsRight | Insert Right | Context/Text/Table/Insert Right | button | `Mod+Alt+R` | table.insertRight | P1 | wired | FLUENT19:ContextMenuText/TableInsertColumnsRight |  |
+| CM.Text.TableInsertRowsAbove | Insert Above | Context/Text/Table/Insert Above | button |  | table.insertAbove | P1 | wired | FLUENT19:ContextMenuText/TableInsertRowsAbove |  |
+| CM.Text.TableInsertRowsBelow | Insert Below | Context/Text/Table/Insert Below | button | `Mod+Enter` | table.insertBelow | P1 | wired | FLUENT19:ContextMenuText/TableInsertRowsBelow |  |
+| CM.Text.DeleteTableOneNote | Delete Table | Context/Text/Table/Delete Table | button |  | table.delete | P1 | wired | FLUENT19:ContextMenuText/DeleteTableOneNote |  |
+| CM.Text.DeleteColumnsOneNote | Delete Columns | Context/Text/Table/Delete Columns | button |  | table.deleteColumns | P1 | wired | FLUENT19:ContextMenuText/DeleteColumnsOneNote |  |
+| CM.Text.DeleteRowsOneNote | Delete Rows | Context/Text/Table/Delete Rows | button |  | table.deleteRows | P1 | wired | FLUENT19:ContextMenuText/DeleteRowsOneNote |  |
+| CM.Text.SelectTableOneNote | Select Table | Context/Text/Table/Select Table | button |  | table.selectTable | P1 | verified | FLUENT19:ContextMenuText/SelectTableOneNote |  |
+| CM.Text.SelectColumns | Select Columns | Context/Text/Table/Select Columns | button |  | table.selectColumns | P1 | wired | FLUENT19:ContextMenuText/SelectColumns |  |
+| CM.Text.SelectRows | Select Rows | Context/Text/Table/Select Rows | button |  | table.selectRows | P1 | wired | FLUENT19:ContextMenuText/SelectRows |  |
+| CM.Text.SelectCell | Select Cell | Context/Text/Table/Select Cell | button |  | table.selectCell | P1 | wired | FLUENT19:ContextMenuText/SelectCell |  |
+| CM.Text.TableBordersHide | Hide Borders | Context/Text/Table/Hide Borders | toggle |  | table.hideBorders | P1 | wired | FLUENT19:ContextMenuText/TableBordersHide |  |
+| CM.Text.ShadingColorPicker | Shading | Context/Text/Table/Shading | gallery |  | table.shading | P1 | wired | FLUENT19:ContextMenuText/ShadingColorPicker |  |
+| CM.Text.SortUp | Sort Ascending | Context/Text/Table/Sort Ascending | button |  | table.sortAscending | P1 | wired | FLUENT19:ContextMenuText/SortUp |  |
+| CM.Text.SortDown | Sort Descending | Context/Text/Table/Sort Descending | button |  | table.sortDescending | P1 | wired | FLUENT19:ContextMenuText/SortDown |  |
 | CM.Text.ShowSortTableRowsDialog | Sort… | Context/Text/Table/Sort… | button |  | table.sortDialog | P2 | missing | FLUENT19:ContextMenuText/ShowSortTableRowsDialog |  |
-| CM.Text.HeaderRowNoFormatting | Header Row (excluded from sort) | Context/Text/Table/Header Row (excluded from sort) | check |  | table.headerRow | P2 | missing | FLUENT19:ContextMenuText/HeaderRowNoFormatting |  |
+| CM.Text.HeaderRowNoFormatting | Header Row (excluded from sort) | Context/Text/Table/Header Row (excluded from sort) | check |  | table.headerRow | P2 | wired | FLUENT19:ContextMenuText/HeaderRowNoFormatting |  |
 | CM.Text.ConvertToExcelSpreadsheet | Convert to Excel Spreadsheet | Context/Text/Convert to Excel Spreadsheet | button |  | table.convertToSpreadsheet | P3 | missing | FLUENT19:ContextMenuText/ConvertToExcelSpreadsheet |  |
 | CM.Text.LinkedNotesMenu | Linked Notes | Context/Text/Linked Notes | menu |  |  | P3 | missing | FLUENT19:ContextMenuText/LinkedNotesMenu |  |
 | CM.Text.LinkedFileOpen | Open Linked File | Context/Text/Linked Notes/Open Linked File | button |  | linked.open | P3 | missing | FLUENT19:ContextMenuText/LinkedFileOpen |  |

@@ -162,6 +162,18 @@ enum Drag {
     Column { table: Id, col: usize, left: f32 },
 }
 
+/// What a right-click context menu is about (`context_menu.rs`): set once when it opens on a
+/// secondary click, read every frame while it stays open.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum ContextTarget {
+    /// A note container's drag bar (`CM.NoteContainer.*`).
+    Container(Id),
+    /// A paragraph's handle, left of its text (`CM.ParagraphHandle.*`).
+    Handle(Block, usize),
+    /// Text or a table cell, at a paragraph and byte offset (`CM.Text.*`).
+    Text(Block, usize, usize),
+}
+
 /// Canvas view state.
 pub struct CanvasState {
     /// Paragraph layouts of the last frame.
@@ -185,6 +197,8 @@ pub struct CanvasState {
     /// Size of the page content in the last frame (screen points; the page grows right and
     /// down with what is on it, catalog `BEH.Canvas.PageGrows`).
     pub extent: egui::Vec2,
+    /// The open right-click context menu's target, if any (`context_menu.rs`).
+    pub(crate) context_target: Option<ContextTarget>,
     drag: Option<Drag>,
     scroll_to: Option<Rect>,
     viewport: Rect,
@@ -203,6 +217,7 @@ impl Default for CanvasState {
             desired_x: None,
             preedit: String::new(),
             extent: egui::Vec2::ZERO,
+            context_target: None,
             drag: None,
             scroll_to: None,
             viewport: Rect::NOTHING,
@@ -524,6 +539,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             ctx.set_cursor_icon(CursorIcon::Grabbing);
         }
         interact(app, ui, &ctx, &resp);
+        crate::context_menu::show(app, ui, &resp, t);
         if let Some(r) = scroll_req {
             let vp = app.canvas.viewport;
             let target = match r {
@@ -1118,7 +1134,7 @@ fn block_param(b: Block) -> String {
 /// The paragraph under a point: inside a paragraph's rect, anywhere in a table cell (its
 /// nearest paragraph), or to the right of a line of a container (clicking past the end of a
 /// line puts the caret at its end).
-fn hit_para(app: &NoteApp, p: Pos2) -> Option<ParaLayout> {
+pub(crate) fn hit_para(app: &NoteApp, p: Pos2) -> Option<ParaLayout> {
     if let Some(pl) = app.canvas.paras.iter().find(|pl| pl.rect().expand2(vec2(3.0, 0.0)).contains(p)) {
         return Some(pl.clone());
     }

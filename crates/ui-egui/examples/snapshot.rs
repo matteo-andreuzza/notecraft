@@ -147,6 +147,28 @@ fn main() {
         |_| {},
     );
     shot_then(
+        "context-menu-text",
+        &out,
+        1.0,
+        egui::vec2(1366.0, 820.0),
+        |a| {
+            let pid = a.session.notebook().unwrap().sections()[1].pages[0].id;
+            a.session.run("nav.goto", json!({"page": pid.to_string()})).unwrap();
+            a.canvas.focused = true;
+        },
+        |h| {
+            let pl =
+                h.state().canvas.paras.iter().find(|p| matches!(p.block, notecraft_engine::selection::Block::Outline(_)) && p.para == 1).cloned();
+            if let Some(pl) = pl {
+                let pos = pl.pos + egui::vec2(6.0, 4.0);
+                h.event(egui::Event::PointerMoved(pos));
+                for pressed in [true, false] {
+                    h.event(egui::Event::PointerButton { pos, button: egui::PointerButton::Secondary, pressed, modifiers: egui::Modifiers::NONE });
+                }
+            }
+        },
+    );
+    shot_then(
         "paragraph-handle",
         &out,
         1.0,
