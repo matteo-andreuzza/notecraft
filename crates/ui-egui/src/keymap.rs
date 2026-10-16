@@ -289,6 +289,12 @@ fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) ->
             }
             true
         }
+        Key::G if (m.command || m.ctrl) && !m.alt && !m.shift => {
+            // UI.Nav.NotebookList: the notebook drop-down (every notebook is already in the
+            // nav tree in this UI, but the reference's quick switcher still gets its shortcut).
+            app.ui.dialog = Some(crate::dialogs::Dialog::NotebookList);
+            true
+        }
         _ => false,
     }
 }

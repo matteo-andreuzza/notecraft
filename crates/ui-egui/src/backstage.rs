@@ -197,6 +197,20 @@ fn open(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
         app.ui.backstage = None;
     }
     ui.add_space(14.0);
+    // BS.Open.RecentNotebooks.
+    if app.ui.recent_notebooks.is_empty() {
+        ui.label(RichText::new("Recent Notebooks").strong());
+        ui.label(RichText::new("Notebooks you open appear here.").size(12.0).color(t.page_meta));
+    } else {
+        ui.label(RichText::new("Recent Notebooks").strong());
+        for path in app.ui.recent_notebooks.clone() {
+            let name = std::path::Path::new(&path).file_name().and_then(|n| n.to_str()).unwrap_or(&path);
+            if ui.button(name).on_hover_text(&path).clicked() && app.run(ctx, "file.openRecent", json!({"path": path})).is_some() {
+                app.ui.backstage = None;
+            }
+        }
+    }
+    ui.add_space(14.0);
     ui.label(RichText::new("Open Section (.one) files and .onepkg packages: coming with M3 (OneNote file import).").size(12.0).color(t.page_meta));
     let _ = Color32::TRANSPARENT;
 }

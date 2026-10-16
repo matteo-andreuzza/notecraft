@@ -211,7 +211,10 @@ fn panic_hunt() {
     let mut tried = 0usize;
     for make in &states {
         for c in commands::all() {
-            if matches!(c.id, "file.newNotebook" | "file.openNotebook" | "file.exportNotebook" | "file.backupNow" | "file.openBackups") {
+            if matches!(
+                c.id,
+                "file.newNotebook" | "file.openNotebook" | "file.openRecent" | "file.exportNotebook" | "file.backupNow" | "file.openBackups"
+            ) {
                 // These touch the file system; the hostile `path`/`folder` values are covered by
                 // their own tests below with a sandboxed folder.
                 continue;

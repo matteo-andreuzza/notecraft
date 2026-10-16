@@ -132,7 +132,13 @@ pub struct UiState {
     /// When a paste command last ran (seconds, `ctx` time): the Paste Options button
     /// (`UI.Canvas.PasteOptions`) shows near the caret for a few seconds after.
     pub paste_shown_at: Option<f64>,
+    /// Notebook folders opened recently, most recent first (`BS.Open.RecentNotebooks`); the
+    /// desktop app persists this (`apps/notecraft/src/settings.rs`), empty on the web build.
+    pub recent_notebooks: Vec<String>,
 }
+
+/// Most paths kept in [`UiState::recent_notebooks`].
+pub const MAX_RECENT_NOTEBOOKS: usize = 8;
 
 impl Default for UiState {
     fn default() -> UiState {
@@ -153,6 +159,7 @@ impl Default for UiState {
             tags_unchecked: false,
             tags_scope: "all".into(),
             paste_shown_at: None,
+            recent_notebooks: Vec::new(),
         }
     }
 }
@@ -221,6 +228,11 @@ impl NoteApp {
     pub fn try_run(&mut self, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
         self.session.clock = self.host.clock();
         let sel_before = self.session.sel.clone();
+        // BS.Open.RecentNotebooks: captured before `params` moves into `session.run`, remembered
+        // after it succeeds.
+        let opened_path = matches!(id, "file.openNotebook" | "file.newNotebook" | "file.openRecent")
+            .then(|| params.get("path").and_then(Value::as_str).map(str::to_string))
+            .flatten();
         let v = self.session.run(id, params).map_err(|e| match e {
             CmdError::Disabled(m) => m,
             other => other.to_string(),
@@ -255,6 +267,11 @@ impl NoteApp {
         // paste, letting the choice be changed after the fact.
         if matches!(id, "edit.paste" | "edit.pasteKeepSource" | "edit.pasteMerge" | "edit.pasteTextOnly" | "edit.pasteOptions") {
             self.ui.paste_shown_at = Some(ctx.input(|i| i.time));
+        }
+        if let Some(path) = opened_path {
+            self.ui.recent_notebooks.retain(|p| p != &path);
+            self.ui.recent_notebooks.insert(0, path);
+            self.ui.recent_notebooks.truncate(MAX_RECENT_NOTEBOOKS);
         }
         if v.get("rename").and_then(Value::as_bool) == Some(true) {
             if let Some(sid) = v.get("section").and_then(Value::as_str).and_then(notecraft_engine::doc::Id::parse) {

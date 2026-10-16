@@ -55,6 +55,8 @@ pub struct Notebooks {
     pub open: Vec<String>,
     /// The page that was open (id), reopened when it still exists.
     pub last_page: String,
+    /// Recently opened folders, most recent first (`BS.Open.RecentNotebooks`).
+    pub recent: Vec<String>,
 }
 
 /// Pane sizes in points and the navigation tree's folds.
@@ -193,7 +195,7 @@ pub fn capture(app: &NoteApp, previous: &DesktopSettings) -> DesktopSettings {
     DesktopSettings {
         appearance: Appearance { theme: app.ui.theme, ribbon: s.view.ribbon_mode, ribbon_collapsed: s.view.ribbon_collapsed },
         editing: s.prefs.clone(),
-        notebooks: Notebooks { open, last_page },
+        notebooks: Notebooks { open, last_page, recent: app.ui.recent_notebooks.clone() },
         layout: Layout {
             notebook_pane_width: app.ui.notebook_pane_width,
             page_list_width: s.view.page_list_width,
@@ -222,6 +224,7 @@ pub fn apply(app: &mut NoteApp, s: &DesktopSettings) {
     app.session.view.notebook_pane_collapsed = s.layout.navigation_hidden;
     // Folds of notebooks that no longer exist are harmless; cap the list against a hostile file.
     app.ui.nav_collapsed = s.layout.collapsed.iter().take(10_000).copied().collect();
+    app.ui.recent_notebooks = s.notebooks.recent.iter().take(notecraft_ui_egui::MAX_RECENT_NOTEBOOKS).cloned().collect();
 }
 
 /// The account's user name (`USER`, `USERNAME` on Windows), or empty.
@@ -320,6 +323,7 @@ mod tests {
         let nb = app.session.notebook().unwrap().id;
         app.ui.nav_collapsed.push(nb);
         app.session.prefs.author = "Grace".into();
+        app.ui.recent_notebooks = vec!["/notebooks/Work".into(), "/notebooks/Home".into()];
         let s = capture(&app, &DesktopSettings::default());
         // The sample notebook lives in memory: nothing to reopen.
         assert!(s.notebooks.open.is_empty());
@@ -333,6 +337,8 @@ mod tests {
         assert_eq!(other.session.view.page_list_width, 260.0);
         assert_eq!(other.ui.nav_collapsed, vec![nb]);
         assert_eq!(other.session.prefs.author, "Grace");
+        // BS.Open.RecentNotebooks.
+        assert_eq!(other.ui.recent_notebooks, vec!["/notebooks/Work".to_string(), "/notebooks/Home".to_string()]);
         let mut bad = s.clone();
         bad.layout.notebook_pane_width = f32::NAN;
         apply(&mut other, &bad);

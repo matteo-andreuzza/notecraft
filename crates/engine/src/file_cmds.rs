@@ -35,6 +35,10 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("file.openNotebook", "BS.Open.OpenNotebook", "Open Notebook", "File/Open/Browse", open_notebook)
             .key("Mod+O")
             .params(r#"{"path": folder}"#),
+        // BS.Open.RecentNotebooks — a folder picked from the recent list, not Browse; same
+        // open (opening an already-open folder just selects it).
+        CommandSpec::new("file.openRecent", "BS.Open.RecentNotebooks", "Recent Notebooks", "File/Open/Recent Notebooks", open_notebook)
+            .params(r#"{"path": folder}"#),
         // CM.Notebook.NotebookClose — saves first.
         CommandSpec::new(
             "notebook.close",

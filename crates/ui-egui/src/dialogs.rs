@@ -22,6 +22,8 @@ pub enum Dialog {
     },
     /// Insert Table: columns, rows.
     InsertTable(usize, usize),
+    /// Notebook List (Ctrl+G): pick a notebook to switch to.
+    NotebookList,
     /// Move or Copy Pages (Ctrl+Alt+M): the page, and the search filter.
     MovePage(Id, String),
     /// Move or Copy a section: the section, and the search filter.
@@ -90,6 +92,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
     let title = match &dialog {
         Dialog::Link { .. } => "Link",
         Dialog::InsertTable(..) => "Insert Table",
+        Dialog::NotebookList => "Notebooks",
         Dialog::MovePage(..) => "Move or Copy Pages",
         Dialog::MoveSection(..) => "Move or Copy Section",
         Dialog::MergeSection(_) => "Merge Section",
@@ -166,6 +169,21 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                         close = true;
                     }
                 });
+            }
+            Dialog::NotebookList => {
+                ui.label("Switch to a notebook:");
+                let current = app.session.sel.notebook;
+                egui::ScrollArea::vertical().max_height(260.0).show(ui, |ui| {
+                    for nb in app.session.ws.notebooks.clone() {
+                        if ui.selectable_label(Some(nb.id) == current, &nb.name).clicked() {
+                            app.run(ctx, "notebook.select", json!({"notebook": nb.id.to_string()}));
+                            close = true;
+                        }
+                    }
+                });
+                if ui.button("Cancel").clicked() {
+                    close = true;
+                }
             }
             Dialog::MovePage(pid, filter) => {
                 ui.label("Pick a section:");

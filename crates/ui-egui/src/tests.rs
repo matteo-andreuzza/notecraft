@@ -476,3 +476,39 @@ fn move_or_copy_dialogs_search_sections_and_notebooks() {
     // modal), so count instead of a single query.
     assert!(h.query_all_by_label("Sample Notebook").count() >= 1, "UI.Dialogs.MoveCopySection: the search matches a notebook");
 }
+
+#[test]
+fn notebook_list_dialog_switches_notebooks() {
+    // parity: UI.Nav.NotebookList
+    let mut a = app();
+    a.session.run("file.newNotebook", json!({"name": "Second"})).unwrap();
+    let first = a.session.ws.notebooks[0].id;
+    let second = a.session.ws.notebooks[1].id;
+    assert_eq!(a.session.sel.notebook, Some(second), "the new notebook is selected");
+    // The nav tree has its own row per notebook too: hide it so the dialog's labels are
+    // unambiguous (collapsing navigation is itself a normal, tested action — UI.Nav.Toggle).
+    a.session.view.notebook_pane_collapsed = true;
+    a.ui.dialog = Some(crate::dialogs::Dialog::NotebookList);
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Sample Notebook").is_some(), "UI.Nav.NotebookList (Ctrl+G) lists every open notebook");
+    h.get_by_label("Sample Notebook").click();
+    h.run();
+    assert_eq!(h.state().session.sel.notebook, Some(first), "picking one selects it");
+    assert!(h.state().ui.dialog.is_none(), "and closes the dialog");
+}
+
+#[test]
+fn recent_notebooks_show_in_the_open_backstage_page() {
+    // parity: BS.Open.RecentNotebooks
+    let mut a = app();
+    a.ui.recent_notebooks = vec!["/notebooks/Garden Club".into()];
+    a.ui.backstage = Some(crate::Backstage::Open);
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Garden Club").click();
+    h.run();
+    // The path doesn't exist in the test sandbox, so the open fails — but the click reached
+    // file.openRecent, which is what this row is about.
+    assert!(h.state().ui.status.is_some(), "clicking a recent notebook ran file.openRecent");
+}

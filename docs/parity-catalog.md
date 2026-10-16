@@ -61,7 +61,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Nav.NewSectionLink | "+ New section" link at the end of each notebook's sections | Window/Navigation/New Section | surface |  |  | P0 | wired | M365-2024 |  |
 | UI.Nav.QuickNotes | Quick notes, pinned at the bottom of the navigation pane | Window/Navigation/Quick Notes | surface |  | nav.quickNotes | P1 | wired | M365-2024 | Opens (creating it if needed) the Quick Notes section of the first open notebook; unverified where the reference keeps it (its Options choose the location). |
 | UI.Nav.SortPages | Sort pages button beside Add page (by title, date created, date modified) | Window/Navigation/Sort Pages | surface |  | page.sort | P1 | wired | M365-2024 | Title A→Z, date created or modified newest first; a page keeps its subpages under it. Sort orders unverified. |
-| UI.Nav.NotebookList | Notebook drop-down list (switch notebook, Ctrl+G) | Window/Navigation/Notebook List | surface |  |  | P0 | missing | KBD365 (Ctrl+G) |  |
+| UI.Nav.NotebookList | Notebook drop-down list (switch notebook, Ctrl+G) | Window/Navigation/Notebook List | surface |  |  | P0 | verified | KBD365 (Ctrl+G) |  |
 | UI.Nav.SectionTabs | Section tabs across the top of the page area, coloured by section colour, with section group tabs and the + (Create a New Section) tab | Window/Navigation/Section Tabs | surface |  |  | P0 | out-of-scope | GK; FLUENT19:ContextMenuSectionArea | Not present in the 2024 UI (decision D1); replaced by the sections in the notebook tree (UI.Nav.NotebookTree) and + New section (UI.Nav.NewSectionLink). |
 | UI.Nav.PageList | Page list: titles, subpage indentation, collapse arrows, selected page highlight, resizable width (2024 UI: a column between the notebook tree and the page) | Window/Navigation/Page List | surface |  |  | P0 | wired | GK; KBD365 (Ctrl+Shift+[ / ]); M365-2024 (placement) |  |
 | UI.Nav.AddPage | "Add page" button above the page list (2024 UI: outlined, with the sort button beside it); hover insertion line between pages | Window/Navigation/Add Page | surface |  |  | P0 | wired | GK; M365-2024 (look) | The hover insertion line between pages is not implemented yet. |
@@ -530,7 +530,7 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.New.NewNotebook | New: New Notebook (location, name) | File/New/New Notebook | page |  | file.newNotebook | P0 | wired | FLUENT19:TabNew |  |
 | BS.New.AddPlace | New: Add a Place (cloud locations) | File/New/Add a Place | button |  |  | P3 | out-of-scope | FLUENT19:GroupAddLocation |  |
 | BS.Open.OpenNotebook | Open: Open Notebook (browse) | File/Open/Browse | page | `Mod+O` | file.openNotebook | P0 | wired | FLUENT19:ButtonOpenBrowse |  |
-| BS.Open.RecentNotebooks | Open: Recent Notebooks | File/Open/Recent Notebooks | list |  | file.openRecent | P0 | missing | FLUENT19:GroupRecentDocuments |  |
+| BS.Open.RecentNotebooks | Open: Recent Notebooks | File/Open/Recent Notebooks | list |  | file.openRecent | P0 | verified | FLUENT19:GroupRecentDocuments |  |
 | BS.Open.SharedWithMe | Open: Shared with Me | File/Open/Shared with Me | list |  |  | P3 | out-of-scope | FLUENT19:GroupSharedWithMeDocuments |  |
 | BS.Open.OpenSection | Open: Open Section (.one file) | File/Open/Open Section | button | `Mod+Alt+Shift+O` | file.openSection | P1 | missing | FLUENT19:JotOpenFile; KBD365 |  |
 | BS.Print.Print | Print: Print | File/Print/Print | button | `Mod+P` | file.print | P1 | missing | FLUENT19:FilePrint |  |
