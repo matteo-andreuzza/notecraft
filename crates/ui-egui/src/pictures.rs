@@ -310,6 +310,39 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
     true
 }
 
+/// Most files taken from one drop.
+const MAX_DROPPED: usize = 50;
+
+/// Files dropped on the page (`BEH.Paste.Files`): a picture file becomes a picture, anything
+/// else (or a picture that can't be read) an attachment, at the drop point, several stacked
+/// diagonally. Printouts don't exist yet, so nothing asks "attach or print"; the web build,
+/// whose dropped files can only be read asynchronously, says so instead.
+pub(crate) fn handle_drops(app: &mut NoteApp, ctx: &egui::Context) {
+    let files = ctx.input(|i| i.raw.dropped_files.clone());
+    if files.is_empty() || app.session.page().is_none() {
+        return;
+    }
+    if cfg!(target_arch = "wasm32") {
+        app.ui.status = Some(("Dropping files on the page isn't available in the web version yet.".into(), ctx.input(|i| i.time)));
+        return;
+    }
+    let at = ctx.pointer_latest_pos().filter(|p| app.canvas.viewport.contains(*p)).map(|p| app.canvas.to_page(p));
+    let pictures = picture_filter();
+    for (k, f) in files.iter().take(MAX_DROPPED).enumerate() {
+        let path = f.path();
+        let mut params = json!({"path": path.display().to_string()});
+        if let Some(pt) = at {
+            let d = k as f32 * 24.0;
+            params["x"] = json!(pt.x.max(0.0) + d);
+            params["y"] = json!(pt.y.max(0.0) + d);
+        }
+        let ext = path.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).unwrap_or_default();
+        if !(pictures.contains(&ext.as_str()) && app.try_run(ctx, "insert.picture", params.clone()).is_ok()) {
+            app.run(ctx, "insert.file", params);
+        }
+    }
+}
+
 /// The selected picture's or attachment's suggested file name.
 fn default_name(app: &NoteApp, picture: bool) -> String {
     let Some(page) = app.session.page() else { return String::new() };

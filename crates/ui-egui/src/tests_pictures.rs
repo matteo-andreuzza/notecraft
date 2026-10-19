@@ -209,3 +209,43 @@ fn pasting_html_from_a_browser_keeps_its_table() {
     assert_eq!(t.plain_text(), "Fruit\tQty\nPears\t4");
     assert_eq!(t.rows[0].cells[0].paragraphs[0].runs[0].fmt.bold, Some(true));
 }
+
+#[derive(Debug)]
+struct DroppedPath(std::path::PathBuf);
+
+impl egui::DroppedFile for DroppedPath {
+    fn path(&self) -> &std::path::Path {
+        &self.0
+    }
+    fn bytes(&self) -> Result<Vec<u8>, String> {
+        std::fs::read(&self.0).map_err(|e| e.to_string())
+    }
+}
+
+#[test]
+fn dropping_files_inserts_a_picture_and_an_attachment() {
+    // BEH.Paste.Files: a dropped picture becomes a picture, another file an attachment.
+    let dir = std::env::temp_dir().join(format!("notecraft-drop-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let (pic, doc) = (dir.join("photo.png"), dir.join("notes.txt"));
+    std::fs::write(&pic, png(16, 8)).unwrap();
+    std::fs::write(&doc, b"hello").unwrap();
+    let (a, _) = clip_app();
+    let mut h = harness(a);
+    h.run();
+    let at = h.state().canvas.viewport.center();
+    h.event(egui::Event::PointerMoved(at));
+    h.run();
+    for p in [&pic, &doc] {
+        h.input_mut().dropped_files.push(std::sync::Arc::new(DroppedPath(p.clone())));
+    }
+    h.run();
+    let page = h.state().session.page().unwrap().clone();
+    let im = page.objects.iter().find_map(|o| o.as_image()).expect("BEH.Paste.Files");
+    assert_eq!(im.pixels, (16, 8));
+    let att = page.objects.iter().find_map(|o| o.as_attachment()).unwrap();
+    assert_eq!(att.name, "notes.txt");
+    let drop_pt = h.state().canvas.to_page(at);
+    assert!((im.pos.x - drop_pt.x).abs() < 1.0 && (att.pos.x - drop_pt.x - 24.0).abs() < 1.0, "at the drop point, stacked");
+    let _ = std::fs::remove_dir_all(&dir);
+}

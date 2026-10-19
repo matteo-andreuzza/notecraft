@@ -95,9 +95,16 @@ ribbon; [`ui-parity.md`](ui-parity.md)).
    schema (format 2), commands, the Table Layout contextual tab in both ribbon layouts
    (`chrome::contextual_tabs`), sort, borders, convert to/from text, the Insert Table dialog,
    `KB.Table.DeleteEmptyRow`. Left for later: Tab-after-text table creation, merged cells.
-3. **Pictures, attachments, printouts:** crate `codecs` (pure-Rust decoders, licences checked with
-   `cargo xtask deny`), crop/rotate/alt text; the rich clipboard (HTML and pictures through
-   `arboard`) and drag and drop of files; screen clipping through the desktop portal.
+3. **Pictures, attachments, printouts (decision D3 / §4.9; pictures, attachments, clipboard and
+   drag and drop done):** crate `codecs` (PNG/JPEG/GIF/BMP/WebP through `image` without default
+   features), `PageObject::Image`/`Attachment` with `Arc`-shared blobs in `media/` zip entries
+   (`.ncraft` format 3), Insert › Pictures and File Attachment, the picture and attachment
+   context menus (rotate 90°, flip, move, resize by handles and keys, restore size, background,
+   alt text, save as, open, rename); the rich clipboard (crate `import-export`: a bounded HTML
+   reader and writer; pictures and HTML through `arboard` on the desktop host; tables paste as
+   tables); dropping files on the page. Left: file printouts (PdfCraft's `hayro` 0.7.1 passes
+   our `cargo deny` policy and builds for wasm), screen clipping through the desktop portal,
+   45° rotation, cropping.
 4. **Ink:** crates `ink-geom` and `ink` (pens, highlighters, eraser modes, lasso, ruler, pressure
    from winit; tablet-v2/XInput2 as a risk), crate `render` (CPU oracle for thumbnails and export).
 5. **Dialogs (done):** Insert Table, Link with page search, Move/Copy as a flat searchable list

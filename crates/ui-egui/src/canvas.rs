@@ -235,7 +235,7 @@ pub struct CanvasState {
     pub(crate) context_target: Option<ContextTarget>,
     drag: Option<Drag>,
     scroll_to: Option<Rect>,
-    viewport: Rect,
+    pub(crate) viewport: Rect,
 }
 
 impl Default for CanvasState {
@@ -599,6 +599,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             ctx.set_cursor_icon(CursorIcon::Grabbing);
         }
         interact(app, ui, &ctx, &resp);
+        crate::pictures::handle_drops(app, &ctx);
         crate::context_menu::show(app, ui, &resp, t);
         if let Some(r) = scroll_req {
             let vp = app.canvas.viewport;

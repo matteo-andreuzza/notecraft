@@ -211,3 +211,37 @@ this log plus a green tree is how the next agent picks up.
 - Not done here (next, `plan/handoff.md` §7): gaps item 8 (leftovers of the look) if a future
   session has room; then pictures, the rich clipboard, then ink. M2 exit criteria not met: no
   merge, no tag.
+
+## 2026-10-20 — M2 increment 3: pictures, attachments, rich clipboard, drag and drop
+
+- **Decision D3** (`docs/plan.md` §4.9, §6): pictures and attachments are page objects beside
+  containers and tables; bytes in `Blob { id, len, bytes: Arc<[u8]> }`, serialized as `{id, len}`
+  with the bytes in uncompressed `media/<id>` zip entries (section, recycle bin, archive);
+  `.ncraft` format 3 (format 1 and 2 files still open, tested); limits: picture ≤ 64 MiB and
+  16,384 px / 64 Mpx, attachment ≤ 256 MiB, ≤ 1 GiB media per file, ≤ 10,000 objects per page.
+  A missing or mismatched media entry loads as a placeholder, never an error.
+- **`notecraft-codecs`** (standalone): PNG/JPEG/GIF/BMP/WebP through `image` 0.25 without default
+  features (pure Rust, wasm); header checked before any allocation, EXIF orientation applied,
+  decoder panics caught; tests with truncation at every length, byte flips, random bytes, a
+  10^12-pixel header.
+- **Engine** `picture_cmds.rs` (15 commands): Insert › Pictures / File Attachment (path or base64
+  `data`), rotate 90°/flip, move/resize (handles, arrow keys), restore size, background, alt
+  text, save as, attachment open/save as/rename; objects copy and paste sharing bytes; whole
+  tables copy as table objects. `edit.paste` reads `html` (another app's formatting, lists,
+  tables as table objects), `image` and `external`.
+- **`notecraft-import-export`** (L4, first code): `html.rs`, a bounded tolerant HTML reader and a
+  writer (Copy returns HTML; tables as `<table>`).
+- **UI**: `pictures.rs` (LRU texture cache by blob id, turns/flips through UVs, handles,
+  placeholders, host actions), picture/attachment context menus from the catalog (rows not yet
+  acting on objects drawn disabled), Alt Text and Rename dialogs, `clipboard.rs` (system clipboard
+  through `Host::read_clipboard/write_clipboard`, arboard on the desktop; Ctrl+V with only a
+  picture caught on the key release because egui-winit drops the press), dropped files become
+  pictures or attachments. Snapshots: picture page, selected, dark, context menu. E2E 26/26
+  (pictures, handle resize, attachment save, real X11 clipboard round trips).
+- Gates: the refreshed advisory DB flagged `zip` 3 (unused `extract()`): upgraded to `zip` 9; the
+  zbus helper crates' "unmaintained" advisories are ignored in `deny.toml` with reasons.
+- Printouts (not done): PdfCraft's renderer `hayro` 0.7.1 passes NoteCraft's `cargo deny` policy
+  (licences, bans, sources, advisories) and `cargo check --target wasm32-unknown-unknown`.
+- Numbers: wiring 525/1320 (39.8%), behaviour 158/1320 (12.0%), 279 commands (was 494, 153, 264).
+- Still open: printouts, screen clipping, 45° rotation, crop, OCR, picture links, ink, audio;
+  M2 exit not met (no merge, no tag).
