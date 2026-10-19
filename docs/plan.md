@@ -241,6 +241,48 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 - **Insert position:** below the caret's container (the UI passes the laid-out bottom; the
   engine alone estimates 20 pt per line), or where the user clicked, or below everything.
 
+### 4.9 Pictures and attachments (decision D3, 2026-10-19)
+
+- **Two new page objects**, beside containers and tables (the D2 precedent):
+  `PageObject::Image(Image { id, pos, size, blob, pixels, quarter_turns, flip_h, flip_v,
+  alt_text, background })` and `PageObject::Attachment(Attachment { id, pos, name, blob,
+  alt_text })`. `size` is the drawn size in points (after rotation), `pixels` the decoded size
+  of the stored picture. In the reference a picture or an embedded file is either directly on
+  the page or the content of an outline element ([MS-ONE] `jcidImageNode`,
+  `jcidEmbeddedFileNode`); **M3 import** splits a container around an inline one exactly as for
+  tables (only containment is lost). The size, alt text, background flag, file name and file
+  data map to the node's picture size, alt text, background, embedded-file name and file data
+  store reference (property names to be pinned against [MS-ONE] in M3).
+- **Bytes live in a `Blob { id, kind, bytes: Arc<[u8]> }`.** The id is a fresh 128-bit `Id`
+  minted on insert: it plays the role of the reference's file-data-store GUID and keys the zip
+  entry. Bytes are shared by `Arc`, so undo snapshots, copy/paste and duplicated pages never copy
+  them. `section.json` stores only the blob's id, kind and length; the bytes are zip entries
+  `media/<id>` beside it, **stored uncompressed** (pictures are already compressed and autosave
+  rewrites the section), one entry per distinct id. Sections, the recycle bin (a deleted page
+  keeps its pictures) and notebook archives all carry their media. On load a missing, oversize
+  or mismatched entry leaves that object with empty bytes, drawn as a "can't show this picture"
+  placeholder: one damaged picture never costs the section.
+- **Format 3.** `.ncraft` version 3; files of versions 1 and 2 open unchanged (tests keep a
+  byte-exact v1 file and a v2 table file); older builds refuse version 3 rather than drop media.
+- **Limits against hostile input:** a picture file ≤ 64 MiB and ≤ 16,384 px per side and
+  64 Mpx; an attachment ≤ 256 MiB; ≤ 1 GiB of media per section file; ≤ 10,000 objects per page;
+  drawn sizes 4–16,000 pt; alt text ≤ 4,096 characters; attachment names are single safe file
+  names ≤ 255 bytes. The `codecs` crate decodes with these caps (an error, never a panic or an
+  unbounded allocation); the canvas downscales textures to ≤ 4,096 px per side and keeps a
+  bounded, least-recently-used texture cache keyed by blob id.
+- **Insert:** a picture comes in at its pixel size at 96 dpi (1 px = 0.75 pt), scaled down to at
+  most 468 pt wide (unverified), at the same place a table goes (§4.8). Rotation and flips are
+  view properties applied when drawing (the stored bytes never change); 90° turns swap the drawn
+  width and height. Free 45° rotation and cropping stay disabled (P2, not in the M365 context
+  menu's P0/P1).
+- **Attachments** draw as an icon card with the file name. Open writes the bytes to a private
+  temporary folder and asks the host to open the file with the system's handler; Save As writes
+  them to a path the host's file dialog returns. The web build disables both until downloads
+  exist.
+- **Later:** a file printout (M2/M3) is an attachment plus one picture per printed page linked to
+  it, as in the reference; the `render` crate draws pictures from the same blobs for page export
+  and printing.
+
 ## 5. Risks
 
 | Risk | Impact | Mitigation |
@@ -259,6 +301,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 |---|---|---|---|---|
 | D1 | 2026-10-15 | The visual model is the current OneNote for Microsoft 365 desktop app (the 2024 UI): neutral title bar with a centred Search box; a tab row whose active tab is semibold with an accent underline; the ribbon in a floating rounded card, **Simplified (one row) by default** with a ▾ chevron to the **Classic** ribbon (both in the modern style, the choice remembered); navigation on the left (a tree of every notebook with coloured section bars, + New section, Quick notes pinned at the bottom; the page column with Add page and sort); **no section tabs above the page**; panes as cards. Surfaces that only exist in the 2016 layout become `out-of-scope` rows that name their replacement. | The window layout of the original brief (OneNote 2016-style: section tabs across the top, page list on the right) | The user's directive: like the other ArtCraft apps follow the latest Office. The brief is kept verbatim; this table records the override. The command set, menu paths, shortcuts and behaviour mandate are unchanged. |
 | D2 | 2026-10-15 | Tables are their own page object (`PageObject::Table`) with cells as text blocks (`Block::Cell`) and fixed column widths; `.ncraft` version 2 (§4.8). | — (the plan named `PageObject::Table`; the containment detail was open) | The simplest model compatible with M3: [MS-ONE] tables map 1:1 except that a table inside a container becomes a neighbour of it; no existing text command changes. |
+| D3 | 2026-10-19 | Pictures and attachments are page objects (`PageObject::Image`, `PageObject::Attachment`) whose bytes are `Arc`-shared blobs keyed by a 128-bit id and stored as uncompressed `media/<id>` entries in the section zip; `.ncraft` version 3; explicit size, pixel, byte and object-count limits (§4.9). | — (the plan named `media/` in the section zip; the object shape and limits were open) | Undo and copy/paste stay pointer copies; blob ids map to [MS-ONE]'s file-data-store GUIDs; a damaged picture degrades to a placeholder instead of failing the section; printouts and export reuse the same blobs. |
 
 ## 7. Assumptions
 

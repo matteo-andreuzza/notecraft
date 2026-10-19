@@ -38,6 +38,14 @@ allow-git = ["https://github.com/storytold/craft-libs"]
 
 [advisories]
 yanked = "warn"
+# zbus 5.19 folded these helper crates into itself and marked the standalone crates unmaintained
+# (2026-10); they reach us only through zbus (accesskit's AT-SPI bridge, the desktop theme
+# watcher) and no zbus release without them exists yet. Drop these when zbus 6 lands.
+ignore = [
+    { id = "RUSTSEC-2026-0370", reason = "zvariant: unmaintained as a standalone crate, only via zbus; no safe upgrade" },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names: unmaintained as a standalone crate, only via zbus; no safe upgrade" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive: unmaintained as a standalone crate, only via zbus; no safe upgrade" },
+]
 
 # egui's default UI fonts (Ubuntu-Light, Hack, emoji-icon-font): font licences that the
 # siblings also accept for this one crate (they ship inside epaint, not in this repository).

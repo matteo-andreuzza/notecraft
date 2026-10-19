@@ -1,0 +1,19 @@
+[package]
+name = "notecraft-codecs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "NoteCraft standalone picture codecs: bounded, panic-free decoding of PNG, JPEG, GIF, BMP and WebP, PNG encoding"
+
+[lints]
+workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+image = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
