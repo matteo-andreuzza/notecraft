@@ -2,6 +2,7 @@
 //! Toolbar).
 
 use notecraft_doc::{CharFormat, Paragraph, Run};
+use notecraft_import_export::html;
 use notecraft_text as t;
 use serde_json::{Value, json};
 
@@ -32,7 +33,7 @@ fn can_paste(s: &Session) -> Option<&'static str> {
 }
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
-    const PASTE: &str = r#"{"text"?: string}"#;
+    const PASTE: &str = r#"{"text"?: string, "html"?: HTML from the system clipboard, "image"?: base64 picture file from the system clipboard, "external"?: true when the system clipboard holds another program's content}"#;
     vec![
         // QAT.UndoButton — one user action per step.
         CommandSpec::new("edit.undo", "QAT.UndoButton", "Undo", "Quick Access Toolbar/Undo", undo).key("Mod+Z").when(can_undo),
@@ -181,21 +182,31 @@ pub(crate) fn copy_selection(s: &mut Session) -> Result<String, CmdError> {
         }
         let pages: Vec<_> = section.pages.iter().filter(|p| ids.contains(&p.id)).cloned().collect();
         let text = pages.iter().map(|p| p.display_title()).collect::<Vec<_>>().join("\n");
-        s.clipboard = crate::session::Clipboard { paragraphs: Vec::new(), text: text.clone(), pages, objects: Vec::new() };
+        s.clipboard = crate::session::Clipboard { paragraphs: Vec::new(), text: text.clone(), pages, objects: Vec::new(), html: String::new() };
         return Ok(text);
     }
     let page = s.page().ok_or_else(no_page)?;
     let mut out: Vec<Paragraph> = Vec::new();
     let mut objects = Vec::new();
+    // The same selection as HTML for other applications (tables as tables).
+    let mut html: Vec<html::Block> = Vec::new();
+    let mut text_extra: Vec<String> = Vec::new();
     match &s.sel.on_page {
         PageSel::Objects { ids } => {
             for id in ids {
                 match page.objects.iter().find(|o| o.id() == *id) {
-                    Some(notecraft_doc::PageObject::Outline(o)) => out.extend(o.paragraphs.iter().cloned()),
-                    // A table copies as text: a paragraph per row, tabs between cells.
+                    Some(notecraft_doc::PageObject::Outline(o)) => {
+                        out.extend(o.paragraphs.iter().cloned());
+                        html.extend(o.paragraphs.iter().cloned().map(html::Block::Para));
+                    }
+                    // A table copies as a table object (pasted back as a table) and, for
+                    // other applications, as tab-separated text and an HTML table.
                     Some(notecraft_doc::PageObject::Table(t)) => {
-                        let all = (0, t.n_rows().saturating_sub(1));
-                        out.extend(crate::table_cmds::rows_as_paragraphs(t, all, (0, t.n_cols().saturating_sub(1)), &mut || notecraft_doc::Id::NIL));
+                        let (all_r, all_c) = ((0, t.n_rows().saturating_sub(1)), (0, t.n_cols().saturating_sub(1)));
+                        let rows = crate::table_cmds::rows_as_paragraphs(t, all_r, all_c, &mut || notecraft_doc::Id::NIL);
+                        text_extra.push(rows.iter().map(Paragraph::text).collect::<Vec<_>>().join("\n"));
+                        html.push(html::Block::Table(crate::table_cmds::cells_of(t, all_r, all_c)));
+                        objects.push(notecraft_doc::PageObject::Table(t.clone()));
                     }
                     // Pictures and attachments copy as objects (bytes shared by `Arc`).
                     Some(o @ (notecraft_doc::PageObject::Image(_) | notecraft_doc::PageObject::Attachment(_))) => objects.push(o.clone()),
@@ -206,6 +217,7 @@ pub(crate) fn copy_selection(s: &mut Session) -> Result<String, CmdError> {
         PageSel::Cells { table, rows, cols } => {
             if let Some(t) = page.table(*table) {
                 out.extend(crate::table_cmds::rows_as_paragraphs(t, *rows, *cols, &mut || notecraft_doc::Id::NIL));
+                html.push(html::Block::Table(crate::table_cmds::cells_of(t, *rows, *cols)));
             }
         }
         PageSel::Text(_) => {
@@ -228,24 +240,31 @@ pub(crate) fn copy_selection(s: &mut Session) -> Result<String, CmdError> {
         }
         PageSel::None => return Err(CmdError::Disabled("select some text first".into())),
     }
-    let text = out.iter().map(Paragraph::text).collect::<Vec<_>>().join("\n");
-    s.clipboard = crate::session::Clipboard { paragraphs: out, text: text.clone(), pages: Vec::new(), objects };
+    if matches!(s.sel.on_page, PageSel::Text(_)) {
+        html.extend(out.iter().cloned().map(html::Block::Para));
+    }
+    let mut parts: Vec<String> = out.iter().map(Paragraph::text).collect();
+    parts.extend(text_extra);
+    let text = parts.join("\n");
+    let html = if html.is_empty() { String::new() } else { html::write(&html) };
+    s.clipboard = crate::session::Clipboard { paragraphs: out, text: text.clone(), pages: Vec::new(), objects, html };
     Ok(text)
 }
 
 fn copy(s: &mut Session, _: &Value) -> CmdResult {
     let text = copy_selection(s)?;
-    Ok(json!({"text": text}))
+    Ok(json!({"text": text, "html": s.clipboard.html}))
 }
 
 fn cut(s: &mut Session, _: &Value) -> CmdResult {
     let text = copy_selection(s)?;
+    let html = s.clipboard.html.clone();
     if s.sel.focus == FocusArea::PageList {
         crate::page_cmds::delete_pages_to_bin(s)?;
     } else {
         crate::text_cmds::delete_selection(s)?;
     }
-    Ok(json!({"text": text}))
+    Ok(json!({"text": text, "html": html}))
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -317,22 +336,32 @@ fn do_paste(s: &mut Session, v: &Value, mode: Mode) -> CmdResult {
     // Copied pictures and attachments, when the system clipboard (if given) still holds what
     // NoteCraft put there.
     let given = p::str(v, "text").map(|t| t.replace("\r\n", "\n"));
-    if mode != Mode::Text && !s.clipboard.objects.is_empty() && given.as_ref().is_none_or(|t| *t == s.clipboard.text) {
+    // The UI says when the system clipboard holds something another program put there since.
+    let external = p::bool(v, "external") == Some(true);
+    if mode != Mode::Text && !external && !s.clipboard.objects.is_empty() && given.as_ref().is_none_or(|t| *t == s.clipboard.text) {
         let ids = paste_objects(s, v)?;
         if s.clipboard.paragraphs.is_empty() {
             s.sel.on_page = PageSel::Objects { ids: ids.clone() };
             return Ok(json!({"objects": ids.iter().map(|i| i.to_string()).collect::<Vec<_>>()}));
         }
     }
-    let paras = adapt(clip_paras(s, v)?, mode);
-    // Fresh ids: pasting twice must not create duplicate ids.
-    let mut fresh = Vec::with_capacity(paras.len());
-    for mut p in paras {
-        p.id = s.new_id();
-        p.author = s.author();
-        p.modified = s.now();
-        fresh.push(p);
+    // From another application: its HTML (formatting, lists, tables) or a picture.
+    let internal = !external && !s.clipboard.paragraphs.is_empty() && given.as_ref().is_none_or(|t| *t == s.clipboard.text);
+    if mode != Mode::Text && !internal {
+        if let Some(h) = p::str(v, "html").filter(|h| !h.trim().is_empty()) {
+            let blocks = html::parse(h);
+            if !blocks.is_empty() {
+                return paste_blocks(s, v, blocks, mode);
+            }
+        }
+        if let Some(img) = p::str(v, "image")
+            && given.as_ref().is_none_or(|t| t.trim().is_empty())
+        {
+            return paste_picture(s, v, img);
+        }
     }
+    let paras = adapt(clip_paras(s, v)?, mode);
+    let fresh = fresh_paras(s, paras);
     let caret = ensure_caret(s)?;
     let pos = paste_paragraphs(s, caret, fresh, mode)?;
     s.set_caret(pos);
@@ -340,7 +369,111 @@ fn do_paste(s: &mut Session, v: &Value, mode: Mode) -> CmdResult {
     Ok(Value::Null)
 }
 
-/// Paste the clipboard's pictures and attachments with fresh ids, the first where a new
+/// Fresh ids, author and time: pasting twice must not create duplicate ids.
+fn fresh_paras(s: &mut Session, paras: Vec<Paragraph>) -> Vec<Paragraph> {
+    let mut fresh = Vec::with_capacity(paras.len());
+    for mut p in paras {
+        p.id = s.new_id();
+        p.author = s.author();
+        p.modified = s.now();
+        fresh.push(p);
+    }
+    fresh
+}
+
+/// BEH.Paste.Images: a picture from the system clipboard (base64 file bytes) becomes a
+/// picture object where a new object goes.
+fn paste_picture(s: &mut Session, v: &Value, b64: &str) -> CmdResult {
+    let cap = notecraft_doc::media::MAX_PICTURE_BYTES;
+    if b64.len() / 4 * 3 > cap.saturating_add(3) {
+        return Err(CmdError::Failed(format!("the pasted picture is larger than {} MiB", cap >> 20)));
+    }
+    let bytes = crate::b64::decode(b64).ok_or_else(|| CmdError::Params("`image` is not base64".into()))?;
+    let pixels = crate::picture_cmds::probe(&bytes)?;
+    let id = crate::picture_cmds::add_picture(s, v, bytes, pixels)?;
+    Ok(json!({"picture": id.to_string()}))
+}
+
+/// Where the next pasted object goes: below `anchor` (the object pasted before it), else
+/// where a new object goes.
+fn below(s: &Session, anchor: Option<notecraft_doc::Id>, v: &Value) -> Result<notecraft_doc::geom::Point, CmdError> {
+    let page = s.page().ok_or_else(no_page)?;
+    Ok(match anchor.and_then(|id| page.objects.iter().find(|o| o.id() == id)) {
+        Some(o) => notecraft_doc::geom::Point::new(o.pos().x, ops::object_bottom(o) + 12.0),
+        None => ops::insert_pos(s, page, v),
+    })
+}
+
+/// BEH.Paste.HTML from another application: the leading paragraphs join the caret's text as a
+/// plain paste would; each table becomes a table object, and paragraphs after a table a new
+/// container, stacked below in reading order.
+fn paste_blocks(s: &mut Session, v: &Value, blocks: Vec<html::Block>, mode: Mode) -> CmdResult {
+    enum Seg {
+        Paras(Vec<Paragraph>),
+        Table(html::Cells),
+    }
+    let mut segs: Vec<Seg> = Vec::new();
+    for b in blocks {
+        match (b, segs.last_mut()) {
+            (html::Block::Para(p), Some(Seg::Paras(ps))) => ps.push(p),
+            (html::Block::Para(p), _) => segs.push(Seg::Paras(vec![p])),
+            (html::Block::Table(c), _) => segs.push(Seg::Table(c)),
+        }
+    }
+    let room = notecraft_doc::media::MAX_PAGE_OBJECTS.saturating_sub(s.page().map_or(0, |p| p.objects.len()));
+    if segs.len() > room {
+        return Err(CmdError::Failed(format!("a page holds at most {} objects", notecraft_doc::media::MAX_PAGE_OBJECTS)));
+    }
+    let mut anchor = None;
+    let mut last_table = None;
+    for (i, seg) in segs.into_iter().enumerate() {
+        match seg {
+            Seg::Paras(ps) => {
+                let paras = fresh_paras(s, adapt(ps, mode));
+                last_table = None;
+                if i == 0 {
+                    let caret = ensure_caret(s)?;
+                    let pos = paste_paragraphs(s, caret, paras, mode)?;
+                    s.set_caret(pos);
+                    ops::touch(s, pos.block, pos.para);
+                    let page = s.page().ok_or_else(no_page)?;
+                    anchor = match pos.block {
+                        Block::Outline(id) => Some(id),
+                        Block::Cell(c) => page.table_of_cell(c).map(|(t, _, _)| t.id),
+                        Block::Title => None,
+                    };
+                    continue;
+                }
+                let at = below(s, anchor, v)?;
+                let oid = s.new_id();
+                let mut o = notecraft_doc::Outline::new(oid, at, notecraft_doc::Id::NIL);
+                o.paragraphs = paras;
+                o.normalize();
+                let last = o.paragraphs.len().saturating_sub(1);
+                let end = o.paragraphs.last().map(Paragraph::len).unwrap_or(0);
+                s.page_mut().ok_or_else(no_page)?.objects.push(notecraft_doc::PageObject::Outline(o));
+                s.set_caret(Pos::new(Block::Outline(oid), last, end));
+                anchor = Some(oid);
+            }
+            Seg::Table(cells) => {
+                let at = below(s, anchor, v)?;
+                let cells = cells.into_iter().map(|row| row.into_iter().map(|c| adapt(c, mode)).collect()).collect();
+                let t = crate::table_cmds::table_from_cells(s, at, cells);
+                let id = t.id;
+                s.page_mut().ok_or_else(no_page)?.objects.push(notecraft_doc::PageObject::Table(t));
+                anchor = Some(id);
+                last_table = Some(id);
+            }
+        }
+    }
+    s.pending_outline = None;
+    if let Some(t) = last_table {
+        crate::table_cmds::caret_in_first_cell(s, t);
+    }
+    Ok(Value::Null)
+}
+
+/// Paste the clipboard's pictures, attachments and tables with fresh ids, the first where a new
 /// object goes (`ops::insert_pos`), the rest at the same offsets from it as when copied.
 fn paste_objects(s: &mut Session, v: &Value) -> Result<Vec<notecraft_doc::Id>, CmdError> {
     let objects = s.clipboard.objects.clone();
@@ -353,12 +486,13 @@ fn paste_objects(s: &mut Session, v: &Value) -> Result<Vec<notecraft_doc::Id>, C
     let mut ids = Vec::new();
     let mut fresh = Vec::new();
     for mut o in objects {
-        let id = s.new_id();
         match &mut o {
-            notecraft_doc::PageObject::Image(im) => im.id = id,
-            notecraft_doc::PageObject::Attachment(a) => a.id = id,
-            _ => continue,
+            notecraft_doc::PageObject::Image(im) => im.id = s.new_id(),
+            notecraft_doc::PageObject::Attachment(a) => a.id = s.new_id(),
+            notecraft_doc::PageObject::Table(t) => crate::table_cmds::refresh_ids(s, t),
+            notecraft_doc::PageObject::Outline(_) => continue,
         }
+        let id = o.id();
         let p = o.pos();
         o.set_pos(notecraft_doc::geom::Point::new((at.x + p.x - first.x).max(0.0), (at.y + p.y - first.y).max(0.0)));
         ids.push(id);

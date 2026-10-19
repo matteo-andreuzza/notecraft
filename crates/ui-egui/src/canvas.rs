@@ -212,6 +212,10 @@ pub struct CanvasState {
     pub media: Vec<crate::pictures::MediaLayout>,
     /// Decoded pictures (`pictures::TextureCache`).
     pub(crate) textures: crate::pictures::TextureCache,
+    /// Fingerprint of the picture NoteCraft last put on the system clipboard (`clipboard.rs`).
+    pub(crate) copied_image: Option<u64>,
+    /// Ctrl+V detection when the clipboard holds no text (`clipboard::watch`).
+    pub(crate) paste_probe: crate::clipboard::PasteProbe,
     /// Screen position of the page origin in the last frame.
     pub origin: Pos2,
     /// Zoom used in the last frame.
@@ -242,6 +246,8 @@ impl Default for CanvasState {
             tables: Vec::new(),
             media: Vec::new(),
             textures: Default::default(),
+            copied_image: None,
+            paste_probe: Default::default(),
             origin: Pos2::ZERO,
             zoom: 1.0,
             focused: false,

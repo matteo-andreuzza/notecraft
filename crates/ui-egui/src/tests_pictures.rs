@@ -105,3 +105,107 @@ fn right_click_on_an_attachment_opens_the_attachment_menu() {
     h.run();
     assert!(matches!(h.state().ui.dialog, Some(crate::dialogs::Dialog::RenameAttachment(ref n)) if n == "notes.txt"));
 }
+
+// ---- The rich system clipboard, through a host with a fake clipboard. ----
+
+#[derive(Default)]
+struct Clip {
+    text: Option<String>,
+    html: Option<String>,
+    image: Option<notecraft_codecs::Rgba8>,
+}
+
+struct ClipHost(std::sync::Arc<std::sync::Mutex<Clip>>);
+
+impl crate::Host for ClipHost {
+    fn clock(&self) -> notecraft_engine::Clock {
+        notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 }
+    }
+    fn read_clipboard(&mut self, image: bool) -> crate::RichClip {
+        let c = self.0.lock().unwrap();
+        crate::RichClip { text: c.text.clone(), html: c.html.clone(), image: if image { c.image.clone() } else { None } }
+    }
+    fn write_clipboard(&mut self, text: &str, html: &str, image: Option<&notecraft_codecs::Rgba8>) -> bool {
+        let mut c = self.0.lock().unwrap();
+        *c = Clip { text: (!text.is_empty()).then(|| text.to_string()), html: (!html.is_empty()).then(|| html.to_string()), image: image.cloned() };
+        true
+    }
+}
+
+fn clip_app() -> (NoteApp, std::sync::Arc<std::sync::Mutex<Clip>>) {
+    let clip = std::sync::Arc::new(std::sync::Mutex::new(Clip::default()));
+    let mut s = notecraft_engine::Session::with_sample(notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 });
+    s.prefs.author = "Tester".into();
+    let mut a = NoteApp::new(s, Box::new(ClipHost(clip.clone())));
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.sel.on_page = PageSel::None;
+    a.ui.tab = "View".into();
+    a.canvas.focused = true;
+    (a, clip)
+}
+
+/// Ctrl+V as egui-winit delivers it: a paste event when the clipboard has text, otherwise
+/// only the key release.
+fn ctrl_v(h: &mut Harness<'static, NoteApp>, text: Option<&str>) {
+    let m = egui::Modifiers::COMMAND;
+    if let Some(t) = text {
+        h.event(egui::Event::Paste(t.to_string()));
+    }
+    h.event(egui::Event::Key { key: egui::Key::V, physical_key: None, pressed: false, repeat: false, modifiers: m });
+    h.run();
+}
+
+#[test]
+fn copying_a_picture_puts_its_pixels_on_the_system_clipboard() {
+    // UI.Window.Clipboard: a copied picture goes out as a picture; pasting it back while the
+    // system clipboard still holds it pastes the object (alt text kept), not a new picture.
+    let (mut a, clip) = clip_app();
+    let r = a.session.run("insert.picture", json!({"data": notecraft_engine::b64::encode(&png(30, 20))})).unwrap();
+    let id = Id::parse(r["picture"].as_str().unwrap()).unwrap();
+    a.session.run("object.altText", json!({"text": "kept"})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    let ctx = h.ctx.clone();
+    h.state_mut().run(&ctx, "edit.copy", json!({}));
+    let img = clip.lock().unwrap().image.clone();
+    assert!(img.is_some(), "UI.Window.Clipboard");
+    let img = img.unwrap();
+    assert_eq!((img.width, img.height), (30, 20));
+    ctrl_v(&mut h, None);
+    let pics: Vec<_> = h.state().session.page().unwrap().objects.iter().filter_map(|o| o.as_image()).cloned().collect();
+    assert_eq!(pics.len(), 2);
+    assert!(pics.iter().all(|p| p.alt_text == "kept"), "pasted as the copied object");
+    assert!(pics.iter().any(|p| p.id != id));
+}
+
+#[test]
+fn ctrl_v_with_only_another_programs_picture_pastes_it() {
+    // BEH.Paste.Images
+    let (a, clip) = clip_app();
+    let shot = notecraft_codecs::decode(&png(40, 10), &Default::default()).unwrap();
+    clip.lock().unwrap().image = Some(shot);
+    let mut h = harness(a);
+    h.run();
+    ctrl_v(&mut h, None);
+    let pics: Vec<_> = h.state().session.page().unwrap().objects.iter().filter_map(|o| o.as_image()).cloned().collect();
+    assert_eq!(pics.len(), 1, "BEH.Paste.Images");
+    assert_eq!(pics[0].pixels, (40, 10));
+}
+
+#[test]
+fn pasting_html_from_a_browser_keeps_its_table() {
+    // BEH.Paste.HTML
+    let (a, clip) = clip_app();
+    *clip.lock().unwrap() = Clip {
+        text: Some("Fruit\tQty\nPears\t4".into()),
+        html: Some("<table><tr><td><b>Fruit</b></td><td>Qty</td></tr><tr><td>Pears</td><td>4</td></tr></table>".into()),
+        image: None,
+    };
+    let mut h = harness(a);
+    h.run();
+    ctrl_v(&mut h, Some("Fruit\tQty\nPears\t4"));
+    let page = h.state().session.page().unwrap().clone();
+    let t = page.objects.iter().find_map(|o| o.as_table()).expect("BEH.Paste.HTML: pasted as a table");
+    assert_eq!(t.plain_text(), "Fruit\tQty\nPears\t4");
+    assert_eq!(t.rows[0].cells[0].paragraphs[0].runs[0].fmt.bold, Some(true));
+}

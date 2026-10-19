@@ -516,7 +516,8 @@ fn copy_link(s: &mut Session, v: &Value) -> CmdResult {
     let link = page_link(pid);
     let mut para = ops::new_para(s);
     para.runs.push(notecraft_doc::Run::new(&title, notecraft_doc::CharFormat { link: Some(link.clone()), ..Default::default() }));
-    s.clipboard = crate::session::Clipboard { paragraphs: vec![para], text: link.clone(), pages: Vec::new(), objects: Vec::new() };
+    s.clipboard =
+        crate::session::Clipboard { paragraphs: vec![para], text: link.clone(), pages: Vec::new(), objects: Vec::new(), html: String::new() };
     Ok(json!({"link": link, "text": link}))
 }
 

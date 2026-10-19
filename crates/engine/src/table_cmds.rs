@@ -537,6 +537,70 @@ fn column_width(s: &mut Session, v: &Value) -> CmdResult {
 
 /// Rows `rows` of `t` as paragraphs: cells joined by tabs, a cell's paragraphs by spaces, the
 /// runs (and so the formatting) kept. Used by Convert to Text and by Copy of cells.
+/// The cells of a rectangle of `t` as paragraph lists, for the HTML clipboard.
+pub(crate) fn cells_of(t: &Table, rows: (usize, usize), cols: (usize, usize)) -> Vec<Vec<Vec<Paragraph>>> {
+    t.rows
+        .iter()
+        .skip(rows.0)
+        .take(rows.1.saturating_sub(rows.0) + 1)
+        .map(|r| r.cells.iter().skip(cols.0).take(cols.1.saturating_sub(cols.0) + 1).map(|c| c.paragraphs.clone()).collect())
+        .collect()
+}
+
+/// A new table at `pos` holding `cells` (rows of cells of paragraphs, from pasted HTML): ragged
+/// rows are padded, the table limits applied, every id fresh.
+pub(crate) fn table_from_cells(s: &mut Session, pos: Point, cells: Vec<Vec<Vec<Paragraph>>>) -> Table {
+    let cols = cells.iter().map(Vec::len).max().unwrap_or(1).clamp(1, MAX_COLS);
+    let rows = cells.len().clamp(1, MAX_ROWS).min(MAX_CELLS / cols);
+    let id = s.new_id();
+    let mut table = Table::new(id, pos, rows, cols, &mut mint(s));
+    for (r, row) in cells.into_iter().take(rows).enumerate() {
+        for (c, paras) in row.into_iter().take(cols).enumerate() {
+            if paras.is_empty() {
+                continue;
+            }
+            let fresh: Vec<Paragraph> = paras
+                .into_iter()
+                .map(|mut p| {
+                    p.id = s.new_id();
+                    p
+                })
+                .collect();
+            if let Some(cell) = table.rows.get_mut(r).and_then(|row| row.cells.get_mut(c)) {
+                cell.paragraphs = fresh;
+            }
+        }
+    }
+    for row in &mut table.rows {
+        for c in &mut row.cells {
+            stamp(s, c);
+        }
+    }
+    table.normalize();
+    table
+}
+
+/// Give a copied table fresh ids throughout (pasting it twice must not duplicate ids).
+pub(crate) fn refresh_ids(s: &mut Session, t: &mut Table) {
+    t.id = s.new_id();
+    for row in &mut t.rows {
+        row.id = s.new_id();
+        for c in &mut row.cells {
+            c.id = s.new_id();
+            for p in &mut c.paragraphs {
+                p.id = s.new_id();
+            }
+        }
+    }
+}
+
+/// Put the caret at the start of a table's first cell.
+pub(crate) fn caret_in_first_cell(s: &mut Session, t: Id) {
+    if let Some(c) = s.page().and_then(|p| p.table(t)).and_then(|t| t.rows.first()).and_then(|r| r.cells.first()).map(|c| c.id) {
+        caret_in(s, c, false);
+    }
+}
+
 pub(crate) fn rows_as_paragraphs(t: &Table, rows: (usize, usize), cols: (usize, usize), mint: &mut dyn FnMut() -> Id) -> Vec<Paragraph> {
     let mut out = Vec::new();
     for r in t.rows.iter().skip(rows.0).take(rows.1.saturating_sub(rows.0) + 1) {

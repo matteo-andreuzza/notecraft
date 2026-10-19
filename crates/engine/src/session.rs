@@ -193,8 +193,10 @@ pub struct Clipboard {
     pub text: String,
     /// Copied or cut pages (page list Cut/Copy).
     pub pages: Vec<Arc<Page>>,
-    /// Copied or cut pictures and attachments (their bytes shared, not copied).
+    /// Copied or cut pictures, attachments and whole tables (bytes shared, not copied).
     pub objects: Vec<notecraft_doc::PageObject>,
+    /// The copied notes as HTML, for other applications (empty when there is none).
+    pub html: String,
 }
 
 /// What changed in one notebook since its last save.

@@ -340,6 +340,10 @@ pub fn handle_input(app: &mut NoteApp, ctx: &egui::Context) {
     }
     let text_widget_focused = ctx.memory(|m| m.focused().is_some()) && ctx.egui_wants_keyboard_input();
     let events = ctx.input(|i| i.events.clone());
+    // Ctrl+V with no text on the clipboard (a picture): see `clipboard.rs`.
+    if crate::clipboard::watch(app, ctx, &events) && app.canvas.focused && !text_widget_focused {
+        crate::clipboard::paste(app, ctx, "edit.paste", None);
+    }
     let mut consumed: Vec<(Modifiers, Key)> = Vec::new();
     for ev in events {
         match ev {
@@ -399,7 +403,7 @@ pub fn handle_input(app: &mut NoteApp, ctx: &egui::Context) {
             }
             Event::Paste(t) if (app.canvas.focused || app.session.sel.focus == FocusArea::PageList) && !text_widget_focused => {
                 let shift = ctx.input(|i| i.modifiers.shift);
-                run(app, ctx, if shift { "edit.pasteTextOnly" } else { "edit.paste" }, json!({"text": t}));
+                crate::clipboard::paste(app, ctx, if shift { "edit.pasteTextOnly" } else { "edit.paste" }, Some(t));
             }
             _ => {}
         }

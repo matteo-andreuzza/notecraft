@@ -225,3 +225,75 @@ fn a_page_holds_at_most_max_objects() {
     assert!(s.run("insert.picture", json!({"data": data(&png(2, 2))})).is_err());
     assert!(s.run("insert.file", json!({"data": data(b"x"), "name": "x"})).is_err());
 }
+
+// ---- The rich clipboard (HTML and pictures from other applications). ----
+
+#[test]
+fn copy_gives_html_with_formatting_and_tables() {
+    let mut s = sample();
+    blank_page(&mut s);
+    run(&mut s, "text.insert", json!({"text": "plain bold"}));
+    let o = s.page().unwrap().objects[0].id();
+    run(&mut s, "caret.set", json!({"block": o.to_string(), "para": 0, "offset": 6}));
+    run(&mut s, "caret.set", json!({"block": o.to_string(), "para": 0, "offset": 10, "extend": true}));
+    run(&mut s, "format.bold", json!({}));
+    run(&mut s, "caret.set", json!({"block": o.to_string(), "para": 0, "offset": 0}));
+    run(&mut s, "caret.set", json!({"block": o.to_string(), "para": 0, "offset": 10, "extend": true}));
+    let r = run(&mut s, "edit.copy", json!({}));
+    assert_eq!(r["text"], "plain bold");
+    assert!(r["html"].as_str().unwrap().contains("plain <b>bold</b>"), "{}", r["html"]);
+    run(&mut s, "insert.table", json!({"rows": 2, "cols": 2}));
+    run(&mut s, "text.insert", json!({"text": "a\tb"}));
+    run(&mut s, "table.selectTable", json!({}));
+    let r = run(&mut s, "edit.copy", json!({}));
+    assert!(r["text"].as_str().unwrap().starts_with("a\tb"), "{}", r["text"]);
+    assert!(r["html"].as_str().unwrap().contains("<table"), "{}", r["html"]);
+}
+
+#[test]
+fn pasting_html_from_another_application() {
+    // BEH.Paste.HTML: formatting, lists and tables survive; a table becomes a table object.
+    let mut s = sample();
+    blank_page(&mut s);
+    let html = "<p>Intro <b>bold</b></p><ul><li>one</li><li>two</li></ul><table><tr><td>Item</td><td>Qty</td></tr><tr><td>Pears</td><td>4</td></tr></table><p>After</p>";
+    run(&mut s, "edit.paste", json!({"text": "Intro bold\none\ntwo\nItem\tQty\nPears\t4\nAfter", "html": html}));
+    let page = s.page().unwrap();
+    let outlines: Vec<_> = page.objects.iter().filter_map(|o| o.as_outline()).collect();
+    let first: Vec<String> = outlines[0].paragraphs.iter().map(|p| p.text()).collect();
+    assert_eq!(first, vec!["Intro bold", "one", "two"]);
+    assert!(outlines[0].paragraphs[0].runs.iter().any(|r| r.text == "bold" && r.fmt.bold == Some(true)));
+    assert!(matches!(outlines[0].paragraphs[1].list, Some(notecraft_doc::ListFormat::Bullet(_))));
+    let t = page.objects.iter().find_map(|o| o.as_table()).unwrap();
+    assert_eq!(t.plain_text(), "Item\tQty\nPears\t4");
+    assert_eq!(outlines[1].paragraphs[0].text(), "After");
+    assert!(outlines[1].pos.y > t.pos.y && t.pos.y > outlines[0].pos.y, "stacked in reading order");
+    // One undo step takes the whole paste away.
+    run(&mut s, "edit.undo", json!({}));
+    assert!(s.page().unwrap().objects.iter().all(|o| o.as_table().is_none()));
+    // Keep Text Only ignores the HTML.
+    run(&mut s, "edit.pasteTextOnly", json!({"text": "just text", "html": html}));
+    assert!(s.page().unwrap().objects.iter().all(|o| o.as_table().is_none()));
+}
+
+#[test]
+fn pasting_a_picture_and_copied_tables() {
+    // BEH.Paste.Images: a picture on the system clipboard (no text) becomes a picture.
+    let mut s = sample();
+    blank_page(&mut s);
+    let r = run(&mut s, "edit.paste", json!({"image": crate::b64::encode(&png(20, 10))}));
+    let id = Id::parse(r["picture"].as_str().unwrap()).unwrap();
+    assert_eq!(image(&s, id).pixels, (20, 10));
+    assert!(s.run("edit.paste", json!({"image": data(b"not a picture")})).is_err());
+    // A whole table copied inside NoteCraft pastes back as a table, with fresh ids.
+    run(&mut s, "insert.table", json!({"rows": 2, "cols": 3}));
+    run(&mut s, "text.insert", json!({"text": "x"}));
+    run(&mut s, "table.selectTable", json!({}));
+    let tid = s.page().unwrap().objects.iter().find_map(|o| o.as_table()).unwrap().id;
+    run(&mut s, "object.select", json!({"ids": [tid.to_string()]}));
+    let copied = run(&mut s, "edit.copy", json!({}));
+    run(&mut s, "edit.paste", json!({"text": copied["text"]}));
+    let tables: Vec<_> = s.page().unwrap().objects.iter().filter_map(|o| o.as_table()).cloned().collect();
+    assert_eq!(tables.len(), 2);
+    assert_ne!(tables[0].rows[0].cells[0].id, tables[1].rows[0].cells[0].id);
+    assert_eq!(tables[1].plain_text(), tables[0].plain_text());
+}

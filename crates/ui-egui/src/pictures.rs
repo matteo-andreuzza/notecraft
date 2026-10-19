@@ -296,6 +296,8 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 app.run(ctx, cmd, json!({"path": path}));
             }
         }
+        // The ribbon's and menus' Paste read the system clipboard as Ctrl+V does.
+        "edit.paste" | "edit.pasteKeepSource" | "edit.pasteMerge" | "edit.pasteTextOnly" => crate::clipboard::paste(app, ctx, cmd, None),
         "attachment.open" => {
             if let Some(path) = app.run(ctx, cmd, json!({})).and_then(|v| v.get("path").and_then(|p| p.as_str()).map(str::to_string))
                 && let Err(e) = app.host.open_path(&path)

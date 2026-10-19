@@ -17,6 +17,7 @@ notecraft-text = { workspace = true }
 notecraft-search = { workspace = true }
 notecraft-format = { workspace = true }
 notecraft-codecs = { workspace = true }
+notecraft-import-export = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

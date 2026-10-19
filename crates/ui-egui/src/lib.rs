@@ -12,6 +12,7 @@
 pub mod backstage;
 pub mod canvas;
 pub mod chrome;
+pub(crate) mod clipboard;
 pub mod context_menu;
 pub mod dialogs;
 pub mod fonts;
@@ -33,6 +34,17 @@ use notecraft_engine::{Clock, CmdError, Session};
 use serde_json::{Value, json};
 
 pub use theme::{ThemeKind, Tokens};
+
+/// What the system clipboard holds, as far as the host can read it.
+#[derive(Default)]
+pub struct RichClip {
+    /// Plain text.
+    pub text: Option<String>,
+    /// HTML (from browsers and office applications).
+    pub html: Option<String>,
+    /// A picture (RGBA pixels), when one was asked for.
+    pub image: Option<notecraft_codecs::Rgba8>,
+}
 
 /// What the host platform provides (desktop app, web app, tests).
 pub trait Host {
@@ -59,6 +71,19 @@ pub trait Host {
     fn open_path(&mut self, path: &str) -> Result<(), String> {
         let _ = path;
         Err("opening files isn't available here".into())
+    }
+    /// Read the system clipboard: text and HTML, and the picture too when `image` (decoding a
+    /// picture costs time, so only a paste that has no text asks for it). Empty when the
+    /// host has no rich clipboard (the web build, tests).
+    fn read_clipboard(&mut self, image: bool) -> RichClip {
+        let _ = image;
+        RichClip::default()
+    }
+    /// Put copied notes on the system clipboard: text with its HTML, or a picture. `false` when
+    /// the host has no rich clipboard (the UI then copies the plain text through egui).
+    fn write_clipboard(&mut self, text: &str, html: &str, image: Option<&notecraft_codecs::Rgba8>) -> bool {
+        let _ = (text, html, image);
+        false
     }
     /// Where backups go (`None` = backups unavailable on this platform).
     fn backup_folder(&self) -> Option<String> {
@@ -262,17 +287,10 @@ impl NoteApp {
         if let Some(url) = v.get("open_url").and_then(Value::as_str) {
             ctx.open_url(egui::OpenUrl::new_tab(url));
         }
-        if matches!(
-            id,
-            "edit.copy"
-                | "edit.cut"
-                | "page.copyLink"
-                | "section.copyLink"
-                | "notebook.copyLink"
-                | "link.copy"
-                | "para.copyLink"
-                | "sectionGroup.copyLink"
-        ) && let Some(t) = v.get("text").or_else(|| v.get("link")).and_then(Value::as_str)
+        if matches!(id, "edit.copy" | "edit.cut") {
+            clipboard::after_copy(self, ctx, &v);
+        } else if matches!(id, "page.copyLink" | "section.copyLink" | "notebook.copyLink" | "link.copy" | "para.copyLink" | "sectionGroup.copyLink")
+            && let Some(t) = v.get("text").or_else(|| v.get("link")).and_then(Value::as_str)
         {
             ctx.copy_text(t.to_string());
         }
