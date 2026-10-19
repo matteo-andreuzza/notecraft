@@ -127,6 +127,15 @@ pub fn page_json(p: &Page, runs: bool) -> Value {
                     .collect();
                 json!({"kind": "table", "id": t.id, "x": t.pos.x, "y": t.pos.y, "columns": t.columns, "borders": t.borders, "headerRow": t.header_row, "rows": rows})
             }
+            PageObject::Image(im) => json!({
+                "kind": "picture", "id": im.id, "x": im.pos.x, "y": im.pos.y, "width": im.width, "height": im.height,
+                "pixels": [im.pixels.0, im.pixels.1], "bytes": im.blob.len, "missing": im.blob.is_missing(),
+                "quarterTurns": im.quarter_turns, "flipH": im.flip_h, "flipV": im.flip_v, "altText": im.alt_text, "background": im.background,
+            }),
+            PageObject::Attachment(a) => json!({
+                "kind": "attachment", "id": a.id, "x": a.pos.x, "y": a.pos.y, "name": a.name, "bytes": a.blob.len,
+                "missing": a.blob.is_missing(), "altText": a.alt_text,
+            }),
         })
         .collect();
     json!({
@@ -153,6 +162,15 @@ pub fn page_text(p: &Page) -> String {
                 // A table prints as tab-separated rows.
                 out.push_str(&t.plain_text());
                 out.push_str("\n\n");
+                continue;
+            }
+            PageObject::Image(im) => {
+                let alt = if im.alt_text.is_empty() { String::new() } else { format!(": {}", im.alt_text) };
+                out.push_str(&format!("[picture {}×{} pt{alt}]\n\n", im.width.round(), im.height.round()));
+                continue;
+            }
+            PageObject::Attachment(a) => {
+                out.push_str(&format!("[file {}]\n\n", a.name));
                 continue;
             }
         };

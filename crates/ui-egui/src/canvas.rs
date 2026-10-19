@@ -155,11 +155,33 @@ pub(crate) enum ParaDrop {
 
 #[derive(Clone, Copy, PartialEq)]
 enum Drag {
-    Select { anchor: Option<notecraft_engine::selection::Pos> },
-    Move { id: Id, grab_page: notecraft_engine::doc::geom::Vec2 },
-    Resize { id: Id, left: f32 },
-    Para { from: Id, para: usize },
-    Column { table: Id, col: usize, left: f32 },
+    Select {
+        anchor: Option<notecraft_engine::selection::Pos>,
+    },
+    Move {
+        id: Id,
+        grab_page: notecraft_engine::doc::geom::Vec2,
+    },
+    Resize {
+        id: Id,
+        left: f32,
+    },
+    Para {
+        from: Id,
+        para: usize,
+    },
+    Column {
+        table: Id,
+        col: usize,
+        left: f32,
+    },
+    /// A picture's sizing handle (`pictures::handles` order), from the page rectangle `start`.
+    Picture {
+        id: Id,
+        handle: usize,
+        start: (f32, f32, f32, f32),
+        grab: notecraft_engine::doc::geom::Point,
+    },
 }
 
 /// What a right-click context menu is about (`context_menu.rs`): set once when it opens on a
@@ -172,6 +194,10 @@ pub(crate) enum ContextTarget {
     Handle(Block, usize),
     /// Text or a table cell, at a paragraph and byte offset (`CM.Text.*`).
     Text(Block, usize, usize),
+    /// A picture (`CM.Picture.*`).
+    Picture(Id),
+    /// A file attachment (`CM.FileAttachment.*`).
+    Attachment(Id),
 }
 
 /// Canvas view state.
@@ -182,6 +208,10 @@ pub struct CanvasState {
     pub outlines: Vec<OutlineLayout>,
     /// Table layouts of the last frame.
     pub tables: Vec<TableLayout>,
+    /// Pictures and attachments of the last frame, in z-order.
+    pub media: Vec<crate::pictures::MediaLayout>,
+    /// Decoded pictures (`pictures::TextureCache`).
+    pub(crate) textures: crate::pictures::TextureCache,
     /// Screen position of the page origin in the last frame.
     pub origin: Pos2,
     /// Zoom used in the last frame.
@@ -210,6 +240,8 @@ impl Default for CanvasState {
             paras: Vec::new(),
             outlines: Vec::new(),
             tables: Vec::new(),
+            media: Vec::new(),
+            textures: Default::default(),
             origin: Pos2::ZERO,
             zoom: 1.0,
             focused: false,
@@ -378,13 +410,19 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         app.canvas.zoom = zoom;
         app.canvas.viewport = viewport.translate(min.to_vec2());
         // Lay out everything first (needed for the content size).
-        let (paras, outlines, tables, extent) = layout_page(app, &ctx, &page, zoom, t, page_text);
+        let (paras, outlines, tables, mut extent) = layout_page(app, &ctx, &page, zoom, t, page_text);
+        let media = crate::pictures::layout(&page, app.canvas.origin, zoom);
+        for m in &media {
+            extent = extent.max(m.rect.max - app.canvas.origin + vec2(240.0, 240.0));
+        }
         app.canvas.extent = extent;
         let content = vec2(extent.x.max(avail.width()), extent.y.max(avail.height()));
         let (rect, resp) = ui.allocate_exact_size(content, Sense::click_and_drag());
         let painter = ui.painter_at(rect.union(app.canvas.viewport));
         painter.rect_filled(rect, 0.0, page_bg);
         rule_lines(&painter, &page, rect, app.canvas.origin, zoom, t);
+        // Background pictures sit under everything, the title included.
+        crate::pictures::draw(app, &painter, &page, &media, true, t);
         title_area(app, &painter, &page, zoom, t, page_text, &paras);
         // Containers: frame for the hovered one and the one with the caret.
         let hover = ctx.pointer_hover_pos();
@@ -400,6 +438,9 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             PageSel::Objects { ids } => ids.clone(),
             _ => Vec::new(),
         };
+        // Pictures and attachments, under the text (decision D3: text stays readable and
+        // clickable where they overlap).
+        crate::pictures::draw(app, &painter, &page, &media, false, t);
         // Tables: shading, borders, selected cells.
         for tl in &tables {
             let Some(tb) = page.table(tl.id) else { continue };
@@ -437,6 +478,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                         labels_cache.insert(Block::Cell(c.id), notecraft_engine::text::list_labels(&c.paragraphs));
                     }
                 }
+                _ => {}
             }
         }
         for pl in &paras {
@@ -517,10 +559,22 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 scroll_req = None;
             }
         }
+        // Selected pictures and attachments: frame and sizing handles, above the text.
+        for m in media.iter().filter(|m| selected_objects.contains(&m.id)) {
+            crate::pictures::draw_selection(&painter, m, t);
+        }
+        if let Some(h) = hover
+            && app.canvas.drag.is_none()
+            && let Some(m) = media.iter().rev().find(|m| !m.background && m.rect.contains(h))
+            && let Some(tip) = crate::pictures::tooltip(&page, m.id)
+        {
+            resp.clone().on_hover_text_at_pointer(tip);
+        }
         // Drag ghost for a container being moved is the container itself (moved live).
         app.canvas.paras = paras;
         app.canvas.outlines = outlines;
         app.canvas.tables = tables;
+        app.canvas.media = media;
         // The drop indicator of a paragraph being dragged by its handle.
         if let Some(Drag::Para { from, para }) = app.canvas.drag
             && let Some(h) = ctx.pointer_latest_pos()
@@ -616,6 +670,8 @@ fn layout_page(
     for o in &page.objects {
         let ol = match o {
             PageObject::Outline(ol) => ol,
+            // Pictures and attachments: `pictures::layout`.
+            PageObject::Image(_) | PageObject::Attachment(_) => continue,
             PageObject::Table(tb) => {
                 let (tl, frame) = layout_table(ctx, tb, origin, zoom, t, page_text, &preedit_at, &mut paras);
                 extent = extent.max(vec2(frame.rect.max.x - origin.x + 240.0, frame.rect.max.y - origin.y + 240.0));
@@ -896,8 +952,27 @@ fn highlights(app: &NoteApp, painter: &egui::Painter, paras: &[ParaLayout], t: T
 fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Response) {
     let hover = resp.hover_pos();
     // Cursor shape.
+    let selected: Vec<Id> = match &app.session.sel.on_page {
+        PageSel::Objects { ids } => ids.clone(),
+        _ => Vec::new(),
+    };
+    // A selected picture's sizing handle under a point: `(picture, handle index)`.
+    let picture_handle = |app: &NoteApp, p: Pos2| {
+        app.canvas
+            .media
+            .iter()
+            .filter(|m| m.picture && selected.contains(&m.id))
+            .find_map(|m| crate::pictures::handles(m.rect).iter().position(|h| h.expand(2.0).contains(p)).map(|i| (*m, i)))
+    };
     if let Some(h) = hover {
-        if app.canvas.outlines.iter().any(|o| o.resize.contains(h)) || app.canvas.tables.iter().any(|tl| tl.border_at(h).is_some()) {
+        if let Some((_, i)) = picture_handle(app, h) {
+            ctx.set_cursor_icon(match i {
+                0 | 2 => CursorIcon::ResizeNwSe,
+                1 | 3 => CursorIcon::ResizeNeSw,
+                4 | 6 => CursorIcon::ResizeVertical,
+                _ => CursorIcon::ResizeHorizontal,
+            });
+        } else if app.canvas.outlines.iter().any(|o| o.resize.contains(h)) || app.canvas.tables.iter().any(|tl| tl.border_at(h).is_some()) {
             ctx.set_cursor_icon(CursorIcon::ResizeHorizontal);
         } else if app.canvas.outlines.iter().any(|o| o.bar.contains(h)) {
             ctx.set_cursor_icon(CursorIcon::Move);
@@ -916,6 +991,16 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
         // button went down, not where the pointer is now.
         let origin = if resp.drag_started() { ui.input(|i| i.pointer.press_origin()) } else { None };
         let Some(p) = origin.or_else(|| resp.interact_pointer_pos()) else { return };
+        // A selected picture's sizing handle (decision D3).
+        if let Some((m, handle)) = picture_handle(app, p) {
+            if resp.drag_started()
+                && let Some(im) = app.session.page().and_then(|pg| pg.image(m.id))
+            {
+                let start = (im.pos.x, im.pos.y, im.width, im.height);
+                app.canvas.drag = Some(Drag::Picture { id: m.id, handle, start, grab: app.canvas.to_page(p) });
+            }
+            return;
+        }
         // Resize handle.
         if let Some(o) = app.canvas.outlines.iter().find(|o| o.resize.contains(p)).copied() {
             if resp.drag_started() {
@@ -962,6 +1047,24 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
             // Dragging the handle moves the paragraph with its children (BEH.Outline.DragParagraph).
             if resp.drag_started() {
                 app.canvas.drag = Some(Drag::Para { from: oid, para: pl.para });
+            }
+            return;
+        }
+        // A picture or attachment (not a background picture, and not where a container's text
+        // is): click selects it (Shift adds), drag moves it, double-click opens an attachment.
+        if !app.canvas.outlines.iter().any(|o| o.rect.contains(p))
+            && let Some(m) = crate::pictures::hit(app, p, false)
+        {
+            if !(selected.contains(&m.id) && resp.drag_started()) {
+                app.run(ctx, "object.select", json!({"ids": [m.id.to_string()], "add": shift}));
+            }
+            if resp.double_clicked() && !m.picture {
+                crate::pictures::host_action(app, ctx, "attachment.open");
+            }
+            if resp.drag_started() {
+                let pos = app.session.page().and_then(|pg| pg.objects.iter().find(|x| x.id() == m.id).map(PageObject::pos)).unwrap_or_default();
+                let grab = app.canvas.to_page(p);
+                app.canvas.drag = Some(Drag::Move { id: m.id, grab_page: notecraft_engine::doc::geom::Vec2::new(grab.x - pos.x, grab.y - pos.y) });
             }
             return;
         }
@@ -1028,6 +1131,11 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
             Some(Drag::Resize { id, left }) => {
                 let w = (p.x - left) / (PT * app.canvas.zoom.max(0.1)) - 16.0;
                 app.run(ctx, "outline.resize", json!({"id": id.to_string(), "width": w.max(notecraft_engine::doc::page::MIN_OUTLINE_WIDTH)}));
+            }
+            Some(Drag::Picture { id, handle, start, grab }) => {
+                let pt = app.canvas.to_page(p);
+                let (x, y, w, h) = crate::pictures::resized(start, handle, (pt.x - grab.x, pt.y - grab.y));
+                app.run(ctx, "object.resize", json!({"id": id.to_string(), "x": x, "y": y, "width": w, "height": h}));
             }
             Some(Drag::Para { .. }) | None => {}
         }

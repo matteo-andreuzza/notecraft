@@ -181,11 +181,12 @@ pub(crate) fn copy_selection(s: &mut Session) -> Result<String, CmdError> {
         }
         let pages: Vec<_> = section.pages.iter().filter(|p| ids.contains(&p.id)).cloned().collect();
         let text = pages.iter().map(|p| p.display_title()).collect::<Vec<_>>().join("\n");
-        s.clipboard = crate::session::Clipboard { paragraphs: Vec::new(), text: text.clone(), pages };
+        s.clipboard = crate::session::Clipboard { paragraphs: Vec::new(), text: text.clone(), pages, objects: Vec::new() };
         return Ok(text);
     }
     let page = s.page().ok_or_else(no_page)?;
     let mut out: Vec<Paragraph> = Vec::new();
+    let mut objects = Vec::new();
     match &s.sel.on_page {
         PageSel::Objects { ids } => {
             for id in ids {
@@ -196,6 +197,8 @@ pub(crate) fn copy_selection(s: &mut Session) -> Result<String, CmdError> {
                         let all = (0, t.n_rows().saturating_sub(1));
                         out.extend(crate::table_cmds::rows_as_paragraphs(t, all, (0, t.n_cols().saturating_sub(1)), &mut || notecraft_doc::Id::NIL));
                     }
+                    // Pictures and attachments copy as objects (bytes shared by `Arc`).
+                    Some(o @ (notecraft_doc::PageObject::Image(_) | notecraft_doc::PageObject::Attachment(_))) => objects.push(o.clone()),
                     None => {}
                 }
             }
@@ -226,7 +229,7 @@ pub(crate) fn copy_selection(s: &mut Session) -> Result<String, CmdError> {
         PageSel::None => return Err(CmdError::Disabled("select some text first".into())),
     }
     let text = out.iter().map(Paragraph::text).collect::<Vec<_>>().join("\n");
-    s.clipboard = crate::session::Clipboard { paragraphs: out, text: text.clone(), pages: Vec::new() };
+    s.clipboard = crate::session::Clipboard { paragraphs: out, text: text.clone(), pages: Vec::new(), objects };
     Ok(text)
 }
 
@@ -311,6 +314,16 @@ fn do_paste(s: &mut Session, v: &Value, mode: Mode) -> CmdResult {
     if s.sel.focus == FocusArea::PageList && !s.clipboard.pages.is_empty() {
         return crate::page_cmds::paste_pages(s);
     }
+    // Copied pictures and attachments, when the system clipboard (if given) still holds what
+    // NoteCraft put there.
+    let given = p::str(v, "text").map(|t| t.replace("\r\n", "\n"));
+    if mode != Mode::Text && !s.clipboard.objects.is_empty() && given.as_ref().is_none_or(|t| *t == s.clipboard.text) {
+        let ids = paste_objects(s, v)?;
+        if s.clipboard.paragraphs.is_empty() {
+            s.sel.on_page = PageSel::Objects { ids: ids.clone() };
+            return Ok(json!({"objects": ids.iter().map(|i| i.to_string()).collect::<Vec<_>>()}));
+        }
+    }
     let paras = adapt(clip_paras(s, v)?, mode);
     // Fresh ids: pasting twice must not create duplicate ids.
     let mut fresh = Vec::with_capacity(paras.len());
@@ -325,6 +338,35 @@ fn do_paste(s: &mut Session, v: &Value, mode: Mode) -> CmdResult {
     s.set_caret(pos);
     ops::touch(s, pos.block, pos.para);
     Ok(Value::Null)
+}
+
+/// Paste the clipboard's pictures and attachments with fresh ids, the first where a new
+/// object goes (`ops::insert_pos`), the rest at the same offsets from it as when copied.
+fn paste_objects(s: &mut Session, v: &Value) -> Result<Vec<notecraft_doc::Id>, CmdError> {
+    let objects = s.clipboard.objects.clone();
+    let page = s.page().ok_or_else(no_page)?;
+    if page.objects.len().saturating_add(objects.len()) > notecraft_doc::media::MAX_PAGE_OBJECTS {
+        return Err(CmdError::Failed(format!("a page holds at most {} objects", notecraft_doc::media::MAX_PAGE_OBJECTS)));
+    }
+    let at = ops::insert_pos(s, page, v);
+    let first = objects.first().map(notecraft_doc::PageObject::pos).unwrap_or_default();
+    let mut ids = Vec::new();
+    let mut fresh = Vec::new();
+    for mut o in objects {
+        let id = s.new_id();
+        match &mut o {
+            notecraft_doc::PageObject::Image(im) => im.id = id,
+            notecraft_doc::PageObject::Attachment(a) => a.id = id,
+            _ => continue,
+        }
+        let p = o.pos();
+        o.set_pos(notecraft_doc::geom::Point::new((at.x + p.x - first.x).max(0.0), (at.y + p.y - first.y).max(0.0)));
+        ids.push(id);
+        fresh.push(o);
+    }
+    s.pending_outline = None;
+    s.page_mut().ok_or_else(no_page)?.objects.extend(fresh);
+    Ok(ids)
 }
 
 /// Insert pasted paragraphs at `caret`: the first joins the caret paragraph, the rest follow it

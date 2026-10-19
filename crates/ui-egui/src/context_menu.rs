@@ -1,5 +1,6 @@
-//! Right-click context menus on text, note containers and paragraph handles (catalog
-//! `CM.Text.*`, `CM.NoteContainer.*`, `CM.ParagraphHandle.*`). Built straight from the catalog's
+//! Right-click context menus on text, note containers, paragraph handles, pictures and file
+//! attachments (catalog `CM.Text.*`, `CM.NoteContainer.*`, `CM.ParagraphHandle.*`,
+//! `CM.Picture.*`, `CM.FileAttachment.*`). Built straight from the catalog's
 //! own rows (menu structure mirrors their `Path` column) instead of a hand-kept copy, so a
 //! catalog edit can't drift out of sync with the menu; [`tests::menus_cover_every_context_row`]
 //! checks it both ways.
@@ -211,6 +212,84 @@ pub const HANDLE_MENU: &[Entry] = &[
     Entry::Item("CM.ParagraphHandle.LastModifiedBy"),
 ];
 
+/// Right-click menu on a picture (catalog `CM.Picture.*`, in catalog order).
+pub const PICTURE_MENU: &[Entry] = &[
+    Entry::Item("CM.Picture.OleObjectEdit"),
+    Entry::Item("CM.Picture.RefreshOleObjects"),
+    Entry::Item("CM.Picture.SelectWhatToDisplay"),
+    Entry::Item("CM.Picture.Cut"),
+    Entry::Item("CM.Picture.CopyOneNote"),
+    Entry::Item("CM.Picture.CopyTextFromPicture"),
+    Entry::Item("CM.Picture.PrintoutPageTextCopy"),
+    Entry::Item("CM.Picture.CopyTextFromPrintoutPages"),
+    Entry::Item("CM.Picture.ZoomToDocument"),
+    Entry::Item("CM.Picture.ViewOriginalPrintout"),
+    Entry::Item("CM.Picture.PasteGalleryMini"),
+    Entry::Item("CM.Picture.ImageSaveAs"),
+    Entry::Item("CM.Picture.HyperlinkOpen"),
+    Entry::Item("CM.Picture.LinkEdit"),
+    Entry::Item("CM.Picture.HyperlinkCreate"),
+    Entry::Item("CM.Picture.LinkCopyOneNote"),
+    Entry::Item("CM.Picture.LinkRemove"),
+    Entry::Submenu(
+        "CM.Picture.OrderObjectsMenu",
+        &[
+            Entry::Item("CM.Picture.ObjectBringForward"),
+            Entry::Item("CM.Picture.ObjectBringToFront"),
+            Entry::Item("CM.Picture.ObjectSendBackward"),
+            Entry::Item("CM.Picture.ObjectSendToBack"),
+        ],
+    ),
+    Entry::Submenu(
+        "CM.Picture.RotateInkMenu",
+        &[
+            Entry::Item("CM.Picture.RotateRight45OneNote"),
+            Entry::Item("CM.Picture.RotateLeft45OneNote"),
+            Entry::Item("CM.Picture.ObjectRotateRight90"),
+            Entry::Item("CM.Picture.ObjectRotateLeft90"),
+            Entry::Item("CM.Picture.ObjectFlipHorizontal"),
+            Entry::Item("CM.Picture.ObjectFlipVertical"),
+        ],
+    ),
+    Entry::Item("CM.Picture.ObjectMove"),
+    Entry::Item("CM.Picture.ObjectResize"),
+    Entry::Item("CM.Picture.RestoreImageSize"),
+    Entry::Item("CM.Picture.PictureAsBackground"),
+    Entry::Item("CM.Picture.AlternativeText"),
+    Entry::Item("CM.Picture.OCRLanguageListMenu"),
+];
+
+/// Right-click menu on a file attachment (catalog `CM.FileAttachment.*`, in catalog order; the
+/// name and size header rows are drawn as a label on top).
+pub const ATTACHMENT_MENU: &[Entry] = &[
+    Entry::Item("CM.FileAttachment.FileAttachmentName"),
+    Entry::Item("CM.FileAttachment.FileAttachmentSize"),
+    Entry::Item("CM.FileAttachment.PlayFromPage"),
+    Entry::Item("CM.FileAttachment.FileAttachmentOpen"),
+    Entry::Item("CM.FileAttachment.FileAttachmentSaveAs"),
+    Entry::Item("CM.FileAttachment.RenameSelected"),
+    Entry::Item("CM.FileAttachment.FilePrintoutInsert"),
+    Entry::Item("CM.FileAttachment.RefreshPrintoutPages"),
+    Entry::Item("CM.FileAttachment.JotDeletePrintoutPages"),
+    Entry::Item("CM.FileAttachment.SelectWhatToDisplay"),
+    Entry::Item("CM.FileAttachment.RefreshOleObjects"),
+    Entry::Item("CM.FileAttachment.OriginalFileOpen"),
+    Entry::Item("CM.FileAttachment.FileAttachmentShortcutToOriginalCopy"),
+    Entry::Item("CM.FileAttachment.Cut"),
+    Entry::Item("CM.FileAttachment.CopyOneNote"),
+    Entry::Item("CM.FileAttachment.PasteGalleryMini"),
+    Entry::Item("CM.FileAttachment.HyperlinkCreate"),
+    Entry::Item("CM.FileAttachment.AlternativeText"),
+];
+
+/// Whether a picture/attachment menu row works yet: its command is registered **and** its
+/// catalog row is wired or verified. Commands shared with text (Link…, Open Link) are
+/// registered but don't act on pictures yet; their rows stay `missing`, so they're drawn
+/// disabled here rather than doing nothing (AGENTS.md › No fake UI).
+fn row_live(id: &str) -> bool {
+    notecraft_engine::catalog::rows().iter().any(|r| r.id == id && matches!(r.status.as_str(), "wired" | "verified"))
+}
+
 /// Every catalog id an entry (and its submenu, if any) reaches, for the coverage test.
 pub fn ids(e: &Entry) -> Vec<&'static str> {
     match e {
@@ -223,6 +302,7 @@ pub fn ids(e: &Entry) -> Vec<&'static str> {
 /// disabled is itself drawn disabled, rather than opening onto nothing but grey text.
 fn entry_enabled(app: &NoteApp, e: &Entry) -> bool {
     match e {
+        Entry::Item(id) if is_object_row(id) => row_live(id) && ribbon::enabled(app, id),
         Entry::Item(id) => ribbon::enabled(app, id) || ribbon::special_menu(id) && app.session.page().is_some(),
         Entry::Submenu(header, children) => ribbon::enabled(app, header) || children.iter().any(|c| entry_enabled(app, c)),
     }
@@ -231,6 +311,12 @@ fn entry_enabled(app: &NoteApp, e: &Entry) -> bool {
 /// Draw one entry: a catalog control (`ribbon::menu_item`), or — when it's a colour/shading
 /// picker (`ribbon::special_menu`) — a submenu whose content is `ribbon::special`.
 fn render_item(app: &mut NoteApp, ui: &mut Ui, id: &'static str, t: Tokens) {
+    if is_object_row(id) && !row_live(id) {
+        let text = egui::RichText::new(ribbon::label(id)).color(t.text_disabled);
+        ui.add_enabled(false, egui::Button::new(text).frame(false).min_size(egui::vec2(170.0, 22.0)))
+            .on_disabled_hover_text("Not available for pictures and attachments yet");
+        return;
+    }
     if ribbon::special_menu(id) {
         let on = ribbon::enabled(app, id);
         ui.add_enabled_ui(on, |ui| {
@@ -244,6 +330,10 @@ fn render_item(app: &mut NoteApp, ui: &mut Ui, id: &'static str, t: Tokens) {
         return;
     }
     ribbon::menu_item(app, ui, id, t);
+}
+
+fn is_object_row(id: &str) -> bool {
+    id.starts_with("CM.Picture.") || id.starts_with("CM.FileAttachment.")
 }
 
 /// Draw a list of entries, in catalog order.
@@ -267,6 +357,13 @@ pub(crate) fn render(app: &mut NoteApp, ui: &mut Ui, entries: &[Entry], t: Token
 /// The target under a screen point: the note container's drag bar, a paragraph handle, or the
 /// text (or table cell) there (`canvas::hit_para`). `None` over empty canvas.
 fn detect(app: &NoteApp, p: Pos2) -> Option<ContextTarget> {
+    // Pictures (background ones too: a right click is how they're reached) and attachments,
+    // unless a container's text is on top of them there.
+    if !app.canvas.outlines.iter().any(|o| o.rect.contains(p))
+        && let Some(m) = crate::pictures::hit(app, p, true)
+    {
+        return Some(if m.picture { ContextTarget::Picture(m.id) } else { ContextTarget::Attachment(m.id) });
+    }
     if let Some(o) = app.canvas.outlines.iter().find(|o| o.bar.contains(p)) {
         return Some(ContextTarget::Container(o.id));
     }
@@ -300,7 +397,7 @@ fn block_param(b: Block) -> String {
 /// the pointer landed inside an existing text selection, which a right click leaves alone.
 fn place_for(app: &mut NoteApp, ctx: &egui::Context, target: ContextTarget) {
     match target {
-        ContextTarget::Container(id) => {
+        ContextTarget::Container(id) | ContextTarget::Picture(id) | ContextTarget::Attachment(id) => {
             app.run(ctx, "object.select", json!({"ids": [id.to_string()]}));
         }
         ContextTarget::Handle(block, para) => {
@@ -339,6 +436,8 @@ pub fn show(app: &mut NoteApp, ui: &Ui, resp: &egui::Response, t: Tokens) {
             ContextTarget::Container(_) => render(app, ui, CONTAINER_MENU, t),
             ContextTarget::Handle(..) => render(app, ui, HANDLE_MENU, t),
             ContextTarget::Text(..) => render(app, ui, TEXT_MENU, t),
+            ContextTarget::Picture(_) => render(app, ui, PICTURE_MENU, t),
+            ContextTarget::Attachment(_) => render(app, ui, ATTACHMENT_MENU, t),
         }
     });
 }
@@ -348,11 +447,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn object_rows_that_dont_act_on_pictures_yet_are_disabled() {
+        // Link… is registered (for text) but its picture row is still missing: drawn disabled.
+        assert!(!row_live("CM.Picture.HyperlinkCreate"));
+        assert!(!row_live("CM.FileAttachment.HyperlinkCreate"));
+        assert!(row_live("CM.Picture.RestoreImageSize"));
+        assert!(row_live("CM.FileAttachment.FileAttachmentOpen"));
+    }
+
+    #[test]
     fn menus_cover_every_context_row() {
         // This only checks placement (every catalog row reachable, none twice, none orphaned):
         // no `// parity:` token here, so it never claims a row's documented behaviour is pinned.
         let rows = notecraft_engine::catalog::rows();
-        for (prefix, menu) in [("CM.Text.", TEXT_MENU), ("CM.NoteContainer.", CONTAINER_MENU), ("CM.ParagraphHandle.", HANDLE_MENU)] {
+        for (prefix, menu) in [
+            ("CM.Text.", TEXT_MENU),
+            ("CM.NoteContainer.", CONTAINER_MENU),
+            ("CM.ParagraphHandle.", HANDLE_MENU),
+            ("CM.Picture.", PICTURE_MENU),
+            ("CM.FileAttachment.", ATTACHMENT_MENU),
+        ] {
             let mut placed: Vec<&str> = menu.iter().flat_map(ids).collect();
             let n = placed.len();
             placed.sort_unstable();

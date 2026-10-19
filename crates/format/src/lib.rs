@@ -6,7 +6,7 @@
 //! ```text
 //! Work/                          notebook folder
 //!   notebook.ncraft-toc          JSON: notebook id, name, colour, child order
-//!   Meetings.ncraft              one section = one zip (section.json [+ media/ from M2])
+//!   Meetings.ncraft              one section = one zip: section.json + media/<blob id> entries
 //!   Projects/                    a section group = a subfolder…
 //!     notebook.ncraft-toc        …with its own table of contents
 //!     Alpha.ncraft
@@ -30,9 +30,11 @@
 //! moves archives through downloads); everything touching the file system is native-only.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+use std::collections::HashMap;
 use std::io::{Cursor, Read, Write};
 use std::sync::Arc;
 
+use notecraft_doc::media::{MAX_ATTACHMENT_BYTES, collect_blobs, provide_blobs};
 use notecraft_doc::{Id, NavNode, Notebook, RecycleBin, Section, SectionColor, SectionGroup};
 use serde::{Deserialize, Serialize};
 
@@ -50,16 +52,22 @@ pub const RECYCLE_FILE: &str = "recycle.ncraft-bin";
 /// Current schema version written by this build. Readers accept any version up to this one;
 /// newer files are refused with an error rather than half-read.
 ///
-/// History: 1 = M1 (outlines); 2 = M2 tables (`PageObject::Table`). A file without tables is
-/// read the same by both, but older builds refuse every version-2 file rather than drop
-/// tables they don't know.
-pub const VERSION: u32 = 2;
+/// History: 1 = M1 (outlines); 2 = M2 tables (`PageObject::Table`); 3 = M2 pictures and
+/// attachments (`PageObject::Image`/`Attachment`, bytes in `media/` entries; decision D3).
+/// Each version reads every older one unchanged; older builds refuse newer files rather than
+/// drop objects they don't know.
+pub const VERSION: u32 = 3;
 
 /// Largest decompressed JSON entry accepted (1 GiB): a 2 GB notebook spreads over many
 /// sections, so one section beyond this is corrupt or hostile.
 pub const MAX_ENTRY_BYTES: u64 = 1 << 30;
 /// Most entries accepted in one section zip.
 pub const MAX_ZIP_ENTRIES: usize = 100_000;
+/// Most media bytes (pictures and attached files) read from one file (D3); entries past it
+/// load as missing (placeholders), not as an error.
+pub const MAX_MEDIA_BYTES: u64 = 1 << 30;
+/// Folder of the media entries inside a section, recycle-bin or archive zip.
+pub const MEDIA_DIR: &str = "media/";
 /// Most children accepted in one table of contents.
 pub const MAX_TOC_ENTRIES: usize = 10_000;
 
@@ -192,45 +200,96 @@ pub fn is_safe_component(name: &str) -> bool {
     !name.is_empty() && name != "." && name != ".." && !name.contains(['/', '\\', '\0']) && !name.contains(':') && name.len() <= 255
 }
 
+#[cfg(test)]
 fn zip_one(entry: &str, json: &[u8]) -> Result<Vec<u8>> {
+    zip_with_media(entry, json, &[])
+}
+
+/// A zip holding `entry` (deflated JSON) and one `media/<id>` entry per blob. Media is stored
+/// uncompressed: pictures are compressed already, and autosave rewrites the whole file.
+fn zip_with_media(entry: &str, json: &[u8], media: &[(Id, Arc<[u8]>)]) -> Result<Vec<u8>> {
+    let z = |e: zip::result::ZipError| corrupt(format!("zip: {e}"));
     let mut w = zip::ZipWriter::new(Cursor::new(Vec::new()));
     let opts =
         zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated).large_file(json.len() as u64 > u32::MAX as u64);
-    w.start_file(entry, opts).map_err(|e| corrupt(format!("zip: {e}")))?;
+    w.start_file(entry, opts).map_err(z)?;
     w.write_all(json).map_err(|e| corrupt(format!("zip: {e}")))?;
-    let cur = w.finish().map_err(|e| corrupt(format!("zip: {e}")))?;
+    for (id, bytes) in media {
+        let opts = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Stored)
+            .large_file(bytes.len() as u64 > u32::MAX as u64);
+        w.start_file(format!("{MEDIA_DIR}{id}"), opts).map_err(z)?;
+        w.write_all(bytes).map_err(|e| corrupt(format!("zip: {e}")))?;
+    }
+    let cur = w.finish().map_err(z)?;
     Ok(cur.into_inner())
 }
 
-fn unzip_one(bytes: &[u8], entry: &str) -> Result<Vec<u8>> {
+/// Read `entry` (required) and every readable `media/<id>` entry. A media entry that is
+/// oversize, unnamed, unreadable or past [`MAX_MEDIA_BYTES`] in total is skipped: the object
+/// that wanted it loads with missing bytes and draws as a placeholder (one damaged picture
+/// never costs the notes).
+fn unzip_with_media(bytes: &[u8], entry: &str) -> Result<(Vec<u8>, HashMap<Id, Arc<[u8]>>)> {
     let mut z = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| corrupt(format!("not a zip container: {e}")))?;
     if z.len() > MAX_ZIP_ENTRIES {
         return Err(corrupt(format!("{} zip entries (max {MAX_ZIP_ENTRIES})", z.len())));
     }
-    let f = z.by_name(entry).map_err(|e| corrupt(format!("missing {entry}: {e}")))?;
-    // The declared size is a hint (hostile files lie); the read is capped regardless.
-    if f.size() > MAX_ENTRY_BYTES {
-        return Err(corrupt(format!("{entry} declares {} bytes (max {MAX_ENTRY_BYTES})", f.size())));
+    let json = {
+        let f = z.by_name(entry).map_err(|e| corrupt(format!("missing {entry}: {e}")))?;
+        // The declared size is a hint (hostile files lie); the read is capped regardless.
+        if f.size() > MAX_ENTRY_BYTES {
+            return Err(corrupt(format!("{entry} declares {} bytes (max {MAX_ENTRY_BYTES})", f.size())));
+        }
+        let mut out = Vec::with_capacity(f.size().min(64 << 20) as usize);
+        f.take(MAX_ENTRY_BYTES + 1).read_to_end(&mut out).map_err(|e| corrupt(format!("{entry}: {e}")))?;
+        if out.len() as u64 > MAX_ENTRY_BYTES {
+            return Err(corrupt(format!("{entry} is larger than {MAX_ENTRY_BYTES} bytes")));
+        }
+        out
+    };
+    let mut media = HashMap::new();
+    let mut total: u64 = 0;
+    let cap = MAX_ATTACHMENT_BYTES as u64;
+    for i in 0..z.len() {
+        let Ok(f) = z.by_index(i) else { continue };
+        let Some(id) = f.name().ok().and_then(|n| n.strip_prefix(MEDIA_DIR).and_then(Id::parse)) else { continue };
+        if f.size() > cap || total.saturating_add(f.size()) > MAX_MEDIA_BYTES {
+            continue;
+        }
+        let mut out = Vec::with_capacity(f.size().min(64 << 20) as usize);
+        if f.take(cap + 1).read_to_end(&mut out).is_err() || out.len() as u64 > cap {
+            continue;
+        }
+        total = total.saturating_add(out.len() as u64);
+        if total > MAX_MEDIA_BYTES {
+            break;
+        }
+        media.insert(id, Arc::from(out));
     }
-    let mut out = Vec::with_capacity(f.size().min(64 << 20) as usize);
-    f.take(MAX_ENTRY_BYTES + 1).read_to_end(&mut out).map_err(|e| corrupt(format!("{entry}: {e}")))?;
-    if out.len() as u64 > MAX_ENTRY_BYTES {
-        return Err(corrupt(format!("{entry} is larger than {MAX_ENTRY_BYTES} bytes")));
-    }
-    Ok(out)
+    Ok((json, media))
+}
+
+/// Serialize `value` to JSON, collecting the blobs it holds, and zip both.
+fn encode_with_media<T: Serialize>(entry: &str, value: &T, what: &str) -> Result<Vec<u8>> {
+    let (json, media) = collect_blobs(|| serde_json::to_vec(value));
+    let json = json.map_err(|e| corrupt(format!("{what}: {e}")))?;
+    zip_with_media(entry, &json, &media)
+}
+
+/// Unzip `entry` and parse it, giving blobs their bytes from the media entries.
+fn decode_with_media<T: serde::de::DeserializeOwned>(bytes: &[u8], entry: &str) -> Result<T> {
+    let (json, media) = unzip_with_media(bytes, entry)?;
+    provide_blobs(media, || serde_json::from_slice(&json)).map_err(|e| corrupt(format!("{entry}: {e}")))
 }
 
 /// Serialize a section to `.ncraft` bytes.
 pub fn encode_section(section: &Section) -> Result<Vec<u8>> {
-    let json = serde_json::to_vec(&SectionFile { format: SECTION_MAGIC.into(), version: VERSION, section: section.clone() })
-        .map_err(|e| corrupt(format!("section: {e}")))?;
-    zip_one(SECTION_ENTRY, &json)
+    encode_with_media(SECTION_ENTRY, &SectionFile { format: SECTION_MAGIC.into(), version: VERSION, section: section.clone() }, "section")
 }
 
 /// Parse `.ncraft` bytes (validated and normalised).
 pub fn decode_section(bytes: &[u8]) -> Result<Section> {
-    let json = unzip_one(bytes, SECTION_ENTRY)?;
-    let f: SectionFile = serde_json::from_slice(&json).map_err(|e| corrupt(format!("section.json: {e}")))?;
+    let f: SectionFile = decode_with_media(bytes, SECTION_ENTRY)?;
     check_version(&f.format, SECTION_MAGIC, f.version)?;
     let mut s = f.section;
     s.normalize_pages();
@@ -239,15 +298,12 @@ pub fn decode_section(bytes: &[u8]) -> Result<Section> {
 
 /// Serialize a recycle bin.
 pub fn encode_recycle(bin: &RecycleBin) -> Result<Vec<u8>> {
-    let json = serde_json::to_vec(&RecycleFile { format: RECYCLE_MAGIC.into(), version: VERSION, recycle: bin.clone() })
-        .map_err(|e| corrupt(format!("recycle: {e}")))?;
-    zip_one(RECYCLE_ENTRY, &json)
+    encode_with_media(RECYCLE_ENTRY, &RecycleFile { format: RECYCLE_MAGIC.into(), version: VERSION, recycle: bin.clone() }, "recycle")
 }
 
 /// Parse a recycle bin.
 pub fn decode_recycle(bytes: &[u8]) -> Result<RecycleBin> {
-    let json = unzip_one(bytes, RECYCLE_ENTRY)?;
-    let f: RecycleFile = serde_json::from_slice(&json).map_err(|e| corrupt(format!("recycle.json: {e}")))?;
+    let f: RecycleFile = decode_with_media(bytes, RECYCLE_ENTRY)?;
     check_version(&f.format, RECYCLE_MAGIC, f.version)?;
     Ok(f.recycle)
 }
@@ -264,15 +320,12 @@ const ARCHIVE_MAGIC: &str = "notecraft-archive";
 /// A whole notebook in one file (`.ncraft-archive`: a zip with `notebook.json`), for the web
 /// build's download/upload and File › Export › Notebook (catalog `FMT.Export.Archive`).
 pub fn encode_archive(nb: &Notebook) -> Result<Vec<u8>> {
-    let json = serde_json::to_vec(&ArchiveFile { format: ARCHIVE_MAGIC.into(), version: VERSION, notebook: nb.clone() })
-        .map_err(|e| corrupt(format!("archive: {e}")))?;
-    zip_one("notebook.json", &json)
+    encode_with_media("notebook.json", &ArchiveFile { format: ARCHIVE_MAGIC.into(), version: VERSION, notebook: nb.clone() }, "archive")
 }
 
 /// Parse a notebook archive (validated and normalised).
 pub fn decode_archive(bytes: &[u8]) -> Result<Notebook> {
-    let json = unzip_one(bytes, "notebook.json")?;
-    let f: ArchiveFile = serde_json::from_slice(&json).map_err(|e| corrupt(format!("notebook.json: {e}")))?;
+    let f: ArchiveFile = decode_with_media(bytes, "notebook.json")?;
     check_version(&f.format, ARCHIVE_MAGIC, f.version)?;
     let mut nb = f.notebook;
     nb.normalize_pages();
@@ -351,6 +404,7 @@ pub fn section_node(s: Section) -> NavNode {
 mod tests {
     use super::*;
     use notecraft_doc::{Outline, Page, PageObject, Paragraph, Timestamp, geom::Point};
+    use std::io::Write;
 
     fn sample_section() -> Section {
         let mut s = Section::new(Id(10), "Meetings", SectionColor::index(2), Timestamp(5));
@@ -435,6 +489,109 @@ mod tests {
         assert_eq!(t2.n_cols(), notecraft_doc::table::MAX_COLS);
         assert!(t2.rows.iter().all(|r| r.cells.len() == t2.n_cols() && r.cells.iter().all(|c| !c.paragraphs.is_empty())));
         assert!(t2.columns.iter().all(|w| *w <= notecraft_doc::table::MAX_COL_WIDTH));
+    }
+
+    fn picture(id: u128, blob: &notecraft_doc::Blob) -> PageObject {
+        PageObject::Image(notecraft_doc::Image::new(Id(id), Point::new(40.0, 300.0), blob.clone(), (8, 4), 60.0, 30.0))
+    }
+
+    #[test]
+    fn pictures_and_attachments_round_trip_with_shared_bytes() {
+        use notecraft_doc::{Attachment, Blob};
+        let mut s = sample_section();
+        let shared = Blob::new(Id(70), Arc::from(&b"\x89PNG fake picture bytes"[..]));
+        let file = Blob::new(Id(71), Arc::from(&b"%PDF-1.7 attached"[..]));
+        {
+            let p = Arc::make_mut(&mut s.pages[0]);
+            p.objects.push(picture(60, &shared));
+            // The same picture pasted twice: one media entry.
+            p.objects.push(picture(61, &shared));
+            p.objects.push(PageObject::Attachment(Attachment {
+                id: Id(62),
+                pos: Point::new(40.0, 400.0),
+                name: "report.pdf".into(),
+                blob: file.clone(),
+                alt_text: String::new(),
+            }));
+            if let Some(PageObject::Image(im)) = p.objects.get_mut(1) {
+                im.alt_text = "A chart".into();
+                im.quarter_turns = 1;
+                im.flip_h = true;
+            }
+        }
+        let bytes = encode_section(&s).unwrap();
+        let z = zip::ZipArchive::new(Cursor::new(&bytes[..])).unwrap();
+        let names: Vec<String> = z.file_names().filter_map(|n| n.ok().map(|n| n.to_string())).collect();
+        assert_eq!(names.iter().filter(|n| n.starts_with(MEDIA_DIR)).count(), 2, "{names:?}");
+        let back = decode_section(&bytes).unwrap();
+        assert_eq!(back.pages[0].objects, s.pages[0].objects, "FMT.Native.Ncraft: pictures and attachments survive a save");
+        let a = back.pages[0].image(Id(60)).unwrap();
+        let b = back.pages[0].image(Id(61)).unwrap();
+        assert!(Arc::ptr_eq(&a.blob.bytes, &b.blob.bytes), "one entry loads once and stays shared");
+        assert_eq!(back.pages[0].attachment(Id(62)).unwrap().blob.bytes[..], b"%PDF-1.7 attached"[..]);
+        assert!(back.pages[0].plain_text().contains("report.pdf"));
+        // Deleted pages keep their pictures in the recycle bin; archives carry media too.
+        let bin = RecycleBin {
+            pages: vec![notecraft_doc::DeletedPage {
+                page: back.pages[0].clone(),
+                from_section: s.id,
+                from_section_name: s.name.clone(),
+                deleted: Timestamp(9),
+            }],
+            sections: Vec::new(),
+        };
+        let bin2 = decode_recycle(&encode_recycle(&bin).unwrap()).unwrap();
+        assert_eq!(bin2.pages[0].page.image(Id(60)).unwrap().blob, shared);
+        let mut nb = Notebook::new(Id(1), "Work", SectionColor::default());
+        nb.children.push(section_node(back));
+        let nb2 = decode_archive(&encode_archive(&nb).unwrap()).unwrap();
+        assert_eq!(nb2.sections()[0].pages[0].attachment(Id(62)).unwrap().blob, file);
+    }
+
+    #[test]
+    fn damaged_media_loads_as_a_placeholder_not_an_error() {
+        let mut s = sample_section();
+        let blob = notecraft_doc::Blob::new(Id(80), Arc::from(&b"picture"[..]));
+        Arc::make_mut(&mut s.pages[0]).objects.push(picture(81, &blob));
+        let json =
+            collect_blobs(|| serde_json::to_vec(&SectionFile { format: SECTION_MAGIC.into(), version: VERSION, section: s.clone() })).0.unwrap();
+        // No media entry at all, a wrong-length entry, and a junk entry name.
+        for media in [vec![], vec![(Id(80), Arc::from(&b"pic"[..]))]] {
+            let mut z = zip_with_media(SECTION_ENTRY, &json, &media).unwrap();
+            if media.is_empty() {
+                z = {
+                    let mut w = zip::ZipWriter::new(Cursor::new(Vec::new()));
+                    let o = zip::write::SimpleFileOptions::default();
+                    w.start_file(SECTION_ENTRY, o).unwrap();
+                    w.write_all(&json).unwrap();
+                    w.start_file("media/../../evil", o).unwrap();
+                    w.write_all(b"x").unwrap();
+                    w.finish().unwrap().into_inner()
+                };
+            }
+            let back = decode_section(&z).unwrap();
+            let im = back.pages[0].image(Id(81)).unwrap();
+            assert!(im.blob.is_missing(), "the picture is a placeholder");
+            assert_eq!(back.pages[0].display_title(), "Kickoff", "the notes are intact");
+        }
+    }
+
+    #[test]
+    fn format_2_files_still_open() {
+        // A version-2 section with a table: the table schema is unchanged in version 3.
+        let mut s = sample_section();
+        let mut n = 300u128;
+        let t = notecraft_doc::Table::new(Id(90), Point::new(40.0, 200.0), 2, 2, &mut || {
+            n += 1;
+            Id(n)
+        });
+        Arc::make_mut(&mut s.pages[0]).objects.push(PageObject::Table(t.clone()));
+        let json =
+            String::from_utf8(serde_json::to_vec(&SectionFile { format: SECTION_MAGIC.into(), version: VERSION, section: s }).unwrap()).unwrap();
+        let v2 = json.replacen(&format!(r#""version":{VERSION}"#), r#""version":2"#, 1);
+        assert!(v2.contains(r#""version":2"#));
+        let back = decode_section(&zip_one(SECTION_ENTRY, v2.as_bytes()).unwrap()).unwrap();
+        assert_eq!(back.pages[0].table(Id(90)), Some(&t));
     }
 
     #[test]

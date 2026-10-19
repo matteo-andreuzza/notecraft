@@ -14,7 +14,7 @@ use notecraft_doc::{CharFormat, Id, Outline, PageObject, Paragraph, Run, Table, 
 use notecraft_text as t;
 use serde_json::{Value, json};
 
-use crate::ops::{self, DEFAULT_LEFT, need_page, no_page};
+use crate::ops::{self, need_page, no_page};
 use crate::selection::{Block, PageSel, Pos};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
 
@@ -330,18 +330,7 @@ pub(crate) fn insert_table(s: &mut Session, v: &Value) -> CmdResult {
     let page = s.page().ok_or_else(no_page)?;
     // Below the caret's container when there is one (unverified: the reference puts the table
     // inside that container, after the caret paragraph; see docs/plan.md §4.8).
-    let below = |o: &PageObject| Point::new(o.pos().x, ops::object_bottom(o) + 12.0);
-    let pos = match (p::f32(v, "x"), p::f32(v, "y")) {
-        (Some(x), Some(y)) => Point::new(x.max(0.0), y.max(0.0)),
-        _ => match (s.pending_outline, s.sel.caret()) {
-            (Some(pt), _) => pt,
-            (None, Some(Pos { block: Block::Outline(id), .. })) => page.objects.iter().find(|o| o.id() == id).map(below).unwrap_or_default(),
-            (None, Some(Pos { block: Block::Cell(c), .. })) => {
-                page.table_of_cell(c).and_then(|(t, _, _)| page.objects.iter().find(|o| o.id() == t.id)).map(below).unwrap_or_default()
-            }
-            _ => Point::new(DEFAULT_LEFT, ops::next_free_y(page)),
-        },
-    };
+    let pos = ops::insert_pos(s, page, v);
     s.pending_outline = None;
     let id = s.new_id();
     let mut table = Table::new(id, pos, rows, cols, &mut mint(s));

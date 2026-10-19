@@ -410,7 +410,7 @@ fn remove_link(s: &mut Session, _: &Value) -> CmdResult {
 
 fn copy_link(s: &mut Session, _: &Value) -> CmdResult {
     let (_, _, _, url) = link_range(s).ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?;
-    s.clipboard = crate::session::Clipboard { paragraphs: Vec::new(), text: url.clone(), pages: Vec::new() };
+    s.clipboard = crate::session::Clipboard { paragraphs: Vec::new(), text: url.clone(), pages: Vec::new(), objects: Vec::new() };
     Ok(json!({"text": url}))
 }
 
@@ -429,6 +429,6 @@ fn copy_para_link(s: &mut Session, _: &Value) -> CmdResult {
     let text = para.text();
     let mut q = ops::new_para(s);
     q.runs.push(notecraft_doc::Run::new(if text.is_empty() { &link } else { &text }, CharFormat { link: Some(link.clone()), ..Default::default() }));
-    s.clipboard = crate::session::Clipboard { paragraphs: vec![q], text: link.clone(), pages: Vec::new() };
+    s.clipboard = crate::session::Clipboard { paragraphs: vec![q], text: link.clone(), pages: Vec::new(), objects: Vec::new() };
     Ok(json!({"link": link}))
 }

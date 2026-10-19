@@ -108,6 +108,10 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "view.navigationPanes" => !s.view.notebook_pane_collapsed,
         "table.hideBorders" => current_table(app).is_some_and(|t| !t.borders),
         "table.headerRow" => current_table(app).is_some_and(|t| t.header_row),
+        "object.setAsBackground" => match (&s.sel.on_page, s.page()) {
+            (notecraft_engine::selection::PageSel::Objects { ids }, Some(p)) => ids.iter().any(|id| p.image(*id).is_some_and(|im| im.background)),
+            _ => false,
+        },
         _ => false,
     }
 }
@@ -318,6 +322,18 @@ pub(crate) fn dialog_for(app: &NoteApp, id: &str) -> Option<crate::dialogs::Dial
             Some(p.map(|p| Dialog::Spacing(p.space_before, p.space_after, p.line_spacing)).unwrap_or(Dialog::Spacing(0.0, 0.0, 0.0)))
         }
         "TagsCustomize" => Some(Dialog::CustomizeTags(String::new())),
+        "AlternativeText" => {
+            let page = app.session.page()?;
+            let notecraft_engine::selection::PageSel::Objects { ids } = &app.session.sel.on_page else { return None };
+            let text =
+                ids.iter().find_map(|id| page.image(*id).map(|im| im.alt_text.clone()).or_else(|| page.attachment(*id).map(|a| a.alt_text.clone())));
+            Some(Dialog::AltText(text.unwrap_or_default()))
+        }
+        "RenameSelected" => {
+            let page = app.session.page()?;
+            let notecraft_engine::selection::PageSel::Objects { ids } = &app.session.sel.on_page else { return None };
+            ids.iter().find_map(|id| page.attachment(*id)).map(|a| Dialog::RenameAttachment(a.name.clone()))
+        }
         "EmptyRecycleBin" => Some(Dialog::ConfirmEmptyBin),
         _ => None,
     }
@@ -330,6 +346,9 @@ pub(crate) fn fire(app: &mut NoteApp, ui: &Ui, id: &str) {
     }
     if let Some(c) = command(id) {
         let ctx = ui.ctx().clone();
+        if crate::pictures::host_action(app, &ctx, &c) {
+            return;
+        }
         app.run(&ctx, &c, params_for(id));
     }
 }

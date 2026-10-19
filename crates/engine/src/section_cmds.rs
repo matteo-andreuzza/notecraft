@@ -365,7 +365,7 @@ fn color(s: &mut Session, v: &Value) -> CmdResult {
 fn set_link_clipboard(s: &mut Session, title: &str, link: &str) {
     let mut para = crate::ops::new_para(s);
     para.runs.push(notecraft_doc::Run::new(title, notecraft_doc::CharFormat { link: Some(link.to_string()), ..Default::default() }));
-    s.clipboard = crate::session::Clipboard { paragraphs: vec![para], text: link.to_string(), pages: Vec::new() };
+    s.clipboard = crate::session::Clipboard { paragraphs: vec![para], text: link.to_string(), pages: Vec::new(), objects: Vec::new() };
 }
 
 fn copy_link(s: &mut Session, v: &Value) -> CmdResult {

@@ -2,8 +2,8 @@
 //!
 //! A page is a free-form canvas in page space (points, origin top-left; see `notecraft-geom`).
 //! Everything on it is a [`PageObject`] with a position; in M1 the only kind is the
-//! [`Outline`] (a "note container"); M2 adds the [`Table`], then pictures, ink, files,
-//! printouts and media.
+//! [`Outline`] (a "note container"); M2 adds the [`Table`], pictures ([`Image`]) and attached
+//! files ([`Attachment`]), then ink, printouts and media.
 //!
 //! **Outlines are flat.** The reference stores a tree of outline elements ([MS-ONE]
 //! `jcidOutlineElementNode` with `ElementChildNodes`); NoteCraft stores the same structure as a
@@ -17,6 +17,7 @@ use notecraft_geom::{Point, finite, length};
 use serde::{Deserialize, Serialize};
 
 use crate::id::Id;
+use crate::media::{Attachment, Blob, Image, MAX_PAGE_OBJECTS};
 use crate::table::{Table, TableCell};
 use crate::text::{MAX_LEVEL, ParaStyle, Paragraph};
 use crate::time::Timestamp;
@@ -130,6 +131,10 @@ pub enum PageObject {
     Outline(Outline),
     /// A table (`.ncraft` format 2 and later).
     Table(Table),
+    /// A picture (format 3 and later; decision D3).
+    Image(Image),
+    /// An attached file (format 3 and later; decision D3).
+    Attachment(Attachment),
 }
 
 impl PageObject {
@@ -138,6 +143,8 @@ impl PageObject {
         match self {
             PageObject::Outline(o) => o.id,
             PageObject::Table(t) => t.id,
+            PageObject::Image(i) => i.id,
+            PageObject::Attachment(a) => a.id,
         }
     }
 
@@ -146,6 +153,8 @@ impl PageObject {
         match self {
             PageObject::Outline(o) => o.pos,
             PageObject::Table(t) => t.pos,
+            PageObject::Image(i) => i.pos,
+            PageObject::Attachment(a) => a.pos,
         }
     }
 
@@ -154,6 +163,8 @@ impl PageObject {
         match self {
             PageObject::Outline(o) => o.pos = pos.sanitized(),
             PageObject::Table(t) => t.pos = pos.sanitized(),
+            PageObject::Image(i) => i.pos = pos.sanitized(),
+            PageObject::Attachment(a) => a.pos = pos.sanitized(),
         }
     }
 
@@ -161,7 +172,7 @@ impl PageObject {
     pub fn as_outline(&self) -> Option<&Outline> {
         match self {
             PageObject::Outline(o) => Some(o),
-            PageObject::Table(_) => None,
+            _ => None,
         }
     }
 
@@ -169,7 +180,7 @@ impl PageObject {
     pub fn as_outline_mut(&mut self) -> Option<&mut Outline> {
         match self {
             PageObject::Outline(o) => Some(o),
-            PageObject::Table(_) => None,
+            _ => None,
         }
     }
 
@@ -177,7 +188,7 @@ impl PageObject {
     pub fn as_table(&self) -> Option<&Table> {
         match self {
             PageObject::Table(t) => Some(t),
-            PageObject::Outline(_) => None,
+            _ => None,
         }
     }
 
@@ -185,7 +196,7 @@ impl PageObject {
     pub fn as_table_mut(&mut self) -> Option<&mut Table> {
         match self {
             PageObject::Table(t) => Some(t),
-            PageObject::Outline(_) => None,
+            _ => None,
         }
     }
 
@@ -194,6 +205,48 @@ impl PageObject {
         match self {
             PageObject::Outline(o) => Box::new(o.paragraphs.iter()),
             PageObject::Table(t) => Box::new(t.rows.iter().flat_map(|r| r.cells.iter()).flat_map(|c| c.paragraphs.iter())),
+            PageObject::Image(_) | PageObject::Attachment(_) => Box::new(std::iter::empty()),
+        }
+    }
+
+    /// The picture, if this is one.
+    pub fn as_image(&self) -> Option<&Image> {
+        match self {
+            PageObject::Image(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    /// The picture, mutably, if this is one.
+    pub fn as_image_mut(&mut self) -> Option<&mut Image> {
+        match self {
+            PageObject::Image(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    /// The attachment, if this is one.
+    pub fn as_attachment(&self) -> Option<&Attachment> {
+        match self {
+            PageObject::Attachment(a) => Some(a),
+            _ => None,
+        }
+    }
+
+    /// The attachment, mutably, if this is one.
+    pub fn as_attachment_mut(&mut self) -> Option<&mut Attachment> {
+        match self {
+            PageObject::Attachment(a) => Some(a),
+            _ => None,
+        }
+    }
+
+    /// The stored bytes of a picture or attachment.
+    pub fn blob(&self) -> Option<&Blob> {
+        match self {
+            PageObject::Image(i) => Some(&i.blob),
+            PageObject::Attachment(a) => Some(&a.blob),
+            _ => None,
         }
     }
 }
@@ -359,8 +412,8 @@ impl Page {
         self.shown_time.unwrap_or(self.created)
     }
 
-    /// Enforce invariants: level clamped, title normalised and styled, every outline
-    /// normalised, empty outlines removed.
+    /// Enforce invariants: level clamped, title normalised and styled, every object
+    /// normalised, empty outlines and tables removed, at most [`MAX_PAGE_OBJECTS`] objects.
     pub fn normalize(&mut self) {
         self.level = self.level.min(MAX_PAGE_LEVEL);
         self.title.normalize();
@@ -370,12 +423,16 @@ impl Page {
             match o {
                 PageObject::Outline(ol) => ol.normalize(),
                 PageObject::Table(t) => t.normalize(),
+                PageObject::Image(i) => i.normalize(),
+                PageObject::Attachment(a) => a.normalize(),
             }
         }
         self.objects.retain(|o| match o {
             PageObject::Outline(ol) => !ol.paragraphs.is_empty(),
             PageObject::Table(t) => !t.is_empty(),
+            PageObject::Image(_) | PageObject::Attachment(_) => true,
         });
+        self.objects.truncate(MAX_PAGE_OBJECTS);
     }
 
     /// Index of the object with `id`.
@@ -418,8 +475,29 @@ impl Page {
         self.objects.iter_mut().filter_map(PageObject::as_table_mut).find_map(|t| t.cell_by_id_mut(id))
     }
 
+    /// The picture with `id`.
+    pub fn image(&self, id: Id) -> Option<&Image> {
+        self.objects.iter().find_map(|o| o.as_image().filter(|i| i.id == id))
+    }
+
+    /// The picture with `id`, mutably.
+    pub fn image_mut(&mut self, id: Id) -> Option<&mut Image> {
+        self.objects.iter_mut().find_map(|o| o.as_image_mut().filter(|i| i.id == id))
+    }
+
+    /// The attachment with `id`.
+    pub fn attachment(&self, id: Id) -> Option<&Attachment> {
+        self.objects.iter().find_map(|o| o.as_attachment().filter(|a| a.id == id))
+    }
+
+    /// The attachment with `id`, mutably.
+    pub fn attachment_mut(&mut self, id: Id) -> Option<&mut Attachment> {
+        self.objects.iter_mut().find_map(|o| o.as_attachment_mut().filter(|a| a.id == id))
+    }
+
     /// All plain text on the page (title first), for search and exports. A table's cells are
-    /// separated by tabs, its rows by line breaks.
+    /// separated by tabs, its rows by line breaks; an attachment contributes its file name
+    /// (pictures contribute nothing until OCR exists).
     pub fn plain_text(&self) -> String {
         let mut s = self.title_text();
         for o in &self.objects {
@@ -434,6 +512,11 @@ impl Page {
                     s.push('\n');
                     s.push_str(&t.plain_text());
                 }
+                PageObject::Attachment(a) => {
+                    s.push('\n');
+                    s.push_str(&a.name);
+                }
+                PageObject::Image(_) => {}
             }
         }
         s

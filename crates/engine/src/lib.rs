@@ -12,6 +12,7 @@
 //! autosave) and is the seam every front end (L6) uses; it never draws anything.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+pub mod b64;
 pub mod catalog;
 pub mod commands;
 pub mod sample;
@@ -27,6 +28,7 @@ mod ops;
 mod outline_cmds;
 mod page_cmds;
 mod para_cmds;
+mod picture_cmds;
 mod search_cmds;
 mod section_cmds;
 mod table_cmds;
@@ -38,6 +40,8 @@ mod view_cmds;
 mod tests;
 #[cfg(test)]
 mod tests_cmds;
+#[cfg(test)]
+mod tests_picture;
 #[cfg(test)]
 mod tests_table;
 

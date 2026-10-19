@@ -1,5 +1,5 @@
-//! The desktop's platform services for the UI: the system clock, the system file dialogs, the
-//! backups folder and the desktop's light/dark preference.
+//! The desktop's platform services for the UI: the system clock, the system file dialogs, opening
+//! a file with the desktop's handler, the backups folder and the desktop's light/dark preference.
 
 use notecraft_engine::Clock;
 use notecraft_ui_egui::Host;
@@ -40,6 +40,34 @@ impl Host for DesktopHost {
 
     fn save_file(&mut self, title: &str, default_name: &str) -> Option<String> {
         rfd::FileDialog::new().set_title(title).set_file_name(default_name).save_file().map(|p| p.display().to_string())
+    }
+
+    fn pick_file(&mut self, title: &str, filters: &[(&str, &[&str])]) -> Option<String> {
+        let mut d = rfd::FileDialog::new().set_title(title);
+        for (name, exts) in filters {
+            d = d.add_filter(*name, exts);
+        }
+        d.pick_file().map(|p| p.display().to_string())
+    }
+
+    fn open_path(&mut self, path: &str) -> Result<(), String> {
+        // The desktop's own opener, reaped on a thread so the window never waits for it.
+        let opener = if cfg!(target_os = "macos") {
+            "open"
+        } else if cfg!(windows) {
+            "explorer"
+        } else {
+            "xdg-open"
+        };
+        let mut child = std::process::Command::new(opener)
+            .arg(path)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| format!("couldn't open {path}: {e}"))?;
+        std::thread::spawn(move || child.wait());
+        Ok(())
     }
 
     fn backup_folder(&self) -> Option<String> {

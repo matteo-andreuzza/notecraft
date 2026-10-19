@@ -8,7 +8,8 @@
 //! Renders the sample notebook with each ribbon tab in the simplified and the classic layout, a
 //! narrow window (the overflow menu), the Tags Summary pane, the backstage, the
 //! White, Dark Gray and Black themes, full page view, a 2× HiDPI frame, a page with a table (the
-//! Table Layout tab in both layouts, selected cells) and a hovered paragraph handle, and writes
+//! Table Layout tab in both layouts, selected cells), a hovered paragraph handle, a page with a
+//! picture and an attachment (plain, selected, dark, its context menu), and writes
 //! one PNG per state. Set `CRAFT_FONTS_DIR` to a folder with Inter to see the preferred interface font.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
 
@@ -81,6 +82,48 @@ fn table_page(a: &mut NoteApp) {
     a.canvas.focused = true;
 }
 
+/// A synthetic landscape (sky, sun, hills), drawn here so no photo is needed (clean room).
+fn landscape(w: u32, h: u32) -> Vec<u8> {
+    let mut px = Vec::with_capacity((w * h * 4) as usize);
+    for y in 0..h {
+        for x in 0..w {
+            let (fx, fy) = (x as f32 / w as f32, y as f32 / h as f32);
+            let hill = 0.62 + 0.08 * (fx * 9.0).sin() + 0.05 * (fx * 23.0).cos();
+            let sun = ((fx - 0.72).powi(2) + (fy - 0.28).powi(2)).sqrt() < 0.09;
+            let c = if fy > hill {
+                [(60.0 + 40.0 * fy) as u8, (120.0 + 60.0 * (1.0 - fy)) as u8, 70]
+            } else if sun {
+                [255, 214, 90]
+            } else {
+                [(120.0 + 100.0 * fy) as u8, (170.0 + 60.0 * fy) as u8, 235]
+            };
+            px.extend_from_slice(&[c[0], c[1], c[2], 255]);
+        }
+    }
+    notecraft_codecs::encode_png(&notecraft_codecs::Rgba8::new(w, h, px).unwrap(), &Default::default()).unwrap()
+}
+
+/// A new page with a line of text, a picture below it and an attached file beside it; the
+/// picture is selected when `select`.
+fn picture_page(a: &mut NoteApp, select: bool) {
+    let s = &mut a.session;
+    s.run("page.new", json!({})).unwrap();
+    s.run("text.insert", json!({"text": "Trip photos"})).unwrap();
+    s.run("outline.new", json!({"x": 36.0, "y": 100.0})).unwrap();
+    s.run("text.insert", json!({"text": "The view from the ridge, and the itinerary:"})).unwrap();
+    let r = s.run("insert.picture", json!({"data": notecraft_engine::b64::encode(&landscape(480, 300)), "x": 36.0, "y": 130.0})).unwrap();
+    let pic = r["picture"].as_str().unwrap().to_string();
+    s.run("object.altText", json!({"text": "Hills under a clear sky"})).unwrap();
+    s.run("insert.file", json!({"data": notecraft_engine::b64::encode(b"Day 1: ridge walk"), "name": "Itinerary.pdf", "x": 420.0, "y": 140.0}))
+        .unwrap();
+    if select {
+        s.run("object.select", json!({"ids": [pic]})).unwrap();
+    } else {
+        s.sel.on_page = notecraft_engine::selection::PageSel::None;
+    }
+    a.canvas.focused = true;
+}
+
 fn table_id(s: &Session) -> String {
     s.page().unwrap().objects.iter().find_map(|o| o.as_table()).unwrap().id.to_string()
 }
@@ -118,6 +161,31 @@ fn main() {
         a.session.run("view.ruleLines", json!({"kind": "college"})).unwrap();
     });
     shot("table-page", &out, 1.0, table_page);
+    shot("picture-page", &out, 1.0, |a| picture_page(a, false));
+    shot("picture-selected", &out, 1.0, |a| picture_page(a, true));
+    shot("picture-selected-dark", &out, 1.0, |a| {
+        picture_page(a, true);
+        a.ui.theme = ThemeKind::Black;
+    });
+    shot_then(
+        "context-menu-picture",
+        &out,
+        1.0,
+        egui::vec2(1366.0, 820.0),
+        |a| {
+            picture_page(a, false);
+            a.ui.tab = "View".into();
+        },
+        |h| {
+            if let Some(m) = h.state().canvas.media.iter().find(|m| m.picture).copied() {
+                let pos = m.rect.center();
+                h.event(egui::Event::PointerMoved(pos));
+                for pressed in [true, false] {
+                    h.event(egui::Event::PointerButton { pos, button: egui::PointerButton::Secondary, pressed, modifiers: egui::Modifiers::NONE });
+                }
+            }
+        },
+    );
     for (name, mode) in [("table-layout", "simplified"), ("classic-table-layout", "classic")] {
         shot(name, &out, 1.0, |a| {
             table_page(a);

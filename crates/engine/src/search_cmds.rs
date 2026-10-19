@@ -173,6 +173,7 @@ pub(crate) fn find_on_page(s: &mut Session, query: &str) -> usize {
                         }
                     }
                 }
+                _ => {}
             }
         }
     }

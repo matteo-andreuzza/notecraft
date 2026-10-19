@@ -40,6 +40,10 @@ pub enum Dialog {
     CustomizeTags(String),
     /// Confirm emptying the recycle bin.
     ConfirmEmptyBin,
+    /// Alt Text of the selected picture or attachment (`CM.Picture.AlternativeText`).
+    AltText(String),
+    /// Rename the selected file attachment (`CM.FileAttachment.RenameSelected`).
+    RenameAttachment(String),
 }
 
 /// A curated set of common symbols for the Symbol dialog (`UI.Dialogs.Symbol`); plain Unicode
@@ -110,6 +114,8 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
         Dialog::Spacing(..) => "Paragraph Spacing",
         Dialog::CustomizeTags(_) => "Customize Tags",
         Dialog::ConfirmEmptyBin => "Empty Recycle Bin",
+        Dialog::AltText(_) => "Alt Text",
+        Dialog::RenameAttachment(_) => "Rename",
     };
     let modal = egui::Modal::new(egui::Id::new("dialog")).show(ctx, |ui| {
         ui.set_min_width(380.0);
@@ -324,6 +330,33 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                 ui.horizontal(|ui| {
                     if crate::chrome::primary_button(ui, "OK", &t).clicked() {
                         app.run(ctx, "para.spacingDialog", json!({"before": b, "after": a, "line": l}));
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::AltText(text) => {
+                ui.label("Describe the picture for people who can't see it:");
+                ui.add(egui::TextEdit::multiline(text).desired_rows(3).desired_width(f32::INFINITY));
+                ui.horizontal(|ui| {
+                    if crate::chrome::primary_button(ui, "OK", &t).clicked() {
+                        app.run(ctx, "object.altText", json!({"text": text}));
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::RenameAttachment(name) => {
+                ui.label("File name:");
+                let r = ui.text_edit_singleline(name);
+                let enter = r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                ui.horizontal(|ui| {
+                    if (crate::chrome::primary_button(ui, "OK", &t).clicked() || enter) && !name.trim().is_empty() {
+                        app.run(ctx, "attachment.rename", json!({"name": name.trim()}));
                         close = true;
                     }
                     if ui.button("Cancel").clicked() {

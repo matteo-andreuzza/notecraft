@@ -22,6 +22,7 @@ pub mod mini_toolbar;
 pub mod nav;
 pub mod panes;
 pub mod paste_options;
+pub mod pictures;
 pub mod ribbon;
 pub mod ribbon_layout;
 pub mod ribbon_simplified;
@@ -46,6 +47,18 @@ pub trait Host {
     fn save_file(&mut self, title: &str, default_name: &str) -> Option<String> {
         let _ = (title, default_name);
         None
+    }
+    /// Ask for a file to open; `filters` are `(name, extensions)` pairs (no dots). `None` when
+    /// cancelled or unavailable.
+    fn pick_file(&mut self, title: &str, filters: &[(&str, &[&str])]) -> Option<String> {
+        let _ = (title, filters);
+        None
+    }
+    /// Open a file with the system's handler for its type (an attachment's copy). `Err` with a
+    /// reason when that isn't possible on this platform.
+    fn open_path(&mut self, path: &str) -> Result<(), String> {
+        let _ = path;
+        Err("opening files isn't available here".into())
     }
     /// Where backups go (`None` = backups unavailable on this platform).
     fn backup_folder(&self) -> Option<String> {
@@ -326,6 +339,10 @@ impl NoteApp {
                 "y": p.handle.center().y,
                 "text": rect_json(Rect::from_min_size(p.pos, p.galley.size())),
             })).collect::<Vec<_>>(),
+            "media": self.canvas.media.iter().take(500).map(|m| json!({
+                "id": m.id, "picture": m.picture, "background": m.background, "rect": rect_json(m.rect),
+            })).collect::<Vec<_>>(),
+            "textures": self.canvas.textures.stats().0,
         })
     }
 
@@ -456,3 +473,5 @@ fn rect_json(r: Rect) -> Value {
 mod tests;
 #[cfg(test)]
 mod tests_canvas;
+#[cfg(test)]
+mod tests_pictures;

@@ -210,6 +210,23 @@ fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) ->
             run(app, ctx, "text.deleteForward", json!({}));
             true
         }
+        // A selected picture or attachment: arrows nudge it, Shift+arrows resize a picture
+        // (CM.Picture.ObjectMove / ObjectResize; unverified step: 1 pt, 10 with Ctrl).
+        Key::ArrowLeft | Key::ArrowRight | Key::ArrowUp | Key::ArrowDown if canvas && !m.alt && media_selected(app) => {
+            let step = if m.command || m.ctrl { 10.0 } else { 1.0 };
+            let (dx, dy) = match key {
+                Key::ArrowLeft => (-step, 0.0),
+                Key::ArrowRight => (step, 0.0),
+                Key::ArrowUp => (0.0, -step),
+                _ => (0.0, step),
+            };
+            if m.shift {
+                run(app, ctx, "object.resize", json!({"dw": dx, "dh": dy}));
+            } else {
+                run(app, ctx, "object.move", json!({"dx": dx, "dy": dy}));
+            }
+            true
+        }
         Key::ArrowLeft | Key::ArrowRight if canvas && !m.alt => {
             let word = m.command || m.ctrl;
             let id = match (key, word) {
@@ -400,6 +417,12 @@ pub fn handle_input(app: &mut NoteApp, ctx: &egui::Context) {
         });
     }
     let _ = Block::Title;
+}
+
+/// Whether the page selection holds a picture or attachment (arrows move it then).
+fn media_selected(app: &NoteApp) -> bool {
+    let (Some(page), notecraft_engine::selection::PageSel::Objects { ids }) = (app.session.page(), &app.session.sel.on_page) else { return false };
+    ids.iter().any(|id| page.image(*id).is_some() || page.attachment(*id).is_some())
 }
 
 #[cfg(test)]

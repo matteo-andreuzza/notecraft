@@ -2170,6 +2170,7 @@ name = "notecraft-engine"
 version = "0.1.0"
 dependencies = [
  "log",
+ "notecraft-codecs",
  "notecraft-doc",
  "notecraft-format",
  "notecraft-search",
@@ -2227,6 +2228,7 @@ dependencies = [
  "egui_kittest",
  "image",
  "log",
+ "notecraft-codecs",
  "notecraft-engine",
  "serde",
  "serde_json",

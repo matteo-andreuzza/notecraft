@@ -247,7 +247,7 @@ The Insert tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Insert.Tables.TableInsert | Insert Table | Insert/Tables/Table/Insert Table | button |  | insert.tableDialog | P1 | verified | FLUENT19:TableInsert |  |
 | R.Insert.Tables.InsertNewExcelSpreadsheetWithPreview | New Excel Spreadsheet | Insert/Tables/Table/New Excel Spreadsheet | button |  | insert.newSpreadsheet | P3 | missing | FLUENT19:InsertNewExcelSpreadsheetWithPreview |  |
 | R.Insert.Files.PrintoutFromFileInsert | File Printout | Insert/Files/File Printout | button |  | insert.printout | P1 | missing | FLUENT19:PrintoutFromFileInsert |  |
-| R.Insert.Files.FileAttachmentInsert | File Attachment | Insert/Files/File Attachment | button |  | insert.file | P1 | missing | FLUENT19:FileAttachmentInsert |  |
+| R.Insert.Files.FileAttachmentInsert | File Attachment | Insert/Files/File Attachment | button |  | insert.file | P1 | wired | FLUENT19:FileAttachmentInsert | attaches the file directly as an icon with its name (the reference may offer Insert Printout for documents; printouts come later); decision D3 |
 | R.Insert.Files.InsertExcelSpreadsheetMenu | Spreadsheet | Insert/Files/Spreadsheet | menu |  |  | P2 | missing | FLUENT19:InsertExcelSpreadsheetMenu |  |
 | R.Insert.Files.InsertExistingExcelSpreadsheet | Existing Excel Spreadsheet | Insert/Files/Spreadsheet/Existing Excel Spreadsheet | button |  | insert.existingSpreadsheet | P2 | missing | FLUENT19:InsertExistingExcelSpreadsheet |  |
 | R.Insert.Files.InsertNewExcelSpreadsheetWithPreview | New Excel Spreadsheet | Insert/Files/Spreadsheet/New Excel Spreadsheet | button |  | insert.newSpreadsheet | P3 | missing | FLUENT19:InsertNewExcelSpreadsheetWithPreview |  |
@@ -255,7 +255,7 @@ The Insert tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Insert.Files.InsertExistingVisioDrawing | Existing Visio Diagram | Insert/Files/Diagram/Existing Visio Diagram | button |  | insert.existingDiagram | P3 | missing | FLUENT19:InsertExistingVisioDrawing |  |
 | R.Insert.Files.InsertNewVisioDrawingWithPreview | New Visio Diagram | Insert/Files/Diagram/New Visio Diagram | button |  |  | P3 | out-of-scope | FLUENT19:InsertNewVisioDrawingWithPreview |  |
 | R.Insert.Images.ScreenCaptureInsert | Screen Clipping | Insert/Images/Screen Clipping | button |  | insert.screenClipping | P1 | missing | FLUENT19:ScreenCaptureInsert |  |
-| R.Insert.Images.PictureFromFileInsert | Pictures | Insert/Images/Pictures | button |  | insert.picture | P1 | missing | FLUENT19:PictureFromFileInsert |  |
+| R.Insert.Images.PictureFromFileInsert | Pictures | Insert/Images/Pictures | button |  | insert.picture | P1 | wired | FLUENT19:PictureFromFileInsert | PNG, JPEG, GIF (first frame), BMP, WebP; inserted at its 96-dpi pixel size, at most 468 pt wide, selected (unverified size rule); decision D3 |
 | R.Insert.Images.ClipArtInsertDialog | Online Pictures | Insert/Images/Online Pictures | button |  | insert.onlinePicture | P3 | missing | FLUENT19:ClipArtInsertDialog |  |
 | R.Insert.Addins.OfficeExtensionsAppStore | Get Add-ins (Store) | Insert/Add-ins/Get Add-ins (Store) | button |  |  | P3 | out-of-scope | FLUENT19:OfficeExtensionsAppStore |  |
 | R.Insert.Addins.OfficeExtensionsGallery2 | My Add-ins | Insert/Add-ins/My Add-ins | gallery |  | plugins.manage | P3 | missing | FLUENT19:OfficeExtensionsGallery2 |  |
@@ -760,44 +760,44 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Picture.OleObjectEdit | Edit (embedded object) | Context/Picture/Edit (embedded object) | button |  | object.editOle | P3 | missing | FLUENT19:ContextMenuPicture/OleObjectEdit |  |
 | CM.Picture.RefreshOleObjects | Refresh | Context/Picture/Refresh | button |  | printout.refresh | P2 | missing | FLUENT19:ContextMenuPicture/RefreshOleObjects |  |
 | CM.Picture.SelectWhatToDisplay | Display As | Context/Picture/Display As | button |  | printout.displayAs | P2 | missing | FLUENT19:ContextMenuPicture/SelectWhatToDisplay |  |
-| CM.Picture.Cut | Cut | Context/Picture/Cut | button | `Mod+X` | edit.cut | P0 | missing | FLUENT19:ContextMenuPicture/Cut |  |
-| CM.Picture.CopyOneNote | Copy | Context/Picture/Copy | button | `Mod+C` | edit.copy | P0 | missing | FLUENT19:ContextMenuPicture/CopyOneNote |  |
+| CM.Picture.Cut | Cut | Context/Picture/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuPicture/Cut |  |
+| CM.Picture.CopyOneNote | Copy | Context/Picture/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuPicture/CopyOneNote | copies the picture as an object inside NoteCraft |
 | CM.Picture.CopyTextFromPicture | Copy Text from Picture | Context/Picture/Copy Text from Picture | button |  | object.copyTextFromPicture | P2 | missing | FLUENT19:ContextMenuPicture/CopyTextFromPicture |  |
 | CM.Picture.PrintoutPageTextCopy | Copy Text from This Page of the Printout | Context/Picture/Copy Text from This Page of the Printout | button |  | printout.copyPageText | P2 | missing | FLUENT19:ContextMenuPicture/PrintoutPageTextCopy |  |
 | CM.Picture.CopyTextFromPrintoutPages | Copy Text from All Pages of the Printout | Context/Picture/Copy Text from All Pages of the Printout | button |  | printout.copyAllText | P2 | missing | FLUENT19:ContextMenuPicture/CopyTextFromPrintoutPages |  |
 | CM.Picture.ZoomToDocument | Zoom to Document | Context/Picture/Zoom to Document | button |  | printout.zoomToDocument | P3 | missing | FLUENT19:ContextMenuPicture/ZoomToDocument |  |
 | CM.Picture.ViewOriginalPrintout | Open Original | Context/Picture/Open Original | button |  | printout.openOriginal | P2 | missing | FLUENT19:ContextMenuPicture/ViewOriginalPrintout |  |
-| CM.Picture.PasteGalleryMini | Paste Options | Context/Picture/Paste Options | gallery |  | edit.pasteOptions | P0 | missing | FLUENT19:ContextMenuPicture/PasteGalleryMini |  |
-| CM.Picture.ImageSaveAs | Save As (picture) | Context/Picture/Save As (picture) | button |  | object.saveAs | P1 | missing | FLUENT19:ContextMenuPicture/ImageSaveAs |  |
+| CM.Picture.PasteGalleryMini | Paste Options | Context/Picture/Paste Options | gallery |  | edit.pasteOptions | P0 | wired | FLUENT19:ContextMenuPicture/PasteGalleryMini |  |
+| CM.Picture.ImageSaveAs | Save As (picture) | Context/Picture/Save As (picture) | button |  | object.saveAs | P1 | wired | FLUENT19:ContextMenuPicture/ImageSaveAs | writes the stored file unchanged (rotation and flips are view properties) |
 | CM.Picture.HyperlinkOpen | Open Link | Context/Picture/Open Link | button | `Enter` | link.open | P0 | missing | FLUENT19:ContextMenuPicture/HyperlinkOpen |  |
 | CM.Picture.LinkEdit | Edit Link… | Context/Picture/Edit Link… | button |  | link.edit | P0 | missing | FLUENT19:ContextMenuPicture/LinkEdit |  |
 | CM.Picture.HyperlinkCreate | Link… | Context/Picture/Link… | button | `Mod+K` | insert.link | P0 | missing | FLUENT19:ContextMenuPicture/HyperlinkCreate |  |
 | CM.Picture.LinkCopyOneNote | Copy Link | Context/Picture/Copy Link | button |  | link.copy | P0 | missing | FLUENT19:ContextMenuPicture/LinkCopyOneNote |  |
 | CM.Picture.LinkRemove | Remove Link | Context/Picture/Remove Link | button |  | link.remove | P0 | missing | FLUENT19:ContextMenuPicture/LinkRemove |  |
-| CM.Picture.OrderObjectsMenu | Order | Context/Picture/Order | menu |  |  | P1 | missing | FLUENT19:ContextMenuPicture/OrderObjectsMenu |  |
-| CM.Picture.ObjectBringForward | Bring Forward | Context/Picture/Order/Bring Forward | button |  | object.bringForward | P1 | missing | FLUENT19:ContextMenuPicture/ObjectBringForward |  |
-| CM.Picture.ObjectBringToFront | Bring to Front | Context/Picture/Order/Bring to Front | button |  | object.bringToFront | P1 | missing | FLUENT19:ContextMenuPicture/ObjectBringToFront |  |
-| CM.Picture.ObjectSendBackward | Send Backward | Context/Picture/Order/Send Backward | button |  | object.sendBackward | P1 | missing | FLUENT19:ContextMenuPicture/ObjectSendBackward |  |
-| CM.Picture.ObjectSendToBack | Send to Back | Context/Picture/Order/Send to Back | button |  | object.sendToBack | P1 | missing | FLUENT19:ContextMenuPicture/ObjectSendToBack |  |
-| CM.Picture.RotateInkMenu | Rotate | Context/Picture/Rotate | menu |  |  | P1 | missing | FLUENT19:ContextMenuPicture/RotateInkMenu |  |
+| CM.Picture.OrderObjectsMenu | Order | Context/Picture/Order | menu |  |  | P1 | wired | FLUENT19:ContextMenuPicture/OrderObjectsMenu |  |
+| CM.Picture.ObjectBringForward | Bring Forward | Context/Picture/Order/Bring Forward | button |  | object.bringForward | P1 | wired | FLUENT19:ContextMenuPicture/ObjectBringForward | pictures are drawn under text; the order applies among pictures and attachments |
+| CM.Picture.ObjectBringToFront | Bring to Front | Context/Picture/Order/Bring to Front | button |  | object.bringToFront | P1 | wired | FLUENT19:ContextMenuPicture/ObjectBringToFront | pictures are drawn under text; the order applies among pictures and attachments |
+| CM.Picture.ObjectSendBackward | Send Backward | Context/Picture/Order/Send Backward | button |  | object.sendBackward | P1 | wired | FLUENT19:ContextMenuPicture/ObjectSendBackward | pictures are drawn under text; the order applies among pictures and attachments |
+| CM.Picture.ObjectSendToBack | Send to Back | Context/Picture/Order/Send to Back | button |  | object.sendToBack | P1 | wired | FLUENT19:ContextMenuPicture/ObjectSendToBack | pictures are drawn under text; the order applies among pictures and attachments |
+| CM.Picture.RotateInkMenu | Rotate | Context/Picture/Rotate | menu |  |  | P1 | wired | FLUENT19:ContextMenuPicture/RotateInkMenu |  |
 | CM.Picture.RotateRight45OneNote | Rotate Right 45° | Context/Picture/Rotate/Rotate Right 45° | button |  | object.rotateRight45 | P2 | missing | FLUENT19:ContextMenuPicture/RotateRight45OneNote |  |
 | CM.Picture.RotateLeft45OneNote | Rotate Left 45° | Context/Picture/Rotate/Rotate Left 45° | button |  | object.rotateLeft45 | P2 | missing | FLUENT19:ContextMenuPicture/RotateLeft45OneNote |  |
-| CM.Picture.ObjectRotateRight90 | Rotate Right 90° | Context/Picture/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | missing | FLUENT19:ContextMenuPicture/ObjectRotateRight90 |  |
-| CM.Picture.ObjectRotateLeft90 | Rotate Left 90° | Context/Picture/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | missing | FLUENT19:ContextMenuPicture/ObjectRotateLeft90 |  |
-| CM.Picture.ObjectFlipHorizontal | Flip Horizontal | Context/Picture/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | missing | FLUENT19:ContextMenuPicture/ObjectFlipHorizontal |  |
-| CM.Picture.ObjectFlipVertical | Flip Vertical | Context/Picture/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | missing | FLUENT19:ContextMenuPicture/ObjectFlipVertical |  |
-| CM.Picture.ObjectMove | Move | Context/Picture/Move | button |  | object.move | P1 | missing | FLUENT19:ContextMenuPicture/ObjectMove |  |
-| CM.Picture.ObjectResize | Resize | Context/Picture/Resize | button |  | object.resize | P1 | missing | FLUENT19:ContextMenuPicture/ObjectResize |  |
-| CM.Picture.RestoreImageSize | Restore to Original Size | Context/Picture/Restore to Original Size | button |  | object.restoreSize | P1 | missing | FLUENT19:ContextMenuPicture/RestoreImageSize |  |
-| CM.Picture.PictureAsBackground | Set Picture as Background | Context/Picture/Set Picture as Background | toggle |  | object.setAsBackground | P1 | missing | FLUENT19:ContextMenuPicture/PictureAsBackground |  |
-| CM.Picture.AlternativeText | Alt Text | Context/Picture/Alt Text | button |  | object.altText | P1 | missing | FLUENT19:ContextMenuPicture/AlternativeText |  |
+| CM.Picture.ObjectRotateRight90 | Rotate Right 90° | Context/Picture/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | verified | FLUENT19:ContextMenuPicture/ObjectRotateRight90 | turns about the picture's centre |
+| CM.Picture.ObjectRotateLeft90 | Rotate Left 90° | Context/Picture/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | verified | FLUENT19:ContextMenuPicture/ObjectRotateLeft90 | turns about the picture's centre |
+| CM.Picture.ObjectFlipHorizontal | Flip Horizontal | Context/Picture/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | verified | FLUENT19:ContextMenuPicture/ObjectFlipHorizontal |  |
+| CM.Picture.ObjectFlipVertical | Flip Vertical | Context/Picture/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | verified | FLUENT19:ContextMenuPicture/ObjectFlipVertical |  |
+| CM.Picture.ObjectMove | Move | Context/Picture/Move | button |  | object.move | P1 | wired | FLUENT19:ContextMenuPicture/ObjectMove | unverified: from the menu it explains the gesture; drag, or arrow keys (1 pt, Ctrl 10 pt) |
+| CM.Picture.ObjectResize | Resize | Context/Picture/Resize | button |  | object.resize | P1 | wired | FLUENT19:ContextMenuPicture/ObjectResize | unverified: from the menu it explains the gesture; corner handles keep the proportions, edge handles change one side, Shift+arrow keys |
+| CM.Picture.RestoreImageSize | Restore to Original Size | Context/Picture/Restore to Original Size | button |  | object.restoreSize | P1 | verified | FLUENT19:ContextMenuPicture/RestoreImageSize | the pixel size at 96 dpi |
+| CM.Picture.PictureAsBackground | Set Picture as Background | Context/Picture/Set Picture as Background | toggle |  | object.setAsBackground | P1 | wired | FLUENT19:ContextMenuPicture/PictureAsBackground | unverified: a background picture goes behind everything and only a right click reaches it |
+| CM.Picture.AlternativeText | Alt Text | Context/Picture/Alt Text | button |  | object.altText | P1 | wired | FLUENT19:ContextMenuPicture/AlternativeText |  |
 | CM.Picture.OCRLanguageListMenu | Make Text in Image Searchable | Context/Picture/Make Text in Image Searchable | menu |  | object.ocrLanguage | P2 | missing | FLUENT19:ContextMenuPicture/OCRLanguageListMenu |  |
 | CM.FileAttachment.FileAttachmentName | File name (header) | Context/File Attachment/File name (header) | labelControl |  |  | P2 | missing | FLUENT19:ContextMenuFileAttachment/FileAttachmentName |  |
 | CM.FileAttachment.FileAttachmentSize | File size (header) | Context/File Attachment/File size (header) | labelControl |  |  | P2 | missing | FLUENT19:ContextMenuFileAttachment/FileAttachmentSize |  |
 | CM.FileAttachment.PlayFromPage | Play (attached media) | Context/File Attachment/Play (attached media) | button |  | media.play | P2 | missing | FLUENT19:ContextMenuFileAttachment/PlayFromPage |  |
-| CM.FileAttachment.FileAttachmentOpen | Open | Context/File Attachment/Open | button |  | attachment.open | P1 | missing | FLUENT19:ContextMenuFileAttachment/FileAttachmentOpen |  |
-| CM.FileAttachment.FileAttachmentSaveAs | Save As… | Context/File Attachment/Save As… | button |  | attachment.saveAs | P1 | missing | FLUENT19:ContextMenuFileAttachment/FileAttachmentSaveAs |  |
-| CM.FileAttachment.RenameSelected | Rename | Context/File Attachment/Rename | button |  | attachment.rename | P1 | missing | FLUENT19:ContextMenuFileAttachment/RenameSelected |  |
+| CM.FileAttachment.FileAttachmentOpen | Open | Context/File Attachment/Open | button |  | attachment.open | P1 | wired | FLUENT19:ContextMenuFileAttachment/FileAttachmentOpen | writes a copy to a private temporary folder and opens it with the system handler (desktop); double-click does the same |
+| CM.FileAttachment.FileAttachmentSaveAs | Save As… | Context/File Attachment/Save As… | button |  | attachment.saveAs | P1 | wired | FLUENT19:ContextMenuFileAttachment/FileAttachmentSaveAs |  |
+| CM.FileAttachment.RenameSelected | Rename | Context/File Attachment/Rename | button |  | attachment.rename | P1 | wired | FLUENT19:ContextMenuFileAttachment/RenameSelected |  |
 | CM.FileAttachment.FilePrintoutInsert | Insert Printout | Context/File Attachment/Insert Printout | button |  | attachment.insertPrintout | P2 | missing | FLUENT19:ContextMenuFileAttachment/FilePrintoutInsert |  |
 | CM.FileAttachment.RefreshPrintoutPages | Refresh Printout | Context/File Attachment/Refresh Printout | button |  | printout.refresh | P2 | missing | FLUENT19:ContextMenuFileAttachment/RefreshPrintoutPages |  |
 | CM.FileAttachment.JotDeletePrintoutPages | Delete Printout Pages | Context/File Attachment/Delete Printout Pages | button |  | printout.delete | P2 | missing | FLUENT19:ContextMenuFileAttachment/JotDeletePrintoutPages |  |
@@ -805,11 +805,11 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.FileAttachment.RefreshOleObjects | Refresh | Context/File Attachment/Refresh | button |  | printout.refresh | P2 | missing | FLUENT19:ContextMenuFileAttachment/RefreshOleObjects |  |
 | CM.FileAttachment.OriginalFileOpen | Open Original | Context/File Attachment/Open Original | button |  | attachment.openOriginal | P2 | missing | FLUENT19:ContextMenuFileAttachment/OriginalFileOpen |  |
 | CM.FileAttachment.FileAttachmentShortcutToOriginalCopy | Copy Link to File | Context/File Attachment/Copy Link to File | button |  | attachment.copyLink | P2 | missing | FLUENT19:ContextMenuFileAttachment/FileAttachmentShortcutToOriginalCopy |  |
-| CM.FileAttachment.Cut | Cut | Context/File Attachment/Cut | button | `Mod+X` | edit.cut | P0 | missing | FLUENT19:ContextMenuFileAttachment/Cut |  |
-| CM.FileAttachment.CopyOneNote | Copy | Context/File Attachment/Copy | button | `Mod+C` | edit.copy | P0 | missing | FLUENT19:ContextMenuFileAttachment/CopyOneNote |  |
-| CM.FileAttachment.PasteGalleryMini | Paste Options | Context/File Attachment/Paste Options | gallery |  | edit.pasteOptions | P0 | missing | FLUENT19:ContextMenuFileAttachment/PasteGalleryMini |  |
+| CM.FileAttachment.Cut | Cut | Context/File Attachment/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuFileAttachment/Cut |  |
+| CM.FileAttachment.CopyOneNote | Copy | Context/File Attachment/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuFileAttachment/CopyOneNote |  |
+| CM.FileAttachment.PasteGalleryMini | Paste Options | Context/File Attachment/Paste Options | gallery |  | edit.pasteOptions | P0 | wired | FLUENT19:ContextMenuFileAttachment/PasteGalleryMini |  |
 | CM.FileAttachment.HyperlinkCreate | Link… | Context/File Attachment/Link… | button | `Mod+K` | insert.link | P0 | missing | FLUENT19:ContextMenuFileAttachment/HyperlinkCreate |  |
-| CM.FileAttachment.AlternativeText | Alt Text | Context/File Attachment/Alt Text | button |  | object.altText | P1 | missing | FLUENT19:ContextMenuFileAttachment/AlternativeText |  |
+| CM.FileAttachment.AlternativeText | Alt Text | Context/File Attachment/Alt Text | button |  | object.altText | P1 | wired | FLUENT19:ContextMenuFileAttachment/AlternativeText |  |
 | CM.Tag.NoteTagCheck | Check Tag | Context/Tag/Check Tag | button |  | tag.check | P0 | wired | FLUENT19:ContextMenuTag/NoteTagCheck |  |
 | CM.Tag.NoteTagUncheck | Uncheck Tag | Context/Tag/Uncheck Tag | button |  | tag.uncheck | P0 | wired | FLUENT19:ContextMenuTag/NoteTagUncheck |  |
 | CM.Tag.TagsRemove | Remove Tag | Context/Tag/Remove Tag | button |  | tag.remove | P0 | wired | FLUENT19:ContextMenuTag/TagsRemove |  |

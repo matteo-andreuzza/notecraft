@@ -6,7 +6,8 @@
 //! ```text
 //! Workspace ─ Notebook ─┬─ SectionGroup ─ (Sections and SectionGroups, nested)
 //!                       ├─ Section ─ Page ─┬─ PageObject::Outline ─ Paragraph ─ Run
-//!                       │                  └─ PageObject::Table ─ TableRow ─ TableCell ─ Paragraph
+//!                       │                  ├─ PageObject::Table ─ TableRow ─ TableCell ─ Paragraph
+//!                       │                  └─ PageObject::Image / Attachment ─ Blob (Arc'd bytes)
 //!                       └─ RecycleBin
 //! ```
 //!
@@ -20,6 +21,7 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 pub mod id;
+pub mod media;
 pub mod notebook;
 pub mod page;
 pub mod table;
@@ -28,6 +30,7 @@ pub mod text;
 pub mod time;
 
 pub use id::{Id, IdGen};
+pub use media::{Attachment, Blob, Image};
 pub use notebook::{DeletedPage, DeletedSection, NavNode, Notebook, RecycleBin, Section, SectionColor, SectionGroup, Workspace, clean_name};
 pub use page::{Outline, OutlineWidth, Page, PageObject, PageSetup, PaperSize, RuleLines};
 pub use table::{Table, TableCell, TableRow};

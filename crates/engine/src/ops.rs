@@ -213,6 +213,25 @@ pub(crate) fn object_bottom(o: &PageObject) -> f32 {
                 t.rows.iter().map(|r| r.cells.iter().map(|c| c.paragraphs.iter().map(para_lines).sum::<usize>()).max().unwrap_or(1)).sum();
             t.pos.y + rows as f32 * 20.0 + t.rows.len() as f32 * 6.0
         }
+        PageObject::Image(_) | PageObject::Attachment(_) => o.pos().y + crate::picture_cmds::media_size(o).map_or(0.0, |(_, h)| h),
+    }
+}
+
+/// Where a new object goes (tables, decision D2 §4.8; pictures and attachments, D3 §4.9): the
+/// `x`/`y` params, else where the user clicked, else below the caret's container or table,
+/// else below everything on the page.
+pub(crate) fn insert_pos(s: &Session, page: &notecraft_doc::Page, v: &serde_json::Value) -> Point {
+    let below = |o: &PageObject| Point::new(o.pos().x, object_bottom(o) + 12.0);
+    match (crate::p::f32(v, "x"), crate::p::f32(v, "y")) {
+        (Some(x), Some(y)) => Point::new(x.max(0.0), y.max(0.0)).sanitized(),
+        _ => match (s.pending_outline, s.sel.caret()) {
+            (Some(pt), _) => pt,
+            (None, Some(Pos { block: Block::Outline(id), .. })) => page.objects.iter().find(|o| o.id() == id).map(below).unwrap_or_default(),
+            (None, Some(Pos { block: Block::Cell(c), .. })) => {
+                page.table_of_cell(c).and_then(|(t, _, _)| page.objects.iter().find(|o| o.id() == t.id)).map(below).unwrap_or_default()
+            }
+            _ => Point::new(DEFAULT_LEFT, next_free_y(page)),
+        },
     }
 }
 
@@ -291,6 +310,8 @@ pub(crate) fn clone_page_fresh(s: &mut Session, page: &notecraft_doc::Page, now:
                     para.id = s.new_id();
                 }
             }
+            PageObject::Image(im) => im.id = s.new_id(),
+            PageObject::Attachment(a) => a.id = s.new_id(),
             PageObject::Table(t) => {
                 t.id = s.new_id();
                 for row in &mut t.rows {

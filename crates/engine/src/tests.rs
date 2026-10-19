@@ -168,6 +168,13 @@ const PARAM_NAMES: &[&str] = &[
     "cols",
     "table",
     "col",
+    "data",
+    "dx",
+    "dy",
+    "dw",
+    "dh",
+    "height",
+    "dir",
 ];
 
 #[test]
@@ -207,13 +214,33 @@ fn panic_hunt() {
             run(&mut s, "table.selectColumns", json!({}));
             s
         }),
+        // A selected picture, and a selected attachment (decision D3).
+        Box::new(|| {
+            let mut s = sample();
+            let png = notecraft_codecs::encode_png(&notecraft_codecs::Rgba8::new(2, 2, vec![9; 16]).unwrap(), &Default::default()).unwrap();
+            run(&mut s, "insert.picture", json!({"data": crate::b64::encode(&png)}));
+            s
+        }),
+        Box::new(|| {
+            let mut s = sample();
+            run(&mut s, "insert.file", json!({"data": "aGVsbG8=", "name": "a.txt"}));
+            s
+        }),
     ];
     let mut tried = 0usize;
     for make in &states {
         for c in commands::all() {
             if matches!(
                 c.id,
-                "file.newNotebook" | "file.openNotebook" | "file.openRecent" | "file.exportNotebook" | "file.backupNow" | "file.openBackups"
+                "file.newNotebook"
+                    | "file.openNotebook"
+                    | "file.openRecent"
+                    | "file.exportNotebook"
+                    | "file.backupNow"
+                    | "file.openBackups"
+                    | "object.saveAs"
+                    | "attachment.saveAs"
+                    | "attachment.open"
             ) {
                 // These touch the file system; the hostile `path`/`folder` values are covered by
                 // their own tests below with a sandboxed folder.
