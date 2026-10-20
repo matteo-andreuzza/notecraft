@@ -219,3 +219,26 @@ fn insert_space_pushes_and_pulls_what_follows() {
     run(&mut s, "insert.space", json!({}));
     assert_eq!(s.draw.tool, DrawTool::Type, "the toggle turns it off");
 }
+
+#[test]
+fn shapes_draw_as_ink_with_the_selected_pen() {
+    // parity: NC.Draw.Shape
+    let mut s = sample();
+    blank_page(&mut s);
+    run(&mut s, "draw.shapes", json!({"kind": "rectangle"}));
+    assert_eq!((s.draw.tool, s.draw.shape), (DrawTool::Shape, notecraft_ink::ShapeKind::Rectangle), "R.Draw.Shapes.InkShapeGallery");
+    run(&mut s, "draw.pen", json!({"index": 1}));
+    run(&mut s, "draw.shapes", json!({}));
+    let undo = s.undo_labels().len();
+    run(&mut s, "draw.shape", json!({"from": [100, 100], "to": [40, 60]}));
+    let k = &strokes(&s)[0];
+    assert_eq!(k.points.len(), 5, "a closed rectangle");
+    assert_eq!((k.pos.x, k.pos.y), (40.0, 60.0));
+    assert_eq!(k.color, s.draw.pens[1].color);
+    assert_eq!(s.undo_labels().len(), undo + 1);
+    run(&mut s, "draw.shape", json!({"kind": "double arrow", "from": [0, 0], "to": [100, 0]}));
+    assert_eq!(strokes(&s).len(), 2);
+    assert!(s.run("draw.shape", json!({"kind": "blob", "from": [0, 0], "to": [1, 1]})).is_err());
+    assert!(s.run("draw.shape", json!({"from": [0, 0]})).is_err());
+    assert_eq!(run(&mut s, "draw.lockDrawingMode", json!({}))["locked"], true, "R.Draw.Shapes.ShapesDuplicate");
+}

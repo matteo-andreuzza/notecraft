@@ -41,6 +41,8 @@ pub enum DrawTool {
     /// Insert Space: dragging on the page pushes what is below (or right of) the start down
     /// (or right), or pulls it back.
     Space,
+    /// Draw › Shapes: dragging draws [`DrawState::shape`] with the selected pen.
+    Shape,
 }
 
 /// Eraser sizes (Draw › Eraser).
@@ -104,6 +106,12 @@ pub struct DrawState {
     pub pens: Vec<PenStyle>,
     /// The selected pen (an index into `pens`).
     pub pen: usize,
+    /// The shape the Shape tool draws.
+    #[serde(default)]
+    pub shape: notecraft_ink::ShapeKind,
+    /// Lock Drawing Mode: the Shape tool stays on after a shape (else it returns to Type).
+    #[serde(default)]
+    pub lock_shapes: bool,
 }
 
 impl Default for DrawState {
@@ -116,6 +124,8 @@ impl Default for DrawState {
             eraser: EraserKind::Stroke,
             pens: vec![pen(0, 0, 0), pen(0xE8, 0x11, 0x23), pen(0x00, 0x5A, 0xD1), hl(0xFF, 0xF1, 0x00), hl(0x16, 0xC6, 0x0C)],
             pen: 0,
+            shape: notecraft_ink::ShapeKind::Line,
+            lock_shapes: false,
         }
     }
 }
@@ -166,6 +176,17 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         .pure(),
         CommandSpec::new("draw.stroke", "NC.Draw.Stroke", "Ink", "Mouse/Canvas/Draw", stroke)
             .params(r##"{"points": [[x, y, pressure?], …] page points, "pen"?: index, "tool"?: "pen" | "highlighter", "color"?: "#rrggbb", "width"?: pt}"##)
+            .when(need_page),
+        CommandSpec::new("draw.shapes", "R.Draw.Shapes.InkShapeGallery", "Shapes", "Draw/Shapes", choose_shape)
+            .params(r#"{"kind"?: "line" | "arrow" | "double arrow" | "rectangle" | "oval" | "triangle" | "right triangle" | "diamond" | "parallelogram"}"#)
+            .pure(),
+        CommandSpec::new("draw.lockDrawingMode", "R.Draw.Shapes.ShapesDuplicate", "Lock Drawing Mode", "Draw/Shapes/Lock Drawing Mode", |s, _| {
+            s.draw.lock_shapes = !s.draw.lock_shapes;
+            Ok(json!({"locked": s.draw.lock_shapes}))
+        })
+        .pure(),
+        CommandSpec::new("draw.shape", "NC.Draw.Shape", "Shape", "Mouse/Canvas/Shape", draw_shape)
+            .params(r##"{"from": [x, y], "to": [x, y] page points, "kind"?: shape (default: the chosen one), "pen"?: index, "color"?: "#rrggbb", "width"?: pt}"##)
             .when(need_page),
         CommandSpec::new("draw.erase", "NC.Draw.Erase", "Erase", "Mouse/Canvas/Erase", erase)
             .params(r#"{"points": [[x, y], …] eraser path, "kind"?: "small" | "medium" | "large" | "stroke" (default: the eraser), "gesture"?: number (calls with the same number undo together)}"#)
@@ -275,11 +296,44 @@ fn path(v: &Value, cap: usize) -> Result<Vec<(Point, f32)>, CmdError> {
 }
 
 fn stroke(s: &mut Session, v: &Value) -> CmdResult {
+    let samples = path(v, notecraft_ink::MAX_SAMPLES)?;
+    push_ink(s, v, &samples)
+}
+
+fn choose_shape(s: &mut Session, v: &Value) -> CmdResult {
+    if let Some(k) = p::str(v, "kind") {
+        s.draw.shape = notecraft_ink::ShapeKind::parse(k).ok_or_else(|| CmdError::Params(format!("unknown shape {k:?}")))?;
+    }
+    s.draw.tool = DrawTool::Shape;
+    Ok(json!({"shape": s.draw.shape.name()}))
+}
+
+fn point_param(v: &Value, k: &str) -> Result<Point, CmdError> {
+    let a = v.get(k).and_then(Value::as_array);
+    let n = |i: usize| a.and_then(|a| a.get(i)).and_then(Value::as_f64).map(|x| x as f32);
+    match (n(0), n(1)) {
+        (Some(x), Some(y)) => Ok(Point::new(x, y).sanitized()),
+        _ => Err(CmdError::Params(format!("`{k}` is [x, y]"))),
+    }
+}
+
+/// A shape from `from` to `to`, drawn with the selected pen as one ink stroke.
+fn draw_shape(s: &mut Session, v: &Value) -> CmdResult {
+    let kind = match p::str(v, "kind") {
+        Some(k) => notecraft_ink::ShapeKind::parse(k).ok_or_else(|| CmdError::Params(format!("unknown shape {k:?}")))?,
+        None => s.draw.shape,
+    };
+    let (a, b) = (point_param(v, "from")?, point_param(v, "to")?);
+    let samples: Vec<(Point, f32)> = notecraft_ink::shape_points(kind, a, b).into_iter().map(|p| (p, notecraft_doc::ink::DEFAULT_PRESSURE)).collect();
+    push_ink(s, v, &samples)
+}
+
+/// Clean `samples` and add them as a stroke drawn with the pen the params or the gallery say.
+fn push_ink(s: &mut Session, v: &Value, samples: &[(Point, f32)]) -> CmdResult {
     if s.page().is_some_and(|p| p.objects.len() >= MAX_PAGE_OBJECTS) {
         return Err(CmdError::Failed(format!("a page holds at most {MAX_PAGE_OBJECTS} objects")));
     }
-    let samples = path(v, notecraft_ink::MAX_SAMPLES)?;
-    let samples = notecraft_ink::clean_samples(&samples);
+    let samples = notecraft_ink::clean_samples(samples);
     if samples.is_empty() {
         return Err(CmdError::Params("the stroke has no points".into()));
     }

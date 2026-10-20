@@ -94,3 +94,22 @@ proptest! {
         prop_assert!(k.points.len() <= MAX_INK_POINTS);
     }
 }
+
+#[test]
+fn shapes_are_strokes_inside_their_box() {
+    let (a, b) = (Point::new(10.0, 20.0), Point::new(110.0, 70.0));
+    for kind in ShapeKind::ALL {
+        let pts = shape_points(kind, a, b);
+        assert!(pts.len() >= 2, "{kind:?}");
+        assert_eq!(ShapeKind::parse(kind.name()), Some(kind));
+        if !kind.is_line() {
+            assert_eq!(pts.first(), pts.last(), "{kind:?} is closed");
+            assert!(pts.iter().all(|p| p.x >= 9.99 && p.x <= 110.01 && p.y >= 19.99 && p.y <= 70.01), "{kind:?} stays in its box");
+        }
+    }
+    assert_eq!(ShapeKind::parse("double-arrow"), Some(ShapeKind::DoubleArrow));
+    assert_eq!(ShapeKind::parse("blob"), None);
+    let arrow = shape_points(ShapeKind::Arrow, a, b);
+    assert_eq!(arrow[1], b, "the shaft ends at the tip");
+    assert!(shape_points(ShapeKind::Oval, Point::new(f32::NAN, 0.0), Point::new(f32::INFINITY, 1.0)).iter().all(|p| p.x.is_finite()));
+}

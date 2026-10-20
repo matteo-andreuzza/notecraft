@@ -110,6 +110,8 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "table.headerRow" => current_table(app).is_some_and(|t| t.header_row),
         "draw.type" => s.draw.tool == notecraft_engine::DrawTool::Type,
         "insert.space" => s.draw.tool == notecraft_engine::DrawTool::Space,
+        "draw.shapes" => s.draw.tool == notecraft_engine::DrawTool::Shape,
+        "draw.lockDrawingMode" => s.draw.lock_shapes,
         "draw.lasso" => s.draw.tool == notecraft_engine::DrawTool::Lasso,
         "draw.pan" => s.draw.tool == notecraft_engine::DrawTool::Pan,
         "draw.eraser" => s.draw.tool == notecraft_engine::DrawTool::Eraser,
@@ -446,6 +448,7 @@ pub(crate) fn special_menu(id: &str) -> bool {
                 | "ExtendedTextFormattingMenu"
                 | "TableInsertGallery"
                 | "ShadingColorPicker"
+                | "InkShapeGallery"
         )
     )
 }
@@ -519,6 +522,10 @@ pub(crate) fn table_spot(app: &NoteApp) -> Option<notecraft_engine::doc::geom::P
 pub(crate) fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, _t: Tokens) -> bool {
     let ctx = ui.ctx().clone();
     match id.rsplit('.').next() {
+        Some("InkShapeGallery") => {
+            crate::ink::shape_gallery(app, ui, _t);
+            false
+        }
         Some("TableInsertGallery") => {
             table_grid(app, ui, _t);
             ui.separator();

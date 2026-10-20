@@ -173,3 +173,124 @@ pub fn scale(ink: &mut Ink, origin: Point, kx: f32, ky: f32) {
 
 #[cfg(test)]
 mod tests;
+
+/// The shapes of Draw › Shapes, drawn as ink (the gallery's set; unverified against the
+/// reference's exact list).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub enum ShapeKind {
+    /// A straight line.
+    #[default]
+    Line,
+    /// A line with an arrowhead at its end.
+    Arrow,
+    /// A line with arrowheads at both ends.
+    DoubleArrow,
+    /// A rectangle.
+    Rectangle,
+    /// An ellipse.
+    Oval,
+    /// An isosceles triangle.
+    Triangle,
+    /// A right triangle.
+    RightTriangle,
+    /// A diamond.
+    Diamond,
+    /// A parallelogram.
+    Parallelogram,
+}
+
+impl ShapeKind {
+    /// Every shape, in gallery order.
+    pub const ALL: [ShapeKind; 9] = [
+        ShapeKind::Line,
+        ShapeKind::Arrow,
+        ShapeKind::DoubleArrow,
+        ShapeKind::Rectangle,
+        ShapeKind::Oval,
+        ShapeKind::Triangle,
+        ShapeKind::RightTriangle,
+        ShapeKind::Diamond,
+        ShapeKind::Parallelogram,
+    ];
+
+    /// The name shown in the gallery and accepted by commands (`"double arrow"`…).
+    pub fn name(self) -> &'static str {
+        match self {
+            ShapeKind::Line => "Line",
+            ShapeKind::Arrow => "Arrow",
+            ShapeKind::DoubleArrow => "Double Arrow",
+            ShapeKind::Rectangle => "Rectangle",
+            ShapeKind::Oval => "Oval",
+            ShapeKind::Triangle => "Triangle",
+            ShapeKind::RightTriangle => "Right Triangle",
+            ShapeKind::Diamond => "Diamond",
+            ShapeKind::Parallelogram => "Parallelogram",
+        }
+    }
+
+    /// The shape named `s` (any case, spaces optional).
+    pub fn parse(s: &str) -> Option<ShapeKind> {
+        let k: String = s.chars().filter(|c| !c.is_whitespace() && *c != '_' && *c != '-').collect::<String>().to_lowercase();
+        ShapeKind::ALL.into_iter().find(|x| x.name().replace(' ', "").to_lowercase() == k)
+    }
+
+    /// Whether the shape is a line (dragged end to end) rather than a box.
+    pub fn is_line(self) -> bool {
+        matches!(self, ShapeKind::Line | ShapeKind::Arrow | ShapeKind::DoubleArrow)
+    }
+}
+
+/// An arrowhead at `tip` for a line arriving from `from`: the two barbs, as a path that goes
+/// out and back through the tip (one stroke).
+fn head(from: Point, tip: Point, size: f32) -> [Point; 4] {
+    let (dx, dy) = (tip.x - from.x, tip.y - from.y);
+    let len = (dx * dx + dy * dy).sqrt().max(1e-3);
+    let (ux, uy) = (dx / len, dy / len);
+    let s = size.min(len * 0.5);
+    let barb = |side: f32| Point::new(tip.x - s * (ux * 0.866 - side * uy * 0.5), tip.y - s * (uy * 0.866 + side * ux * 0.5));
+    [barb(1.0), tip, barb(-1.0), tip]
+}
+
+/// The points of `kind` dragged from `a` to `b` (page points), as one stroke: lines run from
+/// `a` to `b`, boxes fill the rectangle they span; closed shapes end where they start.
+/// Arrowheads are 10 pt (unverified), ovals use 64 segments.
+pub fn shape_points(kind: ShapeKind, a: Point, b: Point) -> Vec<Point> {
+    let (a, b) = (a.sanitized(), b.sanitized());
+    let (x0, y0, x1, y1) = (a.x.min(b.x), a.y.min(b.y), a.x.max(b.x), a.y.max(b.y));
+    let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
+    let p = Point::new;
+    match kind {
+        ShapeKind::Line => vec![a, b],
+        ShapeKind::Arrow => {
+            let mut v = vec![a, b];
+            v.extend(head(a, b, 10.0));
+            v
+        }
+        ShapeKind::DoubleArrow => {
+            let mut v = vec![a];
+            v.extend(head(b, a, 10.0));
+            v.push(b);
+            v.extend(head(a, b, 10.0));
+            v
+        }
+        ShapeKind::Rectangle => vec![p(x0, y0), p(x1, y0), p(x1, y1), p(x0, y1), p(x0, y0)],
+        ShapeKind::Oval => {
+            let mut v: Vec<Point> = (0..64)
+                .map(|i| {
+                    let t = i as f32 / 64.0 * std::f32::consts::TAU;
+                    p(cx + (x1 - x0) / 2.0 * t.cos(), cy + (y1 - y0) / 2.0 * t.sin())
+                })
+                .collect();
+            // Closed exactly (trigonometry wouldn't land on the first point bit for bit).
+            v.push(p(x1, cy));
+            v
+        }
+        ShapeKind::Triangle => vec![p(cx, y0), p(x1, y1), p(x0, y1), p(cx, y0)],
+        ShapeKind::RightTriangle => vec![p(x0, y0), p(x0, y1), p(x1, y1), p(x0, y0)],
+        ShapeKind::Diamond => vec![p(cx, y0), p(x1, cy), p(cx, y1), p(x0, cy), p(cx, y0)],
+        ShapeKind::Parallelogram => {
+            let k = (x1 - x0) * 0.25;
+            vec![p(x0 + k, y0), p(x1, y0), p(x1 - k, y1), p(x0, y1), p(x0 + k, y0)]
+        }
+    }
+}

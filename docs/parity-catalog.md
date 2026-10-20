@@ -322,8 +322,8 @@ The Draw tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Draw.Toolstouch.PenAsPointerMode | Use Pen as Pointer | Draw/Tools (touch)/Pens/Ink Mode/Use Pen as Pointer | toggle |  | draw.penAsPointer | P3 | missing | FLUENT19:PenAsPointerMode | touch-mode layout of the Tools group (same commands) |
 | R.Draw.Toolstouch.MoreColorAndThicknessOptions | Color & Thickness | Draw/Tools (touch)/Color & Thickness | button |  | draw.colorThickness | P3 | missing | FLUENT19:MoreColorAndThicknessOptions | touch-mode layout of the Tools group (same commands) |
 | R.Draw.Toolstouch.FingerPaintingMode | Draw with Touch | Draw/Tools (touch)/Draw with Touch | toggle |  | draw.withTouch | P3 | missing | FLUENT19:FingerPaintingMode | touch-mode layout of the Tools group (same commands) |
-| R.Draw.Shapes.InkShapeGallery | Shapes | Draw/Shapes | gallery |  | draw.shapes | P1 | missing | FLUENT19:InkShapeGallery |  |
-| R.Draw.Shapes.ShapesDuplicate | Lock Drawing Mode | Draw/Shapes/Lock Drawing Mode | toggle |  | draw.lockDrawingMode | P2 | missing | FLUENT19:ShapesDuplicate |  |
+| R.Draw.Shapes.InkShapeGallery | Shapes | Draw/Shapes | gallery |  | draw.shapes | P1 | wired | FLUENT19:InkShapeGallery | line, arrow, double arrow, rectangle, oval, triangle, right triangle, diamond, parallelogram, drawn as ink with the selected pen; graph axes and 3-D shapes not yet (unverified list) |
+| R.Draw.Shapes.ShapesDuplicate | Lock Drawing Mode | Draw/Shapes/Lock Drawing Mode | toggle |  | draw.lockDrawingMode | P2 | wired | FLUENT19:ShapesDuplicate | off: the Shape tool returns to Type after one shape (unverified) |
 | R.Draw.Shapes.GridSnapTo | Snap to Grid | Draw/Shapes/Snap to Grid | toggle |  | draw.snapToGrid | P2 | missing | FLUENT19:GridSnapTo |  |
 | R.Draw.Edit.PenInsertSpace | Insert Space | Draw/Edit/Insert Space | toggle |  | insert.space | P1 | wired | FLUENT19:PenInsertSpace |  |
 | R.Draw.Edit.Delete | Delete | Draw/Edit/Delete | button | `Delete` | edit.delete | P0 | wired | FLUENT19:Delete |  |
@@ -1500,6 +1500,7 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 | NC.Table.ConvertToText | Convert to Text | Table Layout/Convert/Convert to Text | button |  | table.convertToText | P2 | wired | NoteCraft | A table becomes text: a paragraph per row, cells joined by tabs. Unverified placement in the reference |
 | NC.Draw.Stroke | Ink | Mouse/Canvas/Draw | mouse |  | draw.stroke | P1 | verified | NoteCraft (decision D4) | Dragging with a pen or highlighter draws one stroke: one page object and one undo step; the finished stroke is simplified (0.2 pt). |
 | NC.Draw.Erase | Erase | Mouse/Canvas/Erase | mouse |  | draw.erase | P1 | wired | NoteCraft (decision D4) | Dragging with an eraser erases along the path; one drag is one undo step. Eraser radii (2.5/6/12 pt) unverified |
+| NC.Draw.Shape | Shape | Mouse/Canvas/Shape | mouse |  | draw.shape | P1 | verified | NoteCraft (decision D4) | Dragging with the Shape tool draws the chosen shape with the selected pen as one ink stroke (one undo step); Shift keeps the proportions. |
 
 ## Revision history
 

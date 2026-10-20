@@ -64,6 +64,8 @@ pub(crate) enum Gesture {
     Pan,
     /// Insert Space: where the drag began and where the pointer is (page points).
     Space { from: Point, to: Point },
+    /// A shape being dragged out (page points).
+    Shape { from: Point, to: Point },
     /// Moving the selected objects: the last page point.
     Group { last: Point },
     /// Resizing the selected ink by a handle (`pictures::handles` order): the box when the drag
@@ -111,42 +113,49 @@ fn ink_color(color: notecraft_engine::doc::color::Rgba, tool: InkTool, page_text
     }
 }
 
-/// Fill a stroke through `pts` with `half[i]` on each side of point `i`: a triangle strip,
-/// round caps and round joins at sharp turns for pens.
+/// Fill a stroke through `pts` with `half[i]` on each side of point `i`: triangle strips split
+/// at sharp corners (an averaged normal there would pinch the stroke), with round caps and
+/// round joins at those corners for pens.
 fn paint_stroke(painter: &Painter, pts: &[Pos2], half: &[f32], color: Color32, round: bool) {
-    match pts {
-        [] => {}
-        [p] => {
-            painter.circle_filled(*p, half.first().copied().unwrap_or(0.5).max(0.5), color);
+    let hw = |i: usize| half.get(i).or(half.last()).copied().unwrap_or(0.5).max(0.5);
+    let n = pts.len();
+    if n == 1 {
+        painter.circle_filled(pts[0], hw(0), color);
+        return;
+    }
+    let sharp = |i: usize| {
+        i > 0 && i + 1 < n && {
+            let (u, v) = ((pts[i] - pts[i - 1]).normalized(), (pts[i + 1] - pts[i]).normalized());
+            u.dot(v) < 0.9
         }
-        _ => {
-            let geo: Vec<Point> = pts.iter().map(|p| Point::new(p.x, p.y)).collect();
-            let edges = notecraft_ink_geom::outline(&geo, half);
-            let mut mesh = Mesh::default();
-            for (l, r) in &edges {
-                mesh.colored_vertex(pos2(l.x, l.y), color);
-                mesh.colored_vertex(pos2(r.x, r.y), color);
-            }
-            for i in 0..edges.len().saturating_sub(1) as u32 {
-                let k = i * 2;
-                mesh.add_triangle(k, k + 1, k + 2);
-                mesh.add_triangle(k + 1, k + 3, k + 2);
-            }
-            painter.add(Shape::mesh(mesh));
-            if round {
-                let n = pts.len();
-                for (i, p) in pts.iter().enumerate() {
-                    let sharp = i == 0 || i == n - 1 || {
-                        let (a, b, c) = (pts[i - 1], *p, pts[i + 1]);
-                        let (u, v) = ((b - a).normalized(), (c - b).normalized());
-                        u.dot(v) < 0.9
-                    };
-                    if sharp {
-                        painter.circle_filled(*p, half.get(i).copied().unwrap_or(0.5), color);
-                    }
-                }
-            }
+    };
+    let mut start = 0;
+    for i in 1..n {
+        if i + 1 < n && !sharp(i) {
+            continue;
         }
+        // One run of gentle turns, start..=i.
+        let geo: Vec<Point> = pts[start..=i].iter().map(|p| Point::new(p.x, p.y)).collect();
+        let widths: Vec<f32> = (start..=i).map(hw).collect();
+        let edges = notecraft_ink_geom::outline(&geo, &widths);
+        let mut mesh = Mesh::default();
+        for (l, r) in &edges {
+            mesh.colored_vertex(pos2(l.x, l.y), color);
+            mesh.colored_vertex(pos2(r.x, r.y), color);
+        }
+        for k in 0..edges.len().saturating_sub(1) as u32 {
+            let k = k * 2;
+            mesh.add_triangle(k, k + 1, k + 2);
+            mesh.add_triangle(k + 1, k + 3, k + 2);
+        }
+        painter.add(Shape::mesh(mesh));
+        if round {
+            painter.circle_filled(pts[i], hw(i), color);
+        }
+        start = i;
+    }
+    if round {
+        painter.circle_filled(pts[0], hw(0), color);
     }
 }
 
@@ -180,6 +189,14 @@ pub(crate) fn draw(app: &NoteApp, painter: &Painter, page: &Page, t: Tokens, pag
             let live = Ink { id: Id(0), pos: Point::ZERO, points: Vec::new(), color: pen.color, width: pen.width, tool: pen.tool, link: None };
             let screen: Vec<Pos2> = pts.iter().map(|(p, _)| app.canvas.to_screen(*p)).collect();
             let half: Vec<f32> = pts.iter().map(|(_, pr)| (live.width_at(*pr) * z / 2.0).max(0.5)).collect();
+            paint_stroke(painter, &screen, &half, ink_color(pen.color, pen.tool, page_text), pen.tool == InkTool::Pen);
+        }
+        Some(Gesture::Shape { from, to }) => {
+            let pen = app.session.draw.current_pen();
+            let z = PT * app.canvas.zoom.max(0.1);
+            let screen: Vec<Pos2> =
+                notecraft_ink::shape_points(app.session.draw.shape, *from, *to).into_iter().map(|p| app.canvas.to_screen(p)).collect();
+            let half = vec![(pen.width * z / 2.0).max(0.5); screen.len()];
             paint_stroke(painter, &screen, &half, ink_color(pen.color, pen.tool, page_text), pen.tool == InkTool::Pen);
         }
         Some(Gesture::Space { from, to }) => {
@@ -242,6 +259,55 @@ pub(crate) fn hit(app: &NoteApp, p: Pos2) -> Option<Id> {
         .map(|l| l.id)
 }
 
+/// Shift while dragging a shape: boxes become squares and circles, lines snap to 45°.
+fn constrain(kind: notecraft_ink::ShapeKind, from: Point, to: Point, shift: bool) -> Point {
+    if !shift {
+        return to;
+    }
+    let (dx, dy) = (to.x - from.x, to.y - from.y);
+    if kind.is_line() {
+        let len = (dx * dx + dy * dy).sqrt();
+        let a = (dy.atan2(dx) / std::f32::consts::FRAC_PI_4).round() * std::f32::consts::FRAC_PI_4;
+        Point::new(from.x + len * a.cos(), from.y + len * a.sin())
+    } else {
+        let side = dx.abs().max(dy.abs());
+        Point::new(from.x + side * dx.signum(), from.y + side * dy.signum())
+    }
+}
+
+/// The shape gallery under Draw › Shapes: one button per shape, its outline drawn in code.
+pub(crate) fn shape_gallery(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    egui::Grid::new("shape_gallery").spacing(vec2(2.0, 2.0)).show(ui, |ui| {
+        for (i, kind) in notecraft_ink::ShapeKind::ALL.into_iter().enumerate() {
+            let (rect, resp) = ui.allocate_exact_size(vec2(30.0, 30.0), Sense::click());
+            resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, kind.name()));
+            let on = app.session.draw.tool == DrawTool::Shape && app.session.draw.shape == kind;
+            if on {
+                ui.painter().rect_filled(rect, radius::CONTROL, t.checked);
+            } else if resp.hovered() {
+                ui.painter().rect_filled(rect, radius::CONTROL, t.hover);
+            }
+            let r = rect.shrink(6.0);
+            let (a, b) = if kind.is_line() {
+                (Point::new(r.min.x, r.max.y), Point::new(r.max.x, r.min.y))
+            } else {
+                (Point::new(r.min.x, r.min.y), Point::new(r.max.x, r.max.y))
+            };
+            let pts: Vec<Pos2> = notecraft_ink::shape_points(kind, a, b).into_iter().map(|p| pos2(p.x, p.y)).collect();
+            ui.painter().add(Shape::line(pts, Stroke::new(1.25, t.icon)));
+            if resp.on_hover_text(kind.name()).clicked() {
+                app.run(&ctx, "draw.shapes", json!({"kind": kind.name()}));
+                ui.close();
+            }
+            if i % 3 == 2 {
+                ui.end_row();
+            }
+        }
+    });
+    ui.separator();
+}
+
 /// Every pointer position of this frame (the latest last), so a fast stroke keeps its shape.
 fn moves(ui: &Ui, resp: &Response) -> Vec<Pos2> {
     let mut v: Vec<Pos2> = ui.input(|i| i.events.iter().filter_map(|e| if let Event::PointerMoved(p) = e { Some(*p) } else { None }).collect());
@@ -269,7 +335,7 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
     let tool = app.session.draw.tool;
     if resp.hovered() {
         match tool {
-            DrawTool::Pen | DrawTool::Lasso => ctx.set_cursor_icon(CursorIcon::Crosshair),
+            DrawTool::Pen | DrawTool::Lasso | DrawTool::Shape => ctx.set_cursor_icon(CursorIcon::Crosshair),
             DrawTool::Eraser => ctx.set_cursor_icon(CursorIcon::Cell),
             DrawTool::Space => ctx.set_cursor_icon(CursorIcon::ResizeVertical),
             DrawTool::Pan => ctx.set_cursor_icon(if resp.dragged() { CursorIcon::Grabbing } else { CursorIcon::Grab }),
@@ -329,6 +395,11 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
             DrawTool::Space => {
                 if resp.drag_started() {
                     app.canvas.ink.gesture = Some(Gesture::Space { from: at, to: at });
+                }
+            }
+            DrawTool::Shape => {
+                if resp.drag_started() {
+                    app.canvas.ink.gesture = Some(Gesture::Shape { from: at, to: at });
                 }
             }
             DrawTool::Lasso | DrawTool::Type if resp.drag_started() && handle_at(app, o).is_some() => {
@@ -407,6 +478,11 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
                     *to = *p;
                 }
             }
+            Some(Gesture::Shape { from, to }) => {
+                if let Some(p) = pts.last() {
+                    *to = constrain(app.session.draw.shape, *from, *p, shift);
+                }
+            }
             Some(Gesture::Pan) => ui.scroll_with_delta(resp.drag_delta()),
             None => return false,
         }
@@ -422,6 +498,12 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
             Some(Gesture::Lasso(v)) => {
                 let pts: Vec<[f32; 2]> = v.iter().map(|p| [p.x, p.y]).collect();
                 app.run(ctx, "draw.lassoSelect", json!({ "points": pts }));
+            }
+            Some(Gesture::Shape { from, to }) => {
+                app.run(ctx, "draw.shape", json!({"from": [from.x, from.y], "to": [to.x, to.y]}));
+                if !app.session.draw.lock_shapes {
+                    app.run(ctx, "draw.type", json!({}));
+                }
             }
             Some(Gesture::Space { from, to }) => {
                 // The longer way the pointer went decides: down/up inserts or removes rows of

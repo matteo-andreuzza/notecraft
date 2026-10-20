@@ -240,3 +240,26 @@ fn insert_space_by_dragging_down() {
     assert!((y - 380.0).abs() < 2.0, "BEH.Canvas.InsertSpace: {y}");
     assert_eq!(h.state().session.draw.tool, DrawTool::Type, "back to typing");
 }
+
+#[test]
+fn dragging_with_the_shape_tool_draws_the_shape() {
+    let mut h = drawing("draw.type");
+    h.state_mut().session.run("draw.shapes", json!({"kind": "oval"})).unwrap();
+    h.run();
+    let at = map(&h);
+    drag(&mut h, at(100.0, 150.0), at(220.0, 230.0));
+    let k = strokes(&h);
+    assert_eq!(k.len(), 1, "NC.Draw.Shape");
+    let b = k[0].bounds();
+    assert!((b.width() - 120.0).abs() < 4.0 && (b.height() - 80.0).abs() < 4.0, "{b:?}");
+    assert_eq!(h.state().session.draw.tool, DrawTool::Type, "without Lock Drawing Mode the tool goes back to Type");
+    // The gallery lists the shapes.
+    h.state_mut().ui.tab = "Draw".into();
+    h.state_mut().session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    h.run();
+    h.get_by_label("Shapes").click();
+    h.run();
+    h.get_by_label("Diamond").click();
+    h.run();
+    assert_eq!(h.state().session.draw.shape, notecraft_ink::ShapeKind::Diamond, "R.Draw.Shapes.InkShapeGallery");
+}

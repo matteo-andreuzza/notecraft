@@ -164,6 +164,9 @@ fn ink_page(a: &mut NoteApp, lasso: bool) {
     // Blue arrow.
     stroke(s, 2, vec![[340.0, 200.0, 0.6], [430.0, 150.0, 0.6]]);
     stroke(s, 2, vec![[412.0, 148.0, 0.6], [430.0, 150.0, 0.6], [424.0, 168.0, 0.6]]);
+    // Shapes are ink too.
+    s.run("draw.shape", json!({"kind": "rectangle", "from": [470, 130], "to": [570, 200], "pen": 2})).unwrap();
+    s.run("draw.shape", json!({"kind": "oval", "from": [600, 130], "to": [680, 200], "pen": 1})).unwrap();
     s.run("draw.pen", json!({"index": 0})).unwrap();
     if lasso {
         s.run("draw.lassoSelect", json!({"points": [[20, 80], [460, 80], [460, 230], [20, 230]]})).unwrap();

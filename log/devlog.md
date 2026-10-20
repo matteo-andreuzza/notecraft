@@ -335,3 +335,15 @@ this log plus a green tree is how the next agent picks up.
   Not exercised live (it would open the selection on the maintainer's screen); the engine path
   and the portal URI decoding are tested.
 - Numbers: wiring 597/1322 (45.2%), behaviour 159/1322 (12.0%), 302 commands.
+
+## 2026-10-20 — M2: shapes
+
+- **Draw › Shapes** (`draw.shapes`, a gallery drawn in code: line, arrow, double arrow,
+  rectangle, oval, triangle, right triangle, diamond, parallelogram; unverified list) and
+  **Lock Drawing Mode** (`draw.lockDrawingMode`). A shape is dragged out (Shift: squares,
+  circles, 45° lines) and stored as one ink stroke with the selected pen (`draw.shape`,
+  `NC.Draw.Shape`; generator `notecraft_ink::shape_points`), one undo step; without the lock the
+  tool returns to Type.
+- Drawing: strokes are now split at sharp corners (an averaged normal pinched the line there),
+  each run a triangle strip, the corners round joins.
+- Numbers: wiring 600/1323 (45.4%), behaviour 160/1323 (12.1%), 305 commands.
