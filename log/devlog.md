@@ -347,3 +347,40 @@ this log plus a green tree is how the next agent picks up.
 - Drawing: strokes are now split at sharp corners (an averaged normal pinched the line there),
   each run a triangle strip, the corners round joins.
 - Numbers: wiring 600/1323 (45.4%), behaviour 160/1323 (12.1%), 305 commands.
+
+## 2026-10-21 — M2: tags on ink (decision D5)
+
+- **Decision D5** (`docs/plan.md` §4.11): `Ink.tags` (optional in `section.json`, format 4
+  unchanged; one per key, at most 32). The tag commands treat the selected strokes as one
+  drawing: a new tag goes on the leftmost stroke unless one has it; remove/check/clear touch
+  every selected stroke, so Find Tags lists a drawing once ("Ink drawing", unverified wording).
+  Icons left of the stroke (unverified placement), the checkbox toggles on click (`tag.click`
+  takes an ink id), the ink menu's Tags submenu is the whole tag gallery, the Tags pane selects
+  a tagged stroke. `ui.inspect` (`ink`) and `notebook.inspect` show ink tags; e2e check added.
+- Fixed on the way: Tags pane rows weren't clickable on their text (a selectable label took
+  the click from the row).
+- Rows: `CM.InkDrawing.TagsGallery/TagsCustomize/TagsRemoveAll/TagsRemoveAll2` wired.
+
+## 2026-10-21 — M2: picture leftovers
+
+- **Paste: Picture** (`edit.pastePicture`): the clipboard's picture even when text came with
+  it; NoteCraft's own copied pictures come back as pictures; text alone is refused until the
+  renderer exists.
+- **Inline pictures in pasted HTML**: `<img src="data:image/…;base64,…">` becomes
+  `html::Block::Image` (at most 256; web pictures and pictures in table cells dropped); a paste
+  places them in reading order, skipping ones that don't decode; alt text kept.
+- **Stacking**: a picture or attachment in front of every container it overlaps is drawn over
+  the text and takes clicks there (`pictures::stack`, `Layer`; plan §4.9).
+- **Attachment menu headers**: file name and size (`CM.FileAttachment.FileAttachmentName/Size`).
+
+## 2026-10-21 — M2: Tab after text makes a table (decision D6)
+
+- **Decision D6** (`docs/plan.md` §4.8): Tab at the end of a paragraph's text turns it into a
+  one-row, two-column table that takes the paragraph's place (`table_cmds::tab_to_table`, from
+  `para.indent`'s Tab branch); no session state — later Tabs and Enter use the existing
+  one-row-table keys. `BEH.Table.TabToCreate` verified, `KB.Table.CreateWithTab` wired.
+- Numbers: wiring 610/1323 (46.1%), behaviour 161/1323 (12.2%), 306 commands; e2e 33/33.
+- Environment: the linker was OOM-killed again with `CARGO_BUILD_JOBS=4`; gates ran with 2.
+- Open: see `plan/handoff.md` §7 (ink leftovers: ruler, Ink to Shape, tablet pressure, pens in
+  settings; picture leftovers: 45° rotation and crop, files pasted from a file manager; page
+  templates need screenshots).
