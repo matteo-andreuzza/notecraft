@@ -677,8 +677,8 @@ fn layout_page(
     for o in &page.objects {
         let ol = match o {
             PageObject::Outline(ol) => ol,
-            // Pictures and attachments: `pictures::layout`.
-            PageObject::Image(_) | PageObject::Attachment(_) => continue,
+            // Pictures and attachments: `pictures::layout`; ink: `ink::draw`.
+            PageObject::Image(_) | PageObject::Attachment(_) | PageObject::Ink(_) => continue,
             PageObject::Table(tb) => {
                 let (tl, frame) = layout_table(ctx, tb, origin, zoom, t, page_text, &preedit_at, &mut paras);
                 extent = extent.max(vec2(frame.rect.max.x - origin.x + 240.0, frame.rect.max.y - origin.y + 240.0));

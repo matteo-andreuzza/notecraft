@@ -1,0 +1,19 @@
+[package]
+name = "notecraft-ink"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "NoteCraft L2 ink operations: strokes from samples, erasers, lasso, turns and flips"
+
+[lints]
+workspace = true
+
+[dependencies]
+notecraft-doc = { workspace = true }
+notecraft-ink-geom = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

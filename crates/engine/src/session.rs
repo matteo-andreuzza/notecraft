@@ -231,6 +231,8 @@ pub struct Session {
     pub view: ViewState,
     /// Preferences.
     pub prefs: Prefs,
+    /// The Draw tab's tool and pens (decision D4; not notebook data, never an undo step).
+    pub draw: crate::DrawState,
     /// The host's clock.
     pub clock: Clock,
     /// Formatting to apply to the next typed text at the caret (set by toggling Bold with no
@@ -280,6 +282,7 @@ impl Session {
             ids: IdGen::from_entropy(),
             clipboard: Clipboard::default(),
             view: ViewState::default(),
+            draw: crate::DrawState::default(),
             prefs: Prefs::default(),
             clock,
             pending_fmt: None,

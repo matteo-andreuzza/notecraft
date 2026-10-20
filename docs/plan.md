@@ -105,8 +105,9 @@ ribbon; [`ui-parity.md`](ui-parity.md)).
    tables); dropping files on the page. Left: file printouts (PdfCraft's `hayro` 0.7.1 passes
    our `cargo deny` policy and builds for wasm), screen clipping through the desktop portal,
    45° rotation, cropping.
-4. **Ink:** crates `ink-geom` and `ink` (pens, highlighters, eraser modes, lasso, ruler, pressure
-   from winit; tablet-v2/XInput2 as a risk), crate `render` (CPU oracle for thumbnails and export).
+4. **Ink (decision D4 / §4.10):** crates `ink-geom` and `ink` (pens, highlighters, eraser modes,
+   lasso, pressure from winit; tablet-v2/XInput2 as a risk), the Draw tab's tools; later the
+   ruler, shapes, recognition and crate `render` (CPU oracle for thumbnails and export).
 5. **Dialogs (done):** Insert Table, Link with page search, Move/Copy as a flat searchable list
    (not a tree — simplest compatible choice, noted in the catalog), Options (with the Office
    Theme), Recent Notebooks, the notebook list (Ctrl+G), Symbol. Left for later: page templates,
@@ -290,6 +291,45 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   it, as in the reference; the `render` crate draws pictures from the same blobs for page export
   and printing.
 
+### 4.10 Ink (decision D4, 2026-10-20)
+
+- **One stroke is one page object**, `PageObject::Ink(Ink { id, pos, points: [[x, y,
+  pressure]], color, width, tool })`, beside containers, tables and pictures (the D2/D3
+  precedent). Points are in page points relative to `pos` (the top-left of the points' box), so
+  moving a stroke is one assignment; `tool` is `Pen` or `Highlighter`; `width` is the nominal tip
+  width in points; pressure is 0–1 per point (0.5 when the device reports none). Strokes being
+  objects means the lasso, Delete, Cut/Copy/Paste, the arrow keys, Order and the Rotate commands
+  work on them through the existing object selection (`PageSel::Objects`), and Undo removes one
+  stroke at a time. In the reference ink is `jcidInkNode` content holding `InkData` with one or
+  more strokes ([MS-ONE]); **M3 import** makes one object per stroke (only the grouping is lost;
+  path, pressure, colour, width and the highlighter flag map to the stroke properties, names to
+  be pinned against [MS-ONE] in M3), export groups the strokes of a page into one ink node.
+- **Width follows pressure** for pens: drawn width = `width × (0.4 + 1.2 × pressure)`, so the
+  constant 0.5 of a mouse draws exactly `width` (curve unverified). Highlighters ignore pressure
+  and draw translucent. Pressure comes from egui's touch force where winit reports it; mouse
+  strokes get 0.5 (PhotoCraft's XInput2 `tablet` crate is the path to real tablets on X11).
+- **Geometry** lives in `notecraft-ink-geom` (L0: simplification, distances, polygon tests,
+  circle cuts, outlines for drawing) and the stroke operations in `notecraft-ink` (L2: building
+  a stroke from samples, partial and whole-stroke erasing, lasso picks, 45°/90° turns, flips).
+  A finished stroke is simplified (Ramer–Douglas–Peucker, 0.2 pt) before it is stored.
+- **Erasers:** the Stroke Eraser removes every stroke it touches; Small, Medium and Large
+  (radius 2.5, 6 and 12 pt, unverified) cut strokes and keep the pieces outside the eraser
+  (each piece a new stroke). One drag is one undo step (the commands coalesce by gesture).
+- **Lasso:** a stroke is picked when at least three quarters of its points are inside the loop;
+  any other object when the centre of its box is (unverified).
+- **Tools** (Type, Lasso Select, Panning Hand, Eraser, the pens) and the pen gallery are session
+  state (`Session::draw`), not notebook data: choosing a tool never adds an undo step. The
+  default pens are black, red and blue pens of 0.5 mm and yellow and green highlighters of
+  5 mm (unverified); Add Pen appends one (at most 32).
+- **Format 4.** `.ncraft` version 4; files of versions 1–3 open unchanged; older builds refuse
+  version 4 rather than drop ink.
+- **Limits against hostile input:** ≤ 20,000 points per stroke (longer input is simplified,
+  then cut), coordinates through `geom::finite`, pressure clamped to 0–1 (NaN → 0.5), widths
+  0.1–72 pt, a stroke without points is dropped on load, and strokes count against the
+  10,000-objects-per-page cap of D3.
+- **Later:** the ruler, shapes (Ink to Shape), Ink to Text/Math (recognition), Ink Replay,
+  touch-only drawing, resizing ink by handles, the `render` crate drawing ink for export.
+
 ## 5. Risks
 
 | Risk | Impact | Mitigation |
@@ -309,6 +349,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | D1 | 2026-10-15 | The visual model is the current OneNote for Microsoft 365 desktop app (the 2024 UI): neutral title bar with a centred Search box; a tab row whose active tab is semibold with an accent underline; the ribbon in a floating rounded card, **Simplified (one row) by default** with a ▾ chevron to the **Classic** ribbon (both in the modern style, the choice remembered); navigation on the left (a tree of every notebook with coloured section bars, + New section, Quick notes pinned at the bottom; the page column with Add page and sort); **no section tabs above the page**; panes as cards. Surfaces that only exist in the 2016 layout become `out-of-scope` rows that name their replacement. | The window layout of the original brief (OneNote 2016-style: section tabs across the top, page list on the right) | The user's directive: like the other ArtCraft apps follow the latest Office. The brief is kept verbatim; this table records the override. The command set, menu paths, shortcuts and behaviour mandate are unchanged. |
 | D2 | 2026-10-15 | Tables are their own page object (`PageObject::Table`) with cells as text blocks (`Block::Cell`) and fixed column widths; `.ncraft` version 2 (§4.8). | — (the plan named `PageObject::Table`; the containment detail was open) | The simplest model compatible with M3: [MS-ONE] tables map 1:1 except that a table inside a container becomes a neighbour of it; no existing text command changes. |
 | D3 | 2026-10-19 | Pictures and attachments are page objects (`PageObject::Image`, `PageObject::Attachment`) whose bytes are `Arc`-shared blobs keyed by a 128-bit id and stored as uncompressed `media/<id>` entries in the section zip; `.ncraft` version 3; explicit size, pixel, byte and object-count limits (§4.9). | — (the plan named `media/` in the section zip; the object shape and limits were open) | Undo and copy/paste stay pointer copies; blob ids map to [MS-ONE]'s file-data-store GUIDs; a damaged picture degrades to a placeholder instead of failing the section; printouts and export reuse the same blobs. |
+| D4 | 2026-10-20 | Ink strokes are page objects, one stroke per object (`PageObject::Ink`, points relative to the object's position with per-point pressure, colour, width, pen or highlighter); `.ncraft` version 4; geometry in `ink-geom` (L0), stroke operations in `ink` (L2); tools are session state (§4.10). | — (the plan named the crates; the object shape was open) | Every object command (select, lasso, delete, clipboard, order, rotate, move, undo) works on ink unchanged; [MS-ONE] ink nodes map stroke by stroke, losing only their grouping. |
 
 ## 7. Assumptions
 

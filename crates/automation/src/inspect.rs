@@ -136,6 +136,14 @@ pub fn page_json(p: &Page, runs: bool) -> Value {
                 "kind": "attachment", "id": a.id, "x": a.pos.x, "y": a.pos.y, "name": a.name, "bytes": a.blob.len,
                 "missing": a.blob.is_missing(), "altText": a.alt_text,
             }),
+            PageObject::Ink(k) => {
+                let b = k.bounds();
+                json!({
+                    "kind": "ink", "id": k.id, "x": k.pos.x, "y": k.pos.y, "tool": serde_json::to_value(k.tool).unwrap_or(Value::Null),
+                    "color": k.color.to_hex(), "width": k.width, "points": k.points.len(),
+                    "bounds": [b.min.x, b.min.y, b.width(), b.height()],
+                })
+            }
         })
         .collect();
     json!({
@@ -171,6 +179,11 @@ pub fn page_text(p: &Page) -> String {
             }
             PageObject::Attachment(a) => {
                 out.push_str(&format!("[file {}]\n\n", a.name));
+                continue;
+            }
+            PageObject::Ink(k) => {
+                let what = if k.tool == notecraft_engine::doc::InkTool::Highlighter { "highlighter" } else { "ink" };
+                out.push_str(&format!("[{what} stroke, {} points]\n\n", k.points.len()));
                 continue;
             }
         };

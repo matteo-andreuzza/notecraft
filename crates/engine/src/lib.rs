@@ -20,6 +20,7 @@ pub mod selection;
 pub mod session;
 
 mod caret_cmds;
+mod draw_cmds;
 mod edit_cmds;
 mod file_cmds;
 mod format_cmds;
@@ -41,12 +42,15 @@ mod tests;
 #[cfg(test)]
 mod tests_cmds;
 #[cfg(test)]
+mod tests_draw;
+#[cfg(test)]
 mod tests_picture;
 #[cfg(test)]
 mod tests_table;
 
 use serde_json::Value;
 
+pub use draw_cmds::{DrawState, DrawTool, EraserKind, PenStyle};
 pub use notecraft_doc as doc;
 pub use notecraft_search as search;
 pub use notecraft_text as text;

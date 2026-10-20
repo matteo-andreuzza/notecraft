@@ -214,6 +214,7 @@ pub(crate) fn object_bottom(o: &PageObject) -> f32 {
             t.pos.y + rows as f32 * 20.0 + t.rows.len() as f32 * 6.0
         }
         PageObject::Image(_) | PageObject::Attachment(_) => o.pos().y + crate::picture_cmds::media_size(o).map_or(0.0, |(_, h)| h),
+        PageObject::Ink(k) => k.bounds().max.y,
     }
 }
 
@@ -312,6 +313,7 @@ pub(crate) fn clone_page_fresh(s: &mut Session, page: &notecraft_doc::Page, now:
             }
             PageObject::Image(im) => im.id = s.new_id(),
             PageObject::Attachment(a) => a.id = s.new_id(),
+            PageObject::Ink(k) => k.id = s.new_id(),
             PageObject::Table(t) => {
                 t.id = s.new_id();
                 for row in &mut t.rows {

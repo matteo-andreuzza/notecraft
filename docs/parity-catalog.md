@@ -289,22 +289,22 @@ The Draw tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| R.Draw.Tools.SelectAndTypeMode | Type | Draw/Tools/Type | toggle |  | draw.type | P1 | missing | FLUENT19:SelectAndTypeMode |  |
-| R.Draw.Tools.LassoSelect | Lasso Select | Draw/Tools/Lasso Select | toggle |  | draw.lasso | P1 | missing | FLUENT19:LassoSelect |  |
-| R.Draw.Tools.PanningHand | Panning Hand | Draw/Tools/Panning Hand | toggle |  | draw.pan | P2 | missing | FLUENT19:PanningHand |  |
-| R.Draw.Tools.EraserMenu | Eraser | Draw/Tools/Eraser | split |  | draw.eraser | P1 | missing | FLUENT19:EraserMenu |  |
-| R.Draw.Tools.EraserLastUsed | Eraser (last used) | Draw/Tools/Eraser/Eraser (last used) | toggle |  | draw.eraser | P1 | missing | FLUENT19:EraserLastUsed |  |
-| R.Draw.Tools.SmallEraser | Small Eraser | Draw/Tools/Eraser/Small Eraser | toggle |  | draw.eraserSmall | P1 | missing | FLUENT19:SmallEraser |  |
-| R.Draw.Tools.MediumEraser | Medium Eraser | Draw/Tools/Eraser/Medium Eraser | toggle |  | draw.eraserMedium | P1 | missing | FLUENT19:MediumEraser |  |
-| R.Draw.Tools.LargeEraser | Large Eraser | Draw/Tools/Eraser/Large Eraser | toggle |  | draw.eraserLarge | P1 | missing | FLUENT19:LargeEraser |  |
-| R.Draw.Tools.StrokeEraserOneNote | Stroke Eraser | Draw/Tools/Eraser/Stroke Eraser | toggle |  | draw.eraserStroke | P1 | missing | FLUENT19:StrokeEraserOneNote |  |
-| R.Draw.Tools.InkStylesGallery | Pens | Draw/Tools/Pens | gallery |  | draw.pen | P1 | missing | FLUENT19:InkStylesGallery |  |
+| R.Draw.Tools.SelectAndTypeMode | Type | Draw/Tools/Type | toggle |  | draw.type | P1 | wired | FLUENT19:SelectAndTypeMode |  |
+| R.Draw.Tools.LassoSelect | Lasso Select | Draw/Tools/Lasso Select | toggle |  | draw.lasso | P1 | wired | FLUENT19:LassoSelect |  |
+| R.Draw.Tools.PanningHand | Panning Hand | Draw/Tools/Panning Hand | toggle |  | draw.pan | P2 | wired | FLUENT19:PanningHand |  |
+| R.Draw.Tools.EraserMenu | Eraser | Draw/Tools/Eraser | split |  | draw.eraser | P1 | wired | FLUENT19:EraserMenu | the Stroke Eraser is the default, unverified |
+| R.Draw.Tools.EraserLastUsed | Eraser (last used) | Draw/Tools/Eraser/Eraser (last used) | toggle |  | draw.eraser | P1 | wired | FLUENT19:EraserLastUsed |  |
+| R.Draw.Tools.SmallEraser | Small Eraser | Draw/Tools/Eraser/Small Eraser | toggle |  | draw.eraserSmall | P1 | wired | FLUENT19:SmallEraser | radius 2.5 pt, unverified |
+| R.Draw.Tools.MediumEraser | Medium Eraser | Draw/Tools/Eraser/Medium Eraser | toggle |  | draw.eraserMedium | P1 | wired | FLUENT19:MediumEraser | radius 6 pt, unverified |
+| R.Draw.Tools.LargeEraser | Large Eraser | Draw/Tools/Eraser/Large Eraser | toggle |  | draw.eraserLarge | P1 | wired | FLUENT19:LargeEraser | radius 12 pt, unverified |
+| R.Draw.Tools.StrokeEraserOneNote | Stroke Eraser | Draw/Tools/Eraser/Stroke Eraser | toggle |  | draw.eraserStroke | P1 | wired | FLUENT19:StrokeEraserOneNote |  |
+| R.Draw.Tools.InkStylesGallery | Pens | Draw/Tools/Pens | gallery |  | draw.pen | P1 | wired | FLUENT19:InkStylesGallery | default pens (black, red, blue 0.5 mm; yellow, green highlighters 5 mm) unverified |
 | R.Draw.Tools.InkBiasMenu | Ink Mode | Draw/Tools/Pens/Ink Mode | menu |  |  | P2 | missing | FLUENT19:InkBiasMenu |  |
 | R.Draw.Tools.InkingBiasAuto | Create Both Handwriting and Drawings | Draw/Tools/Pens/Ink Mode/Create Both Handwriting and Drawings | toggle |  | draw.inkModeAuto | P2 | missing | FLUENT19:InkingBiasAuto |  |
 | R.Draw.Tools.InkingBiasDraw | Create Drawings Only | Draw/Tools/Pens/Ink Mode/Create Drawings Only | toggle |  | draw.inkModeDraw | P2 | missing | FLUENT19:InkingBiasDraw |  |
 | R.Draw.Tools.InkingBiasWrite | Create Handwriting Only | Draw/Tools/Pens/Ink Mode/Create Handwriting Only | toggle |  | draw.inkModeWrite | P2 | missing | FLUENT19:InkingBiasWrite |  |
 | R.Draw.Tools.PenAsPointerMode | Use Pen as Pointer | Draw/Tools/Pens/Ink Mode/Use Pen as Pointer | toggle |  | draw.penAsPointer | P2 | missing | FLUENT19:PenAsPointerMode |  |
-| R.Draw.Tools.MoreColorAndThicknessOptions | Color & Thickness | Draw/Tools/Color & Thickness | button |  | draw.colorThickness | P1 | missing | FLUENT19:MoreColorAndThicknessOptions |  |
+| R.Draw.Tools.MoreColorAndThicknessOptions | Color & Thickness | Draw/Tools/Color & Thickness | button |  | draw.colorThickness | P1 | wired | FLUENT19:MoreColorAndThicknessOptions |  |
 | R.Draw.Tools.FingerPaintingMode | Draw with Touch | Draw/Tools/Draw with Touch | toggle |  | draw.withTouch | P2 | missing | FLUENT19:FingerPaintingMode |  |
 | R.Draw.Toolstouch.SelectAndTypeMode | Type | Draw/Tools (touch)/Type | toggle |  | draw.type | P3 | missing | FLUENT19:SelectAndTypeMode | touch-mode layout of the Tools group (same commands) |
 | R.Draw.Toolstouch.LassoSelect | Lasso Select | Draw/Tools (touch)/Lasso Select | toggle |  | draw.lasso | P3 | missing | FLUENT19:LassoSelect | touch-mode layout of the Tools group (same commands) |
@@ -328,20 +328,20 @@ The Draw tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Draw.Edit.PenInsertSpace | Insert Space | Draw/Edit/Insert Space | toggle |  | insert.space | P1 | missing | FLUENT19:PenInsertSpace |  |
 | R.Draw.Edit.Delete | Delete | Draw/Edit/Delete | button | `Delete` | edit.delete | P0 | wired | FLUENT19:Delete |  |
 | R.Draw.Edit.ObjectsArrangeMenu | Arrange | Draw/Edit/Arrange | menu |  |  | P1 | missing | FLUENT19:ObjectsArrangeMenu |  |
-| R.Draw.Edit.ObjectBringForward | Bring Forward | Draw/Edit/Arrange/Bring Forward | button |  | object.bringForward | P1 | missing | FLUENT19:ObjectBringForward |  |
-| R.Draw.Edit.ObjectBringToFront | Bring to Front | Draw/Edit/Arrange/Bring to Front | button |  | object.bringToFront | P1 | missing | FLUENT19:ObjectBringToFront |  |
-| R.Draw.Edit.ObjectSendBackward | Send Backward | Draw/Edit/Arrange/Send Backward | button |  | object.sendBackward | P1 | missing | FLUENT19:ObjectSendBackward |  |
-| R.Draw.Edit.ObjectSendToBack | Send to Back | Draw/Edit/Arrange/Send to Back | button |  | object.sendToBack | P1 | missing | FLUENT19:ObjectSendToBack |  |
+| R.Draw.Edit.ObjectBringForward | Bring Forward | Draw/Edit/Arrange/Bring Forward | button |  | object.bringForward | P1 | wired | FLUENT19:ObjectBringForward |  |
+| R.Draw.Edit.ObjectBringToFront | Bring to Front | Draw/Edit/Arrange/Bring to Front | button |  | object.bringToFront | P1 | wired | FLUENT19:ObjectBringToFront |  |
+| R.Draw.Edit.ObjectSendBackward | Send Backward | Draw/Edit/Arrange/Send Backward | button |  | object.sendBackward | P1 | wired | FLUENT19:ObjectSendBackward |  |
+| R.Draw.Edit.ObjectSendToBack | Send to Back | Draw/Edit/Arrange/Send to Back | button |  | object.sendToBack | P1 | wired | FLUENT19:ObjectSendToBack |  |
 | R.Draw.Edit.RotateMenuOneNote | Rotate | Draw/Edit/Rotate | menu |  |  | P1 | missing | FLUENT19:RotateMenuOneNote |  |
-| R.Draw.Edit.RotateRight45OneNote | Rotate Right 45° | Draw/Edit/Rotate/Rotate Right 45° | button |  | object.rotateRight45 | P2 | missing | FLUENT19:RotateRight45OneNote |  |
-| R.Draw.Edit.RotateLeft45OneNote | Rotate Left 45° | Draw/Edit/Rotate/Rotate Left 45° | button |  | object.rotateLeft45 | P2 | missing | FLUENT19:RotateLeft45OneNote |  |
-| R.Draw.Edit.ObjectRotateRight90 | Rotate Right 90° | Draw/Edit/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | missing | FLUENT19:ObjectRotateRight90 |  |
-| R.Draw.Edit.ObjectRotateLeft90 | Rotate Left 90° | Draw/Edit/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | missing | FLUENT19:ObjectRotateLeft90 |  |
-| R.Draw.Edit.ObjectFlipHorizontal | Flip Horizontal | Draw/Edit/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | missing | FLUENT19:ObjectFlipHorizontal |  |
-| R.Draw.Edit.ObjectFlipVertical | Flip Vertical | Draw/Edit/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | missing | FLUENT19:ObjectFlipVertical |  |
+| R.Draw.Edit.RotateRight45OneNote | Rotate Right 45° | Draw/Edit/Rotate/Rotate Right 45° | button |  | object.rotateRight45 | P2 | wired | FLUENT19:RotateRight45OneNote |  |
+| R.Draw.Edit.RotateLeft45OneNote | Rotate Left 45° | Draw/Edit/Rotate/Rotate Left 45° | button |  | object.rotateLeft45 | P2 | wired | FLUENT19:RotateLeft45OneNote |  |
+| R.Draw.Edit.ObjectRotateRight90 | Rotate Right 90° | Draw/Edit/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | wired | FLUENT19:ObjectRotateRight90 |  |
+| R.Draw.Edit.ObjectRotateLeft90 | Rotate Left 90° | Draw/Edit/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | wired | FLUENT19:ObjectRotateLeft90 |  |
+| R.Draw.Edit.ObjectFlipHorizontal | Flip Horizontal | Draw/Edit/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | wired | FLUENT19:ObjectFlipHorizontal |  |
+| R.Draw.Edit.ObjectFlipVertical | Flip Vertical | Draw/Edit/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | wired | FLUENT19:ObjectFlipVertical |  |
 | R.Draw.Convert.SelectionToTextConvert | Ink to Text | Draw/Convert/Ink to Text | button |  | draw.inkToText | P2 | missing | FLUENT19:SelectionToTextConvert |  |
 | R.Draw.Convert.SelectionToMathConvert | Ink to Math | Draw/Convert/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:SelectionToMathConvert |  |
-| R.Draw.Tools.AddPen | Add Pen | Draw/Tools/Add Pen | button |  | draw.addPen | P1 | missing | GK (Microsoft 365 OneNote Draw tab) | unverified |
+| R.Draw.Tools.AddPen | Add Pen | Draw/Tools/Add Pen | button |  | draw.addPen | P1 | wired | GK (Microsoft 365 OneNote Draw tab) | unverified |
 | R.Draw.Tools.Ruler | Ruler | Draw/Tools/Ruler | toggle |  | draw.ruler | P2 | missing | GK (Microsoft 365 OneNote Draw tab) | unverified |
 | R.Draw.Convert.InkToShape | Ink to Shape | Draw/Convert/Ink to Shape | toggle |  | draw.inkToShape | P2 | missing | GK (Microsoft 365 OneNote Draw tab) | unverified |
 | R.Draw.Replay.InkReplay | Ink Replay | Draw/Replay/Ink Replay | button |  | draw.replay | P2 | missing | GK (Microsoft 365 OneNote Draw tab) | unverified |
@@ -1432,8 +1432,8 @@ Documented (or, where marked, plausible and unverified) behaviour. A behaviour r
 | BEH.Paste.Images | Pasting an image creates a picture on the page at the caret | Behaviour/Paste | behaviour |  |  | P1 | wired | GK | a picture on the system clipboard (no text) is pasted as a picture where a new object goes; Ctrl+V with only a picture is caught on the key release (egui-winit drops the press) |
 | BEH.Paste.Files | Dropping a file asks: attach file / insert printout | Behaviour/Paste | behaviour |  |  | P1 | wired | GK | unverified: no "attach or insert printout" question yet (printouts come later): a dropped picture file becomes a picture, any other file an attachment, at the drop point; desktop only (the web build reads dropped files asynchronously, not yet) |
 | BEH.Table.TabToCreate | Tab after text in a paragraph turns it into a two-column table | Behaviour/Table | behaviour |  |  | P1 | missing | KBD365 ("Create a table") |  |
-| BEH.Ink.PressureTilt | Pen pressure (and tilt where available) shapes ink stroke width | Behaviour/Ink | behaviour |  |  | P1 | missing | brief §6 M2 |  |
-| BEH.Ink.Lasso | Lasso select picks ink strokes and objects inside the loop | Behaviour/Ink | behaviour |  |  | P1 | missing | FLUENT19:LassoSelect |  |
+| BEH.Ink.PressureTilt | Pen pressure (and tilt where available) shapes ink stroke width | Behaviour/Ink | behaviour |  |  | P1 | wired | brief §6 M2 | Pens draw width × (0.4 + 1.2 × pressure), unverified curve; pressure from egui touch force where winit reports it, else 0.5; tilt not used |
+| BEH.Ink.Lasso | Lasso select picks ink strokes and objects inside the loop | Behaviour/Ink | behaviour |  | draw.lassoSelect | P1 | wired | FLUENT19:LassoSelect | A stroke is picked when three quarters of its points are inside, another object when its centre is (unverified) |
 | BEH.History.RecentEdits | Recent Edits lists pages changed in the chosen period, newest first | Behaviour/History | behaviour |  |  | P1 | missing | FLUENT19:FindByDateMenu |  |
 | BEH.History.Unread | Pages changed by others since you last looked are bold in the page list; Next Unread goes there | Behaviour/History | behaviour |  |  | P2 | missing | FLUENT19:GoToNextUnreadPage |  |
 
@@ -1498,6 +1498,8 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 | NC.Table.ColumnWidth | Column Width | Mouse/Drag a table column border | mouse |  | table.columnWidth | P1 | verified | NoteCraft; [MS-ONE] TableColumnWidths | Drag a table column's border to change its width. |
 | NC.Table.ConvertTextToTable | Convert Text to Table | Insert/Tables/Table/Convert Text to Table | button |  | insert.convertTextToTable | P1 | wired | NoteCraft | The selected paragraphs become a table: a row per paragraph, tabs split the cells. Unverified placement in the reference |
 | NC.Table.ConvertToText | Convert to Text | Table Layout/Convert/Convert to Text | button |  | table.convertToText | P2 | wired | NoteCraft | A table becomes text: a paragraph per row, cells joined by tabs. Unverified placement in the reference |
+| NC.Draw.Stroke | Ink | Mouse/Canvas/Draw | mouse |  | draw.stroke | P1 | verified | NoteCraft (decision D4) | Dragging with a pen or highlighter draws one stroke: one page object and one undo step; the finished stroke is simplified (0.2 pt). |
+| NC.Draw.Erase | Erase | Mouse/Canvas/Erase | mouse |  | draw.erase | P1 | wired | NoteCraft (decision D4) | Dragging with an eraser erases along the path; one drag is one undo step. Eraser radii (2.5/6/12 pt) unverified |
 
 ## Revision history
 

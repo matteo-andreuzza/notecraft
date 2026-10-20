@@ -17,6 +17,7 @@ use notecraft_geom::{Point, finite, length};
 use serde::{Deserialize, Serialize};
 
 use crate::id::Id;
+use crate::ink::Ink;
 use crate::media::{Attachment, Blob, Image, MAX_PAGE_OBJECTS};
 use crate::table::{Table, TableCell};
 use crate::text::{MAX_LEVEL, ParaStyle, Paragraph};
@@ -135,6 +136,8 @@ pub enum PageObject {
     Image(Image),
     /// An attached file (format 3 and later; decision D3).
     Attachment(Attachment),
+    /// An ink stroke (format 4 and later; decision D4).
+    Ink(Ink),
 }
 
 impl PageObject {
@@ -145,6 +148,7 @@ impl PageObject {
             PageObject::Table(t) => t.id,
             PageObject::Image(i) => i.id,
             PageObject::Attachment(a) => a.id,
+            PageObject::Ink(k) => k.id,
         }
     }
 
@@ -155,6 +159,7 @@ impl PageObject {
             PageObject::Table(t) => t.pos,
             PageObject::Image(i) => i.pos,
             PageObject::Attachment(a) => a.pos,
+            PageObject::Ink(k) => k.pos,
         }
     }
 
@@ -165,6 +170,7 @@ impl PageObject {
             PageObject::Table(t) => t.pos = pos.sanitized(),
             PageObject::Image(i) => i.pos = pos.sanitized(),
             PageObject::Attachment(a) => a.pos = pos.sanitized(),
+            PageObject::Ink(k) => k.pos = pos.sanitized(),
         }
     }
 
@@ -205,7 +211,7 @@ impl PageObject {
         match self {
             PageObject::Outline(o) => Box::new(o.paragraphs.iter()),
             PageObject::Table(t) => Box::new(t.rows.iter().flat_map(|r| r.cells.iter()).flat_map(|c| c.paragraphs.iter())),
-            PageObject::Image(_) | PageObject::Attachment(_) => Box::new(std::iter::empty()),
+            PageObject::Image(_) | PageObject::Attachment(_) | PageObject::Ink(_) => Box::new(std::iter::empty()),
         }
     }
 
@@ -237,6 +243,22 @@ impl PageObject {
     pub fn as_attachment_mut(&mut self) -> Option<&mut Attachment> {
         match self {
             PageObject::Attachment(a) => Some(a),
+            _ => None,
+        }
+    }
+
+    /// The ink stroke, if this is one.
+    pub fn as_ink(&self) -> Option<&Ink> {
+        match self {
+            PageObject::Ink(k) => Some(k),
+            _ => None,
+        }
+    }
+
+    /// The ink stroke, mutably, if this is one.
+    pub fn as_ink_mut(&mut self) -> Option<&mut Ink> {
+        match self {
+            PageObject::Ink(k) => Some(k),
             _ => None,
         }
     }
@@ -425,12 +447,14 @@ impl Page {
                 PageObject::Table(t) => t.normalize(),
                 PageObject::Image(i) => i.normalize(),
                 PageObject::Attachment(a) => a.normalize(),
+                PageObject::Ink(k) => k.normalize(),
             }
         }
         self.objects.retain(|o| match o {
             PageObject::Outline(ol) => !ol.paragraphs.is_empty(),
             PageObject::Table(t) => !t.is_empty(),
             PageObject::Image(_) | PageObject::Attachment(_) => true,
+            PageObject::Ink(k) => !k.points.is_empty(),
         });
         self.objects.truncate(MAX_PAGE_OBJECTS);
     }
@@ -490,6 +514,16 @@ impl Page {
         self.objects.iter().find_map(|o| o.as_attachment().filter(|a| a.id == id))
     }
 
+    /// The ink stroke with `id`.
+    pub fn ink(&self, id: Id) -> Option<&Ink> {
+        self.objects.iter().find(|o| o.id() == id).and_then(PageObject::as_ink)
+    }
+
+    /// The ink stroke with `id`, mutably.
+    pub fn ink_mut(&mut self, id: Id) -> Option<&mut Ink> {
+        self.objects.iter_mut().find(|o| o.id() == id).and_then(PageObject::as_ink_mut)
+    }
+
     /// The attachment with `id`, mutably.
     pub fn attachment_mut(&mut self, id: Id) -> Option<&mut Attachment> {
         self.objects.iter_mut().find_map(|o| o.as_attachment_mut().filter(|a| a.id == id))
@@ -497,7 +531,7 @@ impl Page {
 
     /// All plain text on the page (title first), for search and exports. A table's cells are
     /// separated by tabs, its rows by line breaks; an attachment contributes its file name
-    /// (pictures contribute nothing until OCR exists).
+    /// (pictures and ink contribute nothing until OCR and handwriting recognition exist).
     pub fn plain_text(&self) -> String {
         let mut s = self.title_text();
         for o in &self.objects {
@@ -516,7 +550,7 @@ impl Page {
                     s.push('\n');
                     s.push_str(&a.name);
                 }
-                PageObject::Image(_) => {}
+                PageObject::Image(_) | PageObject::Ink(_) => {}
             }
         }
         s

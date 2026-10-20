@@ -175,6 +175,10 @@ const PARAM_NAMES: &[&str] = &[
     "dh",
     "height",
     "dir",
+    "points",
+    "gesture",
+    "pen",
+    "tool",
 ];
 
 #[test]
@@ -224,6 +228,14 @@ fn panic_hunt() {
         Box::new(|| {
             let mut s = sample();
             run(&mut s, "insert.file", json!({"data": "aGVsbG8=", "name": "a.txt"}));
+            s
+        }),
+        // Ink strokes, lassoed (decision D4).
+        Box::new(|| {
+            let mut s = sample();
+            run(&mut s, "draw.stroke", json!({"points": [[10, 300, 0.5], [60, 320, 0.9], [90, 300]]}));
+            run(&mut s, "draw.stroke", json!({"points": [[20, 400]], "pen": 3}));
+            run(&mut s, "draw.lassoSelect", json!({"points": [[0, 280], [200, 280], [200, 450], [0, 450]]}));
             s
         }),
     ];

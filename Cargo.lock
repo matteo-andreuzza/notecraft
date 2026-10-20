@@ -2207,6 +2207,8 @@ dependencies = [
  "notecraft-doc",
  "notecraft-format",
  "notecraft-import-export",
+ "notecraft-ink",
+ "notecraft-ink-geom",
  "notecraft-search",
  "notecraft-text",
  "proptest",
@@ -2242,6 +2244,23 @@ name = "notecraft-import-export"
 version = "0.1.0"
 dependencies = [
  "notecraft-doc",
+ "proptest",
+]
+
+[[package]]
+name = "notecraft-ink"
+version = "0.1.0"
+dependencies = [
+ "notecraft-doc",
+ "notecraft-ink-geom",
+ "proptest",
+]
+
+[[package]]
+name = "notecraft-ink-geom"
+version = "0.1.0"
+dependencies = [
+ "notecraft-geom",
  "proptest",
 ]
 

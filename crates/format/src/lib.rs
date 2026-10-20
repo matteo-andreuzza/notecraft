@@ -53,10 +53,11 @@ pub const RECYCLE_FILE: &str = "recycle.ncraft-bin";
 /// newer files are refused with an error rather than half-read.
 ///
 /// History: 1 = M1 (outlines); 2 = M2 tables (`PageObject::Table`); 3 = M2 pictures and
-/// attachments (`PageObject::Image`/`Attachment`, bytes in `media/` entries; decision D3).
+/// attachments (`PageObject::Image`/`Attachment`, bytes in `media/` entries; decision D3); 4 = M2
+/// ink (`PageObject::Ink`, one stroke per object; decision D4).
 /// Each version reads every older one unchanged; older builds refuse newer files rather than
 /// drop objects they don't know.
-pub const VERSION: u32 = 3;
+pub const VERSION: u32 = 4;
 
 /// Largest decompressed JSON entry accepted (1 GiB): a 2 GB notebook spreads over many
 /// sections, so one section beyond this is corrupt or hostile.
@@ -592,6 +593,41 @@ mod tests {
         assert!(v2.contains(r#""version":2"#));
         let back = decode_section(&zip_one(SECTION_ENTRY, v2.as_bytes()).unwrap()).unwrap();
         assert_eq!(back.pages[0].table(Id(90)), Some(&t));
+    }
+
+    #[test]
+    fn format_3_files_still_open_and_ink_round_trips() {
+        use notecraft_doc::{Ink, InkTool, color::Rgba};
+        // A version-3 section (pictures) reads unchanged: the picture schema is the same in 4.
+        let shared = notecraft_doc::Blob::new(Id(70), Arc::from(&b"\x89PNG fake"[..]));
+        let mut s = sample_section();
+        Arc::make_mut(&mut s.pages[0]).objects.push(picture(60, &shared));
+        let (json, media) = notecraft_doc::media::collect_blobs(|| {
+            serde_json::to_vec(&SectionFile { format: SECTION_MAGIC.into(), version: 3, section: s.clone() }).unwrap()
+        });
+        let v3 = zip_with_media(SECTION_ENTRY, &json, &media).unwrap();
+        let back = decode_section(&v3).unwrap();
+        assert_eq!(back.pages[0].image(Id(60)).map(|im| im.blob.bytes.len()), Some(shared.bytes.len()));
+        // Ink is written as format 4 and comes back point for point.
+        let pts = [(Point::new(50.0, 80.0), 0.5), (Point::new(60.0, 85.0), 0.75), (Point::new(72.5, 82.25), 1.0)];
+        let ink = Ink::new(Id(80), &pts, Rgba::rgb(200, 0, 0), 1.5, InkTool::Pen);
+        let hl = Ink::new(Id(81), &pts, Rgba::rgb(255, 255, 0), 14.0, InkTool::Highlighter);
+        Arc::make_mut(&mut s.pages[0]).objects.extend([PageObject::Ink(ink.clone()), PageObject::Ink(hl.clone())]);
+        let bytes = encode_section(&s).unwrap();
+        let back = decode_section(&bytes).unwrap();
+        assert_eq!(back.pages[0].ink(Id(80)), Some(&ink), "FMT.Native.Ncraft: ink survives a save");
+        assert_eq!(back.pages[0].ink(Id(81)).map(|k| k.tool), Some(InkTool::Highlighter));
+        // Hostile ink: no points is dropped, NaN and huge numbers are clamped.
+        let json =
+            String::from_utf8(serde_json::to_vec(&SectionFile { format: SECTION_MAGIC.into(), version: VERSION, section: s }).unwrap()).unwrap();
+        let evil = json.replacen("[0.0,0.0,0.5]", "[1e30,-1e30,9.0]", 1);
+        let back = decode_section(&zip_one(SECTION_ENTRY, evil.as_bytes()).unwrap()).unwrap();
+        let k = back.pages[0].ink(Id(80)).unwrap();
+        assert!(k.points.iter().all(|p| p.x.is_finite() && p.y.is_finite() && (0.0..=1.0).contains(&p.pressure)));
+        let empty = json.replacen(r#""points":[[0.0,0.0,0.5],[10.0,5.0,0.75],[22.5,2.25,1.0]]"#, r#""points":[]"#, 1);
+        assert_ne!(empty, json, "the test edits the stored points");
+        let back = decode_section(&zip_one(SECTION_ENTRY, empty.as_bytes()).unwrap()).unwrap();
+        assert!(back.pages[0].ink(Id(80)).is_none(), "a stroke without points is dropped");
     }
 
     #[test]

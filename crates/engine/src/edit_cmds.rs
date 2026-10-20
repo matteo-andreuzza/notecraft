@@ -209,7 +209,9 @@ pub(crate) fn copy_selection(s: &mut Session) -> Result<String, CmdError> {
                         objects.push(notecraft_doc::PageObject::Table(t.clone()));
                     }
                     // Pictures and attachments copy as objects (bytes shared by `Arc`).
-                    Some(o @ (notecraft_doc::PageObject::Image(_) | notecraft_doc::PageObject::Attachment(_))) => objects.push(o.clone()),
+                    Some(
+                        o @ (notecraft_doc::PageObject::Image(_) | notecraft_doc::PageObject::Attachment(_) | notecraft_doc::PageObject::Ink(_)),
+                    ) => objects.push(o.clone()),
                     None => {}
                 }
             }
@@ -489,6 +491,7 @@ fn paste_objects(s: &mut Session, v: &Value) -> Result<Vec<notecraft_doc::Id>, C
         match &mut o {
             notecraft_doc::PageObject::Image(im) => im.id = s.new_id(),
             notecraft_doc::PageObject::Attachment(a) => a.id = s.new_id(),
+            notecraft_doc::PageObject::Ink(k) => k.id = s.new_id(),
             notecraft_doc::PageObject::Table(t) => crate::table_cmds::refresh_ids(s, t),
             notecraft_doc::PageObject::Outline(_) => continue,
         }

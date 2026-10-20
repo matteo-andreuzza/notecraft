@@ -26,6 +26,8 @@ notecraft-ui-egui = { path = "crates/ui-egui" }
 notecraft-automation = { path = "crates/automation" }
 notecraft-codecs = { path = "crates/codecs" }
 notecraft-import-export = { path = "crates/import-export" }
+notecraft-ink-geom = { path = "crates/ink-geom" }
+notecraft-ink = { path = "crates/ink" }
 
 # shared Craft libraries, pinned by immutable revision (structure-audit.md › Repository hygiene)
 craft-atomic = { git = "https://github.com/storytold/craft-libs", rev = "457a078809690994b22debdffb703ff36d3129df" }

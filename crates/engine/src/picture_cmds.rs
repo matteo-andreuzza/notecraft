@@ -36,6 +36,14 @@ pub(crate) fn need_picture(s: &Session) -> Option<&'static str> {
     if selected(s, true).is_empty() { Some("Select a picture first") } else { None }
 }
 
+/// Rotate and Flip work on pictures and on ink (decision D4).
+fn need_turnable(s: &Session) -> Option<&'static str> {
+    if s.sel.page.is_none() {
+        return Some("No page is open");
+    }
+    if selected(s, true).is_empty() && crate::draw_cmds::selected_ink(s).is_empty() { Some("Select a picture or ink first") } else { None }
+}
+
 fn need_attachment(s: &Session) -> Option<&'static str> {
     if s.sel.page.is_none() {
         return Some("No page is open");
@@ -76,11 +84,11 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             "Context/Picture/Rotate/Rotate Right 90°",
             |s, _| turn(s, 1),
         )
-        .when(need_picture),
+        .when(need_turnable),
         CommandSpec::new("object.rotateLeft90", "CM.Picture.ObjectRotateLeft90", "Rotate Left 90°", "Context/Picture/Rotate/Rotate Left 90°", |s, _| {
             turn(s, 3)
         })
-        .when(need_picture),
+        .when(need_turnable),
         CommandSpec::new(
             "object.flipHorizontal",
             "CM.Picture.ObjectFlipHorizontal",
@@ -88,11 +96,11 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             "Context/Picture/Rotate/Flip Horizontal",
             |s, _| flip(s, true),
         )
-        .when(need_picture),
+        .when(need_turnable),
         CommandSpec::new("object.flipVertical", "CM.Picture.ObjectFlipVertical", "Flip Vertical", "Context/Picture/Rotate/Flip Vertical", |s, _| {
             flip(s, false)
         })
-        .when(need_picture),
+        .when(need_turnable),
         // CM.Picture.ObjectMove / ObjectResize — from the menu (no params) they explain the
         // mouse and keyboard gestures; the canvas and the arrow keys pass the amounts.
         CommandSpec::new("object.move", "CM.Picture.ObjectMove", "Move", "Context/Picture/Move", move_objects)
@@ -270,6 +278,10 @@ fn each_picture(s: &mut Session, f: impl Fn(&mut Image)) -> CmdResult {
 /// Turn by `quarters` clockwise quarter turns about the picture's centre (90° turns swap the
 /// drawn width and height; the top-left corner stays on the page).
 fn turn(s: &mut Session, quarters: u8) -> CmdResult {
+    crate::draw_cmds::transform_ink(s, |k, c| notecraft_ink::rotate(k, c, f32::from(quarters) * 90.0))?;
+    if selected(s, true).is_empty() {
+        return Ok(Value::Null);
+    }
     each_picture(s, |im| {
         im.quarter_turns = (im.quarter_turns + quarters) % 4;
         if quarters % 2 == 1 {
@@ -283,6 +295,10 @@ fn turn(s: &mut Session, quarters: u8) -> CmdResult {
 /// Mirror as seen on the page: flips are stored in the picture's own axes (applied before the
 /// turns), so on a picture turned 90° a horizontal flip on screen is a vertical one stored.
 fn flip(s: &mut Session, horizontal: bool) -> CmdResult {
+    crate::draw_cmds::transform_ink(s, |k, c| notecraft_ink::flip(k, c, horizontal))?;
+    if selected(s, true).is_empty() {
+        return Ok(Value::Null);
+    }
     each_picture(s, |im| {
         if horizontal == (im.quarter_turns % 2 == 0) {
             im.flip_h = !im.flip_h;
