@@ -595,6 +595,70 @@ pub(crate) fn refresh_ids(s: &mut Session, t: &mut Table) {
 }
 
 /// Put the caret at the start of a table's first cell.
+/// Tab after text (BEH.Table.TabToCreate, KB.Table.CreateWithTab; decision D6, `docs/plan.md`
+/// §4.8): with the caret at the end of a paragraph's text in a container, the paragraph becomes
+/// a one-row, two-column table, its text in the first cell and the caret in the second. The
+/// table takes the paragraph's place: the container keeps the paragraphs before it, those after
+/// it move to a new container below the table, and a container left empty goes. No "creating a
+/// table" state is kept: further Tabs add columns and Enter adds rows through the table's own
+/// keys (KB.Table.NewColumnTab, KB.Table.NewRowEnter). List items, empty paragraphs and a caret
+/// inside the text are left to Tab's other meanings: returns `false` then.
+pub(crate) fn tab_to_table(s: &mut Session) -> Result<bool, CmdError> {
+    let Some(c) = s.text_range().filter(|r| r.is_caret()).map(|r| r.head) else { return Ok(false) };
+    let Block::Outline(oid) = c.block else { return Ok(false) };
+    let page = s.page().ok_or_else(no_page)?;
+    let Some(ol) = page.outline(oid) else { return Ok(false) };
+    let Some(para) = ol.paragraphs.get(c.para) else { return Ok(false) };
+    if c.offset == 0 || c.offset != para.len() || para.list.is_some() || para.text().trim().is_empty() {
+        return Ok(false);
+    }
+    let room = notecraft_doc::media::MAX_PAGE_OBJECTS.saturating_sub(page.objects.len());
+    let mut before = ol.paragraphs.clone();
+    let after = before.split_off(c.para + 1);
+    if room < 1 + usize::from(!after.is_empty()) {
+        return Err(CmdError::Failed(format!("a page holds at most {} objects", notecraft_doc::media::MAX_PAGE_OBJECTS)));
+    }
+    let Some(mut first) = before.pop() else { return Ok(false) };
+    first.level = 0;
+    let (origin, width) = (ol.pos, ol.width);
+    let id = s.new_id();
+    let mut table = Table::new(id, origin, 1, 2, &mut mint(s));
+    for cell in table.rows.iter_mut().flat_map(|r| r.cells.iter_mut()) {
+        stamp(s, cell);
+    }
+    let second = table.cell(0, 1).map(|x| x.id);
+    if let Some(cell) = table.rows.first_mut().and_then(|r| r.cells.first_mut()) {
+        cell.paragraphs = vec![first];
+    }
+    let tail = if after.is_empty() { None } else { Some(s.new_id()) };
+    let page = s.page_mut().ok_or_else(no_page)?;
+    let Some(at) = page.objects.iter().position(|o| o.id() == oid) else { return Ok(false) };
+    let kept = !before.is_empty();
+    if !kept {
+        page.objects.remove(at);
+    } else if let Some(ol) = page.outline_mut(oid) {
+        ol.paragraphs = before;
+    }
+    if let Some(o) = page.objects.get(at).filter(|_| kept) {
+        table.pos = Point::new(origin.x, ops::object_bottom(o) + 12.0);
+    }
+    let at = if kept { at + 1 } else { at };
+    let below = Point::new(origin.x, ops::object_bottom(&PageObject::Table(table.clone())) + 12.0);
+    page.objects.insert(at.min(page.objects.len()), PageObject::Table(table));
+    if let Some(tid) = tail {
+        let mut rest = Outline::new(tid, below, Id::NIL);
+        rest.paragraphs = after;
+        rest.width = width;
+        rest.normalize();
+        page.objects.insert((at + 1).min(page.objects.len()), PageObject::Outline(rest));
+    }
+    s.pending_outline = None;
+    if let Some(cell) = second {
+        caret_in(s, cell, false);
+    }
+    Ok(true)
+}
+
 pub(crate) fn caret_in_first_cell(s: &mut Session, t: Id) {
     if let Some(c) = s.page().and_then(|p| p.table(t)).and_then(|t| t.rows.first()).and_then(|r| r.cells.first()).map(|c| c.id) {
         caret_in(s, c, false);

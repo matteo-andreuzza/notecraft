@@ -442,3 +442,23 @@ fn paste_options_shows_after_a_paste_and_offers_the_three_modes() {
     // formatting (there is none here yet — no rich clipboard, catalog gaps.md item 3).
     assert_eq!(table_texts(&h, o), vec!["Hi Hello"]);
 }
+
+#[test]
+fn typing_then_tab_makes_a_table_and_tab_adds_columns() {
+    // KB.Table.CreateWithTab, through the real keymap.
+    let (a, _) = page_with("Fruit");
+    let mut h = harness(a);
+    h.run();
+    h.key_press(egui::Key::Tab);
+    h.run();
+    h.event(egui::Event::Text("Qty".into()));
+    h.run();
+    h.key_press(egui::Key::Tab);
+    h.run();
+    let page = h.state().session.page().unwrap();
+    let t = page.objects.iter().find_map(|o| o.as_table()).unwrap();
+    let row: Vec<String> = t.rows[0].cells.iter().map(|c| c.text()).collect();
+    assert_eq!(row, ["Fruit", "Qty", ""], "BEH.Table.TabToCreate");
+    assert!(page.objects.iter().all(|o| o.as_outline().is_none()), "the container became the table");
+    assert_eq!(h.state().canvas.tables.len(), 1, "drawn as a table");
+}

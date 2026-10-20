@@ -318,6 +318,10 @@ pub(crate) fn shift_level(s: &mut Session, delta: i8) -> CmdResult {
 }
 
 fn indent(s: &mut Session, v: &Value) -> CmdResult {
+    // Tab at the end of a paragraph's text makes it a table (decision D6).
+    if p::str(v, "key") == Some("tab") && crate::table_cmds::tab_to_table(s)? {
+        return Ok(Value::Null);
+    }
     // Tab in the middle of a single paragraph inserts a tab character.
     if p::str(v, "key") == Some("tab")
         && let (PageSel::Text(_), Some(r)) = (&s.sel.on_page, s.text_range())

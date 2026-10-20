@@ -212,10 +212,11 @@ fn indent_outdent_alignment_spacing_direction() {
     assert!(para(&s, o, 1).rtl);
     run(&mut s, "para.ltr", json!({}));
     assert!(!para(&s, o, 1).rtl);
-    // Tab inside text inserts a tab character instead of indenting.
+    // Tab after the text makes a table instead of indenting (BEH.Table.TabToCreate; the tab
+    // character typed inside text is pinned in tests_table.rs).
     caret(&mut s, o, 0, 1);
     run(&mut s, "para.indent", json!({"key": "tab"}));
-    assert_eq!(para(&s, o, 0).text(), "a\t");
+    assert!(s.page().unwrap().objects.iter().any(|x| x.as_table().is_some()));
 }
 
 #[test]

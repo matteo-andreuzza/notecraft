@@ -26,7 +26,7 @@ Smaller known shortfalls:
   `missing`.
 - `--automation-read-root`/`--automation-write-root` confine the headless MCP server only; a
   running desktop app reached through `--control` is not confined.
-- Tables: no Tab-after-text table creation (`BEH.Table.TabToCreate`), no merged cells, no Sort…
+- Tables: no merged cells, no Sort…
   dialog; a table is a page object beside containers rather than inside one (decision D2). Cell
   ranges copy as tab-separated text (whole tables copy as tables, and as HTML tables for other
   applications).

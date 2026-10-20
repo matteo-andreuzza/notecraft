@@ -344,3 +344,74 @@ fn delete_at_the_start_of_an_empty_row_removes_it() {
     assert_eq!(table(&s2).n_rows(), 1, "the only row stays");
     assert!(s2.page().unwrap().objects.iter().any(|o| o.as_table().is_some()), "the table stays");
 }
+
+#[test]
+fn tab_after_text_turns_the_paragraph_into_a_table() {
+    // parity: BEH.Table.TabToCreate
+    let mut s = sample();
+    blank_page(&mut s);
+    run(&mut s, "outline.new", json!({"x": 60.0, "y": 120.0}));
+    run(&mut s, "text.insert", json!({"text": "Before\nFruit\nAfter"}));
+    let oid = s.page().unwrap().objects[0].id();
+    run(&mut s, "caret.set", json!({"block": oid.to_string(), "para": 1, "offset": 5}));
+    let undo = s.undo_labels().len();
+    run(&mut s, "para.indent", json!({"key": "tab"}));
+    assert_eq!(s.undo_labels().len(), undo + 1, "one undo step");
+    assert_eq!(grid(&s), vec![vec!["Fruit".to_string(), String::new()]], "KB.Table.CreateWithTab");
+    assert_eq!(caret_cell(&s), (0, 1), "the caret goes to the second cell");
+    // The table takes the paragraph's place: before it the container, after it a new one.
+    let kinds: Vec<_> = s
+        .page()
+        .unwrap()
+        .objects
+        .iter()
+        .map(|o| match o {
+            PageObject::Outline(ol) => ol.paragraphs.iter().map(|p| p.text()).collect::<Vec<_>>().join("|"),
+            PageObject::Table(_) => "table".into(),
+            _ => "other".into(),
+        })
+        .collect();
+    assert_eq!(kinds, ["Before", "table", "After"]);
+    let ys: Vec<f32> = s.page().unwrap().objects.iter().map(|o| o.pos().y).collect();
+    assert!(ys[0] < ys[1] && ys[1] < ys[2], "stacked top to bottom: {ys:?}");
+    // Then the table's own keys: Tab in the last cell of a one-row table adds a column.
+    run(&mut s, "text.insert", json!({"text": "Qty"}));
+    run(&mut s, "table.nextCell", json!({}));
+    assert_eq!(grid(&s)[0].len(), 3, "KB.Table.NewColumnTab");
+    run(&mut s, "edit.undo", json!({}));
+    run(&mut s, "edit.undo", json!({}));
+    run(&mut s, "edit.undo", json!({}));
+    assert_eq!(s.page().unwrap().objects.len(), 1, "undo puts the paragraph back");
+    // A lone paragraph: the container goes, the table sits where it was.
+    let mut s = sample();
+    blank_page(&mut s);
+    run(&mut s, "outline.new", json!({"x": 60.0, "y": 120.0}));
+    run(&mut s, "text.insert", json!({"text": "Only"}));
+    run(&mut s, "para.indent", json!({"key": "tab"}));
+    let objects = &s.page().unwrap().objects;
+    assert!(objects.len() == 1 && objects[0].as_table().is_some_and(|t| t.pos.y == 120.0));
+}
+
+#[test]
+fn tab_elsewhere_keeps_its_other_meanings() {
+    let mut s = sample();
+    blank_page(&mut s);
+    run(&mut s, "outline.new", json!({"x": 60.0, "y": 120.0}));
+    run(&mut s, "text.insert", json!({"text": "Inside"}));
+    let oid = s.page().unwrap().objects[0].id();
+    // In the middle of the text: a tab character.
+    run(&mut s, "caret.set", json!({"block": oid.to_string(), "para": 0, "offset": 2}));
+    run(&mut s, "para.indent", json!({"key": "tab"}));
+    assert_eq!(s.page().unwrap().outline(oid).unwrap().paragraphs[0].text(), "In\tside");
+    // A list item at its end: indented, not a table.
+    run(&mut s, "para.bullets", json!({}));
+    let len = s.page().unwrap().outline(oid).unwrap().paragraphs[0].len();
+    run(&mut s, "caret.set", json!({"block": oid.to_string(), "para": 0, "offset": len}));
+    run(&mut s, "para.indent", json!({"key": "tab"}));
+    assert!(s.page().unwrap().objects.iter().all(|o| o.as_table().is_none()));
+    // A selection, not a caret: no table either.
+    run(&mut s, "caret.set", json!({"block": oid.to_string(), "para": 0, "offset": 0}));
+    run(&mut s, "caret.set", json!({"block": oid.to_string(), "para": 0, "offset": len, "extend": true}));
+    run(&mut s, "para.indent", json!({"key": "tab"}));
+    assert!(s.page().unwrap().objects.iter().all(|o| o.as_table().is_none()));
+}

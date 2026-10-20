@@ -252,6 +252,16 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   Loaded pages are now normalised in full (`Section::normalize_pages`), tables included.
 - **Insert position:** below the caret's container (the UI passes the laid-out bottom; the
   engine alone estimates 20 pt per line), or where the user clicked, or below everything.
+- **Tab after text (decision D6, 2026-10-21).** Tab with the caret at the end of a paragraph's
+  text in a container turns that paragraph into a one-row, two-column table: its text (and
+  formatting and tags) in the first cell, the caret in the empty second one. Because a table
+  is its own object (D2), the table takes the paragraph's place: the container keeps the
+  paragraphs before it, those after it move to a new container below the table, and a container
+  left with nothing goes. **No "creating a table" state:** the next Tabs add columns and Enter
+  adds rows through the table's own keys (`KB.Table.NewColumnTab`, `KB.Table.NewRowEnter`),
+  which already behave so on a one-row table. A caret inside the text still types a tab
+  character, a list item still indents, and an empty paragraph still indents (unverified: the
+  reference's behaviour for list items and for Tab in the middle of text). One undo step.
 
 ### 4.9 Pictures and attachments (decision D3, 2026-10-19)
 
@@ -387,6 +397,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | D3 | 2026-10-19 | Pictures and attachments are page objects (`PageObject::Image`, `PageObject::Attachment`) whose bytes are `Arc`-shared blobs keyed by a 128-bit id and stored as uncompressed `media/<id>` entries in the section zip; `.ncraft` version 3; explicit size, pixel, byte and object-count limits (§4.9). | — (the plan named `media/` in the section zip; the object shape and limits were open) | Undo and copy/paste stay pointer copies; blob ids map to [MS-ONE]'s file-data-store GUIDs; a damaged picture degrades to a placeholder instead of failing the section; printouts and export reuse the same blobs. |
 | D4 | 2026-10-20 | Ink strokes are page objects, one stroke per object (`PageObject::Ink`, points relative to the object's position with per-point pressure, colour, width, pen or highlighter); `.ncraft` version 4; geometry in `ink-geom` (L0), stroke operations in `ink` (L2); tools are session state (§4.10). | — (the plan named the crates; the object shape was open) | Every object command (select, lasso, delete, clipboard, order, rotate, move, undo) works on ink unchanged; [MS-ONE] ink nodes map stroke by stroke, losing only their grouping. |
 | D5 | 2026-10-21 | Tags on ink: a stroke carries `tags` like a paragraph (optional field, format 4 unchanged); the tag commands treat the selected strokes as one drawing, putting a new tag on its leftmost stroke and removing or checking it on all (§4.11). | — | Strokes are separate objects (D4), so tagging each would list one drawing many times in Find Tags; one anchor stroke keeps one entry per tag and maps to [MS-ONE]'s tag on the ink node. |
+| D6 | 2026-10-21 | Tab after a paragraph's text makes it a one-row, two-column table that takes the paragraph's place (the container splits around it); no session state, later Tabs and Enters use the table's own keys (§4.8). | — | Tables are separate objects (D2), so the paragraph must leave its container; the one-row table's existing Tab/Enter behaviour already covers "keep creating". |
 
 ## 7. Assumptions
 
