@@ -38,6 +38,9 @@ pub enum DrawTool {
     Eraser,
     /// The pen of [`DrawState::pen`].
     Pen,
+    /// Insert Space: dragging on the page pushes what is below (or right of) the start down
+    /// (or right), or pulls it back.
+    Space,
 }
 
 /// Eraser sizes (Draw › Eraser).
@@ -166,6 +169,15 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .when(need_page),
         CommandSpec::new("draw.erase", "NC.Draw.Erase", "Erase", "Mouse/Canvas/Erase", erase)
             .params(r#"{"points": [[x, y], …] eraser path, "kind"?: "small" | "medium" | "large" | "stroke" (default: the eraser), "gesture"?: number (calls with the same number undo together)}"#)
+            .when(need_page),
+        CommandSpec::new("insert.space", "R.Insert.Insert.PenInsertSpace", "Insert Space", "Insert/Insert Space", |s, _| {
+            let t = if s.draw.tool == DrawTool::Space { DrawTool::Type } else { DrawTool::Space };
+            set_tool(s, t)
+        })
+        .pure()
+        .when(need_page),
+        CommandSpec::new("canvas.insertSpace", "BEH.Canvas.InsertSpace", "Insert Space", "Behaviour/Canvas", insert_space)
+            .params(r#"{"y": pt, "dy": pt} (push down what starts below y) | {"x": pt, "dx": pt} (push right); negative removes space"#)
             .when(need_page),
         CommandSpec::new("draw.lassoSelect", "BEH.Ink.Lasso", "Lasso Select", "Behaviour/Ink", lasso_select)
             .params(r#"{"points": [[x, y], …] the loop, page points}"#)
@@ -342,6 +354,31 @@ fn erase(s: &mut Session, v: &Value) -> CmdResult {
         ids.retain(|id| page.is_some_and(|p| p.object_index(*id).is_some()));
     }
     Ok(json!({"erased": erased, "pieces": added}))
+}
+
+/// Insert Space: every object that starts at or beyond the line moves by the amount; removing
+/// space never pulls an object back past the line (unverified). A drag that moves nothing
+/// leaves the page untouched (no empty undo step).
+fn insert_space(s: &mut Session, v: &Value) -> CmdResult {
+    let (vertical, at, by) = match (p::f32(v, "y"), p::f32(v, "dy"), p::f32(v, "x"), p::f32(v, "dx")) {
+        (Some(y), Some(dy), _, _) => (true, y, dy),
+        (_, _, Some(x), Some(dx)) => (false, x, dx),
+        _ => return Err(CmdError::Params("give `y` and `dy`, or `x` and `dx`".into())),
+    };
+    let start = |o: &PageObject| if vertical { o.pos().y } else { o.pos().x };
+    let page = s.page().ok_or_else(no_page)?;
+    let moving: Vec<Id> = page.objects.iter().filter(|o| start(o) >= at).map(PageObject::id).collect();
+    let nearest = page.objects.iter().map(start).filter(|p| *p >= at).fold(f32::INFINITY, f32::min);
+    let by = if by < 0.0 { by.max(at - nearest) } else { by };
+    if moving.is_empty() || by == 0.0 || !by.is_finite() {
+        return Ok(json!({"moved": 0}));
+    }
+    let page = s.page_mut().ok_or_else(no_page)?;
+    for o in page.objects.iter_mut().filter(|o| moving.contains(&o.id())) {
+        let p = o.pos();
+        o.set_pos(if vertical { Point::new(p.x, (p.y + by).max(0.0)) } else { Point::new((p.x + by).max(0.0), p.y) });
+    }
+    Ok(json!({"moved": moving.len(), "by": by}))
 }
 
 /// The estimated box of an object in page points (the engine has no text layout: 20 pt per

@@ -313,3 +313,14 @@ this log plus a green tree is how the next agent picks up.
 - Numbers: wiring 592/1322 (44.8%), behaviour 159/1322 (12.0%), 299 commands.
 - Environment: the disk filled up during a gate (`target/debug/incremental` had grown to
   5.7 GB); deleted it and ran later builds with `CARGO_INCREMENTAL=0`.
+
+## 2026-10-20 — M2: Insert Space
+
+- **Insert Space** (`insert.space`, a toggle on Insert and Draw and in the ink menu) turns on a
+  tool; dragging on the page runs `canvas.insertSpace` (`BEH.Canvas.InsertSpace`): every object
+  that starts below (or right of, when the drag went sideways) the start line moves by the
+  drag; removing space stops at the line; the tool returns to Type after one use (unverified).
+  A band shows the space while dragging. One undo step; a drag that moves nothing records none.
+- Numbers: wiring 596/1322 (45.1%), behaviour 159/1322 (12.0%), 301 commands.
+- Environment: a gate failed with the linker killed by the OOM killer (15 GB RAM, ~4 GB
+  available): `CARGO_BUILD_JOBS=4` fixed it.

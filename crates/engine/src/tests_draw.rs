@@ -191,3 +191,31 @@ fn ink_resizes_from_one_rectangle_to_another() {
     run(&mut s, "object.resize", json!({}));
     assert!(s.run("object.resize", json!({"from": [0, 0, 0, 0], "to": [0, 0, 1e30, -5]})).is_ok(), "hostile rectangles are ignored, not fatal");
 }
+
+#[test]
+fn insert_space_pushes_and_pulls_what_follows() {
+    // parity: BEH.Canvas.InsertSpace
+    let (mut s, id) = with_line();
+    run(&mut s, "outline.new", json!({"x": 60.0, "y": 100.0}));
+    run(&mut s, "text.insert", json!({"text": "above"}));
+    run(&mut s, "insert.space", json!({}));
+    assert_eq!(s.draw.tool, DrawTool::Space, "R.Insert.Insert.PenInsertSpace");
+    let undo = s.undo_labels().len();
+    let r = run(&mut s, "canvas.insertSpace", json!({"y": 150.0, "dy": 80.0}));
+    assert_eq!(r["moved"], 1, "only what starts below the line");
+    assert_eq!(strokes(&s)[0].pos.y, 280.0);
+    assert_eq!(s.undo_labels().len(), undo + 1);
+    // Removing space stops at the line.
+    let r = run(&mut s, "canvas.insertSpace", json!({"y": 150.0, "dy": -500.0}));
+    assert_eq!(r["by"], -130.0);
+    assert_eq!(strokes(&s)[0].pos.y, 150.0);
+    // Sideways, and nothing to move.
+    run(&mut s, "canvas.insertSpace", json!({"x": 40.0, "dx": 30.0}));
+    assert_eq!(s.page().unwrap().ink(id).unwrap().pos.x, 80.0);
+    let n = s.undo_labels().len();
+    assert_eq!(run(&mut s, "canvas.insertSpace", json!({"y": 5000.0, "dy": 10.0}))["moved"], 0);
+    assert_eq!(s.undo_labels().len(), n, "nothing moved, no undo step");
+    assert!(s.run("canvas.insertSpace", json!({"y": 1.0})).is_err());
+    run(&mut s, "insert.space", json!({}));
+    assert_eq!(s.draw.tool, DrawTool::Type, "the toggle turns it off");
+}

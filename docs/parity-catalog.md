@@ -242,7 +242,7 @@ The Insert tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| R.Insert.Insert.PenInsertSpace | Insert Space | Insert/Insert Space | toggle |  | insert.space | P1 | missing | FLUENT19:PenInsertSpace |  |
+| R.Insert.Insert.PenInsertSpace | Insert Space | Insert/Insert Space | toggle |  | insert.space | P1 | wired | FLUENT19:PenInsertSpace |  |
 | R.Insert.Tables.TableInsertGallery | Table | Insert/Tables/Table | gallery |  | insert.table | P1 | verified | FLUENT19:TableInsertGallery |  |
 | R.Insert.Tables.TableInsert | Insert Table | Insert/Tables/Table/Insert Table | button |  | insert.tableDialog | P1 | verified | FLUENT19:TableInsert |  |
 | R.Insert.Tables.InsertNewExcelSpreadsheetWithPreview | New Excel Spreadsheet | Insert/Tables/Table/New Excel Spreadsheet | button |  | insert.newSpreadsheet | P3 | missing | FLUENT19:InsertNewExcelSpreadsheetWithPreview |  |
@@ -325,7 +325,7 @@ The Draw tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Draw.Shapes.InkShapeGallery | Shapes | Draw/Shapes | gallery |  | draw.shapes | P1 | missing | FLUENT19:InkShapeGallery |  |
 | R.Draw.Shapes.ShapesDuplicate | Lock Drawing Mode | Draw/Shapes/Lock Drawing Mode | toggle |  | draw.lockDrawingMode | P2 | missing | FLUENT19:ShapesDuplicate |  |
 | R.Draw.Shapes.GridSnapTo | Snap to Grid | Draw/Shapes/Snap to Grid | toggle |  | draw.snapToGrid | P2 | missing | FLUENT19:GridSnapTo |  |
-| R.Draw.Edit.PenInsertSpace | Insert Space | Draw/Edit/Insert Space | toggle |  | insert.space | P1 | missing | FLUENT19:PenInsertSpace |  |
+| R.Draw.Edit.PenInsertSpace | Insert Space | Draw/Edit/Insert Space | toggle |  | insert.space | P1 | wired | FLUENT19:PenInsertSpace |  |
 | R.Draw.Edit.Delete | Delete | Draw/Edit/Delete | button | `Delete` | edit.delete | P0 | wired | FLUENT19:Delete |  |
 | R.Draw.Edit.ObjectsArrangeMenu | Arrange | Draw/Edit/Arrange | menu |  |  | P1 | wired | FLUENT19:ObjectsArrangeMenu |  |
 | R.Draw.Edit.ObjectBringForward | Bring Forward | Draw/Edit/Arrange/Bring Forward | button |  | object.bringForward | P1 | wired | FLUENT19:ObjectBringForward |  |
@@ -741,7 +741,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.InkDrawing.TagsMarkAll | Check All Tags | Context/Ink Drawing/Check All Tags | button |  | tag.checkAll | P2 | wired | FLUENT19:ContextMenuInkDrawing/TagsMarkAll |  |
 | CM.InkDrawing.TagsClearAll | Clear All Checkmarks | Context/Ink Drawing/Clear All Checkmarks | button |  | tag.clearAll | P2 | wired | FLUENT19:ContextMenuInkDrawing/TagsClearAll |  |
 | CM.InkDrawing.TagsRemoveAll2 | Remove Tag | Context/Ink Drawing/Remove Tag | button | `Mod+0` | tag.removeAll | P0 | missing | FLUENT19:ContextMenuInkDrawing/TagsRemoveAll |  |
-| CM.InkDrawing.PenInsertSpace | Insert Space | Context/Ink Drawing/Insert Space | toggle |  | insert.space | P1 | missing | FLUENT19:ContextMenuInkDrawing/PenInsertSpace |  |
+| CM.InkDrawing.PenInsertSpace | Insert Space | Context/Ink Drawing/Insert Space | toggle |  | insert.space | P1 | wired | FLUENT19:ContextMenuInkDrawing/PenInsertSpace |  |
 | CM.LassoSelection.Cut | Cut | Context/Lasso Selection/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuLassoSelection/Cut |  |
 | CM.LassoSelection.CopyOneNote | Copy | Context/Lasso Selection/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuLassoSelection/CopyOneNote |  |
 | CM.LassoSelection.Delete | Delete | Context/Lasso Selection/Delete | button | `Delete` | edit.delete | P0 | wired | FLUENT19:ContextMenuLassoSelection/Delete |  |
@@ -1373,7 +1373,7 @@ Documented (or, where marked, plausible and unverified) behaviour. A behaviour r
 | BEH.Canvas.EmptyContainerRemoved | A container left empty disappears when the caret leaves it | Behaviour/Canvas | behaviour |  |  | P0 | wired | GK | unverified |
 | BEH.Canvas.PageGrows | The page grows right and down as content is added; it never has a fixed size unless Paper Size is set | Behaviour/Canvas | behaviour |  |  | P0 | verified | GK; FLUENT19:PaperSize |  |
 | BEH.Canvas.MergeContainers | Shift-dragging a container onto another merges them | Behaviour/Canvas | behaviour |  |  | P2 | missing | GK | unverified |
-| BEH.Canvas.InsertSpace | Insert Space: drag on the page to push content down or right | Behaviour/Canvas | behaviour |  |  | P1 | missing | FLUENT19:PenInsertSpace |  |
+| BEH.Canvas.InsertSpace | Insert Space: drag on the page to push content down or right | Behaviour/Canvas | behaviour |  | canvas.insertSpace | P1 | wired | FLUENT19:PenInsertSpace | the longer way of the drag decides down or right; removing space stops at the line; the tool returns to Type after one use (unverified) |
 | BEH.Outline.EnterNewParagraph | Enter splits/creates a paragraph at the same level; it keeps the list format | Behaviour/Outline | behaviour |  |  | P0 | verified | GK |  |
 | BEH.Outline.TabIndent | Tab at the start of a paragraph indents it (and its children) one level; Shift+Tab outdents | Behaviour/Outline | behaviour |  |  | P0 | verified | KBD365 |  |
 | BEH.Outline.EmptyBulletEnds | Enter on an empty bulleted or numbered paragraph ends the list (outdents, then removes the bullet) | Behaviour/Outline | behaviour |  |  | P0 | wired | GK | unverified exact sequence |

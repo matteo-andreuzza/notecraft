@@ -62,6 +62,8 @@ pub(crate) enum Gesture {
     Lasso(Vec<Point>),
     /// The panning hand.
     Pan,
+    /// Insert Space: where the drag began and where the pointer is (page points).
+    Space { from: Point, to: Point },
     /// Moving the selected objects: the last page point.
     Group { last: Point },
     /// Resizing the selected ink by a handle (`pictures::handles` order): the box when the drag
@@ -180,6 +182,19 @@ pub(crate) fn draw(app: &NoteApp, painter: &Painter, page: &Page, t: Tokens, pag
             let half: Vec<f32> = pts.iter().map(|(_, pr)| (live.width_at(*pr) * z / 2.0).max(0.5)).collect();
             paint_stroke(painter, &screen, &half, ink_color(pen.color, pen.tool, page_text), pen.tool == InkTool::Pen);
         }
+        Some(Gesture::Space { from, to }) => {
+            let (a, b) = (app.canvas.to_screen(*from), app.canvas.to_screen(*to));
+            let v = app.canvas.viewport;
+            if (b.x - a.x).abs() > (b.y - a.y).abs() {
+                let band = Rect::from_x_y_ranges(a.x.min(b.x)..=a.x.max(b.x), v.y_range());
+                painter.rect_filled(band, 0.0, t.selection);
+                painter.line_segment([pos2(a.x, v.min.y), pos2(a.x, v.max.y)], Stroke::new(1.5, t.accent));
+            } else {
+                let band = Rect::from_x_y_ranges(v.x_range(), a.y.min(b.y)..=a.y.max(b.y));
+                painter.rect_filled(band, 0.0, t.selection);
+                painter.line_segment([pos2(v.min.x, a.y), pos2(v.max.x, a.y)], Stroke::new(1.5, t.accent));
+            }
+        }
         Some(Gesture::Lasso(pts)) => {
             let screen: Vec<Pos2> = pts.iter().map(|p| app.canvas.to_screen(*p)).collect();
             let dashes = Shape::dashed_line(&screen, Stroke::new(1.0, t.accent), 4.0, 3.0);
@@ -256,6 +271,7 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
         match tool {
             DrawTool::Pen | DrawTool::Lasso => ctx.set_cursor_icon(CursorIcon::Crosshair),
             DrawTool::Eraser => ctx.set_cursor_icon(CursorIcon::Cell),
+            DrawTool::Space => ctx.set_cursor_icon(CursorIcon::ResizeVertical),
             DrawTool::Pan => ctx.set_cursor_icon(if resp.dragged() { CursorIcon::Grabbing } else { CursorIcon::Grab }),
             DrawTool::Type => {
                 if let Some(h) = resp.hover_pos() {
@@ -308,6 +324,11 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
             DrawTool::Pan => {
                 if resp.drag_started() {
                     app.canvas.ink.gesture = Some(Gesture::Pan);
+                }
+            }
+            DrawTool::Space => {
+                if resp.drag_started() {
+                    app.canvas.ink.gesture = Some(Gesture::Space { from: at, to: at });
                 }
             }
             DrawTool::Lasso | DrawTool::Type if resp.drag_started() && handle_at(app, o).is_some() => {
@@ -381,6 +402,11 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
                     }
                 }
             }
+            Some(Gesture::Space { to, .. }) => {
+                if let Some(p) = pts.last() {
+                    *to = *p;
+                }
+            }
             Some(Gesture::Pan) => ui.scroll_with_delta(resp.drag_delta()),
             None => return false,
         }
@@ -396,6 +422,14 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
             Some(Gesture::Lasso(v)) => {
                 let pts: Vec<[f32; 2]> = v.iter().map(|p| [p.x, p.y]).collect();
                 app.run(ctx, "draw.lassoSelect", json!({ "points": pts }));
+            }
+            Some(Gesture::Space { from, to }) => {
+                // The longer way the pointer went decides: down/up inserts or removes rows of
+                // space, sideways columns. Then back to typing (unverified).
+                let (dx, dy) = (to.x - from.x, to.y - from.y);
+                let p = if dx.abs() > dy.abs() { json!({"x": from.x, "dx": dx}) } else { json!({"y": from.y, "dy": dy}) };
+                app.run(ctx, "canvas.insertSpace", p);
+                app.run(ctx, "draw.type", json!({}));
             }
             Some(_) => {}
             None => return false,

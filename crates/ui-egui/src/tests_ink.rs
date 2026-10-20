@@ -223,3 +223,20 @@ fn a_corner_handle_resizes_selected_ink() {
     assert!(w1 > w0 * 1.5, "CM.InkDrawing.ObjectResize: {w0} → {w1}");
     assert_eq!(h.state().session.undo_labels().len(), undo + 1);
 }
+
+#[test]
+fn insert_space_by_dragging_down() {
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("draw.stroke", json!({"points": [[60, 300], [200, 300]]})).unwrap();
+    a.session.run("insert.space", json!({})).unwrap();
+    a.ui.tab = "Insert".into();
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Insert Space").is_some(), "R.Insert.Insert.PenInsertSpace");
+    let at = map(&h);
+    drag(&mut h, at(300.0, 250.0), at(300.0, 330.0));
+    let y = strokes(&h)[0].pos.y;
+    assert!((y - 380.0).abs() < 2.0, "BEH.Canvas.InsertSpace: {y}");
+    assert_eq!(h.state().session.draw.tool, DrawTool::Type, "back to typing");
+}

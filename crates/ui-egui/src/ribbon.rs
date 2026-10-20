@@ -109,6 +109,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "table.hideBorders" => current_table(app).is_some_and(|t| !t.borders),
         "table.headerRow" => current_table(app).is_some_and(|t| t.header_row),
         "draw.type" => s.draw.tool == notecraft_engine::DrawTool::Type,
+        "insert.space" => s.draw.tool == notecraft_engine::DrawTool::Space,
         "draw.lasso" => s.draw.tool == notecraft_engine::DrawTool::Lasso,
         "draw.pan" => s.draw.tool == notecraft_engine::DrawTool::Pan,
         "draw.eraser" => s.draw.tool == notecraft_engine::DrawTool::Eraser,
