@@ -281,3 +281,20 @@ this log plus a green tree is how the next agent picks up.
 - Still open: ruler, shapes, Ink to Text/Math, Ink Replay, resizing ink by handles, tablet
   pressure on Linux (PhotoCraft's XInput2 `tablet` crate), `render`; printouts; audio; M2 exit
   not met (no merge, no tag).
+
+## 2026-10-20 — M2: file printouts
+
+- **Insert › File Printout** (`insert.printout`), and on an attachment **Insert Printout**,
+  **Delete Printout Pages**; on a printed page **Open Original** (`printout_cmds.rs`, 4 commands).
+  A printout is the attachment plus one picture per page linked to it (`Image::printout`, an
+  optional field: format 4 unchanged), stacked below it at the page's print size, one undo step.
+- **`codecs::pdf`**: PDF pages rendered by `hayro` 0.7.1 from crates.io (the user's choice; pure
+  Rust, PdfCraft's renderer) on white at 108 dpi, at most 200 pages, 3,000 px a side, 8 Mpx a
+  page, under the codecs' panic guard; encrypted files refused; `sample_pdf` writes the test PDFs
+  (no fixtures). A picture file prints as itself; other formats are refused with a hint.
+- `ATTRIBUTION.md` lists the BSD-3-Clause Foxit/PDFium substitute fonts and the CC0 ICC profile
+  that `hayro` compiles into the binary.
+- Snapshot `printout-page`; e2e check of a two-page PDF in the real app.
+- Numbers: wiring 579/1322 (43.8%), behaviour 159/1322 (12.0%), 299 commands.
+- Still open: text from printout pages, asynchronous rendering of large PDFs, the "attach or
+  print" question when a file is dropped.

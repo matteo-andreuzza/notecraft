@@ -234,6 +234,15 @@ fn main() {
             }
         },
     );
+    shot("printout-page", &out, 1.0, |a| {
+        let s = &mut a.session;
+        s.run("page.new", json!({})).unwrap();
+        s.run("text.insert", json!({"text": "Quarterly report"})).unwrap();
+        let bytes = notecraft_codecs::pdf::sample_pdf(&[(420.0, 260.0, [0x2b, 0x57, 0x9a]), (420.0, 260.0, [0xc0, 0x50, 0x20])]);
+        s.run("insert.printout", json!({"data": notecraft_engine::b64::encode(&bytes), "name": "Report.pdf", "x": 36.0, "y": 100.0})).unwrap();
+        s.sel.on_page = notecraft_engine::selection::PageSel::None;
+        a.ui.tab = "Insert".into();
+    });
     shot("ink-page", &out, 1.0, |a| ink_page(a, false));
     shot("ink-page-classic", &out, 1.0, |a| {
         ink_page(a, false);

@@ -246,7 +246,7 @@ The Insert tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Insert.Tables.TableInsertGallery | Table | Insert/Tables/Table | gallery |  | insert.table | P1 | verified | FLUENT19:TableInsertGallery |  |
 | R.Insert.Tables.TableInsert | Insert Table | Insert/Tables/Table/Insert Table | button |  | insert.tableDialog | P1 | verified | FLUENT19:TableInsert |  |
 | R.Insert.Tables.InsertNewExcelSpreadsheetWithPreview | New Excel Spreadsheet | Insert/Tables/Table/New Excel Spreadsheet | button |  | insert.newSpreadsheet | P3 | missing | FLUENT19:InsertNewExcelSpreadsheetWithPreview |  |
-| R.Insert.Files.PrintoutFromFileInsert | File Printout | Insert/Files/File Printout | button |  | insert.printout | P1 | missing | FLUENT19:PrintoutFromFileInsert |  |
+| R.Insert.Files.PrintoutFromFileInsert | File Printout | Insert/Files/File Printout | button |  | insert.printout | P1 | wired | FLUENT19:PrintoutFromFileInsert | the file is attached and each page follows as a picture at its print size, rendered by hayro at 108 dpi (≤ 200 pages, ≤ 8 Mpx a page); PDF files and pictures only (unverified: the reference prints any file through a printer driver) |
 | R.Insert.Files.FileAttachmentInsert | File Attachment | Insert/Files/File Attachment | button |  | insert.file | P1 | wired | FLUENT19:FileAttachmentInsert | attaches the file directly as an icon with its name (the reference may offer Insert Printout for documents; printouts come later); decision D3 |
 | R.Insert.Files.InsertExcelSpreadsheetMenu | Spreadsheet | Insert/Files/Spreadsheet | menu |  |  | P2 | missing | FLUENT19:InsertExcelSpreadsheetMenu |  |
 | R.Insert.Files.InsertExistingExcelSpreadsheet | Existing Excel Spreadsheet | Insert/Files/Spreadsheet/Existing Excel Spreadsheet | button |  | insert.existingSpreadsheet | P2 | missing | FLUENT19:InsertExistingExcelSpreadsheet |  |
@@ -766,7 +766,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Picture.PrintoutPageTextCopy | Copy Text from This Page of the Printout | Context/Picture/Copy Text from This Page of the Printout | button |  | printout.copyPageText | P2 | missing | FLUENT19:ContextMenuPicture/PrintoutPageTextCopy |  |
 | CM.Picture.CopyTextFromPrintoutPages | Copy Text from All Pages of the Printout | Context/Picture/Copy Text from All Pages of the Printout | button |  | printout.copyAllText | P2 | missing | FLUENT19:ContextMenuPicture/CopyTextFromPrintoutPages |  |
 | CM.Picture.ZoomToDocument | Zoom to Document | Context/Picture/Zoom to Document | button |  | printout.zoomToDocument | P3 | missing | FLUENT19:ContextMenuPicture/ZoomToDocument |  |
-| CM.Picture.ViewOriginalPrintout | Open Original | Context/Picture/Open Original | button |  | printout.openOriginal | P2 | missing | FLUENT19:ContextMenuPicture/ViewOriginalPrintout |  |
+| CM.Picture.ViewOriginalPrintout | Open Original | Context/Picture/Open Original | button |  | printout.openOriginal | P2 | wired | FLUENT19:ContextMenuPicture/ViewOriginalPrintout |  |
 | CM.Picture.PasteGalleryMini | Paste Options | Context/Picture/Paste Options | gallery |  | edit.pasteOptions | P0 | wired | FLUENT19:ContextMenuPicture/PasteGalleryMini |  |
 | CM.Picture.ImageSaveAs | Save As (picture) | Context/Picture/Save As (picture) | button |  | object.saveAs | P1 | wired | FLUENT19:ContextMenuPicture/ImageSaveAs | writes the stored file unchanged (rotation and flips are view properties) |
 | CM.Picture.HyperlinkOpen | Open Link | Context/Picture/Open Link | button | `Enter` | link.open | P0 | missing | FLUENT19:ContextMenuPicture/HyperlinkOpen |  |
@@ -798,9 +798,9 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.FileAttachment.FileAttachmentOpen | Open | Context/File Attachment/Open | button |  | attachment.open | P1 | wired | FLUENT19:ContextMenuFileAttachment/FileAttachmentOpen | writes a copy to a private temporary folder and opens it with the system handler (desktop); double-click does the same |
 | CM.FileAttachment.FileAttachmentSaveAs | Save As… | Context/File Attachment/Save As… | button |  | attachment.saveAs | P1 | wired | FLUENT19:ContextMenuFileAttachment/FileAttachmentSaveAs |  |
 | CM.FileAttachment.RenameSelected | Rename | Context/File Attachment/Rename | button |  | attachment.rename | P1 | wired | FLUENT19:ContextMenuFileAttachment/RenameSelected |  |
-| CM.FileAttachment.FilePrintoutInsert | Insert Printout | Context/File Attachment/Insert Printout | button |  | attachment.insertPrintout | P2 | missing | FLUENT19:ContextMenuFileAttachment/FilePrintoutInsert |  |
+| CM.FileAttachment.FilePrintoutInsert | Insert Printout | Context/File Attachment/Insert Printout | button |  | attachment.insertPrintout | P2 | wired | FLUENT19:ContextMenuFileAttachment/FilePrintoutInsert | replaces pages printed earlier from the same file |
 | CM.FileAttachment.RefreshPrintoutPages | Refresh Printout | Context/File Attachment/Refresh Printout | button |  | printout.refresh | P2 | missing | FLUENT19:ContextMenuFileAttachment/RefreshPrintoutPages |  |
-| CM.FileAttachment.JotDeletePrintoutPages | Delete Printout Pages | Context/File Attachment/Delete Printout Pages | button |  | printout.delete | P2 | missing | FLUENT19:ContextMenuFileAttachment/JotDeletePrintoutPages |  |
+| CM.FileAttachment.JotDeletePrintoutPages | Delete Printout Pages | Context/File Attachment/Delete Printout Pages | button |  | printout.delete | P2 | wired | FLUENT19:ContextMenuFileAttachment/JotDeletePrintoutPages |  |
 | CM.FileAttachment.SelectWhatToDisplay | Display As | Context/File Attachment/Display As | button |  | printout.displayAs | P2 | missing | FLUENT19:ContextMenuFileAttachment/SelectWhatToDisplay |  |
 | CM.FileAttachment.RefreshOleObjects | Refresh | Context/File Attachment/Refresh | button |  | printout.refresh | P2 | missing | FLUENT19:ContextMenuFileAttachment/RefreshOleObjects |  |
 | CM.FileAttachment.OriginalFileOpen | Open Original | Context/File Attachment/Open Original | button |  | attachment.openOriginal | P2 | missing | FLUENT19:ContextMenuFileAttachment/OriginalFileOpen |  |
@@ -1430,7 +1430,7 @@ Documented (or, where marked, plausible and unverified) behaviour. A behaviour r
 | BEH.View.Zoom | Zoom from 10% to 400%; Zoom In/Out step through fixed stops | Behaviour/View | behaviour |  |  | P0 | missing | FLUENT19:ZoomClassic | unverified stops |
 | BEH.Paste.HTML | Pasting rich text keeps formatting (Keep Source Formatting is the default paste) | Behaviour/Paste | behaviour |  |  | P0 | wired | FLUENT19:PasteSourceFormatting | unverified default. HTML from other applications keeps paragraphs, headings, basic formatting, links, colour, lists (as levels) and tables (as table objects); a bounded, tolerant reader (notecraft-import-export) |
 | BEH.Paste.Images | Pasting an image creates a picture on the page at the caret | Behaviour/Paste | behaviour |  |  | P1 | wired | GK | a picture on the system clipboard (no text) is pasted as a picture where a new object goes; Ctrl+V with only a picture is caught on the key release (egui-winit drops the press) |
-| BEH.Paste.Files | Dropping a file asks: attach file / insert printout | Behaviour/Paste | behaviour |  |  | P1 | wired | GK | unverified: no "attach or insert printout" question yet (printouts come later): a dropped picture file becomes a picture, any other file an attachment, at the drop point; desktop only (the web build reads dropped files asynchronously, not yet) |
+| BEH.Paste.Files | Dropping a file asks: attach file / insert printout | Behaviour/Paste | behaviour |  |  | P1 | wired | GK | unverified: dropping a file attaches it (a picture file becomes a picture) without asking "attach or insert printout"; Insert Printout on the attachment's menu prints it afterwards |
 | BEH.Table.TabToCreate | Tab after text in a paragraph turns it into a two-column table | Behaviour/Table | behaviour |  |  | P1 | missing | KBD365 ("Create a table") |  |
 | BEH.Ink.PressureTilt | Pen pressure (and tilt where available) shapes ink stroke width | Behaviour/Ink | behaviour |  |  | P1 | wired | brief §6 M2 | Pens draw width × (0.4 + 1.2 × pressure), unverified curve; pressure from egui touch force where winit reports it, else 0.5; tilt not used |
 | BEH.Ink.Lasso | Lasso select picks ink strokes and objects inside the loop | Behaviour/Ink | behaviour |  | draw.lassoSelect | P1 | wired | FLUENT19:LassoSelect | A stroke is picked when three quarters of its points are inside, another object when its centre is (unverified) |
@@ -1471,7 +1471,7 @@ Interop constructs. Per-construct preserved/degraded/dropped numbers for `.one` 
 | FMT.Import.Html | Import HTML | Files/Import | format |  |  | P2 | missing | HTML |  |
 | FMT.Import.Text | Import plain text | Files/Import | format |  |  | P1 | missing | — |  |
 | FMT.Import.Enex | Import Evernote .enex | Files/Import | format |  |  | P2 | missing | ENEX (public DTD) |  |
-| FMT.Import.Pdf | Import PDF as printout | Files/Import | format |  |  | P2 | missing | ISO 32000 |  |
+| FMT.Import.Pdf | Import PDF as printout | Files/Import | format |  |  | P2 | wired | ISO 32000 | as a file printout (attachment plus one picture per page; no text layer yet) |
 | FMT.Import.Images | Import images | Files/Import | format |  |  | P1 | missing | PNG/JPEG/… |  |
 | FMT.Native.Ncraft | Native notebook: folder of .ncraft section files + notebook.ncraft-toc, atomic saves | Files/Native | format |  |  | P0 | verified | NoteCraft (docs/architecture.md) |  |
 

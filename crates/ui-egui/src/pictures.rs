@@ -290,6 +290,13 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 app.run(ctx, cmd, json!({"path": path}));
             }
         }
+        "insert.printout" => {
+            let mut exts = vec!["pdf"];
+            exts.extend(picture_filter());
+            if let Some(path) = app.host.pick_file("Insert File Printout", &[("PDF files and pictures", &exts)]) {
+                app.run(ctx, cmd, json!({"path": path}));
+            }
+        }
         "object.saveAs" | "attachment.saveAs" => {
             let name = default_name(app, cmd == "object.saveAs");
             if let Some(path) = app.host.save_file("Save As", &name) {
@@ -298,7 +305,7 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
         }
         // The ribbon's and menus' Paste read the system clipboard as Ctrl+V does.
         "edit.paste" | "edit.pasteKeepSource" | "edit.pasteMerge" | "edit.pasteTextOnly" => crate::clipboard::paste(app, ctx, cmd, None),
-        "attachment.open" => {
+        "attachment.open" | "printout.openOriginal" => {
             if let Some(path) = app.run(ctx, cmd, json!({})).and_then(|v| v.get("path").and_then(|p| p.as_str()).map(str::to_string))
                 && let Err(e) = app.host.open_path(&path)
             {

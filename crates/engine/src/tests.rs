@@ -253,6 +253,7 @@ fn panic_hunt() {
                     | "object.saveAs"
                     | "attachment.saveAs"
                     | "attachment.open"
+                    | "printout.openOriginal"
             ) {
                 // These touch the file system; the hostile `path`/`folder` values are covered by
                 // their own tests below with a sandboxed folder.

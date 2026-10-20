@@ -185,6 +185,11 @@ pub struct Image {
     /// Set as the page background: behind everything, not selected by a left click.
     #[serde(default)]
     pub background: bool,
+    /// A page of a file printout: the attachment holding the printed file (its [MS-ONE]
+    /// counterpart is the picture's link to the embedded file; a printout is the attachment
+    /// plus one picture per page, decision D3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub printout: Option<Id>,
 }
 
 impl Image {
@@ -202,6 +207,7 @@ impl Image {
             flip_v: false,
             alt_text: String::new(),
             background: false,
+            printout: None,
         };
         im.normalize();
         im

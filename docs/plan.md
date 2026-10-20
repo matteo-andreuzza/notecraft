@@ -102,9 +102,9 @@ ribbon; [`ui-parity.md`](ui-parity.md)).
    context menus (rotate 90°, flip, move, resize by handles and keys, restore size, background,
    alt text, save as, open, rename); the rich clipboard (crate `import-export`: a bounded HTML
    reader and writer; pictures and HTML through `arboard` on the desktop host; tables paste as
-   tables); dropping files on the page. Left: file printouts (PdfCraft's `hayro` 0.7.1 passes
-   our `cargo deny` policy and builds for wasm), screen clipping through the desktop portal,
-   45° rotation, cropping.
+   tables); dropping files on the page; file printouts (PDF pages through `hayro` 0.7.1 from
+   crates.io, the user's choice of 2026-10-20). Left: screen clipping through the desktop
+   portal, 45° rotation of pictures, cropping, copying text from printout pages.
 4. **Ink (decision D4 / §4.10; done):** crates `ink-geom` and `ink`, `PageObject::Ink` (`.ncraft`
    format 4), the Draw tab's tools (Type, Lasso Select, Panning Hand, the four erasers, the pen
    gallery, Add Pen, Color & Thickness), strokes with pressure from egui touch force, the ink
@@ -290,9 +290,15 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   temporary folder and asks the host to open the file with the system's handler; Save As writes
   them to a path the host's file dialog returns. The web build disables both until downloads
   exist.
-- **Later:** a file printout (M2/M3) is an attachment plus one picture per printed page linked to
-  it, as in the reference; the `render` crate draws pictures from the same blobs for page export
-  and printing.
+- **File printouts (done 2026-10-20):** an attachment plus one picture per printed page, each
+  linked to it (`Image::printout`), stacked below it at the page's print size. PDF pages are
+  rendered by `hayro` 0.7 from crates.io (pure Rust, PdfCraft's renderer; `codecs::pdf`) at
+  108 dpi, at most 200 pages, 3,000 px a side and 8 Mpx a page, under the codecs' panic guard;
+  a picture file prints as itself; other formats are refused (no printer driver). Insert
+  Printout on an attachment replaces its earlier pages; Delete Printout Pages and Open Original
+  complete the menus. Rendering runs inside the command (a large PDF blocks for a moment; async
+  later). **Later:** the `render` crate draws pictures from the same blobs for page export and
+  printing; text from printout pages (Copy Text) waits for OCR or a PDF text layer.
 
 ### 4.10 Ink (decision D4, 2026-10-20)
 

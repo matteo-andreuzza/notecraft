@@ -8,7 +8,7 @@ The ranked work list. The exhaustive per-control list is the generated
 | # | Gap | Why it matters | Milestone |
 |---|---|---|---|
 | 1 | `.one`/`.onetoc2`/`.onepkg` import (then export) | Switching needs the user's existing notebooks | M3 |
-| 2 | Insert and Draw: equations, file printouts, screen clipping, audio; ink lacks the ruler, shapes, recognition (Ink to Text/Math), Ink Replay, resizing by handles, touch-only drawing and real tablet pressure on Linux (pens, highlighters, erasers, lasso and the Draw tab are in, decision D4); pictures lack free (45°) rotation, cropping, OCR and links, and draw under text whatever their order | Second most used surface | M2 |
+| 2 | Insert and Draw: equations, screen clipping, audio, text from printout pages (printouts of PDF files and pictures are in); ink lacks the ruler, shapes, recognition (Ink to Text/Math), Ink Replay, resizing by handles, touch-only drawing and real tablet pressure on Linux (pens, highlighters, erasers, lasso and the Draw tab are in, decision D4); pictures lack free (45°) rotation, cropping, OCR and links, and draw under text whatever their order | Second most used surface | M2 |
 | 3 | Clipboard and drag and drop leftovers: copied files (a file manager's file list) don't paste as attachments; dropping on the web build; Paste: Picture (`edit.pastePicture`); HTML pictures (`<img>`) are dropped | Small frictions moving content in | M2 |
 | 4 | Canvas details: the mini toolbar, Paste Options, and the right-click menus on text, containers and paragraph handles are all in now (including the handle, growing containers and the growing page); still missing are a few items those menus leave disabled for later gaps (ink, OCR, linked notes, picture rotation, spelling, translate) and `link.open`'s missing `enabled` predicate | Day-to-day editing feel (catalog `UI.Canvas.*`, `CM.Text/NoteContainer/ParagraphHandle.*`) | M2 |
 | 5 | The web build keeps nothing between visits (no browser storage yet), can't download exports, and has no bold (no font files) | The web app is a demo until notebooks persist | M2 |
@@ -37,7 +37,7 @@ Smaller known shortfalls:
 
 | Date | Change | Summary |
 |---|---|---|
-| 2026-10-20 | minor | M2: ink and the Draw tab (decision D4) narrow gap 2 |
+| 2026-10-20 | minor | M2: ink and the Draw tab (decision D4) and file printouts narrow gap 2 |
 | 2026-10-16 | minor | M2: Dialogs done — closes gap 5 (Insert Table, Link search, Move/Copy as a flat searchable list, Recent Notebooks, notebook list, Symbol, Office Theme); `KB.Table.DeleteEmptyRow` |
 | 2026-10-16 | minor | M2: mini toolbar, context menus, Paste Options done (gap 4 nearly closed) |
 | 2026-10-15 | minor | M2: tables and the paragraph handle done |

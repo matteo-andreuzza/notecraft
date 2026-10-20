@@ -5,7 +5,8 @@
 //! reads only the header (format and size, cheap enough to run on insert), [`decode`] produces
 //! RGBA8 pixels with the EXIF orientation applied, and [`encode_png`] turns clipboard pixels
 //! into a file. PNG, JPEG, GIF (first frame), BMP and WebP are read by the pure-Rust decoders of
-//! the `image` crate (no default features: no threads, builds for `wasm32-unknown-unknown`).
+//! the `image` crate (no default features: no threads, builds for `wasm32-unknown-unknown`);
+//! [`pdf`] renders PDF pages for file printouts.
 //!
 //! **Every byte is hostile.** Sizes are checked against [`Limits`] from the header *before* any
 //! pixel buffer is allocated, the decoders run under an allocation cap, and a decoder panic is
@@ -289,6 +290,8 @@ pub fn encode_png(img: &Rgba8, limits: &Limits) -> Result<Vec<u8>> {
         Ok(bytes)
     })
 }
+
+pub mod pdf;
 
 #[cfg(test)]
 mod tests;

@@ -155,7 +155,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
 
 /// The bytes a command was given: base64 `data`, or the file at `path` (native only), at most
 /// `cap` bytes. Returns the bytes and the file name, if a path gave one.
-fn read_input(v: &Value, cap: usize) -> Result<(Vec<u8>, Option<String>), CmdError> {
+pub(crate) fn read_input(v: &Value, cap: usize) -> Result<(Vec<u8>, Option<String>), CmdError> {
     if let Some(d) = p::str(v, "data") {
         // Base64 is 4/3 the size; refuse before decoding anything absurd.
         if d.len() / 4 * 3 > cap.saturating_add(3) {
@@ -451,7 +451,7 @@ fn open_attachment(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn open_copy(v: &Value, blob: Blob, name: &str) -> CmdResult {
+pub(crate) fn open_copy(v: &Value, blob: Blob, name: &str) -> CmdResult {
     let base = match p::str(v, "dir").filter(|d| !d.is_empty()) {
         Some(d) => std::path::PathBuf::from(d),
         None => std::env::temp_dir().join("notecraft-attachments"),
@@ -465,7 +465,7 @@ fn open_copy(v: &Value, blob: Blob, name: &str) -> CmdResult {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn open_copy(_: &Value, _: Blob, _: &str) -> CmdResult {
+pub(crate) fn open_copy(_: &Value, _: Blob, _: &str) -> CmdResult {
     Err(CmdError::Disabled("the web version can't open attached files yet".into()))
 }
 

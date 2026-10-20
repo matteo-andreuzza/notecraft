@@ -30,6 +30,7 @@ mod outline_cmds;
 mod page_cmds;
 mod para_cmds;
 mod picture_cmds;
+mod printout_cmds;
 mod search_cmds;
 mod section_cmds;
 mod table_cmds;

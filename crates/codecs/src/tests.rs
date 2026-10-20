@@ -165,3 +165,43 @@ proptest! {
         let _ = decode_fit(&b, &Limits::PICTURE, 64);
     }
 }
+
+mod pdf_pages {
+    use crate::CodecError;
+    use crate::pdf::{PdfLimits, is_pdf, page_sizes, render, sample_pdf};
+
+    #[test]
+    fn renders_each_page_on_white_at_the_printout_scale() {
+        let pdf = sample_pdf(&[(200.0, 100.0, [255, 0, 0]), (100.0, 300.0, [0, 0, 255])]);
+        assert!(is_pdf(&pdf));
+        assert_eq!(page_sizes(&pdf, &PdfLimits::PRINTOUT).unwrap(), vec![(200.0, 100.0), (100.0, 300.0)]);
+        let pages = render(&pdf, &PdfLimits::PRINTOUT).unwrap();
+        assert_eq!(pages.len(), 2);
+        let (img, size) = &pages[0];
+        assert_eq!((img.width, img.height, *size), (300, 150, (200.0, 100.0)));
+        let px = |x: u32, y: u32| img.pixels[((y * img.width + x) * 4) as usize..][..4].to_vec();
+        assert_eq!(px(2, 2), vec![255, 255, 255, 255], "white margin");
+        assert_eq!(px(150, 75), vec![255, 0, 0, 255], "the red rectangle");
+    }
+
+    #[test]
+    fn limits_and_hostile_input() {
+        let big = sample_pdf(&[(14_000.0, 14_000.0, [0, 0, 0]); 3]);
+        let lim = PdfLimits { max_pages: 2, ..PdfLimits::PRINTOUT };
+        let pages = render(&big, &lim).unwrap();
+        assert_eq!(pages.len(), 2, "only max_pages pages");
+        assert!(pages.iter().all(|(i, _)| i.width <= lim.max_side && u64::from(i.width) * u64::from(i.height) <= lim.max_pixels));
+        assert!(matches!(render(b"not a pdf", &lim), Err(CodecError::Unsupported)));
+        assert!(matches!(render(&big, &PdfLimits { max_bytes: 10, ..lim }), Err(CodecError::TooLarge(_))));
+        // Truncated at many lengths and with flipped bytes: an error or pages, never a panic.
+        let pdf = sample_pdf(&[(100.0, 100.0, [9, 9, 9])]);
+        for cut in (0..pdf.len()).step_by(7) {
+            let _ = render(&pdf[..cut], &lim);
+        }
+        for i in (0..pdf.len()).step_by(5) {
+            let mut b = pdf.clone();
+            b[i] ^= 0x5a;
+            let _ = render(&b, &lim);
+        }
+    }
+}

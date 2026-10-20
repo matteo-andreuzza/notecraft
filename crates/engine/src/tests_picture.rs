@@ -297,3 +297,63 @@ fn pasting_a_picture_and_copied_tables() {
     assert_ne!(tables[0].rows[0].cells[0].id, tables[1].rows[0].cells[0].id);
     assert_eq!(tables[1].plain_text(), tables[0].plain_text());
 }
+
+/// The page's printout pictures linked to `att`, in order.
+fn printout_pages(s: &Session, att: Id) -> Vec<notecraft_doc::Image> {
+    s.page().unwrap().objects.iter().filter_map(|o| o.as_image().filter(|im| im.printout == Some(att)).cloned()).collect()
+}
+
+#[test]
+fn file_printouts_attach_the_file_and_one_picture_per_page() {
+    let mut s = sample();
+    blank_page(&mut s);
+    let pdf = notecraft_codecs::pdf::sample_pdf(&[(200.0, 100.0, [255, 0, 0]), (100.0, 300.0, [0, 0, 255])]);
+    let undo = s.undo_labels().len();
+    let r = run(&mut s, "insert.printout", json!({"data": data(&pdf), "name": "Report.pdf", "x": 40.0, "y": 150.0}));
+    let att = Id::parse(r["attachment"].as_str().unwrap()).unwrap();
+    assert_eq!(r["total"], 2);
+    let a = s.page().unwrap().attachment(att).unwrap().clone();
+    assert_eq!(a.name, "Report.pdf");
+    assert_eq!(&a.blob.bytes[..], &pdf[..], "the attachment keeps the file unchanged");
+    let pages = printout_pages(&s, att);
+    assert_eq!(pages.len(), 2, "FMT.Import.Pdf");
+    assert_eq!((pages[0].width, pages[0].height), (200.0, 100.0), "pages come in at their print size");
+    assert_eq!((pages[1].width, pages[1].height), (100.0, 300.0));
+    assert!(pages[0].pos.y > a.pos.y && pages[1].pos.y > pages[0].pos.y + 100.0, "stacked below the attachment");
+    assert_eq!(pages[0].pixels, (300, 150), "rendered at 108 dpi");
+    assert_eq!(s.undo_labels().len(), undo + 1, "one undo step");
+    // Open Original from a printed page writes the file for the host to open.
+    run(&mut s, "object.select", json!({"ids": [pages[1].id.to_string()]}));
+    let dir = temp_dir("printout");
+    let r = run(&mut s, "printout.openOriginal", json!({"dir": dir.to_str().unwrap()}));
+    assert_eq!(std::fs::read(r["path"].as_str().unwrap()).unwrap(), pdf, "CM.Picture.ViewOriginalPrintout");
+    // Delete Printout Pages, then Insert Printout again from the attachment's menu.
+    run(&mut s, "object.select", json!({"ids": [att.to_string()]}));
+    assert_eq!(run(&mut s, "printout.delete", json!({}))["deleted"], 2, "CM.FileAttachment.JotDeletePrintoutPages");
+    assert!(printout_pages(&s, att).is_empty());
+    assert!(s.run("printout.delete", json!({})).is_err(), "nothing left to delete");
+    run(&mut s, "attachment.insertPrintout", json!({}));
+    run(&mut s, "attachment.insertPrintout", json!({}));
+    assert_eq!(printout_pages(&s, att).len(), 2, "CM.FileAttachment.FilePrintoutInsert replaces earlier pages");
+    run(&mut s, "edit.undo", json!({}));
+    run(&mut s, "edit.undo", json!({}));
+    run(&mut s, "edit.undo", json!({}));
+    assert_eq!(printout_pages(&s, att).len(), 2, "undo brings the first pages back");
+}
+
+#[test]
+fn printouts_refuse_what_they_cannot_print() {
+    let mut s = sample();
+    blank_page(&mut s);
+    let n = s.page().unwrap().objects.len();
+    let e = s.run("insert.printout", json!({"data": data(b"plain text, not printable"), "name": "a.txt"})).unwrap_err();
+    assert!(e.to_string().contains("PDF files and pictures"), "{e}");
+    assert!(s.run("insert.printout", json!({"data": data(b"%PDF-1.7 truncated")})).is_err());
+    assert_eq!(s.page().unwrap().objects.len(), n, "nothing is inserted");
+    // A picture prints as itself.
+    let r = run(&mut s, "insert.printout", json!({"data": data(&png(8, 4)), "name": "dot.png"}));
+    assert_eq!(r["total"], 1);
+    // A text attachment can't be printed later either.
+    run(&mut s, "insert.file", json!({"data": data(b"hello"), "name": "a.txt"}));
+    assert!(s.run("attachment.insertPrintout", json!({})).is_err());
+}

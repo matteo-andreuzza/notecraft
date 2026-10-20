@@ -3,8 +3,8 @@
 Every non-code asset in this repository, with its author, source and licence. `cargo xtask assets`
 (part of `cargo xtask ci`) fails if an asset file is missing from this table. Add the row in the
 same commit as the file. NoteCraft bundles **no** Microsoft assets of any kind (AGENTS.md › Clean
-room), and **no fonts** (they come from storytold/craft-fonts at build time, when
-`CRAFT_FONTS_DIR` is set).
+room), and **no fonts** of its own (they come from storytold/craft-fonts at build time, when
+`CRAFT_FONTS_DIR` is set; the PDF renderer's compiled-in fonts are listed below).
 
 ## Original assets
 
@@ -25,6 +25,16 @@ room), and **no fonts** (they come from storytold/craft-fonts at build time, whe
 | `assets/app-icon/hicolor/scalable/apps/ai.storyteller.notecraft.svg` | copy of `notecraft.svg` | NoteCraft contributors | `packaging/icons.sh` | MIT OR Apache-2.0 |
 | `assets/app-icon/LICENSE.txt` | licence of the app icon | NoteCraft contributors | original | MIT OR Apache-2.0 |
 | `assets/app-icon/README.md` | provenance of the app icon | NoteCraft contributors | original | MIT OR Apache-2.0 |
+
+## Compiled in through dependencies
+
+Not files in this repository, but data the NoteCraft binary carries because a dependency embeds
+it (recorded here for the notices a binary redistribution must reproduce).
+
+| Data | What | Author | Source | Licence |
+|---|---|---|---|---|
+| `hayro-interpret` 0.7 `assets/Foxit*.pfb` | standard-14 substitute fonts, used to render PDF printouts whose fonts aren't embedded | Foxit Software Inc. / the PDFium Authors | https://pdfium.googlesource.com/pdfium (through the `hayro` crate) | BSD-3-Clause |
+| `hayro-interpret` 0.7 `assets/CGATS001Compat-v2-micro.icc` | CMYK colour profile for PDF rendering | the CGATS profile authors | through the `hayro` crate | CC0-1.0 |
 
 ## Artwork drawn in code
 
