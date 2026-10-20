@@ -521,9 +521,10 @@ mod tests {
 
     #[test]
     fn object_rows_that_dont_act_on_pictures_yet_are_disabled() {
-        // Link… is registered (for text) but its picture row is still missing: drawn disabled.
-        assert!(!row_live("CM.Picture.HyperlinkCreate"));
-        assert!(!row_live("CM.FileAttachment.HyperlinkCreate"));
+        // Tags are registered (for text) but don't act on ink yet: their ink rows are drawn
+        // disabled; Paste Options on ink likewise.
+        assert!(!row_live("CM.InkDrawing.TagsGallery"));
+        assert!(!row_live("CM.InkDrawing.PasteGalleryMini"));
         assert!(row_live("CM.Picture.RestoreImageSize"));
         assert!(row_live("CM.FileAttachment.FileAttachmentOpen"));
     }

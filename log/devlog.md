@@ -298,3 +298,18 @@ this log plus a green tree is how the next agent picks up.
 - Numbers: wiring 579/1322 (43.8%), behaviour 159/1322 (12.0%), 299 commands.
 - Still open: text from printout pages, asynchronous rendering of large PDFs, the "attach or
   print" question when a file is dropped.
+
+## 2026-10-20 — M2: links on pictures, attachments and ink; resizing ink
+
+- Pictures, attachments and ink strokes carry a hyperlink of their own (`link`, optional,
+  format 4 unchanged; cleaned on load). Link…, Edit Link…, Open Link, Copy Link and Remove Link
+  act on the selected objects (`view_cmds.rs` `object_link`/`set_object_link`,
+  `Session::current_link`); Edit Link… opens the Link dialog prefilled, and its OK edits an
+  existing link instead of inserting linked text (this also fixes Edit Link… on text, which ran
+  `link.edit` without a URL). Linked objects show their link in the tooltip.
+- Ink selection box has the eight sizing handles; `object.resize` maps the box `from` → `to`
+  (one small step per frame, coalesced into one undo step), or `dw`/`dh`.
+- Menu header rows (Rotate, Order/Arrange) of the ink, lasso and Draw tab menus pinned by tests.
+- Numbers: wiring 592/1322 (44.8%), behaviour 159/1322 (12.0%), 299 commands.
+- Environment: the disk filled up during a gate (`target/debug/incremental` had grown to
+  5.7 GB); deleted it and ran later builds with `CARGO_INCREMENTAL=0`.

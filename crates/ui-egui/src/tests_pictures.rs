@@ -249,3 +249,21 @@ fn dropping_files_inserts_a_picture_and_an_attachment() {
     assert!((im.pos.x - drop_pt.x).abs() < 1.0 && (att.pos.x - drop_pt.x - 24.0).abs() < 1.0, "at the drop point, stacked");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn edit_link_on_a_picture_starts_from_its_link_and_changes_it() {
+    let (mut a, id) = page_with_picture();
+    a.session.run("object.select", json!({"ids": [id.to_string()]})).unwrap();
+    a.session.run("insert.link", json!({"url": "https://example.org/old"})).unwrap();
+    let d = crate::ribbon::dialog_for(&a, "CM.Picture.LinkEdit");
+    let Some(crate::dialogs::Dialog::Link { url, .. }) = &d else { panic!("Edit Link… opens the Link dialog: {d:?}") };
+    assert_eq!(url, "https://example.org/old", "prefilled with the picture's link");
+    a.ui.dialog = Some(crate::dialogs::Dialog::Link { url: "https://example.org/new".into(), text: String::new(), filter: String::new() });
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("OK").click();
+    h.run();
+    let link = h.state().session.page().unwrap().image(id).unwrap().link.clone();
+    assert_eq!(link.as_deref(), Some("https://example.org/new"), "OK edits the existing link");
+    assert_eq!(h.state().session.page().unwrap().objects.iter().filter(|o| o.as_outline().is_some()).count(), 0, "no linked text was typed");
+}

@@ -374,10 +374,17 @@ pub(crate) fn hit(app: &NoteApp, p: Pos2, background: bool) -> Option<MediaLayou
 
 /// The hover text of a picture (its alt text) or an attachment (its name and size).
 pub(crate) fn tooltip(page: &Page, id: Id) -> Option<String> {
-    match page.objects.iter().find(|o| o.id() == id)? {
+    let o = page.objects.iter().find(|o| o.id() == id)?;
+    let base = match o {
         PageObject::Image(im) if !im.alt_text.is_empty() => Some(im.alt_text.clone()),
         PageObject::Attachment(a) => Some(format!("{} ({} KB)", a.name, a.blob.len.div_ceil(1024))),
         _ => None,
+    };
+    // A linked object shows where its link goes (Open Link is on its menu, Enter opens it).
+    match (base, o.link()) {
+        (Some(b), Some(l)) => Some(format!("{b}\n{l}")),
+        (None, Some(l)) => Some(l.to_string()),
+        (b, None) => b,
     }
 }
 

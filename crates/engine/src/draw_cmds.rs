@@ -420,6 +420,51 @@ pub(crate) fn transform_ink(s: &mut Session, f: impl Fn(&mut Ink, Point)) -> Res
     Ok(true)
 }
 
+/// `[x, y, w, h]` from params, finite with a positive size.
+fn rect_param(v: &Value, k: &str) -> Option<Rect> {
+    let a = v.get(k)?.as_array()?;
+    let n = |i: usize| a.get(i).and_then(Value::as_f64).map(|x| x as f32).filter(|x| x.is_finite());
+    let (x, y, w, h) = (n(0)?, n(1)?, n(2)?, n(3)?);
+    (w > 0.0 && h > 0.0).then(|| Rect::from_points(Point::new(x, y), Point::new(x + w, y + h)))
+}
+
+/// Resize the selected ink: the rectangle `from` (the selection box as it was drawn) maps onto
+/// `to`, so the sizing handles can send one small step per frame (they coalesce into one undo
+/// step). Without rectangles, `dw`/`dh` grow the group's box from its top-left corner.
+pub(crate) fn resize_ink(s: &mut Session, v: &Value) -> CmdResult {
+    let ids = selected_ink(s);
+    let page = s.page().ok_or_else(no_page)?;
+    let group =
+        notecraft_ink::union_bounds(ids.iter().filter_map(|id| page.ink(*id))).ok_or_else(|| CmdError::Disabled("select some ink first".into()))?;
+    let (from, to) = match (rect_param(v, "from"), rect_param(v, "to")) {
+        (Some(a), Some(b)) => (a, b),
+        _ => match (p::f32(v, "dw"), p::f32(v, "dh")) {
+            (None, None) => {
+                s.notice("Drag a sizing handle of the selection to resize the ink.");
+                return Ok(Value::Null);
+            }
+            (dw, dh) => {
+                let (w, h) = (group.width() + dw.unwrap_or(0.0), group.height() + dh.unwrap_or(0.0));
+                (group, Rect::from_points(group.min, Point::new(group.min.x + w.max(1.0), group.min.y + h.max(1.0))))
+            }
+        },
+    };
+    // At most 100× per step either way: a hostile rectangle can't fling points to infinity
+    // (they are clamped by `geom::finite` anyway).
+    let kx = (to.width() / from.width().max(0.01)).clamp(0.01, 100.0);
+    let ky = (to.height() / from.height().max(0.01)).clamp(0.01, 100.0);
+    let (dx, dy) = (to.min.x - from.min.x, to.min.y - from.min.y);
+    let page = s.page_mut().ok_or_else(no_page)?;
+    for id in &ids {
+        if let Some(k) = page.ink_mut(*id) {
+            notecraft_ink::scale(k, from.min, kx, ky);
+            k.pos = Point::new(k.pos.x + dx, k.pos.y + dy).sanitized();
+        }
+    }
+    s.coalesce = Some(format!("resize:{ids:?}"));
+    Ok(Value::Null)
+}
+
 fn rotate_ink(s: &mut Session, degrees: f32) -> CmdResult {
     transform_ink(s, |k, c| notecraft_ink::rotate(k, c, degrees))?;
     Ok(Value::Null)

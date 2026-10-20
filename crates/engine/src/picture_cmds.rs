@@ -107,7 +107,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .params(r#"{"dx": pt, "dy": pt} (selected objects)"#)
             .when(need_object),
         CommandSpec::new("object.resize", "CM.Picture.ObjectResize", "Resize", "Context/Picture/Resize", resize_picture)
-            .params(r#"{"id"?: picture id (default: the selected one), "width"?: pt, "height"?: pt, "dw"?: pt, "dh"?: pt, "x"?: pt, "y"?: pt (new top-left, for handles on the left or top)}"#)
+            .params(r#"{"id"?: picture id (default: the selected one), "width"?: pt, "height"?: pt, "dw"?: pt, "dh"?: pt, "x"?: pt, "y"?: pt (new top-left, for handles on the left or top); selected ink: "from": [x, y, w, h], "to": [x, y, w, h] page rectangles}"#)
             .when(need_page),
         CommandSpec::new(
             "object.restoreSize",
@@ -254,7 +254,7 @@ fn insert_file(s: &mut Session, v: &Value) -> CmdResult {
     let page = s.page().ok_or_else(no_page)?;
     let pos = ops::insert_pos(s, page, v);
     let (id, blob_id) = (s.new_id(), s.new_id());
-    let mut a = Attachment { id, pos, name, blob: Blob::new(blob_id, Arc::from(bytes)), alt_text: String::new() };
+    let mut a = Attachment { id, pos, name, blob: Blob::new(blob_id, Arc::from(bytes)), alt_text: String::new(), link: None };
     a.normalize();
     s.pending_outline = None;
     s.page_mut().ok_or_else(no_page)?.objects.push(PageObject::Attachment(a));
@@ -324,6 +324,10 @@ fn move_objects(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 fn resize_picture(s: &mut Session, v: &Value) -> CmdResult {
+    // Selected ink (no picture named): the sizing handles of the ink selection box.
+    if p::id(v, "id")?.is_none() && selected(s, true).is_empty() && !crate::draw_cmds::selected_ink(s).is_empty() {
+        return crate::draw_cmds::resize_ink(s, v);
+    }
     let id = match p::id(v, "id")? {
         Some(id) => id,
         None => *selected(s, true).first().ok_or_else(|| CmdError::Disabled("select a picture first".into()))?,

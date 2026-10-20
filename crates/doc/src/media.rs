@@ -190,6 +190,9 @@ pub struct Image {
     /// plus one picture per page, decision D3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub printout: Option<Id>,
+    /// A hyperlink on the picture (Link… on its menu; [MS-ONE] `WzHyperlinkUrl`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link: Option<String>,
 }
 
 impl Image {
@@ -208,6 +211,7 @@ impl Image {
             alt_text: String::new(),
             background: false,
             printout: None,
+            link: None,
         };
         im.normalize();
         im
@@ -232,6 +236,7 @@ impl Image {
         self.quarter_turns %= 4;
         self.pixels = (self.pixels.0.min(1 << 20), self.pixels.1.min(1 << 20));
         clean_alt(&mut self.alt_text);
+        clean_link(&mut self.link);
     }
 }
 
@@ -250,6 +255,30 @@ pub struct Attachment {
     /// Alternative text for screen readers.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub alt_text: String,
+    /// A hyperlink on the file's icon (Link… on its menu).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link: Option<String>,
+}
+
+/// Longest stored hyperlink on an object, bytes.
+pub const MAX_LINK: usize = 4_096;
+
+/// A stored object link from a file: control characters removed, at most [`MAX_LINK`] bytes
+/// (cut at a character boundary), empty → none.
+pub fn clean_link(link: &mut Option<String>) {
+    if let Some(l) = link.as_mut() {
+        l.retain(|c| !c.is_control());
+        if l.len() > MAX_LINK {
+            let mut cut = MAX_LINK;
+            while !l.is_char_boundary(cut) {
+                cut -= 1;
+            }
+            l.truncate(cut);
+        }
+    }
+    if link.as_deref().is_some_and(|l| l.trim().is_empty()) {
+        *link = None;
+    }
 }
 
 impl Attachment {
@@ -258,6 +287,7 @@ impl Attachment {
         self.pos = self.pos.sanitized();
         self.name = safe_file_name(&self.name);
         clean_alt(&mut self.alt_text);
+        clean_link(&mut self.link);
     }
 }
 

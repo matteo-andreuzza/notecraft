@@ -160,7 +160,7 @@ fn insert_printout(s: &mut Session, v: &Value) -> CmdResult {
     let page = s.page().ok_or_else(no_page)?;
     let pos = ops::insert_pos(s, page, v);
     let (id, blob) = (s.new_id(), s.new_id());
-    let mut a = Attachment { id, pos, name, blob: Blob::new(blob, Arc::from(bytes)), alt_text: String::new() };
+    let mut a = Attachment { id, pos, name, blob: Blob::new(blob, Arc::from(bytes)), alt_text: String::new(), link: None };
     a.normalize();
     s.pending_outline = None;
     s.page_mut().ok_or_else(no_page)?.objects.push(PageObject::Attachment(a));

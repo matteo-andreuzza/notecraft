@@ -348,7 +348,9 @@ fn link_at_caret(s: &Session) -> Option<String> {
 fn open_link(s: &mut Session, v: &Value) -> CmdResult {
     let url = match p::str(v, "url") {
         Some(u) => u.to_string(),
-        None => link_at_caret(s).ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?,
+        None => {
+            link_at_caret(s).or_else(|| crate::view_cmds::object_link(s)).ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?
+        }
     };
     match parse_link(&url) {
         Some(("page", ids)) => {

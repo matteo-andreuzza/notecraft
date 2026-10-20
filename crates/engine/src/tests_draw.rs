@@ -171,3 +171,23 @@ fn ink_stays_on_the_page_when_turned_at_the_edge() {
     let o = s.page().unwrap().objects.iter().find(|o| matches!(o, PageObject::Ink(_))).unwrap();
     assert!(o.pos().x >= 0.0);
 }
+
+#[test]
+fn ink_resizes_from_one_rectangle_to_another() {
+    let (mut s, id) = with_line();
+    run(&mut s, "draw.lassoSelect", json!({"points": [[0, 150], [400, 150], [400, 250], [0, 250]]}));
+    let b = strokes(&s)[0].bounds();
+    let (x, y, w, h) = (b.min.x, b.min.y, b.width(), b.height());
+    let undo = s.undo_labels().len();
+    // Two steps of one handle drag: twice as wide, then three times, from the left edge.
+    run(&mut s, "object.resize", json!({"from": [x, y, w, h], "to": [x, y, w * 2.0, h]}));
+    run(&mut s, "object.resize", json!({"from": [x, y, w * 2.0, h], "to": [x, y, w * 3.0, h]}));
+    let k = s.page().unwrap().ink(id).unwrap().clone();
+    let pts: Vec<_> = k.page_points().collect();
+    assert!((pts[1].x - pts[0].x - 600.0).abs() < 0.5, "CM.InkDrawing.ObjectResize: {pts:?}");
+    assert_eq!(s.undo_labels().len(), undo + 1, "one drag, one undo step");
+    // dw from the menu-less API; no params only explains.
+    run(&mut s, "object.resize", json!({"dw": 10.0}));
+    run(&mut s, "object.resize", json!({}));
+    assert!(s.run("object.resize", json!({"from": [0, 0, 0, 0], "to": [0, 0, 1e30, -5]})).is_ok(), "hostile rectangles are ignored, not fatal");
+}

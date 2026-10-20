@@ -513,6 +513,8 @@ mod tests {
                 name: "report.pdf".into(),
                 blob: file.clone(),
                 alt_text: String::new(),
+                // Object links round-trip with the rest (format 4).
+                link: Some("https://example.org/report".into()),
             }));
             if let Some(PageObject::Image(im)) = p.objects.get_mut(1) {
                 im.alt_text = "A chart".into();

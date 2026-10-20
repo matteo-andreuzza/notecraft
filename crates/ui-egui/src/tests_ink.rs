@@ -193,3 +193,33 @@ fn the_pen_gallery_and_color_thickness() {
     h.run();
     assert_eq!(h.state().session.draw.current_pen().tool, InkTool::Pen, "the dialog's choice applies to the pen");
 }
+
+#[test]
+fn the_draw_tab_and_lasso_menus_act_on_selected_ink() {
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("draw.stroke", json!({"points": [[10, 10], [60, 30]]})).unwrap();
+    a.session.run("draw.stroke", json!({"points": [[10, 50], [60, 70]]})).unwrap();
+    a.session.run("draw.lassoSelect", json!({"points": [[0, 0], [100, 0], [100, 100], [0, 100]]})).unwrap();
+    let on = |id: &str| crate::ribbon::enabled(&a, id);
+    assert!(on("R.Draw.Edit.ObjectRotateRight90") && on("R.Draw.Edit.RotateRight45OneNote"), "R.Draw.Edit.RotateMenuOneNote");
+    assert!(on("R.Draw.Edit.ObjectBringToFront") && on("R.Draw.Edit.ObjectSendToBack"), "R.Draw.Edit.ObjectsArrangeMenu");
+    assert!(on("CM.LassoSelection.ObjectFlipVertical") && on("CM.LassoSelection.RotateLeft45OneNote"), "CM.LassoSelection.RotateInkMenu");
+}
+
+#[test]
+fn a_corner_handle_resizes_selected_ink() {
+    let mut h = drawing("draw.pen");
+    let at = map(&h);
+    trace(&mut h, &[at(150.0, 200.0), at(220.0, 230.0), at(300.0, 200.0)]);
+    h.state_mut().session.run("draw.type", json!({})).unwrap();
+    click(&mut h, at(220.0, 230.0));
+    let b = crate::ink::selection_box(h.state()).expect("the stroke is selected");
+    let w0 = strokes(&h)[0].bounds().width();
+    let undo = h.state().session.undo_labels().len();
+    // Drag the bottom-right corner outwards: the ink grows in proportion, as one undo step.
+    drag(&mut h, b.right_bottom(), b.right_bottom() + egui::vec2(150.0, 0.0));
+    let w1 = strokes(&h)[0].bounds().width();
+    assert!(w1 > w0 * 1.5, "CM.InkDrawing.ObjectResize: {w0} → {w1}");
+    assert_eq!(h.state().session.undo_labels().len(), undo + 1);
+}

@@ -64,6 +64,9 @@ pub(crate) enum Gesture {
     Pan,
     /// Moving the selected objects: the last page point.
     Group { last: Point },
+    /// Resizing the selected ink by a handle (`pictures::handles` order): the box when the drag
+    /// began and as last sent (page `x, y, w, h`), and where the pointer went down.
+    Resize { handle: usize, start: (f32, f32, f32, f32), last: (f32, f32, f32, f32), grab: Point },
 }
 
 /// The canvas's ink state.
@@ -172,7 +175,7 @@ pub(crate) fn draw(app: &NoteApp, painter: &Painter, page: &Page, t: Tokens, pag
         Some(Gesture::Stroke(pts)) => {
             let pen = app.session.draw.current_pen();
             let z = PT * app.canvas.zoom.max(0.1);
-            let live = Ink { id: Id(0), pos: Point::ZERO, points: Vec::new(), color: pen.color, width: pen.width, tool: pen.tool };
+            let live = Ink { id: Id(0), pos: Point::ZERO, points: Vec::new(), color: pen.color, width: pen.width, tool: pen.tool, link: None };
             let screen: Vec<Pos2> = pts.iter().map(|(p, _)| app.canvas.to_screen(*p)).collect();
             let half: Vec<f32> = pts.iter().map(|(_, pr)| (live.width_at(*pr) * z / 2.0).max(0.5)).collect();
             paint_stroke(painter, &screen, &half, ink_color(pen.color, pen.tool, page_text), pen.tool == InkTool::Pen);
@@ -194,7 +197,19 @@ pub(crate) fn draw(app: &NoteApp, painter: &Painter, page: &Page, t: Tokens, pag
     if let Some(b) = selection_box(app) {
         let pts = [b.left_top(), b.right_top(), b.right_bottom(), b.left_bottom(), b.left_top()];
         painter.extend(Shape::dashed_line(&pts, Stroke::new(1.0, t.accent), 4.0, 3.0));
+        for h in crate::pictures::handles(b) {
+            painter.rect(h, 1.0, t.page, Stroke::new(1.0, t.accent), egui::StrokeKind::Inside);
+        }
     }
+}
+
+/// The sizing handle of the ink selection box under a screen point, with the box in page
+/// space (`x, y, w, h`).
+fn handle_at(app: &NoteApp, p: Pos2) -> Option<(usize, (f32, f32, f32, f32))> {
+    let b = selection_box(app)?;
+    let i = crate::pictures::handles(b).iter().position(|h| h.expand(2.0).contains(p))?;
+    let (a, z) = (app.canvas.to_page(b.min), PT * app.canvas.zoom.max(0.1));
+    Some((i, (a.x, a.y, b.width() / z, b.height() / z)))
 }
 
 /// The stroke under a screen point (topmost first).
@@ -243,10 +258,17 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
             DrawTool::Eraser => ctx.set_cursor_icon(CursorIcon::Cell),
             DrawTool::Pan => ctx.set_cursor_icon(if resp.dragged() { CursorIcon::Grabbing } else { CursorIcon::Grab }),
             DrawTool::Type => {
-                if let Some(h) = resp.hover_pos()
-                    && (selection_box(app).is_some_and(|b| b.contains(h)) || hit(app, h).is_some())
-                {
-                    ctx.set_cursor_icon(CursorIcon::Move);
+                if let Some(h) = resp.hover_pos() {
+                    if let Some((i, _)) = handle_at(app, h) {
+                        ctx.set_cursor_icon(match i {
+                            0 | 2 => CursorIcon::ResizeNwSe,
+                            1 | 3 => CursorIcon::ResizeNeSw,
+                            4 | 6 => CursorIcon::ResizeVertical,
+                            _ => CursorIcon::ResizeHorizontal,
+                        });
+                    } else if selection_box(app).is_some_and(|b| b.contains(h)) || hit(app, h).is_some() {
+                        ctx.set_cursor_icon(CursorIcon::Move);
+                    }
                 }
             }
         }
@@ -286,6 +308,11 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
             DrawTool::Pan => {
                 if resp.drag_started() {
                     app.canvas.ink.gesture = Some(Gesture::Pan);
+                }
+            }
+            DrawTool::Lasso | DrawTool::Type if resp.drag_started() && handle_at(app, o).is_some() => {
+                if let Some((handle, start)) = handle_at(app, o) {
+                    app.canvas.ink.gesture = Some(Gesture::Resize { handle, start, last: start, grab: at });
                 }
             }
             DrawTool::Lasso if resp.drag_started() => {
@@ -342,6 +369,15 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
                     *last = to;
                     if dx != 0.0 || dy != 0.0 {
                         app.run(ctx, "object.move", json!({"dx": dx, "dy": dy}));
+                    }
+                }
+            }
+            Some(Gesture::Resize { handle, start, last, grab }) => {
+                if let Some(to) = pts.last().copied() {
+                    let next = crate::pictures::resized(*start, *handle, (to.x - grab.x, to.y - grab.y));
+                    let from = std::mem::replace(last, next);
+                    if from != next {
+                        app.run(ctx, "object.resize", json!({"from": [from.0, from.1, from.2, from.3], "to": [next.0, next.1, next.2, next.3]}));
                     }
                 }
             }

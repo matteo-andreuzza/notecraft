@@ -357,3 +357,31 @@ fn printouts_refuse_what_they_cannot_print() {
     run(&mut s, "insert.file", json!({"data": data(b"hello"), "name": "a.txt"}));
     assert!(s.run("attachment.insertPrintout", json!({})).is_err());
 }
+
+#[test]
+fn links_on_pictures_attachments_and_ink() {
+    // The picture, attachment and ink menus' Link… / Edit Link… / Open Link / Copy Link /
+    // Remove Link act on the selected objects.
+    let (mut s, pic) = with_picture(8, 4);
+    assert!(s.run("link.open", json!({})).is_err(), "no link yet");
+    run(&mut s, "insert.link", json!({"url": "https://example.org/a"}));
+    assert_eq!(image(&s, pic).link.as_deref(), Some("https://example.org/a"), "CM.Picture.HyperlinkCreate");
+    assert_eq!(s.current_link().as_deref(), Some("https://example.org/a"));
+    assert_eq!(run(&mut s, "link.copy", json!({}))["text"], "https://example.org/a", "CM.Picture.LinkCopyOneNote");
+    assert_eq!(run(&mut s, "link.open", json!({}))["open_url"], "https://example.org/a", "CM.Picture.HyperlinkOpen");
+    run(&mut s, "link.edit", json!({"url": "https://example.org/b"}));
+    assert_eq!(image(&s, pic).link.as_deref(), Some("https://example.org/b"), "CM.Picture.LinkEdit");
+    run(&mut s, "link.remove", json!({}));
+    assert_eq!(image(&s, pic).link, None, "CM.Picture.LinkRemove");
+    // An attachment and a stroke.
+    let r = run(&mut s, "insert.file", json!({"data": data(b"hello"), "name": "a.txt"}));
+    let att = Id::parse(r["attachment"].as_str().unwrap()).unwrap();
+    run(&mut s, "insert.link", json!({"url": "notecraft:page/0000000000000000000000000000000a"}));
+    assert!(s.page().unwrap().attachment(att).unwrap().link.is_some(), "CM.FileAttachment.HyperlinkCreate");
+    let r = run(&mut s, "draw.stroke", json!({"points": [[10, 10], [40, 40]]}));
+    let ink = Id::parse(r["ink"].as_str().unwrap()).unwrap();
+    run(&mut s, "object.select", json!({"ids": [ink.to_string()]}));
+    run(&mut s, "insert.link", json!({"url": "mailto:me@example.org"}));
+    assert_eq!(s.page().unwrap().ink(ink).unwrap().link.as_deref(), Some("mailto:me@example.org"), "CM.InkDrawing.HyperlinkCreate");
+    assert!(s.run("insert.link", json!({"url": "bad\u{0}url"})).is_err());
+}

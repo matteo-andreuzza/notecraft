@@ -170,7 +170,10 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                         if !text.is_empty() {
                             p["text"] = json!(text);
                         }
-                        app.run(ctx, "insert.link", p);
+                        // On an existing link (text at the caret, or a selected object's) OK
+                        // changes it; otherwise it makes a new one.
+                        let cmd = if app.disabled_reason("link.edit").is_none() { "link.edit" } else { "insert.link" };
+                        app.run(ctx, cmd, p);
                         close = true;
                     }
                     if ui.button("Cancel").clicked() {

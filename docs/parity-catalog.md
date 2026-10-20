@@ -327,12 +327,12 @@ The Draw tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Draw.Shapes.GridSnapTo | Snap to Grid | Draw/Shapes/Snap to Grid | toggle |  | draw.snapToGrid | P2 | missing | FLUENT19:GridSnapTo |  |
 | R.Draw.Edit.PenInsertSpace | Insert Space | Draw/Edit/Insert Space | toggle |  | insert.space | P1 | missing | FLUENT19:PenInsertSpace |  |
 | R.Draw.Edit.Delete | Delete | Draw/Edit/Delete | button | `Delete` | edit.delete | P0 | wired | FLUENT19:Delete |  |
-| R.Draw.Edit.ObjectsArrangeMenu | Arrange | Draw/Edit/Arrange | menu |  |  | P1 | missing | FLUENT19:ObjectsArrangeMenu |  |
+| R.Draw.Edit.ObjectsArrangeMenu | Arrange | Draw/Edit/Arrange | menu |  |  | P1 | wired | FLUENT19:ObjectsArrangeMenu |  |
 | R.Draw.Edit.ObjectBringForward | Bring Forward | Draw/Edit/Arrange/Bring Forward | button |  | object.bringForward | P1 | wired | FLUENT19:ObjectBringForward |  |
 | R.Draw.Edit.ObjectBringToFront | Bring to Front | Draw/Edit/Arrange/Bring to Front | button |  | object.bringToFront | P1 | wired | FLUENT19:ObjectBringToFront |  |
 | R.Draw.Edit.ObjectSendBackward | Send Backward | Draw/Edit/Arrange/Send Backward | button |  | object.sendBackward | P1 | wired | FLUENT19:ObjectSendBackward |  |
 | R.Draw.Edit.ObjectSendToBack | Send to Back | Draw/Edit/Arrange/Send to Back | button |  | object.sendToBack | P1 | wired | FLUENT19:ObjectSendToBack |  |
-| R.Draw.Edit.RotateMenuOneNote | Rotate | Draw/Edit/Rotate | menu |  |  | P1 | missing | FLUENT19:RotateMenuOneNote |  |
+| R.Draw.Edit.RotateMenuOneNote | Rotate | Draw/Edit/Rotate | menu |  |  | P1 | wired | FLUENT19:RotateMenuOneNote |  |
 | R.Draw.Edit.RotateRight45OneNote | Rotate Right 45° | Draw/Edit/Rotate/Rotate Right 45° | button |  | object.rotateRight45 | P2 | wired | FLUENT19:RotateRight45OneNote |  |
 | R.Draw.Edit.RotateLeft45OneNote | Rotate Left 45° | Draw/Edit/Rotate/Rotate Left 45° | button |  | object.rotateLeft45 | P2 | wired | FLUENT19:RotateLeft45OneNote |  |
 | R.Draw.Edit.ObjectRotateRight90 | Rotate Right 90° | Draw/Edit/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | wired | FLUENT19:ObjectRotateRight90 |  |
@@ -716,13 +716,13 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.InkDrawing.Cut | Cut | Context/Ink Drawing/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuInkDrawing/Cut |  |
 | CM.InkDrawing.CopyOneNote | Copy | Context/Ink Drawing/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuInkDrawing/CopyOneNote |  |
 | CM.InkDrawing.PasteGalleryMini | Paste Options | Context/Ink Drawing/Paste Options | gallery |  | edit.pasteOptions | P0 | missing | FLUENT19:ContextMenuInkDrawing/PasteGalleryMini |  |
-| CM.InkDrawing.HyperlinkCreate | Link… | Context/Ink Drawing/Link… | button | `Mod+K` | insert.link | P0 | missing | FLUENT19:ContextMenuInkDrawing/HyperlinkCreate |  |
-| CM.InkDrawing.OrderObjectsMenu | Order | Context/Ink Drawing/Order | menu |  |  | P1 | missing | FLUENT19:ContextMenuInkDrawing/OrderObjectsMenu |  |
+| CM.InkDrawing.HyperlinkCreate | Link… | Context/Ink Drawing/Link… | button | `Mod+K` | insert.link | P0 | wired | FLUENT19:ContextMenuInkDrawing/HyperlinkCreate |  |
+| CM.InkDrawing.OrderObjectsMenu | Order | Context/Ink Drawing/Order | menu |  |  | P1 | wired | FLUENT19:ContextMenuInkDrawing/OrderObjectsMenu |  |
 | CM.InkDrawing.ObjectBringForward | Bring Forward | Context/Ink Drawing/Order/Bring Forward | button |  | object.bringForward | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectBringForward |  |
 | CM.InkDrawing.ObjectBringToFront | Bring to Front | Context/Ink Drawing/Order/Bring to Front | button |  | object.bringToFront | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectBringToFront |  |
 | CM.InkDrawing.ObjectSendBackward | Send Backward | Context/Ink Drawing/Order/Send Backward | button |  | object.sendBackward | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectSendBackward |  |
 | CM.InkDrawing.ObjectSendToBack | Send to Back | Context/Ink Drawing/Order/Send to Back | button |  | object.sendToBack | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectSendToBack |  |
-| CM.InkDrawing.RotateInkMenu | Rotate | Context/Ink Drawing/Rotate | menu |  |  | P1 | missing | FLUENT19:ContextMenuInkDrawing/RotateInkMenu |  |
+| CM.InkDrawing.RotateInkMenu | Rotate | Context/Ink Drawing/Rotate | menu |  |  | P1 | wired | FLUENT19:ContextMenuInkDrawing/RotateInkMenu |  |
 | CM.InkDrawing.RotateRight45OneNote | Rotate Right 45° | Context/Ink Drawing/Rotate/Rotate Right 45° | button |  | object.rotateRight45 | P2 | wired | FLUENT19:ContextMenuInkDrawing/RotateRight45OneNote |  |
 | CM.InkDrawing.RotateLeft45OneNote | Rotate Left 45° | Context/Ink Drawing/Rotate/Rotate Left 45° | button |  | object.rotateLeft45 | P2 | wired | FLUENT19:ContextMenuInkDrawing/RotateLeft45OneNote |  |
 | CM.InkDrawing.ObjectRotateRight90 | Rotate Right 90° | Context/Ink Drawing/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectRotateRight90 |  |
@@ -733,7 +733,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.InkDrawing.TreatInkAsHandwriting | Handwriting | Context/Ink Drawing/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | missing | FLUENT19:ContextMenuInkDrawing/TreatInkAsHandwriting |  |
 | CM.InkDrawing.TreatInkAsDrawing | Drawing | Context/Ink Drawing/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | missing | FLUENT19:ContextMenuInkDrawing/TreatInkAsDrawing |  |
 | CM.InkDrawing.ObjectMove | Move | Context/Ink Drawing/Move | button |  | object.move | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectMove |  |
-| CM.InkDrawing.ObjectResize | Resize | Context/Ink Drawing/Resize | button |  | object.resize | P1 | missing | FLUENT19:ContextMenuInkDrawing/ObjectResize |  |
+| CM.InkDrawing.ObjectResize | Resize | Context/Ink Drawing/Resize | button |  | object.resize | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectResize |  |
 | CM.InkDrawing.SelectionToMathConvert | Ink to Math | Context/Ink Drawing/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuInkDrawing/SelectionToMathConvert |  |
 | CM.InkDrawing.TagsGallery | Tags | Context/Ink Drawing/Tags | gallery |  | tag.toggle | P0 | missing | FLUENT19:ContextMenuInkDrawing/TagsGallery |  |
 | CM.InkDrawing.TagsCustomize | Customize Tags | Context/Ink Drawing/Tags/Customize Tags | button |  | tag.customize | P1 | missing | FLUENT19:ContextMenuInkDrawing/TagsCustomize |  |
@@ -745,7 +745,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.LassoSelection.Cut | Cut | Context/Lasso Selection/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuLassoSelection/Cut |  |
 | CM.LassoSelection.CopyOneNote | Copy | Context/Lasso Selection/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuLassoSelection/CopyOneNote |  |
 | CM.LassoSelection.Delete | Delete | Context/Lasso Selection/Delete | button | `Delete` | edit.delete | P0 | wired | FLUENT19:ContextMenuLassoSelection/Delete |  |
-| CM.LassoSelection.RotateInkMenu | Rotate | Context/Lasso Selection/Rotate | menu |  |  | P1 | missing | FLUENT19:ContextMenuLassoSelection/RotateInkMenu |  |
+| CM.LassoSelection.RotateInkMenu | Rotate | Context/Lasso Selection/Rotate | menu |  |  | P1 | wired | FLUENT19:ContextMenuLassoSelection/RotateInkMenu |  |
 | CM.LassoSelection.RotateRight45OneNote | Rotate Right 45° | Context/Lasso Selection/Rotate/Rotate Right 45° | button |  | object.rotateRight45 | P2 | wired | FLUENT19:ContextMenuLassoSelection/RotateRight45OneNote |  |
 | CM.LassoSelection.RotateLeft45OneNote | Rotate Left 45° | Context/Lasso Selection/Rotate/Rotate Left 45° | button |  | object.rotateLeft45 | P2 | wired | FLUENT19:ContextMenuLassoSelection/RotateLeft45OneNote |  |
 | CM.LassoSelection.ObjectRotateRight90 | Rotate Right 90° | Context/Lasso Selection/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | wired | FLUENT19:ContextMenuLassoSelection/ObjectRotateRight90 |  |
@@ -769,11 +769,11 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Picture.ViewOriginalPrintout | Open Original | Context/Picture/Open Original | button |  | printout.openOriginal | P2 | wired | FLUENT19:ContextMenuPicture/ViewOriginalPrintout |  |
 | CM.Picture.PasteGalleryMini | Paste Options | Context/Picture/Paste Options | gallery |  | edit.pasteOptions | P0 | wired | FLUENT19:ContextMenuPicture/PasteGalleryMini |  |
 | CM.Picture.ImageSaveAs | Save As (picture) | Context/Picture/Save As (picture) | button |  | object.saveAs | P1 | wired | FLUENT19:ContextMenuPicture/ImageSaveAs | writes the stored file unchanged (rotation and flips are view properties) |
-| CM.Picture.HyperlinkOpen | Open Link | Context/Picture/Open Link | button | `Enter` | link.open | P0 | missing | FLUENT19:ContextMenuPicture/HyperlinkOpen |  |
-| CM.Picture.LinkEdit | Edit Link… | Context/Picture/Edit Link… | button |  | link.edit | P0 | missing | FLUENT19:ContextMenuPicture/LinkEdit |  |
-| CM.Picture.HyperlinkCreate | Link… | Context/Picture/Link… | button | `Mod+K` | insert.link | P0 | missing | FLUENT19:ContextMenuPicture/HyperlinkCreate |  |
-| CM.Picture.LinkCopyOneNote | Copy Link | Context/Picture/Copy Link | button |  | link.copy | P0 | missing | FLUENT19:ContextMenuPicture/LinkCopyOneNote |  |
-| CM.Picture.LinkRemove | Remove Link | Context/Picture/Remove Link | button |  | link.remove | P0 | missing | FLUENT19:ContextMenuPicture/LinkRemove |  |
+| CM.Picture.HyperlinkOpen | Open Link | Context/Picture/Open Link | button | `Enter` | link.open | P0 | wired | FLUENT19:ContextMenuPicture/HyperlinkOpen |  |
+| CM.Picture.LinkEdit | Edit Link… | Context/Picture/Edit Link… | button |  | link.edit | P0 | wired | FLUENT19:ContextMenuPicture/LinkEdit |  |
+| CM.Picture.HyperlinkCreate | Link… | Context/Picture/Link… | button | `Mod+K` | insert.link | P0 | wired | FLUENT19:ContextMenuPicture/HyperlinkCreate |  |
+| CM.Picture.LinkCopyOneNote | Copy Link | Context/Picture/Copy Link | button |  | link.copy | P0 | wired | FLUENT19:ContextMenuPicture/LinkCopyOneNote |  |
+| CM.Picture.LinkRemove | Remove Link | Context/Picture/Remove Link | button |  | link.remove | P0 | wired | FLUENT19:ContextMenuPicture/LinkRemove |  |
 | CM.Picture.OrderObjectsMenu | Order | Context/Picture/Order | menu |  |  | P1 | wired | FLUENT19:ContextMenuPicture/OrderObjectsMenu |  |
 | CM.Picture.ObjectBringForward | Bring Forward | Context/Picture/Order/Bring Forward | button |  | object.bringForward | P1 | wired | FLUENT19:ContextMenuPicture/ObjectBringForward | pictures are drawn under text; the order applies among pictures and attachments |
 | CM.Picture.ObjectBringToFront | Bring to Front | Context/Picture/Order/Bring to Front | button |  | object.bringToFront | P1 | wired | FLUENT19:ContextMenuPicture/ObjectBringToFront | pictures are drawn under text; the order applies among pictures and attachments |
@@ -808,7 +808,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.FileAttachment.Cut | Cut | Context/File Attachment/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuFileAttachment/Cut |  |
 | CM.FileAttachment.CopyOneNote | Copy | Context/File Attachment/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuFileAttachment/CopyOneNote |  |
 | CM.FileAttachment.PasteGalleryMini | Paste Options | Context/File Attachment/Paste Options | gallery |  | edit.pasteOptions | P0 | wired | FLUENT19:ContextMenuFileAttachment/PasteGalleryMini |  |
-| CM.FileAttachment.HyperlinkCreate | Link… | Context/File Attachment/Link… | button | `Mod+K` | insert.link | P0 | missing | FLUENT19:ContextMenuFileAttachment/HyperlinkCreate |  |
+| CM.FileAttachment.HyperlinkCreate | Link… | Context/File Attachment/Link… | button | `Mod+K` | insert.link | P0 | wired | FLUENT19:ContextMenuFileAttachment/HyperlinkCreate |  |
 | CM.FileAttachment.AlternativeText | Alt Text | Context/File Attachment/Alt Text | button |  | object.altText | P1 | wired | FLUENT19:ContextMenuFileAttachment/AlternativeText |  |
 | CM.Tag.NoteTagCheck | Check Tag | Context/Tag/Check Tag | button |  | tag.check | P0 | wired | FLUENT19:ContextMenuTag/NoteTagCheck |  |
 | CM.Tag.NoteTagUncheck | Uncheck Tag | Context/Tag/Uncheck Tag | button |  | tag.uncheck | P0 | wired | FLUENT19:ContextMenuTag/NoteTagUncheck |  |

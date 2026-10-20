@@ -322,6 +322,8 @@ pub(crate) fn dialog_for(app: &NoteApp, id: &str) -> Option<crate::dialogs::Dial
     use crate::dialogs::Dialog;
     match id.rsplit('.').next()? {
         "HyperlinkCreateHere" | "HyperlinkCreate" => Some(Dialog::Link { url: String::new(), text: String::new(), filter: String::new() }),
+        // Edit Link… starts from the link under the caret or on the selected object.
+        "LinkEdit" => Some(Dialog::Link { url: app.session.current_link().unwrap_or_default(), text: String::new(), filter: String::new() }),
         "TableInsert" => Some(Dialog::InsertTable(2, 2)),
         "SymbolInsertGallery" | "SymbolsDialog" => Some(Dialog::Symbol),
         "ParagraphSpacingOptions" => {

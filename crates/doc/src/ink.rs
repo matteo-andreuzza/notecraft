@@ -81,13 +81,16 @@ pub struct Ink {
     /// Pen or highlighter.
     #[serde(default)]
     pub tool: InkTool,
+    /// A hyperlink on the stroke (Link… on its menu).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub link: Option<String>,
 }
 
 impl Ink {
     /// A stroke through `page_points` (`(page point, pressure)`), normalised.
     pub fn new(id: Id, page_points: &[(Point, f32)], color: Rgba, width: f32, tool: InkTool) -> Ink {
         let points = page_points.iter().map(|(p, pr)| InkPoint { x: p.x, y: p.y, pressure: *pr }).collect();
-        let mut ink = Ink { id, pos: Point::ZERO, points, color, width, tool };
+        let mut ink = Ink { id, pos: Point::ZERO, points, color, width, tool, link: None };
         ink.normalize();
         ink
     }
@@ -122,6 +125,7 @@ impl Ink {
     /// 1/100 pt, pressure 0–1, at most [`MAX_INK_POINTS`] points, the width in range, and the
     /// points re-anchored so their box starts at `pos`.
     pub fn normalize(&mut self) {
+        crate::media::clean_link(&mut self.link);
         self.points.truncate(MAX_INK_POINTS);
         self.width = if self.width.is_nan() { 1.0 } else { self.width.clamp(MIN_INK_WIDTH, MAX_INK_WIDTH) };
         let pos = self.pos.sanitized();

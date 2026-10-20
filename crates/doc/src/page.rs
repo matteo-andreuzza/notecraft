@@ -263,6 +263,27 @@ impl PageObject {
         }
     }
 
+    /// The hyperlink on a picture, attachment or ink stroke (`None` for containers and tables,
+    /// whose links live in their text).
+    pub fn link(&self) -> Option<&str> {
+        match self {
+            PageObject::Image(i) => i.link.as_deref(),
+            PageObject::Attachment(a) => a.link.as_deref(),
+            PageObject::Ink(k) => k.link.as_deref(),
+            PageObject::Outline(_) | PageObject::Table(_) => None,
+        }
+    }
+
+    /// The link slot of a picture, attachment or ink stroke.
+    pub fn link_mut(&mut self) -> Option<&mut Option<String>> {
+        match self {
+            PageObject::Image(i) => Some(&mut i.link),
+            PageObject::Attachment(a) => Some(&mut a.link),
+            PageObject::Ink(k) => Some(&mut k.link),
+            PageObject::Outline(_) | PageObject::Table(_) => None,
+        }
+    }
+
     /// The stored bytes of a picture or attachment.
     pub fn blob(&self) -> Option<&Blob> {
         match self {

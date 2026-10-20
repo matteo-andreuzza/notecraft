@@ -1,12 +1,12 @@
 //! View (zoom, page setup, full page, window) and Insert (time stamps, links) commands.
 
 use notecraft_doc::color::Rgba;
-use notecraft_doc::{CharFormat, RuleLines};
+use notecraft_doc::{CharFormat, Id, PageObject, RuleLines};
 use notecraft_text as t;
 use serde_json::{Value, json};
 
 use crate::ops::{self, need_page, need_text, no_page};
-use crate::selection::{Block, Pos};
+use crate::selection::{Block, PageSel, Pos};
 use crate::session::{RibbonMode, ScrollRequest};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
 
@@ -14,7 +14,46 @@ use crate::{CmdError, CmdResult, CommandSpec, Session, p};
 pub const ZOOM_STOPS: [f32; 13] = [0.1, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 3.5, 4.0];
 
 fn need_link(s: &Session) -> Option<&'static str> {
-    if link_range(s).is_some() { None } else { Some("The caret is not on a link") }
+    if link_range(s).is_some() || object_link(s).is_some() { None } else { Some("The caret is not on a link") }
+}
+
+/// The selected pictures, attachments and ink strokes (the objects that carry a link of their
+/// own; a container's or a table's links are in its text).
+fn linkable(s: &Session) -> Vec<Id> {
+    let (Some(page), PageSel::Objects { ids }) = (s.page(), &s.sel.on_page) else { return Vec::new() };
+    ids.iter()
+        .copied()
+        .filter(|id| page.objects.iter().any(|o| o.id() == *id && matches!(o, PageObject::Image(_) | PageObject::Attachment(_) | PageObject::Ink(_))))
+        .collect()
+}
+
+/// The link of the first selected object that has one.
+pub(crate) fn object_link(s: &Session) -> Option<String> {
+    let (Some(page), PageSel::Objects { ids }) = (s.page(), &s.sel.on_page) else { return None };
+    ids.iter().find_map(|id| page.objects.iter().find(|o| o.id() == *id).and_then(|o| o.link().map(str::to_string)))
+}
+
+/// Set (or clear) the link on the selected objects; false when none is selected.
+fn set_object_link(s: &mut Session, url: Option<String>) -> Result<bool, CmdError> {
+    let ids = linkable(s);
+    if ids.is_empty() {
+        return Ok(false);
+    }
+    let page = s.page_mut().ok_or_else(no_page)?;
+    for o in page.objects.iter_mut().filter(|o| ids.contains(&o.id())) {
+        if let Some(slot) = o.link_mut() {
+            *slot = url.clone();
+        }
+    }
+    Ok(true)
+}
+
+impl Session {
+    /// The link under the selection: the text link at the caret, or the selected object's
+    /// (what Edit Link… starts from).
+    pub fn current_link(&self) -> Option<String> {
+        link_range(self).map(|(_, _, _, url)| url).or_else(|| object_link(self))
+    }
 }
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
@@ -316,6 +355,10 @@ fn validate_url(url: &str) -> Result<String, CmdError> {
 
 fn insert_link(s: &mut Session, v: &Value) -> CmdResult {
     let url = validate_url(p::req_str(v, "url")?)?;
+    // Selected pictures, attachments or ink get the link themselves (their Link… menu items).
+    if set_object_link(s, Some(url.clone()))? {
+        return Ok(Value::Null);
+    }
     let text = p::str(v, "text").map(str::to_string);
     let has_selection = s.text_range().is_some_and(|r| !r.is_caret());
     if has_selection && text.is_none() {
@@ -384,6 +427,10 @@ fn link_range(s: &Session) -> Option<(Block, usize, std::ops::Range<usize>, Stri
 
 fn edit_link(s: &mut Session, v: &Value) -> CmdResult {
     let url = validate_url(p::req_str(v, "url")?)?;
+    if link_range(s).is_none() && object_link(s).is_some() {
+        set_object_link(s, Some(url))?;
+        return Ok(Value::Null);
+    }
     let (b, i, r, _) = link_range(s).ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?;
     let text = p::str(v, "text").map(str::to_string);
     let page = s.page_mut().ok_or_else(no_page)?;
@@ -400,6 +447,10 @@ fn edit_link(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 fn remove_link(s: &mut Session, _: &Value) -> CmdResult {
+    if link_range(s).is_none() && object_link(s).is_some() {
+        set_object_link(s, None)?;
+        return Ok(Value::Null);
+    }
     let (b, i, r, _) = link_range(s).ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?;
     let page = s.page_mut().ok_or_else(no_page)?;
     if let Some(p) = Session::para_mut(page, b, i) {
@@ -409,7 +460,7 @@ fn remove_link(s: &mut Session, _: &Value) -> CmdResult {
 }
 
 fn copy_link(s: &mut Session, _: &Value) -> CmdResult {
-    let (_, _, _, url) = link_range(s).ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?;
+    let url = s.current_link().ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?;
     s.clipboard =
         crate::session::Clipboard { paragraphs: Vec::new(), text: url.clone(), pages: Vec::new(), objects: Vec::new(), html: String::new() };
     Ok(json!({"text": url}))
