@@ -1,6 +1,6 @@
 # Architecture
 
-> **Last reviewed:** 2026-10-14 · **Last updated:** 2026-10-14 · **Change:** major (first version)
+> **Last reviewed:** 2026-10-20 · **Last updated:** 2026-10-20 · **Change:** minor (ink crates, decision D4)
 
 ## Layers
 
@@ -25,6 +25,11 @@ Every user-visible action is a `CommandSpec` in the engine: id, parity-catalog i
 path (OneNote's ribbon/menu path), shortcut, params doc, `enabled` predicate and `run`. The
 ribbon, context menus, keyboard, CLI, control channel and MCP dispatch by id, so behaviour is
 identical whichever way it is invoked, and one command records exactly one undo step.
+
+Ink (decision D4): `ink-geom` (L0) holds the pure geometry (distances, polygon tests,
+simplification, disc cuts, stroke outlines), `ink` (L2) the stroke operations over the model
+(strokes from samples, erasers, lasso, turns), `engine/src/draw_cmds.rs` the Draw tab's commands
+and tool state, and `ui-egui/src/ink.rs` the drawing, the gestures and the pen gallery.
 
 The details of the document model, persistence and the UI shell are written up in
 [`plan.md`](plan.md) and grow here as the crates land.

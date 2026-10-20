@@ -245,3 +245,39 @@ this log plus a green tree is how the next agent picks up.
 - Numbers: wiring 525/1320 (39.8%), behaviour 158/1320 (12.0%), 279 commands (was 494, 153, 264).
 - Still open: printouts, screen clipping, 45° rotation, crop, OCR, picture links, ink, audio;
   M2 exit not met (no merge, no tag).
+
+## 2026-10-20 — M2 increment 4: ink and the Draw tab (decision D4)
+
+- **Decision D4** (`docs/plan.md` §4.10, §6): one ink stroke is one page object
+  (`PageObject::Ink`: points relative to the object's position with per-point pressure, colour,
+  width, pen or highlighter), so selection, lasso, Delete, Cut/Copy/Paste, Order, Move, Rotate
+  and Undo work on ink unchanged; [MS-ONE] ink nodes map stroke by stroke (only the grouping is
+  lost). `.ncraft` **format 4** (formats 1–3 open unchanged, tested with a v3 file). Limits:
+  20,000 points per stroke, widths 0.1–72 pt, pressure 0–1 (NaN → 0.5), strokes count against
+  the 10,000-objects-per-page cap; empty strokes are dropped on load.
+- **`notecraft-ink-geom`** (L0): distances, polygon test, iterative RDP, disc cuts, stroke
+  outlines, rotation (proptests on hostile input). **`notecraft-ink`** (L2): strokes from
+  samples (cleaned, simplified at 0.2 pt, capped), hit tests, the stroke eraser and partial
+  erasers (pieces outside the disc become new strokes; the sweep is bounded to 2,000 positions
+  after a proptest showed a hostile path costing a minute), the lasso rule (¾ of the points,
+  unverified), turns, flips, scaling.
+- **Engine** `draw_cmds.rs` (16 commands): Type, Lasso Select, Panning Hand, Eraser and its four
+  sizes, the pen gallery, Add Pen, Color & Thickness — session state, never an undo step;
+  `draw.stroke` (one undo step), `draw.erase` (coalesced per gesture), `draw.lassoSelect`,
+  Rotate Right/Left 45°; Rotate 90°/Flip turn ink about the selection's centre and keep it on
+  the page; copy/paste carry strokes.
+- **UI** `ink.rs`: strokes as triangle strips with round caps/joins (width from pressure, black
+  ink follows the page text colour in dark themes, translucent highlighters), the live stroke,
+  lasso and eraser feedback, the dashed selection box (drag to move), pen tool samples from every
+  `PointerMoved` of a frame, pressure from egui touch force (else 0.5), the panning hand; the
+  pen gallery inline in both ribbon layouts (pen glyphs drawn in code; a click on the selected
+  pen opens thickness and colour), the Color & Thickness dialog, the ink and lasso context menus
+  (`CM.InkDrawing.*`, `CM.LassoSelection.*` from the catalog), arrow keys nudge ink.
+  Snapshots: `ink-page`, `ink-page-classic`, `ink-page-dark`, `ink-lasso`, `ink-zoom-2x`.
+- Learned: a touch held still for many frames is egui's long press (the touch-screen context
+  menu), not a drag — the kittest pressure test sends one sample per frame, as a pen does.
+- Numbers: wiring 574/1322 (43.4%), behaviour 159/1322 (12.0%), 295 commands (was 525/1320,
+  158, 279).
+- Still open: ruler, shapes, Ink to Text/Math, Ink Replay, resizing ink by handles, tablet
+  pressure on Linux (PhotoCraft's XInput2 `tablet` crate), `render`; printouts; audio; M2 exit
+  not met (no merge, no tag).

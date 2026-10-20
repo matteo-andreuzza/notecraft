@@ -50,7 +50,7 @@ mod tests_table;
 
 use serde_json::Value;
 
-pub use draw_cmds::{DrawState, DrawTool, EraserKind, PenStyle};
+pub use draw_cmds::{DrawState, DrawTool, EraserKind, MAX_PATH as MAX_DRAW_PATH, PenStyle};
 pub use notecraft_doc as doc;
 pub use notecraft_search as search;
 pub use notecraft_text as text;

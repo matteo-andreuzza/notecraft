@@ -124,6 +124,54 @@ fn picture_page(a: &mut NoteApp, select: bool) {
     a.canvas.focused = true;
 }
 
+/// A new page with a line of text and ink over it (decision D4): a highlighter across the
+/// text, a red pen circling a word, handwriting with varying pressure and a blue arrow; the
+/// Draw tab shows with the first pen chosen, and everything is lassoed when `lasso`.
+fn ink_page(a: &mut NoteApp, lasso: bool) {
+    let s = &mut a.session;
+    s.run("page.new", json!({})).unwrap();
+    s.run("text.insert", json!({"text": "Sketch"})).unwrap();
+    s.run("outline.new", json!({"x": 36.0, "y": 100.0})).unwrap();
+    s.run("text.insert", json!({"text": "Ideas for the garden: a bench under the old pear tree."})).unwrap();
+    s.sel.on_page = notecraft_engine::selection::PageSel::None;
+    let stroke = |s: &mut Session, pen: usize, pts: Vec<[f32; 3]>| {
+        s.run("draw.stroke", json!({"pen": pen, "points": pts})).unwrap();
+    };
+    // Yellow highlighter along the text.
+    stroke(s, 3, (0..=40).map(|i| [40.0 + i as f32 * 4.5, 112.0 + (i as f32 * 0.3).sin(), 0.5]).collect());
+    // Red circle around "bench".
+    stroke(
+        s,
+        1,
+        (0..=64)
+            .map(|i| {
+                let a = i as f32 / 64.0 * std::f32::consts::TAU * 1.05;
+                [258.0 + 30.0 * a.cos(), 110.0 + 13.0 * a.sin(), 0.5]
+            })
+            .collect(),
+    );
+    // Handwriting-like loops with pressure.
+    stroke(
+        s,
+        0,
+        (0..=160)
+            .map(|i| {
+                let t = i as f32 / 160.0;
+                [60.0 + t * 260.0 + 9.0 * (t * 60.0).sin(), 190.0 - 14.0 * (t * 30.0).sin().abs(), 0.25 + 0.7 * (t * 9.0).sin().abs()]
+            })
+            .collect(),
+    );
+    // Blue arrow.
+    stroke(s, 2, vec![[340.0, 200.0, 0.6], [430.0, 150.0, 0.6]]);
+    stroke(s, 2, vec![[412.0, 148.0, 0.6], [430.0, 150.0, 0.6], [424.0, 168.0, 0.6]]);
+    s.run("draw.pen", json!({"index": 0})).unwrap();
+    if lasso {
+        s.run("draw.lassoSelect", json!({"points": [[20, 80], [460, 80], [460, 230], [20, 230]]})).unwrap();
+    }
+    a.ui.tab = "Draw".into();
+    a.canvas.focused = true;
+}
+
 fn table_id(s: &Session) -> String {
     s.page().unwrap().objects.iter().find_map(|o| o.as_table()).unwrap().id.to_string()
 }
@@ -186,6 +234,20 @@ fn main() {
             }
         },
     );
+    shot("ink-page", &out, 1.0, |a| ink_page(a, false));
+    shot("ink-page-classic", &out, 1.0, |a| {
+        ink_page(a, false);
+        a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    });
+    shot("ink-page-dark", &out, 1.0, |a| {
+        ink_page(a, false);
+        a.ui.theme = ThemeKind::Black;
+    });
+    shot("ink-lasso", &out, 1.0, |a| ink_page(a, true));
+    shot("ink-zoom-2x", &out, 2.0, |a| {
+        ink_page(a, false);
+        a.session.run("view.zoom", json!({"percent": 150})).unwrap();
+    });
     for (name, mode) in [("table-layout", "simplified"), ("classic-table-layout", "classic")] {
         shot(name, &out, 1.0, |a| {
             table_page(a);

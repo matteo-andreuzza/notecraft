@@ -14,6 +14,8 @@ workspace = true
 [dependencies]
 notecraft-engine = { workspace = true }
 notecraft-codecs = { workspace = true }
+notecraft-ink = { workspace = true }
+notecraft-ink-geom = { workspace = true }
 egui = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

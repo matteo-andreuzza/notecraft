@@ -1,6 +1,6 @@
 # NoteCraft plan
 
-> **Last reviewed:** 2026-10-16 · **Last updated:** 2026-10-16 · **Change:** minor (M2: Dialogs done; `KB.Table.DeleteEmptyRow`) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the 2024 UI)
+> **Last reviewed:** 2026-10-20 · **Last updated:** 2026-10-20 · **Change:** major (decision D4: ink) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the 2024 UI)
 
 How NoteCraft gets from nothing to a OneNote replacement a typical user could switch to. The
 inventory of what "OneNote" means is [`parity-catalog.md`](parity-catalog.md) (1,291 rows); the
@@ -105,9 +105,12 @@ ribbon; [`ui-parity.md`](ui-parity.md)).
    tables); dropping files on the page. Left: file printouts (PdfCraft's `hayro` 0.7.1 passes
    our `cargo deny` policy and builds for wasm), screen clipping through the desktop portal,
    45° rotation, cropping.
-4. **Ink (decision D4 / §4.10):** crates `ink-geom` and `ink` (pens, highlighters, eraser modes,
-   lasso, pressure from winit; tablet-v2/XInput2 as a risk), the Draw tab's tools; later the
-   ruler, shapes, recognition and crate `render` (CPU oracle for thumbnails and export).
+4. **Ink (decision D4 / §4.10; done):** crates `ink-geom` and `ink`, `PageObject::Ink` (`.ncraft`
+   format 4), the Draw tab's tools (Type, Lasso Select, Panning Hand, the four erasers, the pen
+   gallery, Add Pen, Color & Thickness), strokes with pressure from egui touch force, the ink
+   and lasso context menus, 45°/90° turns and flips of ink. Left: the ruler, shapes, recognition
+   (Ink to Text/Math), Ink Replay, resizing ink by handles, tablet pressure on Linux (PhotoCraft's
+   XInput2 `tablet` crate), and crate `render` (CPU oracle for thumbnails and export).
 5. **Dialogs (done):** Insert Table, Link with page search, Move/Copy as a flat searchable list
    (not a tree — simplest compatible choice, noted in the catalog), Options (with the Office
    Theme), Recent Notebooks, the notebook list (Ctrl+G), Symbol. Left for later: page templates,

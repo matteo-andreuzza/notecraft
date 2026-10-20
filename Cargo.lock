@@ -2291,6 +2291,8 @@ dependencies = [
  "log",
  "notecraft-codecs",
  "notecraft-engine",
+ "notecraft-ink",
+ "notecraft-ink-geom",
  "serde",
  "serde_json",
  "skrifa",

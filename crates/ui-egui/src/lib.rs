@@ -18,6 +18,7 @@ pub mod dialogs;
 pub mod fonts;
 pub mod icons;
 pub mod icons_set;
+pub mod ink;
 pub mod keymap;
 pub mod mini_toolbar;
 pub mod nav;
@@ -491,5 +492,7 @@ fn rect_json(r: Rect) -> Value {
 mod tests;
 #[cfg(test)]
 mod tests_canvas;
+#[cfg(test)]
+mod tests_ink;
 #[cfg(test)]
 mod tests_pictures;

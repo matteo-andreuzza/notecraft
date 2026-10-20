@@ -198,6 +198,10 @@ pub(crate) enum ContextTarget {
     Picture(Id),
     /// A file attachment (`CM.FileAttachment.*`).
     Attachment(Id),
+    /// An ink stroke (`CM.InkDrawing.*`).
+    Ink(Id),
+    /// A stroke of a multi-object (lasso) selection (`CM.LassoSelection.*`).
+    Lasso(Id),
 }
 
 /// Canvas view state.
@@ -233,6 +237,8 @@ pub struct CanvasState {
     pub extent: egui::Vec2,
     /// The open right-click context menu's target, if any (`context_menu.rs`).
     pub(crate) context_target: Option<ContextTarget>,
+    /// Ink strokes of the last frame and the Draw gesture in progress (`ink.rs`).
+    pub ink: crate::ink::InkUi,
     drag: Option<Drag>,
     scroll_to: Option<Rect>,
     pub(crate) viewport: Rect,
@@ -256,6 +262,7 @@ impl Default for CanvasState {
             preedit: String::new(),
             extent: egui::Vec2::ZERO,
             context_target: None,
+            ink: Default::default(),
             drag: None,
             scroll_to: None,
             viewport: Rect::NOTHING,
@@ -290,7 +297,7 @@ impl CanvasState {
     /// floats near the selection (the mini toolbar) stays hidden while one is, so it doesn't
     /// flicker under the pointer.
     pub(crate) fn is_dragging(&self) -> bool {
-        self.drag.is_some()
+        self.drag.is_some() || self.ink.busy()
     }
 }
 
@@ -420,6 +427,10 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         let media = crate::pictures::layout(&page, app.canvas.origin, zoom);
         for m in &media {
             extent = extent.max(m.rect.max - app.canvas.origin + vec2(240.0, 240.0));
+        }
+        app.canvas.ink.layout = crate::ink::layout(app, &page);
+        for k in &app.canvas.ink.layout {
+            extent = extent.max(k.rect.max - app.canvas.origin + vec2(240.0, 240.0));
         }
         app.canvas.extent = extent;
         let content = vec2(extent.x.max(avail.width()), extent.y.max(avail.height()));
@@ -565,6 +576,8 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 scroll_req = None;
             }
         }
+        // Ink, above the text (decision D4), with the gesture in progress and the selection box.
+        crate::ink::draw(app, &painter, &page, t, page_text);
         // Selected pictures and attachments: frame and sizing handles, above the text.
         for m in media.iter().filter(|m| selected_objects.contains(&m.id)) {
             crate::pictures::draw_selection(&painter, m, t);
@@ -957,6 +970,10 @@ fn highlights(app: &NoteApp, painter: &egui::Painter, paras: &[ParaLayout], t: T
 
 /// Mouse interaction.
 fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Response) {
+    // The Draw tools, and clicks or drags on ink (`ink.rs`).
+    if app.canvas.drag.is_none() && crate::ink::interact(app, ui, ctx, resp) {
+        return;
+    }
     let hover = resp.hover_pos();
     // Cursor shape.
     let selected: Vec<Id> = match &app.session.sel.on_page {

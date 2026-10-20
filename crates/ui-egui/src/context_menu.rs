@@ -282,6 +282,70 @@ pub const ATTACHMENT_MENU: &[Entry] = &[
     Entry::Item("CM.FileAttachment.AlternativeText"),
 ];
 
+/// Right-click menu on an ink stroke (catalog `CM.InkDrawing.*`, in catalog order).
+pub const INK_MENU: &[Entry] = &[
+    Entry::Item("CM.InkDrawing.Cut"),
+    Entry::Item("CM.InkDrawing.CopyOneNote"),
+    Entry::Item("CM.InkDrawing.PasteGalleryMini"),
+    Entry::Item("CM.InkDrawing.HyperlinkCreate"),
+    Entry::Submenu(
+        "CM.InkDrawing.OrderObjectsMenu",
+        &[
+            Entry::Item("CM.InkDrawing.ObjectBringForward"),
+            Entry::Item("CM.InkDrawing.ObjectBringToFront"),
+            Entry::Item("CM.InkDrawing.ObjectSendBackward"),
+            Entry::Item("CM.InkDrawing.ObjectSendToBack"),
+        ],
+    ),
+    Entry::Submenu(
+        "CM.InkDrawing.RotateInkMenu",
+        &[
+            Entry::Item("CM.InkDrawing.RotateRight45OneNote"),
+            Entry::Item("CM.InkDrawing.RotateLeft45OneNote"),
+            Entry::Item("CM.InkDrawing.ObjectRotateRight90"),
+            Entry::Item("CM.InkDrawing.ObjectRotateLeft90"),
+            Entry::Item("CM.InkDrawing.ObjectFlipHorizontal"),
+            Entry::Item("CM.InkDrawing.ObjectFlipVertical"),
+        ],
+    ),
+    Entry::Submenu(
+        "CM.InkDrawing.TreatInkAsMenu",
+        &[Entry::Item("CM.InkDrawing.TreatInkAsHandwriting"), Entry::Item("CM.InkDrawing.TreatInkAsDrawing")],
+    ),
+    Entry::Item("CM.InkDrawing.ObjectMove"),
+    Entry::Item("CM.InkDrawing.ObjectResize"),
+    Entry::Item("CM.InkDrawing.SelectionToMathConvert"),
+    Entry::Submenu("CM.InkDrawing.TagsGallery", &[Entry::Item("CM.InkDrawing.TagsCustomize"), Entry::Item("CM.InkDrawing.TagsRemoveAll")]),
+    Entry::Item("CM.InkDrawing.TagsMarkAll"),
+    Entry::Item("CM.InkDrawing.TagsClearAll"),
+    Entry::Item("CM.InkDrawing.TagsRemoveAll2"),
+    Entry::Item("CM.InkDrawing.PenInsertSpace"),
+];
+
+/// Right-click menu on several strokes picked with the lasso (catalog `CM.LassoSelection.*`).
+pub const LASSO_MENU: &[Entry] = &[
+    Entry::Item("CM.LassoSelection.Cut"),
+    Entry::Item("CM.LassoSelection.CopyOneNote"),
+    Entry::Item("CM.LassoSelection.Delete"),
+    Entry::Submenu(
+        "CM.LassoSelection.RotateInkMenu",
+        &[
+            Entry::Item("CM.LassoSelection.RotateRight45OneNote"),
+            Entry::Item("CM.LassoSelection.RotateLeft45OneNote"),
+            Entry::Item("CM.LassoSelection.ObjectRotateRight90"),
+            Entry::Item("CM.LassoSelection.ObjectRotateLeft90"),
+            Entry::Item("CM.LassoSelection.ObjectFlipHorizontal"),
+            Entry::Item("CM.LassoSelection.ObjectFlipVertical"),
+        ],
+    ),
+    Entry::Submenu(
+        "CM.LassoSelection.TreatInkAsMenu",
+        &[Entry::Item("CM.LassoSelection.TreatInkAsHandwriting"), Entry::Item("CM.LassoSelection.TreatInkAsDrawing")],
+    ),
+    Entry::Item("CM.LassoSelection.SelectionToTextConvert"),
+    Entry::Item("CM.LassoSelection.SelectionToMathConvert"),
+];
+
 /// Whether a picture/attachment menu row works yet: its command is registered **and** its
 /// catalog row is wired or verified. Commands shared with text (Link…, Open Link) are
 /// registered but don't act on pictures yet; their rows stay `missing`, so they're drawn
@@ -314,7 +378,7 @@ fn render_item(app: &mut NoteApp, ui: &mut Ui, id: &'static str, t: Tokens) {
     if is_object_row(id) && !row_live(id) {
         let text = egui::RichText::new(ribbon::label(id)).color(t.text_disabled);
         ui.add_enabled(false, egui::Button::new(text).frame(false).min_size(egui::vec2(170.0, 22.0)))
-            .on_disabled_hover_text("Not available for pictures and attachments yet");
+            .on_disabled_hover_text("Not available for this object yet");
         return;
     }
     if ribbon::special_menu(id) {
@@ -333,7 +397,7 @@ fn render_item(app: &mut NoteApp, ui: &mut Ui, id: &'static str, t: Tokens) {
 }
 
 fn is_object_row(id: &str) -> bool {
-    id.starts_with("CM.Picture.") || id.starts_with("CM.FileAttachment.")
+    ["CM.Picture.", "CM.FileAttachment.", "CM.InkDrawing.", "CM.LassoSelection."].iter().any(|p| id.starts_with(p))
 }
 
 /// Draw a list of entries, in catalog order.
@@ -357,6 +421,12 @@ pub(crate) fn render(app: &mut NoteApp, ui: &mut Ui, entries: &[Entry], t: Token
 /// The target under a screen point: the note container's drag bar, a paragraph handle, or the
 /// text (or table cell) there (`canvas::hit_para`). `None` over empty canvas.
 fn detect(app: &NoteApp, p: Pos2) -> Option<ContextTarget> {
+    // Ink is drawn on top of everything: a stroke under the pointer wins. A stroke that belongs
+    // to a multi-object selection opens the lasso selection's menu.
+    if let Some(id) = crate::ink::hit(app, p) {
+        let group = matches!(&app.session.sel.on_page, notecraft_engine::selection::PageSel::Objects { ids } if ids.len() > 1 && ids.contains(&id));
+        return Some(if group { ContextTarget::Lasso(id) } else { ContextTarget::Ink(id) });
+    }
     // Pictures (background ones too: a right click is how they're reached) and attachments,
     // unless a container's text is on top of them there.
     if !app.canvas.outlines.iter().any(|o| o.rect.contains(p))
@@ -397,9 +467,10 @@ fn block_param(b: Block) -> String {
 /// the pointer landed inside an existing text selection, which a right click leaves alone.
 fn place_for(app: &mut NoteApp, ctx: &egui::Context, target: ContextTarget) {
     match target {
-        ContextTarget::Container(id) | ContextTarget::Picture(id) | ContextTarget::Attachment(id) => {
+        ContextTarget::Container(id) | ContextTarget::Picture(id) | ContextTarget::Attachment(id) | ContextTarget::Ink(id) => {
             app.run(ctx, "object.select", json!({"ids": [id.to_string()]}));
         }
+        ContextTarget::Lasso(_) => {}
         ContextTarget::Handle(block, para) => {
             if let Block::Outline(id) = block {
                 app.run(ctx, "caret.set", json!({"block": id.to_string(), "para": para, "offset": 0}));
@@ -438,6 +509,8 @@ pub fn show(app: &mut NoteApp, ui: &Ui, resp: &egui::Response, t: Tokens) {
             ContextTarget::Text(..) => render(app, ui, TEXT_MENU, t),
             ContextTarget::Picture(_) => render(app, ui, PICTURE_MENU, t),
             ContextTarget::Attachment(_) => render(app, ui, ATTACHMENT_MENU, t),
+            ContextTarget::Ink(_) => render(app, ui, INK_MENU, t),
+            ContextTarget::Lasso(_) => render(app, ui, LASSO_MENU, t),
         }
     });
 }
@@ -466,6 +539,8 @@ mod tests {
             ("CM.ParagraphHandle.", HANDLE_MENU),
             ("CM.Picture.", PICTURE_MENU),
             ("CM.FileAttachment.", ATTACHMENT_MENU),
+            ("CM.InkDrawing.", INK_MENU),
+            ("CM.LassoSelection.", LASSO_MENU),
         ] {
             let mut placed: Vec<&str> = menu.iter().flat_map(ids).collect();
             let n = placed.len();

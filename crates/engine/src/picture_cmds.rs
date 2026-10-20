@@ -310,7 +310,7 @@ fn flip(s: &mut Session, horizontal: bool) -> CmdResult {
 
 fn move_objects(s: &mut Session, v: &Value) -> CmdResult {
     let (Some(dx), Some(dy)) = (p::f32(v, "dx"), p::f32(v, "dy")) else {
-        s.notice("Drag the picture, or use the arrow keys, to move it.");
+        s.notice("Drag the selection, or use the arrow keys, to move it.");
         return Ok(Value::Null);
     };
     let PageSel::Objects { ids } = s.sel.on_page.clone() else { return Err(CmdError::Disabled("select an object first".into())) };

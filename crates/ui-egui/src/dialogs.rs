@@ -44,6 +44,16 @@ pub enum Dialog {
     AltText(String),
     /// Rename the selected file attachment (`CM.FileAttachment.RenameSelected`).
     RenameAttachment(String),
+    /// Color & Thickness of the selected pen (`UI.Panes.ColorThickness`): highlighter or pen,
+    /// colour `#rrggbb`, width in points.
+    ColorThickness {
+        /// A highlighter (else a pen).
+        highlighter: bool,
+        /// Colour.
+        color: String,
+        /// Tip width, points.
+        width: f32,
+    },
 }
 
 /// A curated set of common symbols for the Symbol dialog (`UI.Dialogs.Symbol`); plain Unicode
@@ -116,6 +126,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
         Dialog::ConfirmEmptyBin => "Empty Recycle Bin",
         Dialog::AltText(_) => "Alt Text",
         Dialog::RenameAttachment(_) => "Rename",
+        Dialog::ColorThickness { .. } => "Color & Thickness",
     };
     let modal = egui::Modal::new(egui::Id::new("dialog")).show(ctx, |ui| {
         ui.set_min_width(380.0);
@@ -330,6 +341,48 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                 ui.horizontal(|ui| {
                     if crate::chrome::primary_button(ui, "OK", &t).clicked() {
                         app.run(ctx, "para.spacingDialog", json!({"before": b, "after": a, "line": l}));
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::ColorThickness { highlighter, color, width } => {
+                use notecraft_engine::doc::InkTool;
+                ui.horizontal(|ui| {
+                    if ui.radio(!*highlighter, "Pen").clicked() && *highlighter {
+                        *highlighter = false;
+                        *width = 0.5 * crate::ink::MM;
+                    }
+                    if ui.radio(*highlighter, "Highlighter").clicked() && !*highlighter {
+                        *highlighter = true;
+                        *width = 5.0 * crate::ink::MM;
+                    }
+                });
+                let tool = if *highlighter { InkTool::Highlighter } else { InkTool::Pen };
+                ui.label(RichText::new("Thickness").color(t.text_dim));
+                ui.horizontal_wrapped(|ui| {
+                    for mm in if *highlighter { crate::ink::HIGHLIGHTER_MM } else { crate::ink::PEN_MM } {
+                        let on = (*width - mm * crate::ink::MM).abs() < 0.05;
+                        if ui.selectable_label(on, format!("{mm} mm")).clicked() {
+                            *width = mm * crate::ink::MM;
+                        }
+                    }
+                });
+                ui.label(RichText::new("Color").color(t.text_dim));
+                let mut picked = None;
+                crate::ribbon::swatch_grid(ui, &crate::ink::colors(tool), 6, |c| picked = Some(c));
+                if let Some(c) = picked {
+                    *color = c.to_hex();
+                }
+                let sample = notecraft_engine::doc::color::Rgba::from_hex(color).map(crate::theme::c32).unwrap_or(t.text);
+                let (r, _) = ui.allocate_exact_size(vec2(200.0, 18.0), egui::Sense::hover());
+                ui.painter().line_segment([r.left_center(), r.right_center()], egui::Stroke::new((*width * 1.33).clamp(1.0, 18.0), sample));
+                ui.horizontal(|ui| {
+                    if crate::chrome::primary_button(ui, "OK", &t).clicked() {
+                        let tool = if *highlighter { "highlighter" } else { "pen" };
+                        app.run(ctx, "draw.colorThickness", json!({"tool": tool, "color": color, "width": width}));
                         close = true;
                     }
                     if ui.button("Cancel").clicked() {

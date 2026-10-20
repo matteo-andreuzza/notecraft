@@ -108,6 +108,14 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "view.navigationPanes" => !s.view.notebook_pane_collapsed,
         "table.hideBorders" => current_table(app).is_some_and(|t| !t.borders),
         "table.headerRow" => current_table(app).is_some_and(|t| t.header_row),
+        "draw.type" => s.draw.tool == notecraft_engine::DrawTool::Type,
+        "draw.lasso" => s.draw.tool == notecraft_engine::DrawTool::Lasso,
+        "draw.pan" => s.draw.tool == notecraft_engine::DrawTool::Pan,
+        "draw.eraser" => s.draw.tool == notecraft_engine::DrawTool::Eraser,
+        "draw.eraserSmall" => s.draw.eraser == notecraft_engine::EraserKind::Small,
+        "draw.eraserMedium" => s.draw.eraser == notecraft_engine::EraserKind::Medium,
+        "draw.eraserLarge" => s.draw.eraser == notecraft_engine::EraserKind::Large,
+        "draw.eraserStroke" => s.draw.eraser == notecraft_engine::EraserKind::Stroke,
         "object.setAsBackground" => match (&s.sel.on_page, s.page()) {
             (notecraft_engine::selection::PageSel::Objects { ids }, Some(p)) => ids.iter().any(|id| p.image(*id).is_some_and(|im| im.background)),
             _ => false,
@@ -249,6 +257,7 @@ fn item(app: &mut NoteApp, ui: &mut Ui, it: &Item, t: Tokens) {
             small(app, ui, id, kids, false, t);
         }
         Item::Combo(id, w) => combo(app, ui, id, w, t),
+        Item::Gallery(id, _, extra) if id == crate::ink::PENS_ID => crate::ink::gallery(app, ui, CONTENT_H, extra, t),
         Item::Gallery(id, items, extra) => gallery(app, ui, id, items, extra, t),
         Item::Column(items) => {
             ui.vertical(|ui| {
@@ -335,6 +344,14 @@ pub(crate) fn dialog_for(app: &NoteApp, id: &str) -> Option<crate::dialogs::Dial
             ids.iter().find_map(|id| page.attachment(*id)).map(|a| Dialog::RenameAttachment(a.name.clone()))
         }
         "EmptyRecycleBin" => Some(Dialog::ConfirmEmptyBin),
+        "MoreColorAndThicknessOptions" => {
+            let pen = app.session.draw.current_pen();
+            Some(Dialog::ColorThickness {
+                highlighter: pen.tool == notecraft_engine::doc::InkTool::Highlighter,
+                color: pen.color.to_hex(),
+                width: pen.width,
+            })
+        }
         _ => None,
     }
 }
@@ -615,7 +632,7 @@ pub(crate) fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, _t: Tokens) -> b
     }
 }
 
-fn swatch_grid(
+pub(crate) fn swatch_grid(
     ui: &mut Ui,
     colors: &[(&str, notecraft_engine::doc::color::Rgba)],
     per_row: usize,

@@ -236,6 +236,9 @@ fn text(id: &str) -> String {
 
 /// The width an entry takes in the row.
 fn width(ui: &Ui, e: &E, c: Option<&Control>) -> f32 {
+    if e.0 == crate::ink::PENS_ID {
+        return crate::ink::gallery_width();
+    }
     let menu = if has_menu(c, e.0) { ARROW } else { 0.0 };
     let font = TypeRung::Body.font(ui.ctx(), Weight::Regular);
     let label_w = |s: String| ui.painter().layout_no_wrap(s, font.clone(), egui::Color32::PLACEHOLDER).size().x;
@@ -376,6 +379,10 @@ fn entry(app: &mut NoteApp, ui: &mut Ui, e: &E, c: Option<&Control>, t: Tokens) 
     let id = e.0;
     if let Kind::Combo(w) = e.1 {
         rb::combo(app, ui, id, w, t);
+        return;
+    }
+    if id == crate::ink::PENS_ID {
+        crate::ink::gallery(app, ui, size::BUTTON, c.and_then(|c| c.gallery.map(|g| g.1)).unwrap_or(&[]), t);
         return;
     }
     let lab = text(id);

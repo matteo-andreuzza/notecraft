@@ -145,6 +145,12 @@ fn lasso_selects_ink_and_objects_then_object_commands_apply() {
     assert_eq!(strokes(&s).len(), 2, "CM.InkDrawing.CopyOneNote: the copy has its own id");
     assert_ne!(strokes(&s)[0].id, strokes(&s)[1].id);
     run(&mut s, "draw.lassoSelect", json!({"points": [[0, 0], [2000, 0], [2000, 2000], [0, 2000]]}));
+    let n = s.page().unwrap().objects.len();
+    run(&mut s, "edit.cut", json!({}));
+    assert!(strokes(&s).is_empty(), "CM.LassoSelection.Cut");
+    run(&mut s, "edit.paste", json!({}));
+    assert_eq!(s.page().unwrap().objects.len(), n, "cut ink pastes back");
+    run(&mut s, "draw.lassoSelect", json!({"points": [[0, 0], [2000, 0], [2000, 2000], [0, 2000]]}));
     run(&mut s, "edit.delete", json!({}));
     assert!(strokes(&s).is_empty(), "CM.LassoSelection.Delete");
     // Nothing inside: the selection clears.

@@ -87,7 +87,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Panes.Password | Password Protection pane (Set Password, Remove Password, Lock All, options) | Window/Panes/Password Protection | surface |  |  | P1 | missing | FLUENT19:PasswordProtectSection |  |
 | UI.Panes.Research | Research / Thesaurus pane | Window/Panes/Research | surface |  |  | P3 | missing | FLUENT19:ResearchPane |  |
 | UI.Panes.RecentEdits | Search results pane listing recently edited pages by date | Window/Panes/Recent Edits | surface |  |  | P1 | missing | FLUENT19:FindByDateMenu |  |
-| UI.Panes.ColorThickness | Color & Thickness dialog (pen/highlighter, thickness, colour) | Window/Panes/Color & Thickness | surface |  |  | P1 | missing | FLUENT19:MoreColorAndThicknessOptions |  |
+| UI.Panes.ColorThickness | Color & Thickness dialog (pen/highlighter, thickness, colour) | Window/Panes/Color & Thickness | surface |  |  | P1 | wired | FLUENT19:MoreColorAndThicknessOptions |  |
 | UI.Dialogs.MoveCopyPage | Move or Copy Pages dialog (notebook tree, Move/Copy buttons, search box) | Window/Dialogs/Move or Copy Pages | surface |  |  | P0 | verified | FLUENT19:MoveOrCopyPage | A flat, searchable list of every section with its full notebook path, not a collapsible tree. |
 | UI.Dialogs.MoveCopySection | Move or Copy Section dialog | Window/Dialogs/Move or Copy Section | surface |  |  | P0 | verified | FLUENT19:SectionMove | A flat, searchable list of notebooks, not a tree. |
 | UI.Dialogs.Link | Link dialog (text to display, address, search pages, pick a location in OneNote) | Window/Dialogs/Link | surface |  |  | P0 | verified | FLUENT19:HyperlinkCreateHere |  |
@@ -713,26 +713,26 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Number.ContinueNumberList | Continue Numbering | Context/Number/Continue Numbering | button |  | para.continueNumbering | P1 | wired | FLUENT19:ContextMenuNumbering/ContinueNumberList |  |
 | CM.Number.NumberListRemove | Remove Numbering | Context/Number/Remove Numbering | button |  | para.numberingRemove | P0 | wired | FLUENT19:ContextMenuNumbering/NumberListRemove |  |
 | CM.Number.ChangeToBullet | Change to Bulleted List | Context/Number/Change to Bulleted List | button |  | para.bullets | P1 | missing | FLUENT19:ContextMenuNumbering/ChangeToBullet |  |
-| CM.InkDrawing.Cut | Cut | Context/Ink Drawing/Cut | button | `Mod+X` | edit.cut | P0 | missing | FLUENT19:ContextMenuInkDrawing/Cut |  |
-| CM.InkDrawing.CopyOneNote | Copy | Context/Ink Drawing/Copy | button | `Mod+C` | edit.copy | P0 | missing | FLUENT19:ContextMenuInkDrawing/CopyOneNote |  |
+| CM.InkDrawing.Cut | Cut | Context/Ink Drawing/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuInkDrawing/Cut |  |
+| CM.InkDrawing.CopyOneNote | Copy | Context/Ink Drawing/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuInkDrawing/CopyOneNote |  |
 | CM.InkDrawing.PasteGalleryMini | Paste Options | Context/Ink Drawing/Paste Options | gallery |  | edit.pasteOptions | P0 | missing | FLUENT19:ContextMenuInkDrawing/PasteGalleryMini |  |
 | CM.InkDrawing.HyperlinkCreate | Link… | Context/Ink Drawing/Link… | button | `Mod+K` | insert.link | P0 | missing | FLUENT19:ContextMenuInkDrawing/HyperlinkCreate |  |
 | CM.InkDrawing.OrderObjectsMenu | Order | Context/Ink Drawing/Order | menu |  |  | P1 | missing | FLUENT19:ContextMenuInkDrawing/OrderObjectsMenu |  |
-| CM.InkDrawing.ObjectBringForward | Bring Forward | Context/Ink Drawing/Order/Bring Forward | button |  | object.bringForward | P1 | missing | FLUENT19:ContextMenuInkDrawing/ObjectBringForward |  |
-| CM.InkDrawing.ObjectBringToFront | Bring to Front | Context/Ink Drawing/Order/Bring to Front | button |  | object.bringToFront | P1 | missing | FLUENT19:ContextMenuInkDrawing/ObjectBringToFront |  |
-| CM.InkDrawing.ObjectSendBackward | Send Backward | Context/Ink Drawing/Order/Send Backward | button |  | object.sendBackward | P1 | missing | FLUENT19:ContextMenuInkDrawing/ObjectSendBackward |  |
-| CM.InkDrawing.ObjectSendToBack | Send to Back | Context/Ink Drawing/Order/Send to Back | button |  | object.sendToBack | P1 | missing | FLUENT19:ContextMenuInkDrawing/ObjectSendToBack |  |
+| CM.InkDrawing.ObjectBringForward | Bring Forward | Context/Ink Drawing/Order/Bring Forward | button |  | object.bringForward | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectBringForward |  |
+| CM.InkDrawing.ObjectBringToFront | Bring to Front | Context/Ink Drawing/Order/Bring to Front | button |  | object.bringToFront | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectBringToFront |  |
+| CM.InkDrawing.ObjectSendBackward | Send Backward | Context/Ink Drawing/Order/Send Backward | button |  | object.sendBackward | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectSendBackward |  |
+| CM.InkDrawing.ObjectSendToBack | Send to Back | Context/Ink Drawing/Order/Send to Back | button |  | object.sendToBack | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectSendToBack |  |
 | CM.InkDrawing.RotateInkMenu | Rotate | Context/Ink Drawing/Rotate | menu |  |  | P1 | missing | FLUENT19:ContextMenuInkDrawing/RotateInkMenu |  |
-| CM.InkDrawing.RotateRight45OneNote | Rotate Right 45° | Context/Ink Drawing/Rotate/Rotate Right 45° | button |  | object.rotateRight45 | P2 | missing | FLUENT19:ContextMenuInkDrawing/RotateRight45OneNote |  |
-| CM.InkDrawing.RotateLeft45OneNote | Rotate Left 45° | Context/Ink Drawing/Rotate/Rotate Left 45° | button |  | object.rotateLeft45 | P2 | missing | FLUENT19:ContextMenuInkDrawing/RotateLeft45OneNote |  |
-| CM.InkDrawing.ObjectRotateRight90 | Rotate Right 90° | Context/Ink Drawing/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | missing | FLUENT19:ContextMenuInkDrawing/ObjectRotateRight90 |  |
-| CM.InkDrawing.ObjectRotateLeft90 | Rotate Left 90° | Context/Ink Drawing/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | missing | FLUENT19:ContextMenuInkDrawing/ObjectRotateLeft90 |  |
-| CM.InkDrawing.ObjectFlipHorizontal | Flip Horizontal | Context/Ink Drawing/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | missing | FLUENT19:ContextMenuInkDrawing/ObjectFlipHorizontal |  |
-| CM.InkDrawing.ObjectFlipVertical | Flip Vertical | Context/Ink Drawing/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | missing | FLUENT19:ContextMenuInkDrawing/ObjectFlipVertical |  |
+| CM.InkDrawing.RotateRight45OneNote | Rotate Right 45° | Context/Ink Drawing/Rotate/Rotate Right 45° | button |  | object.rotateRight45 | P2 | wired | FLUENT19:ContextMenuInkDrawing/RotateRight45OneNote |  |
+| CM.InkDrawing.RotateLeft45OneNote | Rotate Left 45° | Context/Ink Drawing/Rotate/Rotate Left 45° | button |  | object.rotateLeft45 | P2 | wired | FLUENT19:ContextMenuInkDrawing/RotateLeft45OneNote |  |
+| CM.InkDrawing.ObjectRotateRight90 | Rotate Right 90° | Context/Ink Drawing/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectRotateRight90 |  |
+| CM.InkDrawing.ObjectRotateLeft90 | Rotate Left 90° | Context/Ink Drawing/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectRotateLeft90 |  |
+| CM.InkDrawing.ObjectFlipHorizontal | Flip Horizontal | Context/Ink Drawing/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectFlipHorizontal |  |
+| CM.InkDrawing.ObjectFlipVertical | Flip Vertical | Context/Ink Drawing/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectFlipVertical |  |
 | CM.InkDrawing.TreatInkAsMenu | Treat Selected Ink As | Context/Ink Drawing/Treat Selected Ink As | menu |  |  | P2 | missing | FLUENT19:ContextMenuInkDrawing/TreatInkAsMenu |  |
 | CM.InkDrawing.TreatInkAsHandwriting | Handwriting | Context/Ink Drawing/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | missing | FLUENT19:ContextMenuInkDrawing/TreatInkAsHandwriting |  |
 | CM.InkDrawing.TreatInkAsDrawing | Drawing | Context/Ink Drawing/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | missing | FLUENT19:ContextMenuInkDrawing/TreatInkAsDrawing |  |
-| CM.InkDrawing.ObjectMove | Move | Context/Ink Drawing/Move | button |  | object.move | P1 | missing | FLUENT19:ContextMenuInkDrawing/ObjectMove |  |
+| CM.InkDrawing.ObjectMove | Move | Context/Ink Drawing/Move | button |  | object.move | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectMove |  |
 | CM.InkDrawing.ObjectResize | Resize | Context/Ink Drawing/Resize | button |  | object.resize | P1 | missing | FLUENT19:ContextMenuInkDrawing/ObjectResize |  |
 | CM.InkDrawing.SelectionToMathConvert | Ink to Math | Context/Ink Drawing/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuInkDrawing/SelectionToMathConvert |  |
 | CM.InkDrawing.TagsGallery | Tags | Context/Ink Drawing/Tags | gallery |  | tag.toggle | P0 | missing | FLUENT19:ContextMenuInkDrawing/TagsGallery |  |
@@ -742,16 +742,16 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.InkDrawing.TagsClearAll | Clear All Checkmarks | Context/Ink Drawing/Clear All Checkmarks | button |  | tag.clearAll | P2 | wired | FLUENT19:ContextMenuInkDrawing/TagsClearAll |  |
 | CM.InkDrawing.TagsRemoveAll2 | Remove Tag | Context/Ink Drawing/Remove Tag | button | `Mod+0` | tag.removeAll | P0 | missing | FLUENT19:ContextMenuInkDrawing/TagsRemoveAll |  |
 | CM.InkDrawing.PenInsertSpace | Insert Space | Context/Ink Drawing/Insert Space | toggle |  | insert.space | P1 | missing | FLUENT19:ContextMenuInkDrawing/PenInsertSpace |  |
-| CM.LassoSelection.Cut | Cut | Context/Lasso Selection/Cut | button | `Mod+X` | edit.cut | P0 | missing | FLUENT19:ContextMenuLassoSelection/Cut |  |
-| CM.LassoSelection.CopyOneNote | Copy | Context/Lasso Selection/Copy | button | `Mod+C` | edit.copy | P0 | missing | FLUENT19:ContextMenuLassoSelection/CopyOneNote |  |
-| CM.LassoSelection.Delete | Delete | Context/Lasso Selection/Delete | button | `Delete` | edit.delete | P0 | missing | FLUENT19:ContextMenuLassoSelection/Delete |  |
+| CM.LassoSelection.Cut | Cut | Context/Lasso Selection/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuLassoSelection/Cut |  |
+| CM.LassoSelection.CopyOneNote | Copy | Context/Lasso Selection/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuLassoSelection/CopyOneNote |  |
+| CM.LassoSelection.Delete | Delete | Context/Lasso Selection/Delete | button | `Delete` | edit.delete | P0 | wired | FLUENT19:ContextMenuLassoSelection/Delete |  |
 | CM.LassoSelection.RotateInkMenu | Rotate | Context/Lasso Selection/Rotate | menu |  |  | P1 | missing | FLUENT19:ContextMenuLassoSelection/RotateInkMenu |  |
-| CM.LassoSelection.RotateRight45OneNote | Rotate Right 45° | Context/Lasso Selection/Rotate/Rotate Right 45° | button |  | object.rotateRight45 | P2 | missing | FLUENT19:ContextMenuLassoSelection/RotateRight45OneNote |  |
-| CM.LassoSelection.RotateLeft45OneNote | Rotate Left 45° | Context/Lasso Selection/Rotate/Rotate Left 45° | button |  | object.rotateLeft45 | P2 | missing | FLUENT19:ContextMenuLassoSelection/RotateLeft45OneNote |  |
-| CM.LassoSelection.ObjectRotateRight90 | Rotate Right 90° | Context/Lasso Selection/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | missing | FLUENT19:ContextMenuLassoSelection/ObjectRotateRight90 |  |
-| CM.LassoSelection.ObjectRotateLeft90 | Rotate Left 90° | Context/Lasso Selection/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | missing | FLUENT19:ContextMenuLassoSelection/ObjectRotateLeft90 |  |
-| CM.LassoSelection.ObjectFlipHorizontal | Flip Horizontal | Context/Lasso Selection/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | missing | FLUENT19:ContextMenuLassoSelection/ObjectFlipHorizontal |  |
-| CM.LassoSelection.ObjectFlipVertical | Flip Vertical | Context/Lasso Selection/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | missing | FLUENT19:ContextMenuLassoSelection/ObjectFlipVertical |  |
+| CM.LassoSelection.RotateRight45OneNote | Rotate Right 45° | Context/Lasso Selection/Rotate/Rotate Right 45° | button |  | object.rotateRight45 | P2 | wired | FLUENT19:ContextMenuLassoSelection/RotateRight45OneNote |  |
+| CM.LassoSelection.RotateLeft45OneNote | Rotate Left 45° | Context/Lasso Selection/Rotate/Rotate Left 45° | button |  | object.rotateLeft45 | P2 | wired | FLUENT19:ContextMenuLassoSelection/RotateLeft45OneNote |  |
+| CM.LassoSelection.ObjectRotateRight90 | Rotate Right 90° | Context/Lasso Selection/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | wired | FLUENT19:ContextMenuLassoSelection/ObjectRotateRight90 |  |
+| CM.LassoSelection.ObjectRotateLeft90 | Rotate Left 90° | Context/Lasso Selection/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | wired | FLUENT19:ContextMenuLassoSelection/ObjectRotateLeft90 |  |
+| CM.LassoSelection.ObjectFlipHorizontal | Flip Horizontal | Context/Lasso Selection/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | wired | FLUENT19:ContextMenuLassoSelection/ObjectFlipHorizontal |  |
+| CM.LassoSelection.ObjectFlipVertical | Flip Vertical | Context/Lasso Selection/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | wired | FLUENT19:ContextMenuLassoSelection/ObjectFlipVertical |  |
 | CM.LassoSelection.TreatInkAsMenu | Treat Selected Ink As | Context/Lasso Selection/Treat Selected Ink As | menu |  |  | P2 | missing | FLUENT19:ContextMenuLassoSelection/TreatInkAsMenu |  |
 | CM.LassoSelection.TreatInkAsHandwriting | Handwriting | Context/Lasso Selection/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | missing | FLUENT19:ContextMenuLassoSelection/TreatInkAsHandwriting |  |
 | CM.LassoSelection.TreatInkAsDrawing | Drawing | Context/Lasso Selection/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | missing | FLUENT19:ContextMenuLassoSelection/TreatInkAsDrawing |  |
