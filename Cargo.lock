@@ -2407,6 +2407,7 @@ dependencies = [
  "notecraft-doc",
  "notecraft-ink-geom",
  "proptest",
+ "serde",
 ]
 
 [[package]]
