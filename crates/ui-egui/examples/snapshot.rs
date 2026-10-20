@@ -168,6 +168,13 @@ fn ink_page(a: &mut NoteApp, lasso: bool) {
     s.run("draw.shape", json!({"kind": "rectangle", "from": [470, 130], "to": [570, 200], "pen": 2})).unwrap();
     s.run("draw.shape", json!({"kind": "oval", "from": [600, 130], "to": [680, 200], "pen": 1})).unwrap();
     s.run("draw.pen", json!({"index": 0})).unwrap();
+    // Tags on ink (decision D5): a to-do and a star on the rectangle, a question on the oval.
+    s.run("draw.lassoSelect", json!({"points": [[460, 120], [580, 120], [580, 210], [460, 210]]})).unwrap();
+    s.run("tag.todo", json!({})).unwrap();
+    s.run("tag.important", json!({})).unwrap();
+    s.run("draw.lassoSelect", json!({"points": [[590, 120], [690, 120], [690, 210], [590, 210]]})).unwrap();
+    s.run("tag.question", json!({})).unwrap();
+    s.sel.on_page = notecraft_engine::selection::PageSel::None;
     if lasso {
         s.run("draw.lassoSelect", json!({"points": [[20, 80], [460, 80], [460, 230], [20, 230]]})).unwrap();
     }

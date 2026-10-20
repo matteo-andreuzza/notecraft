@@ -59,7 +59,11 @@ pub fn tags_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                                 if let Some(d) = defs.iter().find(|d| d.key == key) {
                                     icons::tag(ui.painter(), r, d.symbol, checked, t.text);
                                 }
-                                ui.label(RichText::new(if text.is_empty() { "(empty)".to_string() } else { text.clone() }).color(t.text));
+                                // Not selectable: a selectable label would take the click from the row.
+                                ui.add(
+                                    egui::Label::new(RichText::new(if text.is_empty() { "(empty)".to_string() } else { text.clone() }).color(t.text))
+                                        .selectable(false),
+                                );
                             })
                             .response
                             .interact(Sense::click());
@@ -68,7 +72,11 @@ pub fn tags_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                             let block = it["block"].as_str().unwrap_or("").to_string();
                             let para = it["para"].as_u64().unwrap_or(0);
                             app.run(&ctx, "nav.goto", json!({"page": page}));
-                            app.run(&ctx, "caret.set", json!({"block": block, "para": para, "offset": 0}));
+                            if it["ink"].as_bool().unwrap_or(false) {
+                                app.run(&ctx, "object.select", json!({"ids": [block]}));
+                            } else {
+                                app.run(&ctx, "caret.set", json!({"block": block, "para": para, "offset": 0}));
+                            }
                             app.canvas.focused = true;
                         }
                         resp.on_hover_text(it["pageTitle"].as_str().unwrap_or(""));

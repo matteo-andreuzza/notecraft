@@ -372,6 +372,7 @@ impl NoteApp {
                 "id": m.id, "picture": m.picture, "background": m.background, "rect": rect_json(m.rect),
             })).collect::<Vec<_>>(),
             "textures": self.canvas.textures.stats().0,
+            "ink": crate::ink::inspect(self),
         })
     }
 
@@ -501,7 +502,7 @@ impl NoteApp {
     }
 }
 
-fn rect_json(r: Rect) -> Value {
+pub(crate) fn rect_json(r: Rect) -> Value {
     json!({"x": r.min.x, "y": r.min.y, "w": r.width(), "h": r.height()})
 }
 

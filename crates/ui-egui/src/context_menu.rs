@@ -405,6 +405,13 @@ pub(crate) fn render(app: &mut NoteApp, ui: &mut Ui, entries: &[Entry], t: Token
     for e in entries {
         match e {
             Entry::Item(id) => render_item(app, ui, id, t),
+            // A Tags submenu is the whole tag gallery, then its own commands.
+            Entry::Submenu(header, children) if header.ends_with("TagsGallery") => {
+                let extra: Vec<&str> = children.iter().flat_map(ids).collect();
+                ui.add_enabled_ui(entry_enabled(app, e), |ui| {
+                    ui.menu_button(ribbon::label(header), |ui| ribbon::gallery_menu(app, ui, header, crate::ribbon_layout::TAG_ITEMS, &extra, t));
+                });
+            }
             Entry::Submenu(header, children) => {
                 let on = entry_enabled(app, e);
                 ui.add_enabled_ui(on, |ui| {
@@ -521,10 +528,9 @@ mod tests {
 
     #[test]
     fn object_rows_that_dont_act_on_pictures_yet_are_disabled() {
-        // Tags are registered (for text) but don't act on ink yet: their ink rows are drawn
-        // disabled; Paste Options on ink likewise.
-        assert!(!row_live("CM.InkDrawing.TagsGallery"));
+        // Paste Options don't act on ink yet: the row is drawn disabled.
         assert!(!row_live("CM.InkDrawing.PasteGalleryMini"));
+        assert!(row_live("CM.InkDrawing.TagsGallery"));
         assert!(row_live("CM.Picture.RestoreImageSize"));
         assert!(row_live("CM.FileAttachment.FileAttachmentOpen"));
     }

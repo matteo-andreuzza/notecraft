@@ -10,6 +10,7 @@ use notecraft_geom::{Point, Rect, finite};
 use serde::{Deserialize, Serialize};
 
 use crate::Id;
+use crate::tags::TagUse;
 
 /// At most this many points per stroke (longer input is simplified, then cut, before it is
 /// stored).
@@ -84,13 +85,17 @@ pub struct Ink {
     /// A hyperlink on the stroke (Link… on its menu).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link: Option<String>,
+    /// Note tags on the stroke (decision D5: a tagged drawing carries its tags on one of its
+    /// strokes; absent in files written before tags on ink, so format 4 is unchanged).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<TagUse>,
 }
 
 impl Ink {
     /// A stroke through `page_points` (`(page point, pressure)`), normalised.
     pub fn new(id: Id, page_points: &[(Point, f32)], color: Rgba, width: f32, tool: InkTool) -> Ink {
         let points = page_points.iter().map(|(p, pr)| InkPoint { x: p.x, y: p.y, pressure: *pr }).collect();
-        let mut ink = Ink { id, pos: Point::ZERO, points, color, width, tool, link: None };
+        let mut ink = Ink { id, pos: Point::ZERO, points, color, width, tool, link: None, tags: Vec::new() };
         ink.normalize();
         ink
     }
@@ -122,10 +127,11 @@ impl Ink {
     }
 
     /// Enforce the invariants (hostile files and agents): finite coordinates rounded to
-    /// 1/100 pt, pressure 0–1, at most [`MAX_INK_POINTS`] points, the width in range, and the
-    /// points re-anchored so their box starts at `pos`.
+    /// 1/100 pt, pressure 0–1, at most [`MAX_INK_POINTS`] points, the width in range, tags
+    /// deduplicated and capped ([`crate::tags::clean_uses`]), and the points re-anchored so their box starts at `pos`.
     pub fn normalize(&mut self) {
         crate::media::clean_link(&mut self.link);
+        crate::tags::clean_uses(&mut self.tags);
         self.points.truncate(MAX_INK_POINTS);
         self.width = if self.width.is_nan() { 1.0 } else { self.width.clamp(MIN_INK_WIDTH, MAX_INK_WIDTH) };
         let pos = self.pos.sanitized();
@@ -176,5 +182,21 @@ mod tests {
         assert_eq!(ink.width_at(1.0), 2.0);
         let b = ink.bounds();
         assert_eq!((b.min, b.max), (Point::new(-1.0, -1.0), Point::new(1.0, 1.0)));
+    }
+    #[test]
+    fn tags_are_optional_deduplicated_and_capped() {
+        // Strokes written before tags on ink (format 4) load with none and save without the key.
+        let ink = Ink::new(Id(1), &[(Point::ZERO, 0.5)], Rgba::BLACK, 1.0, InkTool::Pen);
+        let json = serde_json::to_value(&ink).unwrap();
+        assert!(json.get("tags").is_none());
+        let back: Ink = serde_json::from_value(json).unwrap();
+        assert!(back.tags.is_empty());
+        // A hostile file: 40 distinct tags, each repeated.
+        let mut ink = back;
+        ink.tags =
+            (0..100).map(|i| TagUse { key: format!("k{}", i % 40), name: "X".into(), symbol: crate::TagSymbol::Star, checked: false }).collect();
+        ink.normalize();
+        assert_eq!(ink.tags.len(), crate::tags::MAX_OBJECT_TAGS);
+        assert_eq!((ink.tags[0].key.as_str(), ink.tags[31].key.as_str()), ("k0", "k31"));
     }
 }

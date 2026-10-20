@@ -735,12 +735,12 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.InkDrawing.ObjectMove | Move | Context/Ink Drawing/Move | button |  | object.move | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectMove |  |
 | CM.InkDrawing.ObjectResize | Resize | Context/Ink Drawing/Resize | button |  | object.resize | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectResize |  |
 | CM.InkDrawing.SelectionToMathConvert | Ink to Math | Context/Ink Drawing/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuInkDrawing/SelectionToMathConvert |  |
-| CM.InkDrawing.TagsGallery | Tags | Context/Ink Drawing/Tags | gallery |  | tag.toggle | P0 | missing | FLUENT19:ContextMenuInkDrawing/TagsGallery |  |
-| CM.InkDrawing.TagsCustomize | Customize Tags | Context/Ink Drawing/Tags/Customize Tags | button |  | tag.customize | P1 | missing | FLUENT19:ContextMenuInkDrawing/TagsCustomize |  |
-| CM.InkDrawing.TagsRemoveAll | Remove Tag | Context/Ink Drawing/Tags/Remove Tag | button | `Mod+0` | tag.removeAll | P0 | missing | FLUENT19:ContextMenuInkDrawing/TagsRemoveAll |  |
+| CM.InkDrawing.TagsGallery | Tags | Context/Ink Drawing/Tags | gallery |  | tag.toggle | P0 | wired | FLUENT19:ContextMenuInkDrawing/TagsGallery | Decision D5: a drawing carries the tag on its leftmost selected stroke; the icon sits left of that stroke, level with its top, and Find Tags lists it as "Ink drawing" (placement and wording unverified) |
+| CM.InkDrawing.TagsCustomize | Customize Tags | Context/Ink Drawing/Tags/Customize Tags | button |  | tag.customize | P1 | wired | FLUENT19:ContextMenuInkDrawing/TagsCustomize | Opens the Customize Tags dialog, as on the Home tab |
+| CM.InkDrawing.TagsRemoveAll | Remove Tag | Context/Ink Drawing/Tags/Remove Tag | button | `Mod+0` | tag.removeAll | P0 | wired | FLUENT19:ContextMenuInkDrawing/TagsRemoveAll | Clears the tags of every selected stroke (D5) |
 | CM.InkDrawing.TagsMarkAll | Check All Tags | Context/Ink Drawing/Check All Tags | button |  | tag.checkAll | P2 | wired | FLUENT19:ContextMenuInkDrawing/TagsMarkAll |  |
 | CM.InkDrawing.TagsClearAll | Clear All Checkmarks | Context/Ink Drawing/Clear All Checkmarks | button |  | tag.clearAll | P2 | wired | FLUENT19:ContextMenuInkDrawing/TagsClearAll |  |
-| CM.InkDrawing.TagsRemoveAll2 | Remove Tag | Context/Ink Drawing/Remove Tag | button | `Mod+0` | tag.removeAll | P0 | missing | FLUENT19:ContextMenuInkDrawing/TagsRemoveAll |  |
+| CM.InkDrawing.TagsRemoveAll2 | Remove Tag | Context/Ink Drawing/Remove Tag | button | `Mod+0` | tag.removeAll | P0 | wired | FLUENT19:ContextMenuInkDrawing/TagsRemoveAll | Clears the tags of every selected stroke (D5) |
 | CM.InkDrawing.PenInsertSpace | Insert Space | Context/Ink Drawing/Insert Space | toggle |  | insert.space | P1 | wired | FLUENT19:ContextMenuInkDrawing/PenInsertSpace |  |
 | CM.LassoSelection.Cut | Cut | Context/Lasso Selection/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuLassoSelection/Cut |  |
 | CM.LassoSelection.CopyOneNote | Copy | Context/Lasso Selection/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuLassoSelection/CopyOneNote |  |

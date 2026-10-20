@@ -188,6 +188,21 @@ pub fn shortcut_tag(n: u8) -> Option<&'static str> {
 /// Maximum custom tags a user can define (hostile settings files are capped here).
 pub const MAX_CUSTOM_TAGS: usize = 256;
 
+/// Maximum tags on one object (hostile files are capped here).
+pub const MAX_OBJECT_TAGS: usize = 32;
+
+/// Keep the first use of each tag key, at most [`MAX_OBJECT_TAGS`] of them.
+pub fn clean_uses(tags: &mut Vec<TagUse>) {
+    let mut seen: Vec<String> = Vec::new();
+    tags.retain(|t| {
+        if seen.len() >= MAX_OBJECT_TAGS || seen.contains(&t.key) {
+            return false;
+        }
+        seen.push(t.key.clone());
+        true
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

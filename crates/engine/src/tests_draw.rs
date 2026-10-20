@@ -242,3 +242,62 @@ fn shapes_draw_as_ink_with_the_selected_pen() {
     assert!(s.run("draw.shape", json!({"from": [0, 0]})).is_err());
     assert_eq!(run(&mut s, "draw.lockDrawingMode", json!({}))["locked"], true, "R.Draw.Shapes.ShapesDuplicate");
 }
+
+#[test]
+fn tags_go_on_selected_ink_and_find_tags_lists_them() {
+    // Decision D5: a tagged drawing carries the tag on its leftmost stroke.
+    let (mut s, a) = with_line();
+    let r = run(&mut s, "draw.stroke", json!({"points": [[20, 220], [40, 260]]}));
+    let b = Id::parse(r["ink"].as_str().unwrap()).unwrap();
+    let tags = |s: &Session, id: Id| s.page().unwrap().ink(id).unwrap().tags.iter().map(|t| (t.key.clone(), t.checked)).collect::<Vec<_>>();
+    let enabled = |s: &Session, id: &str| (crate::commands::find(id).unwrap().enabled)(s);
+    run(&mut s, "object.select", json!({"ids": [a.to_string(), b.to_string()]}));
+    assert_eq!(enabled(&s, "tag.removeAll"), Some("The ink has no tag"));
+    let undo = s.undo_labels().len();
+    run(&mut s, "tag.toggle", json!({"key": "important"}));
+    assert_eq!(s.undo_labels().len(), undo + 1, "one undo step");
+    assert_eq!(tags(&s, b), vec![("important".to_string(), false)], "CM.InkDrawing.TagsGallery");
+    assert!(tags(&s, a).is_empty(), "one tag per drawing, on its leftmost stroke");
+    // Ctrl+1 cycles a to-do on ink as on text; a click on its checkbox toggles it.
+    run(&mut s, "tag.todo", json!({}));
+    assert_eq!(tags(&s, b)[1], ("todo".to_string(), false));
+    run(&mut s, "tag.todo", json!({}));
+    assert_eq!(tags(&s, b)[1], ("todo".to_string(), true));
+    assert_eq!(run(&mut s, "tag.click", json!({"block": b.to_string()}))["checked"], false);
+    run(&mut s, "tag.checkAll", json!({}));
+    assert!(tags(&s, b)[1].1, "CM.InkDrawing.TagsMarkAll");
+    // Find Tags lists the stroke once per tag, marked as ink.
+    let found = run(&mut s, "tag.findTags", json!({"scope": "page"}));
+    assert_eq!(found["count"], 2);
+    let item = &found["groups"][0]["items"][0];
+    assert_eq!((item["ink"].as_bool(), item["block"].as_str()), (Some(true), Some(b.to_string().as_str())));
+    let summary = run(&mut s, "tag.summaryPage", json!({"scope": "section"}));
+    assert_eq!(summary["count"], 2, "the summary page lists the ink's tags too");
+    run(&mut s, "nav.goto", json!({"page": found["groups"][0]["items"][0]["page"]}));
+    run(&mut s, "object.select", json!({"ids": [a.to_string(), b.to_string()]}));
+    // A tag the drawing has toggles off on every stroke; Remove Tag clears them all.
+    run(&mut s, "tag.toggle", json!({"key": "important"}));
+    assert_eq!(tags(&s, b).len(), 1);
+    run(&mut s, "tag.removeAll", json!({}));
+    assert!(tags(&s, b).is_empty(), "CM.InkDrawing.TagsRemoveAll");
+    assert!(tags(&s, b).is_empty(), "CM.InkDrawing.TagsRemoveAll2");
+    run(&mut s, "edit.undo", json!({}));
+    assert_eq!(tags(&s, b).len(), 1, "undo brings the tags back");
+    // Hostile clicks: an unknown block, a stroke without a checkbox.
+    assert!(s.run("tag.click", json!({"block": a.to_string()})).is_err());
+    assert!(s.run("tag.click", json!({"block": "nope"})).is_err());
+}
+
+#[test]
+fn a_selection_without_text_or_ink_cant_be_tagged() {
+    let (mut s, a) = with_line();
+    let img = notecraft_codecs::Rgba8 { width: 2, height: 2, pixels: vec![255; 16] };
+    let png = notecraft_codecs::encode_png(&img, &notecraft_codecs::Limits::PICTURE).unwrap();
+    let r = run(&mut s, "insert.picture", json!({"data": crate::b64::encode(&png), "x": 300.0, "y": 300.0}));
+    run(&mut s, "object.select", json!({"ids": [r["picture"].as_str().unwrap()]}));
+    let enabled = |s: &Session, id: &str| (crate::commands::find(id).unwrap().enabled)(s);
+    assert_eq!(enabled(&s, "tag.toggle"), Some("Select text or ink to tag"));
+    assert_eq!(enabled(&s, "tag.todo"), Some("Select text or ink to tag"));
+    run(&mut s, "object.select", json!({"ids": [a.to_string()], "add": true}));
+    assert_eq!(enabled(&s, "tag.toggle"), None, "ink in the selection is enough");
+}

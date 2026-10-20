@@ -142,6 +142,7 @@ pub fn page_json(p: &Page, runs: bool) -> Value {
                     "kind": "ink", "id": k.id, "x": k.pos.x, "y": k.pos.y, "tool": serde_json::to_value(k.tool).unwrap_or(Value::Null),
                     "color": k.color.to_hex(), "width": k.width, "points": k.points.len(),
                     "bounds": [b.min.x, b.min.y, b.width(), b.height()],
+                    "tags": k.tags.iter().map(|t| json!({"key": t.key, "name": t.name, "checked": t.checked})).collect::<Vec<_>>(),
                 })
             }
         })

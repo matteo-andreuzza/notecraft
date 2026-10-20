@@ -263,3 +263,48 @@ fn dragging_with_the_shape_tool_draws_the_shape() {
     h.run();
     assert_eq!(h.state().session.draw.shape, notecraft_ink::ShapeKind::Diamond, "R.Draw.Shapes.InkShapeGallery");
 }
+
+#[test]
+fn the_ink_menu_tags_a_stroke() {
+    let mut h = drawing("draw.pen");
+    let at = map(&h);
+    trace(&mut h, &[at(150.0, 200.0), at(220.0, 200.0), at(300.0, 200.0)]);
+    h.state_mut().session.run("draw.type", json!({})).unwrap();
+    h.state_mut().ui.tab = "View".into();
+    h.run();
+    right_click(&mut h, at(220.0, 200.0));
+    h.run();
+    h.get_by_label_contains("Tags ⏵").click();
+    h.run();
+    assert!(h.query_by_label("Customize Tags").is_some(), "CM.InkDrawing.TagsCustomize");
+    assert_eq!(h.query_all_by_label("Remove Tag").count(), 2, "CM.InkDrawing.TagsRemoveAll in the submenu and CM.InkDrawing.TagsRemoveAll2 below it");
+    h.get_by_label_contains("Important").click();
+    h.run();
+    let tags: Vec<String> = strokes(&h)[0].tags.iter().map(|t| t.key.clone()).collect();
+    assert_eq!(tags, vec!["important".to_string()], "CM.InkDrawing.TagsGallery");
+}
+
+#[test]
+fn a_checkbox_tag_on_ink_toggles_on_click_and_find_tags_selects_the_ink() {
+    let mut h = drawing("draw.pen");
+    let at = map(&h);
+    trace(&mut h, &[at(150.0, 200.0), at(220.0, 200.0), at(300.0, 200.0)]);
+    let id = strokes(&h)[0].id;
+    let s = &mut h.state_mut().session;
+    s.run("draw.type", json!({})).unwrap();
+    s.run("object.select", json!({"ids": [id.to_string()]})).unwrap();
+    s.run("tag.todo", json!({})).unwrap();
+    s.run("tag.findTags", json!({})).unwrap();
+    h.run();
+    // The icon sits left of the stroke's box, level with its top.
+    let (r, z) = (h.state().canvas.ink.layout[0].rect, h.state().canvas.zoom);
+    let size = (14.0 * z).clamp(8.0, 40.0);
+    click(&mut h, pos2(r.min.x - crate::canvas::TAG_W * crate::canvas::PT * z + size / 2.0, r.min.y + size / 2.0));
+    assert!(strokes(&h)[0].tags[0].checked, "BEH.Tags.CheckboxClick on ink");
+    // The Tags pane lists the drawing; clicking it selects the stroke.
+    h.state_mut().session.run("caret.set", json!({"block": "title", "para": 0, "offset": 0})).ok();
+    h.run();
+    let item = h.get_by_label("Ink drawing").rect().center();
+    click(&mut h, item);
+    assert_eq!(h.state().session.sel.on_page, PageSel::Objects { ids: vec![id] });
+}

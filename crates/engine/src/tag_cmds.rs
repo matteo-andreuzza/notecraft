@@ -1,13 +1,16 @@
 //! Note tags (Home › Tags): applying, checking and removing tags, Find Tags (the Tags
-//! Summary), summary pages and custom tags.
+//! Summary), summary pages and custom tags. Tags go on paragraphs and on ink (decision D5,
+//! `docs/plan.md` §4.11): a tagged drawing carries the tag on one of its strokes.
 
 use std::sync::Arc;
 
-use notecraft_doc::{Outline, PageObject, Paragraph, Run, TagDef, TagSymbol, TagUse};
+use notecraft_doc::tags::MAX_OBJECT_TAGS;
+use notecraft_doc::{Id, Outline, Page, PageObject, Paragraph, Run, TagDef, TagSymbol, TagUse};
 use serde_json::{Value, json};
 
+use crate::draw_cmds::selected_ink;
 use crate::ops::{self, need_page, need_text, no_page};
-use crate::selection::{Block, Pos};
+use crate::selection::{Block, PageSel, Pos};
 use crate::session::ScopeKind;
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
 
@@ -19,26 +22,44 @@ fn need_tagged(s: &Session) -> Option<&'static str> {
     let any = ops::touched(s)
         .iter()
         .any(|(b, r)| Session::block_paras(page, *b).is_some_and(|ps| ps.get(r.clone()).is_some_and(|x| x.iter().any(|p| !p.tags.is_empty()))));
-    if any { None } else { Some("The paragraph has no tag") }
+    let ink = selected_ink(s);
+    if any || ink.iter().any(|id| page.ink(*id).is_some_and(|k| !k.tags.is_empty())) {
+        None
+    } else if ink.is_empty() {
+        Some("The paragraph has no tag")
+    } else {
+        Some("The ink has no tag")
+    }
+}
+
+/// Tags go on text and ink: a selection of pictures or attachments alone can't be tagged.
+fn need_taggable(s: &Session) -> Option<&'static str> {
+    if let Some(w) = need_text(s) {
+        return Some(w);
+    }
+    if matches!(s.sel.on_page, PageSel::Objects { .. }) && ops::touched(s).is_empty() && selected_ink(s).is_empty() {
+        return Some("Select text or ink to tag");
+    }
+    None
 }
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
         // R.Home.Tags.TagsGallery — apply (or remove, when every paragraph has it) one tag.
-        CommandSpec::new("tag.toggle", "R.Home.Tags.TagsGallery", "Tags", "Home/Tags", toggle).params(r#"{"key": tag key}"#).when(need_text),
+        CommandSpec::new("tag.toggle", "R.Home.Tags.TagsGallery", "Tags", "Home/Tags", toggle).params(r#"{"key": tag key}"#).when(need_taggable),
         // R.Home.Tags.ToDoTag — Ctrl+1 cycles: none → unchecked → checked → none
         // (KB.Tag.ToDo "apply, select, or clear"; exact cycle unverified).
-        CommandSpec::new("tag.todo", "R.Home.Tags.ToDoTag", "To Do Tag", "Home/Tags/To Do Tag", |s, _| shortcut(s, "todo")).key("Mod+1").when(need_text),
-        CommandSpec::new("tag.important", "R.Home.Tags.Important", "Important", "Home/Tags/Important", |s, _| shortcut(s, "important")).key("Mod+2").when(need_text),
-        CommandSpec::new("tag.question", "R.Home.Tags.Question", "Question", "Home/Tags/Question", |s, _| shortcut(s, "question")).key("Mod+3").when(need_text),
+        CommandSpec::new("tag.todo", "R.Home.Tags.ToDoTag", "To Do Tag", "Home/Tags/To Do Tag", |s, _| shortcut(s, "todo")).key("Mod+1").when(need_taggable),
+        CommandSpec::new("tag.important", "R.Home.Tags.Important", "Important", "Home/Tags/Important", |s, _| shortcut(s, "important")).key("Mod+2").when(need_taggable),
+        CommandSpec::new("tag.question", "R.Home.Tags.Question", "Question", "Home/Tags/Question", |s, _| shortcut(s, "question")).key("Mod+3").when(need_taggable),
         CommandSpec::new("tag.rememberForLater", "R.Home.Tags.RememberForLater", "Remember for later", "Home/Tags/Remember for later", |s, _| shortcut(s, "remember-for-later"))
             .key("Mod+4")
-            .when(need_text),
-        CommandSpec::new("tag.definition", "R.Home.Tags.Definition", "Definition", "Home/Tags/Definition", |s, _| shortcut(s, "definition")).key("Mod+5").when(need_text),
-        CommandSpec::new("tag.highlight", "R.Home.Tags.Highlight", "Highlight", "Home/Tags/Highlight", |s, _| shortcut(s, "highlight")).key("Mod+6").when(need_text),
-        CommandSpec::new("tag.contact", "R.Home.Tags.Contact", "Contact", "Home/Tags/Contact", |s, _| shortcut(s, "contact")).key("Mod+7").when(need_text),
-        CommandSpec::new("tag.address", "R.Home.Tags.Address", "Address", "Home/Tags/Address", |s, _| shortcut(s, "address")).key("Mod+8").when(need_text),
-        CommandSpec::new("tag.phoneNumber", "R.Home.Tags.PhoneNumber", "Phone number", "Home/Tags/Phone number", |s, _| shortcut(s, "phone-number")).key("Mod+9").when(need_text),
+            .when(need_taggable),
+        CommandSpec::new("tag.definition", "R.Home.Tags.Definition", "Definition", "Home/Tags/Definition", |s, _| shortcut(s, "definition")).key("Mod+5").when(need_taggable),
+        CommandSpec::new("tag.highlight", "R.Home.Tags.Highlight", "Highlight", "Home/Tags/Highlight", |s, _| shortcut(s, "highlight")).key("Mod+6").when(need_taggable),
+        CommandSpec::new("tag.contact", "R.Home.Tags.Contact", "Contact", "Home/Tags/Contact", |s, _| shortcut(s, "contact")).key("Mod+7").when(need_taggable),
+        CommandSpec::new("tag.address", "R.Home.Tags.Address", "Address", "Home/Tags/Address", |s, _| shortcut(s, "address")).key("Mod+8").when(need_taggable),
+        CommandSpec::new("tag.phoneNumber", "R.Home.Tags.PhoneNumber", "Phone number", "Home/Tags/Phone number", |s, _| shortcut(s, "phone-number")).key("Mod+9").when(need_taggable),
         // R.Home.Tags.TagsRemoveAll — Ctrl+0.
         CommandSpec::new("tag.removeAll", "R.Home.Tags.TagsRemoveAll", "Remove Tag", "Home/Tags/Remove Tag", remove_all).key("Mod+0").when(need_tagged),
         CommandSpec::new("tag.check", "CM.Tag.NoteTagCheck", "Check Tag", "Context/Tag/Check Tag", |s, v| set_checked(s, v, true)).params(r#"{"key"?: tag key}"#).when(need_tagged),
@@ -47,8 +68,11 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         // CM.InkDrawing.TagsMarkAll / TagsClearAll — check or clear every to-do on the selection.
         CommandSpec::new("tag.checkAll", "CM.InkDrawing.TagsMarkAll", "Check All Tags", "Context/Ink Drawing/Check All Tags", |s, _| check_all(s, true)).when(need_tagged),
         CommandSpec::new("tag.clearAll", "CM.InkDrawing.TagsClearAll", "Clear All Checkmarks", "Context/Ink Drawing/Clear All Checkmarks", |s, _| check_all(s, false)).when(need_tagged),
-        // NC.Tag.Click — clicking a checkbox toggles it (BEH.Tags.CheckboxClick).
-        CommandSpec::new("tag.click", "BEH.Tags.CheckboxClick", "Toggle Checkbox", "Behaviour/Tags", click).params(r#"{"block": outline id, "para": int, "tag"?: index}"#).when(need_page),
+        // NC.Tag.Click — clicking a checkbox toggles it (BEH.Tags.CheckboxClick), on a paragraph
+        // or on a stroke.
+        CommandSpec::new("tag.click", "BEH.Tags.CheckboxClick", "Toggle Checkbox", "Behaviour/Tags", click)
+            .params(r#"{"block": outline or ink id, "para"?: int (required for outlines), "tag"?: index}"#)
+            .when(need_page),
         // R.Home.Tags.FindTaggedNotes — the Tags Summary: every tagged paragraph in a scope,
         // grouped (BEH.Tags.Summary).
         CommandSpec::new("tag.findTags", "R.Home.Tags.FindTaggedNotes", "Find Tags", "Home/Tags/Find Tags", find_tags)
@@ -69,28 +93,77 @@ fn def_for(s: &Session, key: &str) -> Result<TagDef, CmdError> {
     s.tag_defs().into_iter().find(|d| d.key == key).ok_or_else(|| CmdError::Params(format!("unknown tag `{key}`")))
 }
 
-/// Paragraph locations touched by the selection (materialising a pending container).
-fn targets(s: &mut Session) -> Result<Vec<(Block, usize)>, CmdError> {
-    if ops::touched(s).is_empty() && s.pending_outline.is_some() {
+/// What a tag command acts on: the paragraphs the selection touches (or those of selected
+/// containers) and the selected ink strokes.
+struct Targets {
+    paras: Vec<(Block, usize)>,
+    ink: Vec<Id>,
+}
+
+/// The selection's targets (materialising a pending container when nothing is selected).
+fn targets(s: &mut Session) -> Result<Targets, CmdError> {
+    let ink = selected_ink(s);
+    if ink.is_empty() && ops::touched(s).is_empty() && s.pending_outline.is_some() {
         ops::ensure_caret(s)?;
     }
-    let t: Vec<(Block, usize)> = ops::touched(s).into_iter().filter(|(b, _)| *b != Block::Title).flat_map(|(b, r)| r.map(move |i| (b, i))).collect();
-    if t.is_empty() {
+    let paras: Vec<(Block, usize)> =
+        ops::touched(s).into_iter().filter(|(b, _)| *b != Block::Title).flat_map(|(b, r)| r.map(move |i| (b, i))).collect();
+    if paras.is_empty() && ink.is_empty() {
         return Err(CmdError::Disabled("click in a note first (the page title can't be tagged)".into()));
     }
-    Ok(t)
+    Ok(Targets { paras, ink })
+}
+
+/// Whether a selected stroke carries tag `key`, and if so whether it is checked.
+fn ink_tag(page: &Page, ink: &[Id], key: &str) -> Option<bool> {
+    ink.iter().filter_map(|id| page.ink(*id)).find_map(|k| k.tags.iter().find(|t| t.key == key).map(|t| t.checked))
+}
+
+/// The stroke a new tag goes on: the selection's leftmost (then topmost) stroke, so the icon
+/// sits at the drawing's left edge (decision D5).
+fn anchor(page: &Page, ink: &[Id]) -> Option<Id> {
+    ink.iter()
+        .filter_map(|id| page.ink(*id))
+        .min_by(|a, b| {
+            let (a, b) = (a.bounds().min, b.bounds().min);
+            a.x.total_cmp(&b.x).then(a.y.total_cmp(&b.y))
+        })
+        .map(|k| k.id)
+}
+
+/// Put `def` on the selection's anchor stroke, unless one of its strokes already has it.
+fn tag_ink(page: &mut Page, ink: &[Id], def: &TagDef) {
+    if ink_tag(page, ink, &def.key).is_some() {
+        return;
+    }
+    if let Some(k) = anchor(page, ink).and_then(|a| page.ink_mut(a))
+        && k.tags.len() < MAX_OBJECT_TAGS
+    {
+        k.tags.push(TagUse::of(def));
+    }
+}
+
+/// Apply `f` to the tags of every selected stroke.
+fn each_ink(page: &mut Page, ink: &[Id], mut f: impl FnMut(&mut Vec<TagUse>)) {
+    for id in ink {
+        if let Some(k) = page.ink_mut(*id) {
+            f(&mut k.tags);
+        }
+    }
 }
 
 fn toggle(s: &mut Session, v: &Value) -> CmdResult {
     let key = p::req_str(v, "key")?;
     let def = def_for(s, key)?;
-    let targets = targets(s)?;
+    let t = targets(s)?;
     let page = s.page().ok_or_else(no_page)?;
-    let all_have = targets
+    let all_have = t
+        .paras
         .iter()
-        .all(|(b, i)| Session::block_paras(page, *b).and_then(|ps| ps.get(*i)).is_some_and(|p| p.tags.iter().any(|t| t.key == def.key)));
+        .all(|(b, i)| Session::block_paras(page, *b).and_then(|ps| ps.get(*i)).is_some_and(|p| p.tags.iter().any(|t| t.key == def.key)))
+        && (t.ink.is_empty() || ink_tag(page, &t.ink, &def.key).is_some());
     let page = s.page_mut().ok_or_else(no_page)?;
-    for (b, i) in targets {
+    for (b, i) in t.paras {
         if let Some(p) = Session::para_mut(page, b, i) {
             if all_have {
                 p.tags.retain(|t| t.key != def.key);
@@ -98,6 +171,11 @@ fn toggle(s: &mut Session, v: &Value) -> CmdResult {
                 p.tags.push(TagUse::of(&def));
             }
         }
+    }
+    if all_have {
+        each_ink(page, &t.ink, |tags| tags.retain(|t| t.key != def.key));
+    } else {
+        tag_ink(page, &t.ink, &def);
     }
     Ok(Value::Null)
 }
@@ -108,15 +186,23 @@ fn shortcut(s: &mut Session, key: &str) -> CmdResult {
     if !def.is_todo() {
         return toggle(s, &json!({"key": key}));
     }
-    let targets = targets(s)?;
+    let t = targets(s)?;
     let page = s.page().ok_or_else(no_page)?;
     let state = |b: Block, i: usize| {
         Session::block_paras(page, b).and_then(|ps| ps.get(i)).and_then(|p| p.tags.iter().find(|t| t.key == def.key).map(|t| t.checked))
     };
-    // Decide by the first paragraph, apply to all.
-    let first = targets.first().and_then(|(b, i)| state(*b, *i));
+    // Decide by the first paragraph (or, with ink alone, by the ink), apply to all.
+    let first = match t.paras.first() {
+        Some((b, i)) => state(*b, *i),
+        None => ink_tag(page, &t.ink, &def.key),
+    };
     let page = s.page_mut().ok_or_else(no_page)?;
-    for (b, i) in targets {
+    match first {
+        None => tag_ink(page, &t.ink, &def),
+        Some(false) => each_ink(page, &t.ink, |tags| tags.iter_mut().filter(|t| t.key == def.key).for_each(|t| t.checked = true)),
+        Some(true) => each_ink(page, &t.ink, |tags| tags.retain(|t| t.key != def.key)),
+    }
+    for (b, i) in t.paras {
         if let Some(p) = Session::para_mut(page, b, i) {
             match first {
                 None => {
@@ -132,35 +218,35 @@ fn shortcut(s: &mut Session, key: &str) -> CmdResult {
     Ok(Value::Null)
 }
 
-fn remove_all(s: &mut Session, _: &Value) -> CmdResult {
-    for (b, i) in targets(s)? {
-        if let Some(p) = s.page_mut().and_then(|pg| Session::para_mut(pg, b, i)) {
-            p.tags.clear();
+/// Apply `f` to the tags of every target: each paragraph's and each selected stroke's.
+fn each_target(s: &mut Session, mut f: impl FnMut(&mut Vec<TagUse>)) -> CmdResult {
+    let t = targets(s)?;
+    let page = s.page_mut().ok_or_else(no_page)?;
+    for (b, i) in t.paras {
+        if let Some(p) = Session::para_mut(page, b, i) {
+            f(&mut p.tags);
         }
     }
+    each_ink(page, &t.ink, f);
     Ok(Value::Null)
+}
+
+fn remove_all(s: &mut Session, _: &Value) -> CmdResult {
+    each_target(s, Vec::clear)
 }
 
 fn remove_one(s: &mut Session, v: &Value) -> CmdResult {
     let key = p::req_str(v, "key")?.to_string();
-    for (b, i) in targets(s)? {
-        if let Some(p) = s.page_mut().and_then(|pg| Session::para_mut(pg, b, i)) {
-            p.tags.retain(|t| t.key != key);
-        }
-    }
-    Ok(Value::Null)
+    each_target(s, |tags| tags.retain(|t| t.key != key))
 }
 
 fn set_checked(s: &mut Session, v: &Value, on: bool) -> CmdResult {
     let key = p::str(v, "key").map(str::to_string);
-    for (b, i) in targets(s)? {
-        if let Some(p) = s.page_mut().and_then(|pg| Session::para_mut(pg, b, i)) {
-            for t in p.tags.iter_mut().filter(|t| t.symbol.is_checkbox() && key.as_ref().is_none_or(|k| *k == t.key)) {
-                t.checked = on;
-            }
+    each_target(s, |tags| {
+        for t in tags.iter_mut().filter(|t| t.symbol.is_checkbox() && key.as_ref().is_none_or(|k| *k == t.key)) {
+            t.checked = on;
         }
-    }
-    Ok(Value::Null)
+    })
 }
 
 fn check_all(s: &mut Session, on: bool) -> CmdResult {
@@ -168,16 +254,19 @@ fn check_all(s: &mut Session, on: bool) -> CmdResult {
 }
 
 fn click(s: &mut Session, v: &Value) -> CmdResult {
-    let block = match v.get("block").and_then(Value::as_str).and_then(notecraft_doc::Id::parse) {
-        Some(id) => Block::Outline(id),
-        None => return Err(CmdError::Params("`block` (outline id) is required".into())),
+    let Some(id) = v.get("block").and_then(Value::as_str).and_then(Id::parse) else {
+        return Err(CmdError::Params("`block` (outline or ink id) is required".into()));
     };
-    let para = p::req_usize(v, "para")?;
     let which = p::usize(v, "tag").unwrap_or(0);
+    let is_ink = s.page().ok_or_else(no_page)?.ink(id).is_some();
     let page = s.page_mut().ok_or_else(no_page)?;
-    let p = Session::para_mut(page, block, para).ok_or_else(|| CmdError::Params("no such paragraph".into()))?;
-    let t =
-        p.tags.iter_mut().filter(|t| t.symbol.is_checkbox()).nth(which).ok_or_else(|| CmdError::Params("that paragraph has no checkbox".into()))?;
+    let tags = if is_ink {
+        page.ink_mut(id).map(|k| &mut k.tags).ok_or_else(|| CmdError::Params("no such stroke".into()))?
+    } else {
+        let para = p::req_usize(v, "para")?;
+        Session::para_mut(page, Block::Outline(id), para).map(|p| &mut p.tags).ok_or_else(|| CmdError::Params("no such paragraph".into()))?
+    };
+    let t = tags.iter_mut().filter(|t| t.symbol.is_checkbox()).nth(which).ok_or_else(|| CmdError::Params("that note has no checkbox".into()))?;
     t.checked = !t.checked;
     Ok(json!({"checked": t.checked}))
 }
@@ -192,7 +281,12 @@ struct Found {
     date: notecraft_doc::Timestamp,
     block: notecraft_doc::Id,
     para: usize,
+    /// Whether the tag is on a stroke (`block` is then the stroke's id).
+    ink: bool,
 }
+
+/// What Find Tags and summary pages show for a tagged stroke (unverified wording).
+const INK_TEXT: &str = "Ink drawing";
 
 fn scope_kind(v: &Value) -> Result<Option<ScopeKind>, CmdError> {
     Ok(match p::str(v, "scope") {
@@ -223,6 +317,22 @@ fn collect(s: &Session, kind: ScopeKind, unchecked_only: bool) -> Vec<Found> {
             }
             let section = s.ws.section(meta.section).map(|x| x.name.clone()).unwrap_or_default();
             for o in &page.objects {
+                if let Some(k) = o.as_ink() {
+                    for t in k.tags.iter().filter(|t| !(unchecked_only && t.checked)) {
+                        out.push(Found {
+                            tag: t.clone(),
+                            text: INK_TEXT.into(),
+                            page: page.id,
+                            page_title: page.display_title(),
+                            section: section.clone(),
+                            date: page.modified,
+                            block: k.id,
+                            para: 0,
+                            ink: true,
+                        });
+                    }
+                    continue;
+                }
                 let Some(ol) = o.as_outline() else { continue };
                 for (i, para) in ol.paragraphs.iter().enumerate() {
                     for t in &para.tags {
@@ -238,6 +348,7 @@ fn collect(s: &Session, kind: ScopeKind, unchecked_only: bool) -> Vec<Found> {
                             date: page.modified,
                             block: ol.id,
                             para: i,
+                            ink: false,
                         });
                     }
                 }
@@ -267,7 +378,7 @@ fn find_tags(s: &mut Session, v: &Value) -> CmdResult {
     let mut groups: Vec<(String, Vec<Value>)> = Vec::new();
     for f in &found {
         let k = group_key(f, group, s.clock.utc_offset_min);
-        let item = json!({"tag": f.tag.name, "key": f.tag.key, "checked": f.tag.checked, "text": f.text, "page": f.page.to_string(), "pageTitle": f.page_title, "section": f.section, "block": f.block.to_string(), "para": f.para});
+        let item = json!({"tag": f.tag.name, "key": f.tag.key, "checked": f.tag.checked, "text": f.text, "page": f.page.to_string(), "pageTitle": f.page_title, "section": f.section, "block": f.block.to_string(), "para": f.para, "ink": f.ink});
         match groups.iter_mut().find(|(g, _)| *g == k) {
             Some((_, items)) => items.push(item),
             None => groups.push((k, vec![item])),

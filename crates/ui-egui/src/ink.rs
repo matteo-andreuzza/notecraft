@@ -10,7 +10,7 @@
 use egui::{Color32, CursorIcon, Event, Mesh, Painter, Pos2, Rect, Response, Sense, Shape, Stroke, Ui, pos2, vec2};
 use notecraft_engine::doc::geom::Point;
 use notecraft_engine::doc::ink::DEFAULT_PRESSURE;
-use notecraft_engine::doc::{Id, Ink, InkTool, Page, PageObject};
+use notecraft_engine::doc::{Id, Ink, InkTool, Page, PageObject, TagUse};
 use notecraft_engine::selection::PageSel;
 use notecraft_engine::{DrawTool, PenStyle};
 use serde_json::json;
@@ -175,18 +175,73 @@ pub(crate) fn selection_box(app: &NoteApp) -> Option<Rect> {
 
 /// Draw the page's strokes (above the text, in z-order), the stroke being drawn, the lasso and
 /// eraser feedback, and the box around selected ink.
+/// Where a stroke's tag icons sit on screen: a row ending just left of its box, level with its
+/// top (decision D5; the placement is unverified).
+fn tag_rects<'a>(app: &NoteApp, k: &'a Ink, rect: Rect) -> impl Iterator<Item = (Rect, &'a TagUse)> + 'a {
+    let zoom = app.canvas.zoom.max(0.1);
+    let size = (14.0 * zoom).clamp(8.0, 40.0);
+    let step = crate::canvas::TAG_W * PT * zoom;
+    let n = k.tags.len();
+    k.tags.iter().enumerate().map(move |(i, tag)| (Rect::from_min_size(pos2(rect.min.x - step * (n - i) as f32, rect.min.y), vec2(size, size)), tag))
+}
+
+/// The checkbox tag under a screen point: the stroke and the checkbox's index among the
+/// stroke's checkboxes (what `tag.click` takes).
+pub(crate) fn checkbox_at(app: &NoteApp, p: Pos2) -> Option<(Id, usize)> {
+    let page = app.session.page()?;
+    page.objects
+        .iter()
+        .filter_map(PageObject::as_ink)
+        .zip(&app.canvas.ink.layout)
+        .filter(|(k, _)| !k.tags.is_empty())
+        .find_map(|(k, l)| tag_rects(app, k, l.rect).filter(|(_, tag)| tag.symbol.is_checkbox()).position(|(r, _)| r.contains(p)).map(|i| (k.id, i)))
+}
+
+/// The strokes on screen with their tag icons, for `ui.inspect`.
+pub(crate) fn inspect(app: &NoteApp) -> serde_json::Value {
+    let Some(page) = app.session.page() else { return json!([]) };
+    page.objects
+        .iter()
+        .filter_map(PageObject::as_ink)
+        .zip(&app.canvas.ink.layout)
+        .take(500)
+        .map(|(k, l)| {
+            let tags: Vec<_> =
+                tag_rects(app, k, l.rect).map(|(r, t)| json!({"key": t.key, "checked": t.checked, "rect": crate::rect_json(r)})).collect();
+            json!({"id": k.id, "rect": crate::rect_json(l.rect), "tags": tags})
+        })
+        .collect()
+}
+
 pub(crate) fn draw(app: &NoteApp, painter: &Painter, page: &Page, t: Tokens, page_text: Color32) {
     let view = app.canvas.viewport.expand(40.0);
+    let mut defs = None;
     for (k, l) in page.objects.iter().filter_map(PageObject::as_ink).zip(&app.canvas.ink.layout) {
         if l.rect.intersects(view) {
             paint_ink(app, painter, k, page_text);
+        }
+        if !k.tags.is_empty() {
+            let defs = defs.get_or_insert_with(|| app.session.tag_defs());
+            for (r, tag) in tag_rects(app, k, l.rect) {
+                let symbol = defs.iter().find(|d| d.key == tag.key).map(|d| d.symbol).unwrap_or(tag.symbol);
+                crate::icons::tag(painter, r, symbol, tag.checked, page_text);
+            }
         }
     }
     match &app.canvas.ink.gesture {
         Some(Gesture::Stroke(pts)) => {
             let pen = app.session.draw.current_pen();
             let z = PT * app.canvas.zoom.max(0.1);
-            let live = Ink { id: Id(0), pos: Point::ZERO, points: Vec::new(), color: pen.color, width: pen.width, tool: pen.tool, link: None };
+            let live = Ink {
+                id: Id(0),
+                pos: Point::ZERO,
+                points: Vec::new(),
+                color: pen.color,
+                width: pen.width,
+                tool: pen.tool,
+                link: None,
+                tags: Vec::new(),
+            };
             let screen: Vec<Pos2> = pts.iter().map(|(p, _)| app.canvas.to_screen(*p)).collect();
             let half: Vec<f32> = pts.iter().map(|(_, pr)| (live.width_at(*pr) * z / 2.0).max(0.5)).collect();
             paint_stroke(painter, &screen, &half, ink_color(pen.color, pen.tool, page_text), pen.tool == InkTool::Pen);
@@ -366,6 +421,14 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
         app.canvas.ink.force = None;
     }
     let pr = pressure(app, ui);
+    // A checkbox tag on a stroke toggles on click (BEH.Tags.CheckboxClick).
+    if resp.clicked()
+        && matches!(tool, DrawTool::Type | DrawTool::Lasso)
+        && let Some((id, i)) = resp.interact_pointer_pos().and_then(|p| checkbox_at(app, p))
+    {
+        app.run(ctx, "tag.click", json!({"block": id.to_string(), "tag": i}));
+        return true;
+    }
     // Start.
     if let Some(o) = origin.or_else(|| resp.clicked().then(|| resp.interact_pointer_pos()).flatten()) {
         let at = app.canvas.to_page(o);

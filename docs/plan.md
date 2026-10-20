@@ -340,6 +340,27 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 - **Later:** the ruler, shapes (Ink to Shape), Ink to Text/Math (recognition), Ink Replay,
   touch-only drawing, resizing ink by handles, the `render` crate drawing ink for export.
 
+### 4.11 Tags on ink (decision D5, 2026-10-21)
+
+- **A stroke carries tags** like a paragraph: `Ink.tags: Vec<TagUse>` (the same name, symbol
+  and checked snapshot). The field is optional in `section.json` (absent when empty), so
+  `.ncraft` stays at version 4 and older files open unchanged; at most 32 tags per stroke, one
+  per tag key (hostile files are cut there).
+- **A drawing is several strokes, but a tag is applied once.** With strokes one object each
+  (D4), the tag commands (the gallery, Ctrl+1…9, Remove Tag, Check/Clear All, the checkbox
+  click) act on the selected strokes as one drawing: the drawing *has* a tag when any of its
+  strokes has it; applying puts the tag on the **leftmost** selected stroke (then the topmost)
+  unless one already has it; removing, checking and clearing touch every selected stroke. So
+  Find Tags lists a tagged drawing once, not once per stroke. A selection that mixes containers
+  and ink tags both.
+- **Placement:** the icons sit in a row just left of the tagged stroke's box, level with its
+  top; a checkbox there toggles on click. Find Tags and summary pages show a tagged stroke as
+  "Ink drawing", and clicking it in the pane selects the stroke (placement and wording
+  unverified).
+- Pictures and attachments take no tags (their reference menus have no Tags).
+- **M3:** [MS-ONE] note tags hang off the ink node; import puts them on the node's leftmost
+  stroke, export on the node that groups the page's strokes.
+
 ## 5. Risks
 
 | Risk | Impact | Mitigation |
@@ -360,6 +381,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | D2 | 2026-10-15 | Tables are their own page object (`PageObject::Table`) with cells as text blocks (`Block::Cell`) and fixed column widths; `.ncraft` version 2 (§4.8). | — (the plan named `PageObject::Table`; the containment detail was open) | The simplest model compatible with M3: [MS-ONE] tables map 1:1 except that a table inside a container becomes a neighbour of it; no existing text command changes. |
 | D3 | 2026-10-19 | Pictures and attachments are page objects (`PageObject::Image`, `PageObject::Attachment`) whose bytes are `Arc`-shared blobs keyed by a 128-bit id and stored as uncompressed `media/<id>` entries in the section zip; `.ncraft` version 3; explicit size, pixel, byte and object-count limits (§4.9). | — (the plan named `media/` in the section zip; the object shape and limits were open) | Undo and copy/paste stay pointer copies; blob ids map to [MS-ONE]'s file-data-store GUIDs; a damaged picture degrades to a placeholder instead of failing the section; printouts and export reuse the same blobs. |
 | D4 | 2026-10-20 | Ink strokes are page objects, one stroke per object (`PageObject::Ink`, points relative to the object's position with per-point pressure, colour, width, pen or highlighter); `.ncraft` version 4; geometry in `ink-geom` (L0), stroke operations in `ink` (L2); tools are session state (§4.10). | — (the plan named the crates; the object shape was open) | Every object command (select, lasso, delete, clipboard, order, rotate, move, undo) works on ink unchanged; [MS-ONE] ink nodes map stroke by stroke, losing only their grouping. |
+| D5 | 2026-10-21 | Tags on ink: a stroke carries `tags` like a paragraph (optional field, format 4 unchanged); the tag commands treat the selected strokes as one drawing, putting a new tag on its leftmost stroke and removing or checking it on all (§4.11). | — | Strokes are separate objects (D4), so tagging each would list one drawing many times in Find Tags; one anchor stroke keeps one entry per tag and maps to [MS-ONE]'s tag on the ink node. |
 
 ## 7. Assumptions
 
