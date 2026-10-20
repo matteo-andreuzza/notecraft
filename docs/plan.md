@@ -103,8 +103,9 @@ ribbon; [`ui-parity.md`](ui-parity.md)).
    alt text, save as, open, rename); the rich clipboard (crate `import-export`: a bounded HTML
    reader and writer; pictures and HTML through `arboard` on the desktop host; tables paste as
    tables); dropping files on the page; file printouts (PDF pages through `hayro` 0.7.1 from
-   crates.io, the user's choice of 2026-10-20). Left: screen clipping through the desktop
-   portal, 45° rotation of pictures, cropping, copying text from printout pages.
+   crates.io, the user's choice of 2026-10-20). Screen clipping through the XDG Screenshot
+   portal (Linux; a background thread, the result polled by the UI). Left: screen clipping on
+   Windows/macOS, 45° rotation of pictures, cropping, copying text from printout pages.
 4. **Ink (decision D4 / §4.10; done):** crates `ink-geom` and `ink`, `PageObject::Ink` (`.ncraft`
    format 4), the Draw tab's tools (Type, Lasso Select, Panning Hand, the four erasers, the pen
    gallery, Add Pen, Color & Thickness), strokes with pressure from egui touch force, the ink

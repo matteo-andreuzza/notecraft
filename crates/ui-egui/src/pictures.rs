@@ -290,6 +290,10 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 app.run(ctx, cmd, json!({"path": path}));
             }
         }
+        "insert.screenClipping" => match app.host.start_screen_clip() {
+            Ok(()) => app.ui.status = Some(("Select an area of the screen to clip.".into(), ctx.input(|i| i.time))),
+            Err(e) => app.ui.status = Some((e, ctx.input(|i| i.time))),
+        },
         "insert.printout" => {
             let mut exts = vec!["pdf"];
             exts.extend(picture_filter());

@@ -73,6 +73,11 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .params(r#"{"path": picture file | "data": base64, "x"?: pt, "y"?: pt}"#)
             .when(need_page),
         // R.Insert.Files.FileAttachmentInsert
+        // R.Insert.Images.ScreenCaptureInsert — the desktop host captures (XDG Screenshot portal)
+        // and passes the picture here.
+        CommandSpec::new("insert.screenClipping", "R.Insert.Images.ScreenCaptureInsert", "Screen Clipping", "Insert/Images/Screen Clipping", screen_clipping)
+            .params(r#"{"data": base64 picture of the clipped area, "x"?: pt, "y"?: pt}"#)
+            .when(need_page),
         CommandSpec::new("insert.file", "R.Insert.Files.FileAttachmentInsert", "File Attachment", "Insert/Files/File Attachment", insert_file)
             .params(r#"{"path": file | "data": base64 with "name", "name"?: shown file name, "x"?: pt, "y"?: pt}"#)
             .when(need_page),
@@ -245,6 +250,32 @@ fn insert_picture(s: &mut Session, v: &Value) -> CmdResult {
     let pixels = probe(&bytes)?;
     let id = add_picture(s, v, bytes, pixels)?;
     Ok(json!({"picture": id.to_string(), "pixels": [pixels.0, pixels.1]}))
+}
+
+/// A screen clipping: the picture, and below it a note saying when it was taken (as the
+/// reference does; the wording is unverified), all one undo step.
+fn screen_clipping(s: &mut Session, v: &Value) -> CmdResult {
+    if p::str(v, "data").is_none() {
+        return Err(CmdError::Disabled("the desktop captures the screen; give the picture as `data`".into()));
+    }
+    if s.page().is_some_and(|p| p.objects.len() + 2 > MAX_PAGE_OBJECTS) {
+        return Err(CmdError::Failed(format!("a page holds at most {MAX_PAGE_OBJECTS} objects")));
+    }
+    let (bytes, _) = read_input(v, MAX_PICTURE_BYTES)?;
+    let pixels = probe(&bytes)?;
+    let id = add_picture(s, v, bytes, pixels)?;
+    let (now, off) = (s.now(), s.clock.utc_offset_min);
+    let caption = format!("Screen clipping taken: {} {}", now.short_date(off), now.short_time(off));
+    let im = s.page().and_then(|p| p.image(id)).ok_or_else(no_page)?;
+    let below = Point::new(im.pos.x, im.pos.y + im.height + 6.0);
+    let mut para = ops::new_para(s);
+    notecraft_text::insert(&mut para, 0, &caption, &notecraft_doc::CharFormat::default());
+    let oid = s.new_id();
+    let mut outline = notecraft_doc::Outline::new(oid, below, para.id);
+    outline.paragraphs = vec![para];
+    s.page_mut().ok_or_else(no_page)?.objects.push(PageObject::Outline(outline));
+    s.sel.on_page = PageSel::Objects { ids: vec![id] };
+    Ok(json!({"picture": id.to_string(), "caption": caption}))
 }
 
 fn insert_file(s: &mut Session, v: &Value) -> CmdResult {

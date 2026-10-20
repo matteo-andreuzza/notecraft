@@ -23,6 +23,7 @@
 mod control;
 mod desktop_theme;
 mod host;
+mod screen_clip;
 mod settings;
 
 use std::path::PathBuf;

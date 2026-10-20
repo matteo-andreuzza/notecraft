@@ -86,6 +86,16 @@ pub trait Host {
         let _ = (text, html, image);
         false
     }
+    /// Start a screen clipping: the desktop lets the user pick an area (the XDG Screenshot portal
+    /// on Linux) while NoteCraft keeps running. `Err` with a reason when unavailable here.
+    fn start_screen_clip(&mut self) -> Result<(), String> {
+        Err("Screen clipping isn't available here".into())
+    }
+    /// The finished screen clipping, once: the picture file's bytes, or why there is none
+    /// (cancelled, refused). Polled every frame.
+    fn take_screen_clip(&mut self) -> Option<Result<Vec<u8>, String>> {
+        None
+    }
     /// Where backups go (`None` = backups unavailable on this platform).
     fn backup_folder(&self) -> Option<String> {
         None
@@ -373,6 +383,13 @@ impl NoteApp {
             if let Some(e) = errors.first() {
                 self.ui.status = Some((e.clone(), ctx.input(|i| i.time)));
             }
+        }
+        match self.host.take_screen_clip() {
+            Some(Ok(bytes)) => {
+                self.run(ctx, "insert.screenClipping", json!({"data": notecraft_engine::b64::encode(&bytes)}));
+            }
+            Some(Err(e)) => self.ui.status = Some((e, ctx.input(|i| i.time))),
+            None => {}
         }
         if let Some(m) = self.session.messages.pop() {
             self.ui.status = Some((m, ctx.input(|i| i.time)));

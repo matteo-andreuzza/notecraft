@@ -324,3 +324,14 @@ this log plus a green tree is how the next agent picks up.
 - Numbers: wiring 596/1322 (45.1%), behaviour 159/1322 (12.0%), 301 commands.
 - Environment: a gate failed with the linker killed by the OOM killer (15 GB RAM, ~4 GB
   available): `CARGO_BUILD_JOBS=4` fixed it.
+
+## 2026-10-20 — M2: screen clipping
+
+- **Insert › Screen Clipping** (`insert.screenClipping`): on Linux the desktop app asks the XDG
+  Screenshot portal (interactive: the compositor draws the area selection, Wayland or X11) on a
+  background thread (`apps/notecraft/src/screen_clip.rs`, zbus); the UI polls
+  `Host::take_screen_clip` each frame and inserts the picture with a "Screen clipping taken:"
+  line below it (wording unverified), one undo step. Elsewhere it explains why it's unavailable.
+  Not exercised live (it would open the selection on the maintainer's screen); the engine path
+  and the portal URI decoding are tested.
+- Numbers: wiring 597/1322 (45.2%), behaviour 159/1322 (12.0%), 302 commands.

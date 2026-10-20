@@ -385,3 +385,16 @@ fn links_on_pictures_attachments_and_ink() {
     assert_eq!(s.page().unwrap().ink(ink).unwrap().link.as_deref(), Some("mailto:me@example.org"), "CM.InkDrawing.HyperlinkCreate");
     assert!(s.run("insert.link", json!({"url": "bad\u{0}url"})).is_err());
 }
+
+#[test]
+fn a_screen_clipping_is_a_picture_with_when_it_was_taken() {
+    let mut s = sample();
+    blank_page(&mut s);
+    assert!(s.run("insert.screenClipping", json!({})).is_err(), "the host captures; the engine alone can't");
+    let r = run(&mut s, "insert.screenClipping", json!({"data": data(&png(40, 20)), "x": 50.0, "y": 100.0}));
+    let id = Id::parse(r["picture"].as_str().unwrap()).unwrap();
+    assert_eq!(image(&s, id).pixels, (40, 20), "R.Insert.Images.ScreenCaptureInsert");
+    assert!(s.page().unwrap().plain_text().contains("Screen clipping taken: "), "{}", s.page().unwrap().plain_text());
+    run(&mut s, "edit.undo", json!({}));
+    assert!(s.page().unwrap().objects.is_empty(), "one undo step");
+}

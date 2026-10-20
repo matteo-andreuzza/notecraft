@@ -16,13 +16,17 @@ pub struct DesktopHost {
     /// The system clipboard (`arboard`), opened on first use and kept: on X11 the copied
     /// contents are served by this object, so it must outlive the copy.
     clipboard: Option<arboard::Clipboard>,
+    /// A screen clipping waiting for the desktop's answer.
+    clip: Option<crate::screen_clip::Clip>,
+    /// To wake the UI when an answer comes from another thread.
+    ctx: egui::Context,
 }
 
 impl DesktopHost {
     /// A host whose theme watcher asks `ctx` for a repaint when the desktop's preference changes.
     pub fn new(ctx: &egui::Context) -> DesktopHost {
-        let ctx = ctx.clone();
-        DesktopHost { theme: DesktopTheme::start(move || ctx.request_repaint()), dark: None, clipboard: None }
+        let waker = ctx.clone();
+        DesktopHost { theme: DesktopTheme::start(move || waker.request_repaint()), dark: None, clipboard: None, clip: None, ctx: ctx.clone() }
     }
 
     fn clipboard(&mut self) -> Option<&mut arboard::Clipboard> {
@@ -116,6 +120,21 @@ impl Host for DesktopHost {
 
     fn backup_folder(&self) -> Option<String> {
         notecraft_automation::keyfile::data_dir().map(|d| d.join("backups").display().to_string())
+    }
+
+    fn start_screen_clip(&mut self) -> Result<(), String> {
+        if self.clip.is_some() {
+            return Err("A screen clipping is already in progress.".into());
+        }
+        let ctx = self.ctx.clone();
+        self.clip = Some(crate::screen_clip::Clip::start(move || ctx.request_repaint())?);
+        Ok(())
+    }
+
+    fn take_screen_clip(&mut self) -> Option<Result<Vec<u8>, String>> {
+        let answer = self.clip.as_ref()?.take()?;
+        self.clip = None;
+        Some(answer)
     }
 
     fn prefers_dark(&mut self) -> Option<bool> {
