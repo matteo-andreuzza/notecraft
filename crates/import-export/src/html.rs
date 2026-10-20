@@ -5,11 +5,13 @@
 //! **The reader is small and tolerant, not a browser.** It keeps what a note can hold —
 //! paragraphs, headings, soft line breaks, bold/italic/underline/strikethrough, sub- and
 //! superscript, links, text colour, bulleted and numbered lists (nesting becomes indent
-//! levels) and tables (one level; a table inside a table becomes text) — and drops the rest
-//! (scripts, styles, images, forms). Unclosed and stray tags are forgiven. **Bounds against
+//! levels), tables (one level; a table inside a table becomes text) and pictures given inline
+//! (`<img src="data:image/…;base64,…">`) — and drops the rest (scripts, styles, forms, pictures
+//! from the web: no network by default). Unclosed and stray tags are forgiven. **Bounds against
 //! hostile input:** at most [`MAX_HTML_BYTES`] are read, [`MAX_DEPTH`] open elements are
-//! tracked (deeper tags are ignored, their text kept), at most [`MAX_PARAGRAPHS`] paragraphs
-//! and the table limits of `notecraft_doc::table` are produced; everything else is skipped.
+//! tracked (deeper tags are ignored, their text kept), at most [`MAX_PARAGRAPHS`] paragraphs,
+//! [`MAX_IMAGES`] pictures and the table limits of `notecraft_doc::table` are produced;
+//! everything else is skipped. Pictures are passed on undecoded: the caller probes them.
 //!
 //! Paragraph ids are [`Id::NIL`]: the caller assigns fresh ones.
 
@@ -24,6 +26,8 @@ pub const MAX_HTML_BYTES: usize = 16 << 20;
 pub const MAX_DEPTH: usize = 256;
 /// Most paragraphs produced.
 pub const MAX_PARAGRAPHS: usize = 50_000;
+/// Most inline pictures produced.
+pub const MAX_IMAGES: usize = 256;
 
 /// A table as rows of cells, each cell a list of paragraphs.
 pub type Cells = Vec<Vec<Vec<Paragraph>>>;
@@ -35,6 +39,13 @@ pub enum Block {
     Para(Paragraph),
     /// A table.
     Table(Cells),
+    /// An inline picture: `src` is its `data:image/…;base64,…` URI, as found (undecoded).
+    Image {
+        /// The `data:` URI.
+        src: String,
+        /// Its `alt` text.
+        alt: String,
+    },
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -79,6 +90,7 @@ struct Reader {
     table: Option<TableState>,
     table_depth: usize,
     paras: usize,
+    images: usize,
 }
 
 fn decode_entity(name: &str) -> Option<char> {
@@ -251,6 +263,7 @@ impl Reader {
             table: None,
             table_depth: 0,
             paras: 0,
+            images: 0,
         }
     }
 
@@ -337,6 +350,24 @@ impl Reader {
         }
     }
 
+    /// An inline picture ends the paragraph around it and follows it. One inside a table is
+    /// dropped (cells hold text), and so is one from the web.
+    fn image(&mut self, attrs: &str) {
+        if self.table.is_some() || self.images >= MAX_IMAGES {
+            return;
+        }
+        let Some(src) = attr(attrs, "src") else { return };
+        // `data:image/<type>;base64,<payload>`, any case; passed on with a lower-case header.
+        let Some((head, payload)) = src.trim().split_once(',').filter(|(h, _)| h.len() <= 64) else { return };
+        let head = head.to_ascii_lowercase();
+        let Some(mime) = head.strip_prefix("data:").and_then(|h| h.strip_suffix(";base64")).filter(|m| m.starts_with("image/")) else {
+            return;
+        };
+        self.flush();
+        self.images += 1;
+        self.out.push(Block::Image { src: format!("data:{mime};base64,{payload}"), alt: attr(attrs, "alt").unwrap_or_default() });
+    }
+
     fn open(&mut self, tag: &str, attrs: &str) {
         if self.skip.is_some() {
             return;
@@ -355,7 +386,11 @@ impl Reader {
                 self.flush();
                 return;
             }
-            "img" | "input" | "meta" | "link" | "wbr" | "col" | "area" | "source" => return,
+            "img" => {
+                self.image(attrs);
+                return;
+            }
+            "input" | "meta" | "link" | "wbr" | "col" | "area" | "source" => return,
             _ => {}
         }
         if self.stack.len() >= MAX_DEPTH {
@@ -738,6 +773,10 @@ pub fn write(blocks: &[Block]) -> String {
                     out.push_str("</tr>");
                 }
                 out.push_str("</table>");
+            }
+            Block::Image { src, alt } => {
+                close_to(&mut out, &mut lists, 0);
+                out.push_str(&format!("<p><img src=\"{}\" alt=\"{}\"></p>", escape(src), escape(alt)));
             }
         }
     }

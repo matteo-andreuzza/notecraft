@@ -116,6 +116,36 @@ pub struct MediaLayout {
     pub picture: bool,
     /// A background picture (behind everything, only reachable by right click).
     pub background: bool,
+    /// Drawn over the text: in front of every container and table it overlaps ([`stack`]).
+    pub above: bool,
+}
+
+/// Which pictures and attachments [`draw`] paints.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Layer {
+    /// Background pictures, under everything.
+    Background,
+    /// The others under the text.
+    Under,
+    /// Those over the text ([`MediaLayout::above`]).
+    Over,
+}
+
+/// Mark the pictures and attachments drawn over the text: those that overlap at least one
+/// container or table (`text`, screen frames) and come after every one they overlap in the
+/// page's order (Order › Bring to Front, or moved onto older text). The rest stay under the
+/// text, which keeps it readable and clickable. Two layers approximate the full order: a
+/// picture between two overlapping containers is drawn over both (unverified).
+pub(crate) fn stack(page: &Page, media: &mut [MediaLayout], text: &[crate::canvas::OutlineLayout]) {
+    if media.is_empty() || text.is_empty() {
+        return;
+    }
+    let order: HashMap<Id, usize> = page.objects.iter().enumerate().map(|(i, o)| (o.id(), i)).collect();
+    for m in media.iter_mut().filter(|m| !m.background) {
+        let Some(&mi) = order.get(&m.id) else { continue };
+        let mut over = text.iter().filter(|o| o.rect.intersects(m.rect)).peekable();
+        m.above = over.peek().is_some() && over.all(|o| order.get(&o.id).is_some_and(|&oi| oi < mi));
+    }
 }
 
 /// Lay out the page's pictures and attachments (screen rectangles, in z-order).
@@ -126,11 +156,15 @@ pub(crate) fn layout(page: &Page, origin: Pos2, zoom: f32) -> Vec<MediaLayout> {
         .iter()
         .filter_map(|o| match o {
             PageObject::Image(im) => {
-                Some(MediaLayout { id: im.id, rect: rect(im.pos, im.width, im.height), picture: true, background: im.background })
+                Some(MediaLayout { id: im.id, rect: rect(im.pos, im.width, im.height), picture: true, background: im.background, above: false })
             }
-            PageObject::Attachment(a) => {
-                Some(MediaLayout { id: a.id, rect: rect(a.pos, ATTACHMENT_SIZE.0, ATTACHMENT_SIZE.1), picture: false, background: false })
-            }
+            PageObject::Attachment(a) => Some(MediaLayout {
+                id: a.id,
+                rect: rect(a.pos, ATTACHMENT_SIZE.0, ATTACHMENT_SIZE.1),
+                picture: false,
+                background: false,
+                above: false,
+            }),
             _ => None,
         })
         .collect()
@@ -161,9 +195,14 @@ pub(crate) fn corner_uvs(im: &Image) -> [Pos2; 4] {
 
 /// Draw the pictures and attachments of `pass` (`true`: background pictures only; `false`:
 /// everything else), in z-order.
-pub(crate) fn draw(app: &mut NoteApp, painter: &egui::Painter, page: &Page, media: &[MediaLayout], pass: bool, t: Tokens) {
+pub(crate) fn draw(app: &mut NoteApp, painter: &egui::Painter, page: &Page, media: &[MediaLayout], layer: Layer, t: Tokens) {
     let ctx = painter.ctx().clone();
-    for m in media.iter().filter(|m| m.background == pass) {
+    let shown = |m: &&MediaLayout| match layer {
+        Layer::Background => m.background,
+        Layer::Under => !m.background && !m.above,
+        Layer::Over => m.above,
+    };
+    for m in media.iter().filter(shown) {
         if !painter.clip_rect().intersects(m.rect) {
             continue;
         }
@@ -308,7 +347,9 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
             }
         }
         // The ribbon's and menus' Paste read the system clipboard as Ctrl+V does.
-        "edit.paste" | "edit.pasteKeepSource" | "edit.pasteMerge" | "edit.pasteTextOnly" => crate::clipboard::paste(app, ctx, cmd, None),
+        "edit.paste" | "edit.pasteKeepSource" | "edit.pasteMerge" | "edit.pasteTextOnly" | "edit.pastePicture" => {
+            crate::clipboard::paste(app, ctx, cmd, None)
+        }
         "attachment.open" | "printout.openOriginal" => {
             if let Some(path) = app.run(ctx, cmd, json!({})).and_then(|v| v.get("path").and_then(|p| p.as_str()).map(str::to_string))
                 && let Err(e) = app.host.open_path(&path)

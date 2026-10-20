@@ -101,6 +101,8 @@ fn right_click_on_an_attachment_opens_the_attachment_menu() {
     let r = rect(&h, id);
     right_click(&mut h, r.center());
     assert!(h.query_by_label("Save As…").is_some(), "CM.FileAttachment.FileAttachmentSaveAs");
+    assert!(h.query_by_label("notes.txt").is_some(), "CM.FileAttachment.FileAttachmentName");
+    assert!(h.query_by_label("5 bytes").is_some(), "CM.FileAttachment.FileAttachmentSize");
     h.get_by_label("Rename").click();
     h.run();
     assert!(matches!(h.state().ui.dialog, Some(crate::dialogs::Dialog::RenameAttachment(ref n)) if n == "notes.txt"));
@@ -266,4 +268,48 @@ fn edit_link_on_a_picture_starts_from_its_link_and_changes_it() {
     let link = h.state().session.page().unwrap().image(id).unwrap().link.clone();
     assert_eq!(link.as_deref(), Some("https://example.org/new"), "OK edits the existing link");
     assert_eq!(h.state().session.page().unwrap().objects.iter().filter(|o| o.as_outline().is_some()).count(), 0, "no linked text was typed");
+}
+
+#[test]
+fn paste_picture_from_the_ribbon_takes_the_picture_beside_text() {
+    // R.Home.Clipboard.PastePicture: a browser put both text and a picture on the clipboard.
+    let (a, clip) = clip_app();
+    {
+        let mut c = clip.lock().unwrap();
+        c.text = Some("a caption".into());
+        c.image = Some(notecraft_codecs::decode(&png(16, 12), &Default::default()).unwrap());
+    }
+    let mut h = harness(a);
+    h.run();
+    let ctx = h.ctx.clone();
+    assert!(crate::pictures::host_action(h.state_mut(), &ctx, "edit.pastePicture"));
+    h.run();
+    let page = h.state().session.page().unwrap();
+    let pics: Vec<_> = page.objects.iter().filter_map(|o| o.as_image()).collect();
+    assert_eq!(pics.iter().map(|p| p.pixels).collect::<Vec<_>>(), vec![(16, 12)], "R.Home.Clipboard.PastePicture");
+    assert!(page.objects.iter().filter_map(|o| o.as_outline()).all(|o| o.paragraphs.iter().all(|p| p.text() != "a caption")));
+}
+
+#[test]
+fn a_picture_in_front_of_text_is_drawn_and_clicked_over_it() {
+    let (mut a, o) = crate::tests_canvas::page_with("Text under or over the picture");
+    let r = a.session.run("insert.picture", json!({"data": notecraft_engine::b64::encode(&png(160, 80)), "x": 70.0, "y": 118.0})).unwrap();
+    let id = Id::parse(r["picture"].as_str().unwrap()).unwrap();
+    a.session.sel.on_page = PageSel::None;
+    a.ui.tab = "View".into();
+    let mut h = harness(a);
+    h.run();
+    let m = *h.state().canvas.media.iter().find(|m| m.id == id).unwrap();
+    assert!(m.above, "inserted after the container and overlapping it: drawn over its text");
+    let text = h.state().canvas.paras.iter().find(|p| p.block == notecraft_engine::selection::Block::Outline(o)).unwrap().rect();
+    let p = text.intersect(m.rect).center();
+    crate::tests_canvas::click(&mut h, p);
+    assert_eq!(h.state().session.sel.on_page, PageSel::Objects { ids: vec![id] }, "a click there selects the picture");
+    // Sent to the back, it goes under the text again, and the text takes the click.
+    let ctx = h.ctx.clone();
+    h.state_mut().run(&ctx, "object.sendToBack", json!({}));
+    h.run();
+    assert!(!h.state().canvas.media.iter().any(|m| m.above));
+    crate::tests_canvas::click(&mut h, p);
+    assert!(matches!(h.state().session.sel.caret(), Some(c) if c.block == notecraft_engine::selection::Block::Outline(o)));
 }

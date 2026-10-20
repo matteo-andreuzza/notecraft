@@ -100,6 +100,10 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         .key("Mod+Shift+V")
         .params(PASTE)
         .when(need_page),
+        // R.Home.Clipboard.PastePicture — the clipboard's picture, even when text came with it.
+        CommandSpec::new("edit.pastePicture", "R.Home.Clipboard.PastePicture", "Paste: Picture", "Home/Clipboard/Paste/Picture", paste_as_picture)
+            .params(PASTE)
+            .when(need_page),
         // R.Home.Clipboard.PasteGallery — the Paste Options choice.
         CommandSpec::new("edit.pasteOptions", "R.Home.Clipboard.PasteGallery", "Paste Options", "Home/Clipboard/Paste/Paste Options", paste_options)
             .params(r#"{"mode": "keep" | "merge" | "text", "text"?: string}"#)
@@ -396,6 +400,23 @@ fn paste_picture(s: &mut Session, v: &Value, b64: &str) -> CmdResult {
     Ok(json!({"picture": id.to_string()}))
 }
 
+/// Paste: Picture. The system clipboard's picture (`image`) is pasted as a picture even when
+/// text or HTML came with it (a browser copies both); with none, pictures NoteCraft copied come
+/// back as pictures. Text pasted as a picture of itself needs the renderer, so it is refused
+/// for now (unverified: what the reference does with text-only content).
+fn paste_as_picture(s: &mut Session, v: &Value) -> CmdResult {
+    if let Some(img) = p::str(v, "image") {
+        return paste_picture(s, v, img);
+    }
+    let own = !s.clipboard.objects.is_empty() && s.clipboard.objects.iter().all(|o| matches!(o, notecraft_doc::PageObject::Image(_)));
+    if own && p::bool(v, "external") != Some(true) {
+        let ids = paste_objects(s, v)?;
+        s.sel.on_page = PageSel::Objects { ids: ids.clone() };
+        return Ok(json!({"objects": ids.iter().map(|i| i.to_string()).collect::<Vec<_>>()}));
+    }
+    Err(CmdError::Failed("The clipboard holds no picture".into()))
+}
+
 /// Where the next pasted object goes: below `anchor` (the object pasted before it), else
 /// where a new object goes.
 fn below(s: &Session, anchor: Option<notecraft_doc::Id>, v: &Value) -> Result<notecraft_doc::geom::Point, CmdError> {
@@ -413,6 +434,7 @@ fn paste_blocks(s: &mut Session, v: &Value, blocks: Vec<html::Block>, mode: Mode
     enum Seg {
         Paras(Vec<Paragraph>),
         Table(html::Cells),
+        Image(String, String),
     }
     let mut segs: Vec<Seg> = Vec::new();
     for b in blocks {
@@ -420,6 +442,7 @@ fn paste_blocks(s: &mut Session, v: &Value, blocks: Vec<html::Block>, mode: Mode
             (html::Block::Para(p), Some(Seg::Paras(ps))) => ps.push(p),
             (html::Block::Para(p), _) => segs.push(Seg::Paras(vec![p])),
             (html::Block::Table(c), _) => segs.push(Seg::Table(c)),
+            (html::Block::Image { src, alt }, _) => segs.push(Seg::Image(src, alt)),
         }
     }
     let room = notecraft_doc::media::MAX_PAGE_OBJECTS.saturating_sub(s.page().map_or(0, |p| p.objects.len()));
@@ -465,6 +488,19 @@ fn paste_blocks(s: &mut Session, v: &Value, blocks: Vec<html::Block>, mode: Mode
                 s.page_mut().ok_or_else(no_page)?.objects.push(notecraft_doc::PageObject::Table(t));
                 anchor = Some(id);
                 last_table = Some(id);
+            }
+            Seg::Image(src, alt) => {
+                // A picture that doesn't decode or breaks a limit is left out, not the paste.
+                let Some(bytes) = crate::b64::decode(&src).filter(|b| b.len() <= notecraft_doc::media::MAX_PICTURE_BYTES) else { continue };
+                let Ok(pixels) = crate::picture_cmds::probe(&bytes) else { continue };
+                let at = below(s, anchor, v)?;
+                let id = crate::picture_cmds::add_picture(s, &json!({"x": at.x, "y": at.y}), bytes, pixels)?;
+                if let Some(im) = s.page_mut().and_then(|pg| pg.image_mut(id)) {
+                    im.alt_text = alt;
+                    im.normalize();
+                }
+                anchor = Some(id);
+                last_table = None;
             }
         }
     }

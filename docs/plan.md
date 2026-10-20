@@ -282,6 +282,11 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   names ≤ 255 bytes. The `codecs` crate decodes with these caps (an error, never a panic or an
   unbounded allocation); the canvas downscales textures to ≤ 4,096 px per side and keeps a
   bounded, least-recently-used texture cache keyed by blob id.
+- **Stacking (2026-10-21):** a picture or attachment is drawn over the text of the containers
+  and tables it overlaps, and takes clicks there, only when it comes after every one of them in
+  the page's order (Order › Bring to Front, or moved onto older text); otherwise it stays under
+  the text, which stays readable and clickable. Two layers approximate the full order (a
+  picture between two overlapping containers is drawn over both; unverified).
 - **Insert:** a picture comes in at its pixel size at 96 dpi (1 px = 0.75 pt), scaled down to at
   most 468 pt wide (unverified), at the same place a table goes (§4.8). Rotation and flips are
   view properties applied when drawing (the stored bytes never change); 90° turns swap the drawn

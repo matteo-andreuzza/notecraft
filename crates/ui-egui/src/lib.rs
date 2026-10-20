@@ -74,7 +74,7 @@ pub trait Host {
         Err("opening files isn't available here".into())
     }
     /// Read the system clipboard: text and HTML, and the picture too when `image` (decoding a
-    /// picture costs time, so only a paste that has no text asks for it). Empty when the
+    /// picture costs time, so only a paste that has no text, or Paste: Picture, asks for it). Empty when the
     /// host has no rich clipboard (the web build, tests).
     fn read_clipboard(&mut self, image: bool) -> RichClip {
         let _ = image;
@@ -369,7 +369,7 @@ impl NoteApp {
                 "text": rect_json(Rect::from_min_size(p.pos, p.galley.size())),
             })).collect::<Vec<_>>(),
             "media": self.canvas.media.iter().take(500).map(|m| json!({
-                "id": m.id, "picture": m.picture, "background": m.background, "rect": rect_json(m.rect),
+                "id": m.id, "picture": m.picture, "background": m.background, "above": m.above, "rect": rect_json(m.rect),
             })).collect::<Vec<_>>(),
             "textures": self.canvas.textures.stats().0,
             "ink": crate::ink::inspect(self),

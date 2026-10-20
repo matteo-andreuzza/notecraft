@@ -50,9 +50,10 @@ pub(crate) fn after_copy(app: &mut NoteApp, ctx: &egui::Context, v: &Value) {
 }
 
 /// Paste with what the system clipboard holds: `text` from egui's paste event when there was
-/// one, the host's HTML, and — only when there is no text — its picture.
+/// one, the host's HTML, and — only when there is no text, or for Paste: Picture — its picture.
 pub(crate) fn paste(app: &mut NoteApp, ctx: &egui::Context, cmd: &str, text: Option<String>) {
-    let rich = app.host.read_clipboard(text.is_none());
+    let as_picture = cmd == "edit.pastePicture";
+    let rich = app.host.read_clipboard(text.is_none() || as_picture);
     let text = text.or(rich.text);
     let mut params = json!({});
     if let Some(t) = &text {
@@ -61,7 +62,7 @@ pub(crate) fn paste(app: &mut NoteApp, ctx: &egui::Context, cmd: &str, text: Opt
     if let Some(h) = rich.html {
         params["html"] = json!(h);
     }
-    if text.as_deref().is_none_or(|t| t.trim().is_empty())
+    if (as_picture || text.as_deref().is_none_or(|t| t.trim().is_empty()))
         && let Some(img) = rich.image
         && app.canvas.copied_image != Some(fingerprint(&img))
     {

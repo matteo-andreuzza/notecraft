@@ -398,3 +398,44 @@ fn a_screen_clipping_is_a_picture_with_when_it_was_taken() {
     run(&mut s, "edit.undo", json!({}));
     assert!(s.page().unwrap().objects.is_empty(), "one undo step");
 }
+
+#[test]
+fn pasted_html_brings_its_inline_pictures() {
+    let mut s = sample();
+    blank_page(&mut s);
+    let src = format!("data:image/png;base64,{}", crate::b64::encode(&png(30, 20)));
+    let html = format!(
+        r#"<p>Look:</p><img alt="A chart" src="{src}"><p>Below it</p><img src="data:image/png;base64,bm9wZQ=="><img src="https://example.org/a.png">"#
+    );
+    let undo = s.undo_labels().len();
+    run(&mut s, "edit.paste", json!({"text": "Look:\nBelow it", "html": html}));
+    assert_eq!(s.undo_labels().len(), undo + 1, "one undo step");
+    let page = s.page().unwrap();
+    let pics: Vec<_> = page.objects.iter().filter_map(|o| o.as_image()).collect();
+    assert_eq!(pics.len(), 1, "BEH.Paste.Images: a broken inline picture and a web one are left out");
+    assert_eq!((pics[0].pixels, pics[0].alt_text.as_str()), ((30, 20), "A chart"));
+    let below = page.objects.iter().filter_map(|o| o.as_outline()).find(|o| o.paragraphs.iter().any(|p| p.text() == "Below it")).unwrap();
+    assert!(below.pos.y > pics[0].pos.y + pics[0].height - 1.0, "the text after the picture goes below it");
+}
+
+#[test]
+fn paste_picture_takes_the_picture_even_with_text() {
+    let mut s = sample();
+    blank_page(&mut s);
+    let r = run(&mut s, "edit.pastePicture", json!({"text": "caption", "html": "<p>caption</p>", "image": crate::b64::encode(&png(12, 8))}));
+    let id = Id::parse(r["picture"].as_str().unwrap()).unwrap();
+    assert_eq!(image(&s, id).pixels, (12, 8), "R.Home.Clipboard.PastePicture");
+    assert!(s.page().unwrap().objects.iter().all(|o| o.as_outline().is_none_or(|ol| ol.paragraphs.iter().all(|p| p.text() != "caption"))));
+    // A picture NoteCraft copied comes back as that picture.
+    run(&mut s, "object.select", json!({"ids": [id.to_string()]}));
+    run(&mut s, "edit.copy", json!({}));
+    let r = run(&mut s, "edit.pastePicture", json!({}));
+    assert_eq!(r["objects"].as_array().map(Vec::len), Some(1));
+    // Text alone isn't a picture (yet).
+    run(&mut s, "caret.set", json!({"block": "title", "para": 0, "offset": 0}));
+    run(&mut s, "text.insert", json!({"text": "T"}));
+    run(&mut s, "edit.selectAll", json!({}));
+    run(&mut s, "edit.copy", json!({}));
+    assert!(s.run("edit.pastePicture", json!({"text": "T"})).is_err());
+    assert!(s.run("edit.pastePicture", json!({"image": data(b"junk")})).is_err());
+}

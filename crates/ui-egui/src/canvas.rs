@@ -424,7 +424,8 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         app.canvas.viewport = viewport.translate(min.to_vec2());
         // Lay out everything first (needed for the content size).
         let (paras, outlines, tables, mut extent) = layout_page(app, &ctx, &page, zoom, t, page_text);
-        let media = crate::pictures::layout(&page, app.canvas.origin, zoom);
+        let mut media = crate::pictures::layout(&page, app.canvas.origin, zoom);
+        crate::pictures::stack(&page, &mut media, &outlines);
         for m in &media {
             extent = extent.max(m.rect.max - app.canvas.origin + vec2(240.0, 240.0));
         }
@@ -439,7 +440,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         painter.rect_filled(rect, 0.0, page_bg);
         rule_lines(&painter, &page, rect, app.canvas.origin, zoom, t);
         // Background pictures sit under everything, the title included.
-        crate::pictures::draw(app, &painter, &page, &media, true, t);
+        crate::pictures::draw(app, &painter, &page, &media, crate::pictures::Layer::Background, t);
         title_area(app, &painter, &page, zoom, t, page_text, &paras);
         // Containers: frame for the hovered one and the one with the caret.
         let hover = ctx.pointer_hover_pos();
@@ -455,9 +456,9 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             PageSel::Objects { ids } => ids.clone(),
             _ => Vec::new(),
         };
-        // Pictures and attachments, under the text (decision D3: text stays readable and
-        // clickable where they overlap).
-        crate::pictures::draw(app, &painter, &page, &media, false, t);
+        // Pictures and attachments under the text (text stays readable and clickable where they
+        // overlap), unless they are in front of it (`pictures::stack`).
+        crate::pictures::draw(app, &painter, &page, &media, crate::pictures::Layer::Under, t);
         // Tables: shading, borders, selected cells.
         for tl in &tables {
             let Some(tb) = page.table(tl.id) else { continue };
@@ -576,6 +577,8 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 scroll_req = None;
             }
         }
+        // Pictures and attachments in front of the text they overlap.
+        crate::pictures::draw(app, &painter, &page, &media, crate::pictures::Layer::Over, t);
         // Ink, above the text (decision D4), with the gesture in progress and the selection box.
         crate::ink::draw(app, &painter, &page, t, page_text);
         // Selected pictures and attachments: frame and sizing handles, above the text.
@@ -1075,9 +1078,10 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
             return;
         }
         // A picture or attachment (not a background picture, and not where a container's text
-        // is): click selects it (Shift adds), drag moves it, double-click opens an attachment.
-        if !app.canvas.outlines.iter().any(|o| o.rect.contains(p))
-            && let Some(m) = crate::pictures::hit(app, p, false)
+        // is, unless it is drawn over it): click selects it (Shift adds), drag moves it,
+        // double-click opens an attachment.
+        if let Some(m) = crate::pictures::hit(app, p, false)
+            && (m.above || !app.canvas.outlines.iter().any(|o| o.rect.contains(p)))
         {
             if !(selected.contains(&m.id) && resp.drag_started()) {
                 app.run(ctx, "object.select", json!({"ids": [m.id.to_string()], "add": shift}));

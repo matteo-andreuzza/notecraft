@@ -11,6 +11,7 @@ fn texts(blocks: &[Block]) -> Vec<String> {
                 .map(|r| r.iter().map(|c| c.iter().map(Paragraph::text).collect::<Vec<_>>().join("/")).collect::<Vec<_>>().join("|"))
                 .collect::<Vec<_>>()
                 .join("\n"),
+            Block::Image { alt, .. } => format!("[img {alt}]"),
         })
         .collect()
 }
@@ -18,7 +19,7 @@ fn texts(blocks: &[Block]) -> Vec<String> {
 fn para(b: &Block) -> &Paragraph {
     match b {
         Block::Para(p) => p,
-        Block::Table(_) => panic!("expected a paragraph"),
+        _ => panic!("expected a paragraph"),
     }
 }
 
@@ -126,4 +127,23 @@ proptest! {
     fn random_markup_never_panics(s in "(<[a-z/!]{0,4}[^<>]{0,8}>?|&[a-z#0-9]{0,6};?|[a-z <>\"'=]{0,6}){0,60}") {
         let _ = parse(&s);
     }
+}
+
+#[test]
+fn inline_pictures_split_paragraphs_and_web_pictures_are_dropped() {
+    let png = "data:image/png;base64,iVBORw0KGgo=";
+    let html = format!(
+        r#"<p>Before <img alt="A &amp; B" src="{png}"> after</p><p><img src="https://example.org/x.png">web</p>
+        <table><tr><td>cell<img src="{png}"></td></tr></table><img src='data:text/plain;base64,aGk='><IMG SRC="DATA:IMAGE/GIF;BASE64,R0lG">"#
+    );
+    let blocks = parse(&html);
+    assert_eq!(texts(&blocks), ["Before", "[img A & B]", "after", "web", "cell", "[img ]"]);
+    assert!(matches!(&blocks[1], Block::Image { src, .. } if src == png));
+    // Hostile: far too many pictures.
+    let many = format!("<img src=\"{png}\">").repeat(MAX_IMAGES + 10);
+    assert_eq!(parse(&many).len(), MAX_IMAGES);
+    // Written back as inline pictures.
+    let out = write(&blocks[..3]);
+    assert!(out.contains(&format!("<img src=\"{png}\" alt=\"A &amp; B\">")), "{out}");
+    assert_eq!(texts(&parse(&out)), ["Before", "[img A & B]", "after"]);
 }

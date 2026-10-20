@@ -375,6 +375,14 @@ fn entry_enabled(app: &NoteApp, e: &Entry) -> bool {
 /// Draw one entry: a catalog control (`ribbon::menu_item`), or — when it's a colour/shading
 /// picker (`ribbon::special_menu`) — a submenu whose content is `ribbon::special`.
 fn render_item(app: &mut NoteApp, ui: &mut Ui, id: &'static str, t: Tokens) {
+    if let Some((text, strong)) = header(app, id) {
+        let text = if strong { egui::RichText::new(text).strong().color(t.text) } else { egui::RichText::new(text).color(t.text_dim) };
+        ui.add(egui::Label::new(text).selectable(false).truncate());
+        if !strong {
+            ui.separator();
+        }
+        return;
+    }
     if is_object_row(id) && !row_live(id) {
         let text = egui::RichText::new(ribbon::label(id)).color(t.text_disabled);
         ui.add_enabled(false, egui::Button::new(text).frame(false).min_size(egui::vec2(170.0, 22.0)))
@@ -394,6 +402,31 @@ fn render_item(app: &mut NoteApp, ui: &mut Ui, id: &'static str, t: Tokens) {
         return;
     }
     ribbon::menu_item(app, ui, id, t);
+}
+
+/// A header row of the attachment menu: the file's name (strong) and its size, read from the
+/// attachment the menu is open on (`CM.FileAttachment.FileAttachmentName/Size`).
+fn header(app: &NoteApp, id: &str) -> Option<(String, bool)> {
+    let name = id.ends_with(".FileAttachmentName");
+    if !name && !id.ends_with(".FileAttachmentSize") {
+        return None;
+    }
+    let Some(ContextTarget::Attachment(a)) = app.canvas.context_target else { return None };
+    let a = app.session.page()?.attachment(a)?;
+    Some(if name { (a.name.clone(), true) } else { (size_label(a.blob.len), false) })
+}
+
+/// A file size as the menu shows it: bytes, then KB and MB of 1,024 (wording unverified).
+pub(crate) fn size_label(bytes: u64) -> String {
+    const K: f64 = 1024.0;
+    let b = bytes as f64;
+    if b < K {
+        format!("{bytes} bytes")
+    } else if b < K * K {
+        format!("{:.1} KB", b / K)
+    } else {
+        format!("{:.1} MB", b / (K * K))
+    }
 }
 
 fn is_object_row(id: &str) -> bool {
@@ -435,9 +468,9 @@ fn detect(app: &NoteApp, p: Pos2) -> Option<ContextTarget> {
         return Some(if group { ContextTarget::Lasso(id) } else { ContextTarget::Ink(id) });
     }
     // Pictures (background ones too: a right click is how they're reached) and attachments,
-    // unless a container's text is on top of them there.
-    if !app.canvas.outlines.iter().any(|o| o.rect.contains(p))
-        && let Some(m) = crate::pictures::hit(app, p, true)
+    // unless a container's text is on top of them there (`pictures::stack`).
+    if let Some(m) = crate::pictures::hit(app, p, true)
+        && (m.above || !app.canvas.outlines.iter().any(|o| o.rect.contains(p)))
     {
         return Some(if m.picture { ContextTarget::Picture(m.id) } else { ContextTarget::Attachment(m.id) });
     }
