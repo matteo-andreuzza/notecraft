@@ -409,3 +409,30 @@ this log plus a green tree is how the next agent picks up.
 - Open: two-finger turning of the ruler, Snap to Grid, Draw with Touch, Ink to Shape, tablet
   pressure on Linux; files copied in a file manager pasting as attachments; the M2 exit
   workflows (see `plan/handoff.md` §7).
+
+## 2026-10-24 — M2: the exit workflows
+
+- **Headless acceptance** (`crates/automation/tests/m2_workflows.rs`, helpers shared with M1 in
+  `tests/common/mod.rs`): "a page with a table and pictures" (a table filled with Tab, rows
+  added in the last cell, a header row, sorted, the header shaded; a picture from bytes resized
+  with alt text, one from a file turned; a file attachment) and "handwritten notes" (pen
+  strokes, a shape, a line along the ruler, a lasso selection tagged as a checked to-do and
+  moved, the stroke eraser). Both drive MCP tools over a folder notebook, then a fresh session
+  reads the page back from disk and must see exactly the same objects (blobs included).
+- Seen on the way: a picture under 4 pt a side is raised to 4 pt on each side separately, so a
+  tiny picture loses its proportions; kept (it keeps a hair-thin separator thin), the test uses
+  a 16×8 picture.
+- **P0/P1 rows of the M2 exit still `missing`** (`R.Draw.*` and `BEH.Ink/Table/Paste.*` have
+  none left):
+  - `R.Insert.Pages.PageTemplatesSplitButton`, `R.Insert.Pages.PageTemplatesTaskpane` (page
+    templates: need the user's screenshots).
+  - `CT.TableLayout.Data.SortMenu` (the Sort… dialog), `CT.TableLayout.Merge.MergeCells`,
+    `CT.TableLayout.Merge.UnmergeCells` (cell spans: a model change to discuss first).
+  - Object menus: `CM.NoteContainer.OrderObjectsMenu`, `CM.NoteContainer.ObjectMove`,
+    `CM.NoteContainer.ObjectResize`; `CM.ParagraphHandle.AlternativeText`,
+    `CM.ParagraphHandle.ImageSaveAs`, `CM.ParagraphHandle.TableMenu`,
+    `CM.ParagraphHandle.TableInsert`; `CM.Equation.Cut`, `CM.Equation.CopyOneNote`,
+    `CM.Equation.PasteGalleryMini` (equations, later).
+  - Outside the M2 scope but P0/P1 and small: `CM.Tag.FindTaggedNotes`,
+    `CM.OutlookTask.TagsRemove`, `CM.Bullet.ChangeToNumberList`, `CM.Number.ChangeToBullet`,
+    the object rows of `CM.Text.*` (Rotate, flips, Alt Text, Set Picture as Background, Table).
