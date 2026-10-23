@@ -448,3 +448,7 @@ this log plus a green tree is how the next agent picks up.
   header row's text; the engine sorts by 1–3 columns in turn, stably, and can set the header
   row in the same undo step. The Table Layout › Sort menu is tested end to end
   (`CT.TableLayout.Data.SortMenu` verified).
+- Numbers: wiring 617/1324 (46.6%), behaviour 163/1324 (12.3%), 311 commands; e2e 33/33.
+- Open: the object menu rows above (NoteContainer Order/Move/Resize, ParagraphHandle Alt Text,
+  Save As, Table), copied files from a file manager pasting as attachments, merge/split cells
+  (to discuss), page templates (need screenshots).
