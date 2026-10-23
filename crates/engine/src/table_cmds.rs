@@ -36,7 +36,8 @@ pub(crate) fn table_sel(s: &Session) -> Option<TableSel> {
         PageSel::Text(r) => match r.head.block {
             Block::Cell(cell) => {
                 let (t, row, col) = page.table_of_cell(cell)?;
-                Some(TableSel { table: t.id, rows: (row, row), cols: (col, col) })
+                let (rows, cols) = with_spans(t, (row, row), (col, col));
+                Some(TableSel { table: t.id, rows, cols })
             }
             _ => None,
         },
@@ -45,7 +46,8 @@ pub(crate) fn table_sel(s: &Session) -> Option<TableSel> {
             let (lr, lc) = (t.n_rows().checked_sub(1)?, t.n_cols().checked_sub(1)?);
             let r0 = rows.0.min(rows.1).min(lr);
             let c0 = cols.0.min(cols.1).min(lc);
-            Some(TableSel { table: *table, rows: (r0, rows.0.max(rows.1).min(lr)), cols: (c0, cols.0.max(cols.1).min(lc)) })
+            let (rows, cols) = with_spans(t, (r0, rows.0.max(rows.1).min(lr)), (c0, cols.0.max(cols.1).min(lc)));
+            Some(TableSel { table: *table, rows, cols })
         }
         PageSel::Objects { ids } => {
             let t = ids.iter().find_map(|id| page.table(*id))?;
@@ -53,6 +55,52 @@ pub(crate) fn table_sel(s: &Session) -> Option<TableSel> {
         }
         PageSel::None => None,
     }
+}
+
+/// Grow the cell range `rows` × `cols` until it holds every merged cell it touches (decision D9).
+fn with_spans(t: &Table, mut rows: (usize, usize), mut cols: (usize, usize)) -> ((usize, usize), (usize, usize)) {
+    loop {
+        let mut grew = false;
+        for (r, row) in t.rows.iter().enumerate() {
+            for (c, cell) in row.cells.iter().enumerate().filter(|(_, c)| c.is_merged()) {
+                let (rs, cs) = cell.span();
+                let (r1, c1) = (r + rs - 1, c + cs - 1);
+                if r <= rows.1 && r1 >= rows.0 && c <= cols.1 && c1 >= cols.0 {
+                    let (nr, nc) = ((rows.0.min(r), rows.1.max(r1)), (cols.0.min(c), cols.1.max(c1)));
+                    if (nr, nc) != (rows, cols) {
+                        (rows, cols) = (nr, nc);
+                        grew = true;
+                    }
+                }
+            }
+        }
+        if !grew {
+            return (rows, cols);
+        }
+    }
+}
+
+/// Merge Cells: enabled on two or more selected cells.
+fn need_cells(s: &Session) -> Option<&'static str> {
+    if let Some(reason) = in_table(s) {
+        return Some(reason);
+    }
+    match table_sel(s) {
+        Some(ts) if ts.rows.0 == ts.rows.1 && ts.cols.0 == ts.cols.1 => Some("Select two or more cells to merge"),
+        _ => None,
+    }
+}
+
+/// Split Cells: enabled when the selection holds a merged cell.
+fn need_merged(s: &Session) -> Option<&'static str> {
+    if let Some(reason) = in_table(s) {
+        return Some(reason);
+    }
+    let merged = table_sel(s).zip(s.page()).and_then(|(ts, p)| {
+        let t = p.table(ts.table)?;
+        Some((ts.rows.0..=ts.rows.1).any(|r| (ts.cols.0..=ts.cols.1).any(|c| t.cell(r, c).is_some_and(TableCell::is_merged))))
+    });
+    if merged == Some(true) { None } else { Some("Select a merged cell to split") }
 }
 
 /// Enabled when the selection is in a table.
@@ -220,6 +268,10 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             |s, _| sort(s, true),
         )
         .when(in_table),
+        CommandSpec::new("table.merge", "CT.TableLayout.Merge.MergeCells", "Merge Cells", "Table Layout/Merge/Merge Cells", merge_cells)
+            .when(need_cells),
+        CommandSpec::new("table.split", "CT.TableLayout.Merge.UnmergeCells", "Split Cells", "Table Layout/Merge/Split Cells", split_cells)
+            .when(need_merged),
         CommandSpec::new("table.sortDialog", "CT.TableLayout.Data.ShowSortTableRowsDialog", "Sort…", "Table Layout/Data/Sort/Sort…", sort_by_keys)
             .params(r#"{"keys"?: [{"col": int, "descending"?: bool}, …] 1–3 columns in turn (default: the caret's, ascending), "headerRow"?: bool}"#)
             .when(in_table),
@@ -311,7 +363,7 @@ pub(crate) fn delete_empty_row(s: &mut Session) -> bool {
     }
     let table_id = t.id;
     let Some(t) = s.page_mut().and_then(|p| p.table_mut(table_id)) else { return false };
-    t.rows.remove(row);
+    t.remove_lines(true, row, row);
     let n_rows = t.n_rows();
     let target = t.cell(row.min(n_rows - 1), 0).map(|c| c.id);
     if let Some(c) = target {
@@ -398,15 +450,8 @@ fn delete_lines(s: &mut Session, rows: bool) -> CmdResult {
         // Every row (or column): the table goes.
         return delete_table(s, &Value::Null);
     }
-    if rows {
-        t.rows.drain(a..=b.min(total - 1));
-    } else {
-        t.columns.drain(a..=b.min(total - 1));
-        for r in &mut t.rows {
-            let n = r.cells.len();
-            r.cells.drain(a.min(n)..=b.min(n.saturating_sub(1)));
-        }
-    }
+    // Merged cells reaching past the range keep their text (decision D9).
+    t.remove_lines(rows, a, b);
     let (row, col) =
         if rows { (a.min(t.n_rows() - 1), ts.cols.0.min(t.n_cols() - 1)) } else { (ts.rows.0.min(t.n_rows() - 1), a.min(t.n_cols() - 1)) };
     let target = t.cell(row, col).map(|c| c.id);
@@ -434,7 +479,9 @@ fn insert_row(s: &mut Session, below: bool) -> CmdResult {
     let target = row.cells.get(ts.cols.0).map(|c| c.id);
     room(n_rows + 1, n_cols)?;
     let t = table_mut(s, ts.table)?;
-    t.rows.insert(at.min(t.rows.len()), row);
+    let at = at.min(t.rows.len());
+    t.rows.insert(at, row);
+    t.grow_spans(true, at, 1);
     // The caret goes to the new row, same column (unverified).
     if let Some(c) = target {
         caret_in(s, c, false);
@@ -462,6 +509,7 @@ fn insert_col(s: &mut Session, right: bool) -> CmdResult {
         let k = at.min(r.cells.len());
         r.cells.insert(k, c);
     }
+    t.grow_spans(false, at, 1);
     if let Some(c) = target {
         caret_in(s, c, false);
     }
@@ -504,8 +552,17 @@ fn sort_key(text: &str) -> (u8, f64, String) {
     }
 }
 
+/// Rows can't be reordered while a merged cell spans several of them (as in other editors).
+fn sortable(s: &Session, table: Id) -> Result<(), CmdError> {
+    if s.page().and_then(|p| p.table(table)).is_some_and(Table::has_row_spans) {
+        return Err(CmdError::Failed("This table has cells merged across rows; split them to sort".into()));
+    }
+    Ok(())
+}
+
 fn sort(s: &mut Session, descending: bool) -> CmdResult {
     let ts = cur(s)?;
+    sortable(s, ts.table)?;
     sort_rows(table_mut(s, ts.table)?, &[(ts.cols.0, descending)]);
     Ok(Value::Null)
 }
@@ -514,6 +571,7 @@ fn sort(s: &mut Session, descending: bool) -> CmdResult {
 /// sets whether the first row is a header (it stays on top).
 fn sort_by_keys(s: &mut Session, v: &Value) -> CmdResult {
     let ts = cur(s)?;
+    sortable(s, ts.table)?;
     let keys: Vec<(usize, bool)> = match v.get("keys") {
         None => vec![(ts.cols.0, false)],
         Some(Value::Array(a)) if (1..=3).contains(&a.len()) => {
@@ -843,28 +901,34 @@ fn caret_cell(s: &Session) -> Result<(Id, usize, usize, Pos), CmdError> {
     Ok((t.id, r, col, c))
 }
 
+/// The next (or, with `back`, previous) cell that shows after `r`, `c` in reading order:
+/// merged cells count once (decision D9).
+fn shown_after(t: &Table, r: usize, c: usize, back: bool) -> Option<(usize, usize)> {
+    let grid = t.span_grid();
+    let n_cols = t.n_cols();
+    let here = r * n_cols + c;
+    let shown = |k: usize| grid.get(k / n_cols).and_then(|row| row.get(k % n_cols)).copied().flatten().is_some();
+    let total = t.n_rows() * n_cols;
+    let k = if back { (0..here).rev().find(|k| shown(*k))? } else { (here + 1..total).find(|k| shown(*k))? };
+    Some((k / n_cols, k % n_cols))
+}
+
 fn next_cell(s: &mut Session, _: &Value) -> CmdResult {
     let (tid, r, c, _) = caret_cell(s)?;
-    let (n_rows, n_cols) = s.page().and_then(|p| p.table(tid)).map(|t| (t.n_rows(), t.n_cols())).ok_or_else(no_page)?;
-    let next = if c + 1 < n_cols {
-        Some((r, c + 1))
-    } else if r + 1 < n_rows {
-        Some((r + 1, 0))
-    } else {
-        None
-    };
-    let target = match next {
-        Some((nr, nc)) => s.page().and_then(|p| p.table(tid)).and_then(|t| t.cell(nr, nc)).map(|x| x.id),
+    let t = s.page().and_then(|p| p.table(tid)).cloned().ok_or_else(no_page)?;
+    let target = match shown_after(&t, r, c, false) {
+        Some((nr, nc)) => t.cell(nr, nc).map(|x| x.id),
         // The last cell: a single-row table grows a column (KB.Table.NewColumnTab), a longer one
         // a row (KB.Table.TabInLastCell).
-        None if n_rows == 1 => {
+        None if t.n_rows() == 1 => {
             let ts = TableSel { table: tid, rows: (0, 0), cols: (c, c) };
             s.sel.on_page = PageSel::Cells { table: ts.table, rows: ts.rows, cols: ts.cols };
             insert_col(s, true)?;
             return Ok(Value::Null);
         }
         None => {
-            s.sel.on_page = PageSel::Cells { table: tid, rows: (r, r), cols: (0, 0) };
+            let last = t.n_rows() - 1;
+            s.sel.on_page = PageSel::Cells { table: tid, rows: (last, last), cols: (0, 0) };
             insert_row(s, true)?;
             return Ok(Value::Null);
         }
@@ -878,17 +942,69 @@ fn next_cell(s: &mut Session, _: &Value) -> CmdResult {
 
 fn prev_cell(s: &mut Session, _: &Value) -> CmdResult {
     let (tid, r, c, _) = caret_cell(s)?;
-    let n_cols = s.page().and_then(|p| p.table(tid)).map(Table::n_cols).ok_or_else(no_page)?;
-    let prev = if c > 0 {
-        Some((r, c - 1))
-    } else if r > 0 {
-        Some((r - 1, n_cols.saturating_sub(1)))
-    } else {
-        None
-    };
-    if let Some(cell) = prev.and_then(|(pr, pc)| s.page().and_then(|p| p.table(tid)).and_then(|t| t.cell(pr, pc)).map(|x| x.id)) {
+    let target = s.page().and_then(|p| p.table(tid)).and_then(|t| shown_after(t, r, c, true).and_then(|(pr, pc)| t.cell(pr, pc)).map(|x| x.id));
+    if let Some(cell) = target {
         caret_in(s, cell, true);
     }
+    Ok(Value::Null)
+}
+
+/// Merge Cells (decision D9): the selected cells become one, spanning them all; their text joins
+/// in reading order in the first cell (empty cells add nothing) and the others are left empty
+/// and hidden. One undo step.
+fn merge_cells(s: &mut Session, _: &Value) -> CmdResult {
+    let ts = cur(s)?;
+    if ts.rows.0 == ts.rows.1 && ts.cols.0 == ts.cols.1 {
+        return Err(CmdError::Disabled("select two or more cells to merge".into()));
+    }
+    let n = (ts.rows.1 - ts.rows.0 + 1) * (ts.cols.1 - ts.cols.0 + 1);
+    let fresh: Vec<Id> = (0..n).map(|_| s.new_id()).collect();
+    let t = table_mut(s, ts.table)?;
+    let mut joined: Vec<Paragraph> = Vec::new();
+    let mut k = 0;
+    for r in ts.rows.0..=ts.rows.1 {
+        for c in ts.cols.0..=ts.cols.1 {
+            let Some(cell) = t.cell_mut(r, c) else { continue };
+            if !cell.is_empty() {
+                joined.append(&mut cell.paragraphs);
+            }
+            if (r, c) != (ts.rows.0, ts.cols.0) {
+                cell.paragraphs = vec![Paragraph::new(fresh.get(k).copied().unwrap_or(cell.id))];
+                cell.row_span = 1;
+                cell.col_span = 1;
+            }
+            k += 1;
+        }
+    }
+    let Some(first) = t.cell_mut(ts.rows.0, ts.cols.0) else { return Err(CmdError::Failed("the table is gone".into())) };
+    if !joined.is_empty() {
+        first.paragraphs = joined;
+    }
+    first.row_span = (ts.rows.1 - ts.rows.0 + 1) as u32;
+    first.col_span = (ts.cols.1 - ts.cols.0 + 1) as u32;
+    let id = first.id;
+    t.normalize();
+    caret_in(s, id, true);
+    Ok(json!({"cell": id.to_string()}))
+}
+
+/// Split Cells (decision D9): every merged cell in the selection goes back to single cells; its
+/// text stays in its first cell.
+fn split_cells(s: &mut Session, _: &Value) -> CmdResult {
+    let ts = cur(s)?;
+    let t = table_mut(s, ts.table)?;
+    let mut first = None;
+    for r in ts.rows.0..=ts.rows.1 {
+        for c in ts.cols.0..=ts.cols.1 {
+            if let Some(cell) = t.cell_mut(r, c).filter(|x| x.is_merged()) {
+                cell.row_span = 1;
+                cell.col_span = 1;
+                first.get_or_insert(cell.id);
+            }
+        }
+    }
+    let Some(id) = first else { return Err(CmdError::Disabled("select a merged cell to split".into())) };
+    caret_in(s, id, true);
     Ok(Value::Null)
 }
 
@@ -908,7 +1024,7 @@ fn enter(s: &mut Session, _: &Value) -> CmdResult {
         // Enter again on the new, empty last row: the row goes and the caret leaves the table;
         // typing starts a container below it.
         let tm = table_mut(s, tid)?;
-        tm.rows.truncate(r);
+        tm.remove_lines(true, r, r);
         let bottom = s.page().and_then(|p| p.objects.iter().find(|o| o.id() == tid).map(ops::object_bottom)).unwrap_or(t.pos.y);
         s.sel.on_page = PageSel::None;
         s.pending_outline = Some(Point::new(t.pos.x, bottom + 12.0));
@@ -926,13 +1042,13 @@ fn enter(s: &mut Session, _: &Value) -> CmdResult {
 pub(crate) fn neighbour_cell(s: &Session, cell: Id, dr: i8, dc: i8) -> Option<Id> {
     let page = s.page()?;
     let (t, r, c) = page.table_of_cell(cell)?;
+    let (rs, _) = t.cell(r, c)?.span();
+    // Merged cells count once: sideways in reading order, up and down to the cell showing there.
     let (nr, nc) = match (dr, dc) {
-        (0, 1) if c + 1 < t.n_cols() => (r, c + 1),
-        (0, 1) => (r.checked_add(1).filter(|x| *x < t.n_rows())?, 0),
-        (0, -1) if c > 0 => (r, c - 1),
-        (0, -1) => (r.checked_sub(1)?, t.n_cols().checked_sub(1)?),
-        (1, 0) => (r.checked_add(1).filter(|x| *x < t.n_rows())?, c),
-        (-1, 0) => (r.checked_sub(1)?, c),
+        (0, 1) => shown_after(t, r, c, false)?,
+        (0, -1) => shown_after(t, r, c, true)?,
+        (1, 0) => t.anchor(r.checked_add(rs).filter(|x| *x < t.n_rows())?, c),
+        (-1, 0) => t.anchor(r.checked_sub(1)?, c),
         _ => return None,
     };
     t.cell(nr, nc).map(|x| x.id)

@@ -255,6 +255,35 @@ fn table_cells_take_clicks_keys_and_drags() {
 }
 
 #[test]
+fn merged_cells_lay_out_as_one_and_split_back() {
+    let (mut a, tid) = page_with_table();
+    a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    let tl = h.state().canvas.tables[0].clone();
+    let at = |r: usize, c: usize| tl.cells.iter().find(|x| x.row == r && x.col == c).copied().unwrap();
+    let (a0, b0, a1) = (at(0, 0), at(0, 1), at(1, 0));
+    // Drag across the first two cells of the top row, then Table Layout › Merge Cells.
+    drag(&mut h, a0.rect.center(), b0.rect.center());
+    h.state_mut().ui.tab = "Table Layout".into();
+    h.run();
+    h.get_by_label("Merge Cells").click();
+    h.run();
+    assert_eq!((table(&h, tid).rows[0].cells[0].col_span, table(&h, tid).rows[0].cells[0].row_span), (2, 1));
+    let tl = h.state().canvas.tables[0].clone();
+    assert_eq!(tl.cells.len(), 5, "the covered place isn't laid out");
+    let merged = tl.cells.iter().find(|x| x.row == 0 && x.col == 0).copied().unwrap();
+    assert!((merged.rect.width() - (a0.rect.width() + b0.rect.width())).abs() < 0.5, "it spans both columns");
+    // Typing in it wraps at the merged width; the row below keeps its own cells.
+    h.state_mut().session.run("text.insert", json!({"text": "wide"})).unwrap();
+    h.run();
+    assert!(tl.cells.iter().any(|x| x.row == 1 && x.col == 0 && (x.rect.width() - a1.rect.width()).abs() < 0.5));
+    h.get_by_label("Split Cells").click();
+    h.run();
+    assert_eq!(h.state().canvas.tables[0].cells.len(), 6, "split back into single cells");
+}
+
+#[test]
 fn the_insert_table_grid_inserts_below_the_caret_container() {
     let (a, o) = page_with("Above the table");
     let mut h = harness(a);

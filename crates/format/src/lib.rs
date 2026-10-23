@@ -54,10 +54,11 @@ pub const RECYCLE_FILE: &str = "recycle.ncraft-bin";
 ///
 /// History: 1 = M1 (outlines); 2 = M2 tables (`PageObject::Table`); 3 = M2 pictures and
 /// attachments (`PageObject::Image`/`Attachment`, bytes in `media/` entries; decision D3); 4 = M2
-/// ink (`PageObject::Ink`, one stroke per object; decision D4).
+/// ink (`PageObject::Ink`, one stroke per object; decision D4); 5 = M2 merged table cells
+/// (`TableCell::row_span`/`col_span`; decision D9) and equations (decision D11).
 /// Each version reads every older one unchanged; older builds refuse newer files rather than
 /// drop objects they don't know.
-pub const VERSION: u32 = 4;
+pub const VERSION: u32 = 5;
 
 /// Largest decompressed JSON entry accepted (1 GiB): a 2 GB notebook spreads over many
 /// sections, so one section beyond this is corrupt or hostile.
@@ -630,6 +631,29 @@ mod tests {
         assert_ne!(empty, json, "the test edits the stored points");
         let back = decode_section(&zip_one(SECTION_ENTRY, empty.as_bytes()).unwrap()).unwrap();
         assert!(back.pages[0].ink(Id(80)).is_none(), "a stroke without points is dropped");
+    }
+
+    #[test]
+    fn merged_cells_round_trip_and_hostile_spans_are_repaired() {
+        let mut n = 500u128;
+        let mut mint = || {
+            n += 1;
+            Id(n)
+        };
+        let mut t = notecraft_doc::Table::new(Id(90), Point::new(40.0, 60.0), 3, 3, &mut mint);
+        t.rows[0].cells[0].row_span = 2;
+        t.rows[0].cells[0].col_span = 3;
+        let mut s = sample_section();
+        Arc::make_mut(&mut s.pages[0]).objects.push(PageObject::Table(t.clone()));
+        let back = decode_section(&encode_section(&s).unwrap()).unwrap();
+        assert_eq!(back.pages[0].table(Id(90)), Some(&t), "FMT.Native.Ncraft: merged cells survive a save");
+        // A hostile span is cut back to the table on load.
+        let json =
+            String::from_utf8(serde_json::to_vec(&SectionFile { format: SECTION_MAGIC.into(), version: VERSION, section: s }).unwrap()).unwrap();
+        let evil = json.replacen(r#""row_span":2"#, r#""row_span":4000000000"#, 1);
+        assert_ne!(evil, json, "the test edits the stored span");
+        let back = decode_section(&zip_one(SECTION_ENTRY, evil.as_bytes()).unwrap()).unwrap();
+        assert_eq!(back.pages[0].table(Id(90)).map(|t| t.rows[0].cells[0].span()), Some((3, 3)));
     }
 
     #[test]

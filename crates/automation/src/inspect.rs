@@ -113,14 +113,29 @@ pub fn page_json(p: &Page, runs: bool) -> Value {
                 json!({"kind": "outline", "id": ol.id, "x": ol.pos.x, "y": ol.pos.y, "width": serde_json::to_value(ol.width).unwrap_or(Value::Null), "paragraphs": paras})
             }
             PageObject::Table(t) => {
+                let grid = t.span_grid();
                 let rows: Vec<Value> = t
                     .rows
                     .iter()
-                    .map(|r| {
+                    .enumerate()
+                    .map(|(ri, r)| {
                         let cells: Vec<Value> = r
                             .cells
                             .iter()
-                            .map(|c| json!({"id": c.id, "text": c.text(), "shading": c.shading.map(|x| x.to_hex())}))
+                            .enumerate()
+                            .map(|(ci, c)| {
+                                let mut v = json!({"id": c.id, "text": c.text(), "shading": c.shading.map(|x| x.to_hex())});
+                                // Merged cells (decision D9): the span, or that a merged cell hides this one.
+                                match grid.get(ri).and_then(|g| g.get(ci)).copied().flatten() {
+                                    Some((rs, cs)) if (rs, cs) != (1, 1) => {
+                                        v["rowSpan"] = json!(rs);
+                                        v["colSpan"] = json!(cs);
+                                    }
+                                    None => v["covered"] = json!(true),
+                                    _ => {}
+                                }
+                                v
+                            })
                             .collect();
                         json!({"id": r.id, "cells": cells})
                     })

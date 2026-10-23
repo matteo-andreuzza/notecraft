@@ -780,43 +780,81 @@ fn layout_table<'a>(
         xs.push(x);
     }
     let pad = CELL_PAD * z;
-    let mut y = y0;
-    let mut cells = Vec::new();
+    let n_cols = tb.columns.len();
+    // Merged cells (decision D9): a cell that shows spans its columns' widths and rows' heights;
+    // the places it covers aren't laid out.
+    let grid = tb.span_grid();
+    struct Laid {
+        id: Id,
+        row: usize,
+        col: usize,
+        span: (usize, usize),
+        paras: Vec<(usize, std::sync::Arc<egui::Galley>, f32, f32, String)>,
+        height: f32,
+    }
+    let mut laid: Vec<Laid> = Vec::new();
     for (r, row) in tb.rows.iter().enumerate() {
-        let mut row_h: f32 = 0.0;
-        let first_cell = cells.len();
         for (c, cell) in row.cells.iter().enumerate() {
-            let (cx0, cx1) = (xs.get(c).copied().unwrap_or(x0), xs.get(c + 1).copied().unwrap_or(x0));
+            let Some((rs, cs)) = grid.get(r).and_then(|g| g.get(c)).copied().flatten() else { continue };
+            let cs = cs.min(n_cols.saturating_sub(c)).max(1);
+            let (cx0, cx1) = (xs.get(c).copied().unwrap_or(x0), xs.get(c + cs).copied().unwrap_or(x0));
             let width = (cx1 - cx0) / z;
             let labels = notecraft_engine::text::list_labels(&cell.paragraphs);
-            let mut cy = y + pad;
+            let mut cy = pad;
+            let mut paras_here = Vec::with_capacity(cell.paragraphs.len());
             for (i, para) in cell.paragraphs.iter().enumerate() {
                 let has_list = labels.get(i).is_some_and(|l| !l.is_empty());
                 let lead = para.level as f32 * INDENT + para.tags.len() as f32 * TAG_W + if has_list { LIST_W } else { 0.0 };
                 let wrap = (width - 2.0 * CELL_PAD - lead).max(8.0) * z;
                 cy += para.space_before * z;
                 let g = layout_para(ctx, para, wrap, zoom, t, page_text, preedit_at(Block::Cell(cell.id), i));
-                let pos = pos2(cx0 + pad + lead * z, cy);
                 let h = g.size().y;
-                paras.push(ParaLayout {
-                    block: Block::Cell(cell.id),
-                    para: i,
-                    galley: g,
-                    pos,
-                    text: para.text(),
-                    checkboxes: Vec::new(),
-                    handle: Rect::NOTHING,
-                });
+                paras_here.push((i, g, lead * z, cy, para.text()));
                 cy += h + para.space_after * z;
             }
-            row_h = row_h.max(cy - y + pad);
-            cells.push(CellLayout { id: cell.id, row: r, col: c, rect: Rect::from_min_max(pos2(cx0, y), pos2(cx1, y)) });
+            laid.push(Laid { id: cell.id, row: r, col: c, span: (rs, cs), paras: paras_here, height: cy + pad });
         }
-        let row_h = row_h.max(14.0 * z);
-        for cl in cells.iter_mut().skip(first_cell) {
-            cl.rect.max.y = y + row_h;
+    }
+    // Row heights: one-row cells first, then a merged cell taller than its rows stretches the
+    // last of them.
+    let mut row_h = vec![14.0 * z; tb.rows.len()];
+    for l in laid.iter().filter(|l| l.span.0 == 1) {
+        if let Some(h) = row_h.get_mut(l.row) {
+            *h = h.max(l.height);
         }
-        y += row_h;
+    }
+    for l in laid.iter().filter(|l| l.span.0 > 1) {
+        let last = (l.row + l.span.0).min(row_h.len()).saturating_sub(1);
+        let have: f32 = row_h.iter().skip(l.row).take(l.span.0).sum();
+        if have < l.height
+            && let Some(h) = row_h.get_mut(last)
+        {
+            *h += l.height - have;
+        }
+    }
+    let mut ys = Vec::with_capacity(row_h.len() + 1);
+    let mut y = y0;
+    ys.push(y);
+    for h in &row_h {
+        y += h;
+        ys.push(y);
+    }
+    let mut cells = Vec::with_capacity(laid.len());
+    for l in laid {
+        let (cx0, cx1) = (xs.get(l.col).copied().unwrap_or(x0), xs.get(l.col + l.span.1).copied().unwrap_or(x0));
+        let (top, bottom) = (ys.get(l.row).copied().unwrap_or(y0), ys.get(l.row + l.span.0).copied().unwrap_or(y));
+        for (i, g, lead, oy, text) in l.paras {
+            paras.push(ParaLayout {
+                block: Block::Cell(l.id),
+                para: i,
+                galley: g,
+                pos: pos2(cx0 + pad + lead, top + oy),
+                text,
+                checkboxes: Vec::new(),
+                handle: Rect::NOTHING,
+            });
+        }
+        cells.push(CellLayout { id: l.id, row: l.row, col: l.col, rect: Rect::from_min_max(pos2(cx0, top), pos2(cx1, bottom)) });
     }
     let right = xs.last().copied().unwrap_or(x0);
     let rect = Rect::from_min_max(pos2(x0, y0), pos2(right, y.max(y0 + 14.0 * z)));
@@ -842,16 +880,10 @@ fn draw_table(painter: &egui::Painter, tb: &Table, tl: &TableLayout, sel: &PageS
         None
     };
     if let Some(st) = stroke {
+        // Cell by cell, so a merged cell has no lines across it.
         painter.rect_stroke(tl.rect, 0.0, st, egui::StrokeKind::Middle);
-        for x in tl.col_edges.iter().take(tl.col_edges.len().saturating_sub(1)) {
-            painter.line_segment([pos2(*x, tl.rect.min.y), pos2(*x, tl.rect.max.y)], st);
-        }
-        let mut last_row = usize::MAX;
         for cl in &tl.cells {
-            if cl.row != last_row && cl.row > 0 {
-                painter.line_segment([pos2(tl.rect.min.x, cl.rect.min.y), pos2(tl.rect.max.x, cl.rect.min.y)], st);
-            }
-            last_row = cl.row;
+            painter.rect_stroke(cl.rect, 0.0, st, egui::StrokeKind::Middle);
         }
     }
     if let PageSel::Cells { table, rows, cols } = sel

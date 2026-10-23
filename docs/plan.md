@@ -419,6 +419,28 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   page. The first finger's drag (egui-winit also sends it as the pointer) becomes a drag of the
   ruler, and a stroke, shape or lasso it had begun is dropped.
 
+### 4.14 Merged cells (decision D9, 2026-10-24)
+
+- **Model.** `TableCell` gains `row_span` and `col_span` (1 by default, omitted when 1). A
+  merged cell covers the grid places to its right and below; the covered cells stay in their
+  rows, empty and hidden, so every row still has one cell per column and every row/column
+  command keeps its indices ([MS-ONE] keeps the full grid the same way). `Table::normalize`
+  keeps spans ≥ 1, inside the table and apart (row by row, an earlier cell wins; a span that
+  would reach a covered place stops short). `.ncraft` version 5; older files open unchanged.
+- **Merge Cells** (`table.merge`) joins the selected rectangle — grown to whole merged cells it
+  touches — into its top-left cell: the text of the non-empty cells in reading order, the
+  others left empty. **Split Cells** (`table.split`) returns the merged cells in the selection
+  to single cells, the text staying in the first (unverified: the reference may offer a rows ×
+  columns split for an ordinary cell).
+- **Everything else.** A caret in a merged cell selects all of its rows and columns, so Insert
+  Below/Right go past it and Delete Rows/Columns take all of them; a row or column inserted
+  inside a merged cell joins it; deleting a merged cell's own first row or column moves it, text
+  included, to the first one left; Tab, Shift+Tab and the arrows count a merged cell once; Sort
+  refuses a table with cells merged across rows (split them first). The canvas lays a merged
+  cell over its columns' widths, a tall one stretches the last of its rows, and borders are
+  drawn cell by cell. `notebook.inspect` gives `rowSpan`/`colSpan`, and `covered` for hidden
+  places. HTML copied out keeps the grid but not the merge (a gap).
+
 ## 5. Risks
 
 | Risk | Impact | Mitigation |
@@ -441,6 +463,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | D4 | 2026-10-20 | Ink strokes are page objects, one stroke per object (`PageObject::Ink`, points relative to the object's position with per-point pressure, colour, width, pen or highlighter); `.ncraft` version 4; geometry in `ink-geom` (L0), stroke operations in `ink` (L2); tools are session state (§4.10). | — (the plan named the crates; the object shape was open) | Every object command (select, lasso, delete, clipboard, order, rotate, move, undo) works on ink unchanged; [MS-ONE] ink nodes map stroke by stroke, losing only their grouping. |
 | D5 | 2026-10-21 | Tags on ink: a stroke carries `tags` like a paragraph (optional field, format 4 unchanged); the tag commands treat the selected strokes as one drawing, putting a new tag on its leftmost stroke and removing or checking it on all (§4.11). | — | Strokes are separate objects (D4), so tagging each would list one drawing many times in Find Tags; one anchor stroke keeps one entry per tag and maps to [MS-ONE]'s tag on the ink node. |
 | D6 | 2026-10-21 | Tab after a paragraph's text makes it a one-row, two-column table that takes the paragraph's place (the container splits around it); no session state, later Tabs and Enters use the table's own keys (§4.8). | — | Tables are separate objects (D2), so the paragraph must leave its container; the one-row table's existing Tab/Enter behaviour already covers "keep creating". |
+| D9 | 2026-10-24 | Merged table cells: `row_span`/`col_span` on the top-left cell, covered cells kept in the grid empty and hidden; `table.merge`/`table.split`; `.ncraft` version 5 (§4.14). | Merging was left out of D2 ("needs a model change") | The full grid keeps every row/column command and the format's row/cell lists unchanged; [MS-ONE] stores tables the same way. The user approved the change. |
 | D8 | 2026-10-24 | Snap to Grid puts shapes' end points on the page's grid (1/8 in without one); Draw with Touch off turns a pressureless touch into panning; two fingers on the ruler move and turn it (§4.13). | — | Settings only, no format change; snapping lives in the engine's `draw.shape`, so headless clients get it too. |
 | D7 | 2026-10-23 | The Draw tab's ruler is session state (`DrawState.ruler`: centre and angle in page space), never saved or undone; a stroke that starts near one of its long edges is laid along it by the engine's `draw.stroke` (§4.12). | — | No document change and no format bump; the engine owns the snapping, so the canvas, the control channel and MCP draw the same lines. |
 

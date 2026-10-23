@@ -459,8 +459,8 @@ Shown only while the selection is in a table / an equation / on a recording.
 | CT.TableLayout.Insert.TableInsertRowsBelow | Insert Below | Table Layout/Insert/Insert Below | button | `Mod+Enter` | table.insertBelow | P1 | verified | FLUENT19:TableInsertRowsBelow |  |
 | CT.TableLayout.Insert.TableInsertColumnsLeft | Insert Left | Table Layout/Insert/Insert Left | button | `Mod+Alt+E` | table.insertLeft | P1 | verified | FLUENT19:TableInsertColumnsLeft |  |
 | CT.TableLayout.Insert.TableInsertColumnsRight | Insert Right | Table Layout/Insert/Insert Right | button | `Mod+Alt+R` | table.insertRight | P1 | verified | FLUENT19:TableInsertColumnsRight |  |
-| CT.TableLayout.Merge.MergeCells | Merge Cells | Table Layout/Merge/Merge Cells | button |  | table.merge | P1 | missing | FLUENT19:MergeCells |  |
-| CT.TableLayout.Merge.UnmergeCells | Split Cells | Table Layout/Merge/Split Cells | button |  | table.split | P1 | missing | FLUENT19:UnmergeCells |  |
+| CT.TableLayout.Merge.MergeCells | Merge Cells | Table Layout/Merge/Merge Cells | button |  | table.merge | P1 | wired | FLUENT19:MergeCells | Decision D9: the selected cells (grown to whole merged cells) become one; the non-empty cells' text joins in reading order (order unverified) |
+| CT.TableLayout.Merge.UnmergeCells | Split Cells | Table Layout/Merge/Split Cells | button |  | table.split | P1 | wired | FLUENT19:UnmergeCells | Decision D9: merged cells in the selection become single cells again, the text staying in the first (unverified: the reference may also split an ordinary cell into rows × columns) |
 | CT.TableLayout.Format.TableBordersHide | Hide Borders | Table Layout/Format/Hide Borders | toggle |  | table.hideBorders | P1 | verified | FLUENT19:TableBordersHide |  |
 | CT.TableLayout.Format.ShadingColorPicker | Shading | Table Layout/Format/Shading | gallery |  | table.shading | P1 | verified | FLUENT19:ShadingColorPicker |  |
 | CT.TableLayout.Alignment.AlignLeft | Align Left | Table Layout/Alignment/Align Left | toggle | `Mod+L` | para.alignLeft | P0 | wired | FLUENT19:AlignLeft |  |

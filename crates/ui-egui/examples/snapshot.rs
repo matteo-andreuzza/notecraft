@@ -280,6 +280,18 @@ fn main() {
             a.ui.tab = "Table Layout".into();
         });
     }
+    // Merged cells (decision D9): the header across all three columns, a cell over two rows.
+    shot("table-merged", &out, 1.0, |a| {
+        table_page(a);
+        let t = a.session.page().and_then(|p| p.objects.iter().find_map(|o| o.as_table().map(|t| t.id.to_string()))).unwrap();
+        // A row under "Review the budget", then Luca's cell over both rows.
+        a.session.run("table.insertBelow", json!({})).unwrap();
+        a.session.run("table.selectRange", json!({"table": t, "rows": [0, 0], "cols": [0, 2]})).unwrap();
+        a.session.run("table.merge", json!({})).unwrap();
+        a.session.run("table.selectRange", json!({"table": t, "rows": [2, 3], "cols": [1, 1]})).unwrap();
+        a.session.run("table.merge", json!({})).unwrap();
+        a.ui.tab = "Table Layout".into();
+    });
     // Table Layout › Sort › Sort…, with the header row's names in the column lists.
     shot("table-sort-dialog", &out, 1.0, |a| {
         table_page(a);

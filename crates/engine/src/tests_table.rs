@@ -287,6 +287,58 @@ fn the_sort_dialog_sorts_by_several_columns_in_turn() {
     assert_eq!(s.undo_labels().len(), undo);
 }
 
+fn spans(s: &Session) -> Vec<Vec<(u32, u32)>> {
+    table(s).rows.iter().map(|r| r.cells.iter().map(|c| (c.row_span, c.col_span)).collect()).collect()
+}
+
+#[test]
+fn merge_cells_joins_their_text_and_split_cells_undoes_the_merge() {
+    // parity: CT.TableLayout.Merge.MergeCells, CT.TableLayout.Merge.UnmergeCells
+    let mut s = filled(3, 3);
+    let tid = table(&s).id.to_string();
+    let enabled = |s: &Session, id: &str| (crate::commands::find(id).unwrap().enabled)(s);
+    at(&mut s, 0, 0);
+    assert_eq!(enabled(&s, "table.merge"), Some("Select two or more cells to merge"));
+    assert_eq!(enabled(&s, "table.split"), Some("Select a merged cell to split"));
+    // Merge the top-left 2 × 2: one undo step, the text joined in reading order.
+    run(&mut s, "table.selectRange", json!({"table": tid, "rows": [0, 1], "cols": [0, 1]}));
+    let undo = s.undo_labels().len();
+    run(&mut s, "table.merge", json!({}));
+    assert_eq!(s.undo_labels().len(), undo + 1);
+    assert_eq!(spans(&s)[0][0], (2, 2));
+    assert_eq!(grid(&s)[0][0], "r0c0\nr0c1\nr1c0\nr1c1");
+    assert!(grid(&s)[1][1].is_empty() && table(&s).is_covered(1, 1));
+    assert_eq!(caret_cell(&s), (0, 0), "the caret is in the merged cell");
+    // Tab skips the places it covers; Shift+Tab comes back.
+    run(&mut s, "table.nextCell", json!({}));
+    assert_eq!(caret_cell(&s), (0, 2));
+    run(&mut s, "table.nextCell", json!({}));
+    assert_eq!(caret_cell(&s), (1, 2), "row 1 starts under the merged cell");
+    run(&mut s, "table.prevCell", json!({}));
+    run(&mut s, "table.prevCell", json!({}));
+    assert_eq!(caret_cell(&s), (0, 0));
+    // Rows can't be sorted across it.
+    assert!(s.run("table.sortAscending", json!({})).is_err());
+    // Insert Below from the merged cell goes below all its rows; a row inserted inside joins it.
+    run(&mut s, "table.insertBelow", json!({}));
+    assert_eq!((table(&s).n_rows(), spans(&s)[0][0]), (4, (2, 2)));
+    at(&mut s, 0, 2);
+    run(&mut s, "table.insertBelow", json!({}));
+    assert_eq!(spans(&s)[0][0], (3, 2), "a row added inside the merged cell joins it");
+    // Deleting its first row keeps the merged cell, one row shorter, with its text.
+    at(&mut s, 0, 2);
+    run(&mut s, "table.deleteRows", json!({}));
+    assert_eq!((spans(&s)[0][0], grid(&s)[0][0].starts_with("r0c0")), ((2, 2), true));
+    // Split Cells: single cells again, the text in the first.
+    at(&mut s, 0, 0);
+    assert_eq!(enabled(&s, "table.split"), None);
+    run(&mut s, "table.split", json!({}));
+    assert!(spans(&s).iter().flatten().all(|x| *x == (1, 1)));
+    assert!(grid(&s)[0][0].contains("r1c1"));
+    run(&mut s, "edit.undo", json!({}));
+    assert_eq!(spans(&s)[0][0], (2, 2), "undo merges it again");
+}
+
 #[test]
 fn convert_between_text_and_tables() {
     // parity: NC.Table.ConvertTextToTable, NC.Table.ConvertToText
