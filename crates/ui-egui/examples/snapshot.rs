@@ -280,6 +280,13 @@ fn main() {
             a.ui.tab = "Table Layout".into();
         });
     }
+    // Table Layout › Sort › Sort…, with the header row's names in the column lists.
+    shot("table-sort-dialog", &out, 1.0, |a| {
+        table_page(a);
+        a.session.run("table.headerRow", json!({})).unwrap();
+        a.ui.tab = "Table Layout".into();
+        a.ui.dialog = Some(notecraft_ui_egui::dialogs::Dialog::SortTable { by: [Some(1), Some(2)], descending: [false, true], header: true });
+    });
     shot("table-cells-selected", &out, 1.0, |a| {
         table_page(a);
         a.session.run("table.selectColumns", json!({})).unwrap();

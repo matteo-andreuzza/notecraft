@@ -47,6 +47,16 @@ pub enum Dialog {
     /// Insert File (`BEH.Paste.Files`): dropped files NoteCraft can print, as the parameters of
     /// `insert.file` / `insert.printout` (path, and where they were dropped).
     InsertFile(Vec<serde_json::Value>),
+    /// Sort… of the current table (`CT.TableLayout.Data.ShowSortTableRowsDialog`): the column to
+    /// sort by and an optional second one, each descending or not, and the header row.
+    SortTable {
+        /// Sort by, then by (`None`: no second column).
+        by: [Option<usize>; 2],
+        /// Descending, for each.
+        descending: [bool; 2],
+        /// The first row is a header, kept on top.
+        header: bool,
+    },
     /// Color & Thickness of the selected pen (`UI.Panes.ColorThickness`): highlighter or pen,
     /// colour `#rrggbb`, width in points.
     ColorThickness {
@@ -137,6 +147,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
         Dialog::RenameAttachment(_) => "Rename",
         Dialog::InsertFile(_) => "Insert File",
         Dialog::ColorThickness { .. } => "Color & Thickness",
+        Dialog::SortTable { .. } => "Sort",
     };
     let modal = egui::Modal::new(egui::Id::new("dialog")).show(ctx, |ui| {
         ui.set_min_width(380.0);
@@ -184,6 +195,59 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                         // changes it; otherwise it makes a new one.
                         let cmd = if app.disabled_reason("link.edit").is_none() { "link.edit" } else { "insert.link" };
                         app.run(ctx, cmd, p);
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::SortTable { by, descending, header } => {
+                // Columns go by their header text when the first row is a header (unverified).
+                let names: Vec<String> = crate::ribbon::current_table(app)
+                    .map(|tb| {
+                        (0..tb.n_cols())
+                            .map(|c| {
+                                let head = if *header { tb.cell(0, c).map(|x| x.text()).unwrap_or_default() } else { String::new() };
+                                if head.trim().is_empty() { format!("Column {}", c + 1) } else { head.trim().to_string() }
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                if names.is_empty() {
+                    close = true;
+                }
+                let name = |c: Option<usize>| c.and_then(|c| names.get(c).cloned()).unwrap_or_else(|| "(none)".into());
+                egui::Grid::new("sort_table").num_columns(3).spacing(vec2(12.0, 8.0)).show(ui, |ui| {
+                    for (k, label) in ["Sort by:", "Then by:"].into_iter().enumerate() {
+                        ui.label(label);
+                        egui::ComboBox::from_id_salt(("sort_by", k)).selected_text(name(by[k])).width(150.0).show_ui(ui, |ui| {
+                            if k > 0 {
+                                ui.selectable_value(&mut by[k], None, "(none)");
+                            }
+                            for (c, n) in names.iter().enumerate() {
+                                ui.selectable_value(&mut by[k], Some(c), n);
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add_enabled_ui(by[k].is_some(), |ui| {
+                                ui.radio_value(&mut descending[k], false, "Ascending");
+                                ui.radio_value(&mut descending[k], true, "Descending");
+                            });
+                        });
+                        ui.end_row();
+                    }
+                });
+                ui.add_space(4.0);
+                ui.checkbox(header, "Header row (excluded from sort)");
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if crate::chrome::primary_button(ui, "OK", &t).clicked() {
+                        let keys: Vec<serde_json::Value> =
+                            by.iter().zip(descending.iter()).filter_map(|(c, d)| c.map(|c| json!({"col": c, "descending": d}))).collect();
+                        if !keys.is_empty() {
+                            app.run(ctx, "table.sortDialog", json!({"keys": keys, "headerRow": *header}));
+                        }
                         close = true;
                     }
                     if ui.button("Cancel").clicked() {

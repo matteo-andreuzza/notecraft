@@ -466,10 +466,10 @@ Shown only while the selection is in a table / an equation / on a recording.
 | CT.TableLayout.Alignment.AlignLeft | Align Left | Table Layout/Alignment/Align Left | toggle | `Mod+L` | para.alignLeft | P0 | wired | FLUENT19:AlignLeft |  |
 | CT.TableLayout.Alignment.AlignCenter | Center | Table Layout/Alignment/Center | toggle |  | para.alignCenter | P0 | wired | FLUENT19:AlignCenter |  |
 | CT.TableLayout.Alignment.AlignRight | Align Right | Table Layout/Alignment/Align Right | toggle | `Mod+R` | para.alignRight | P0 | wired | FLUENT19:AlignRight |  |
-| CT.TableLayout.Data.SortMenu | Sort | Table Layout/Data/Sort | menu |  |  | P1 | missing | FLUENT19:SortMenu |  |
+| CT.TableLayout.Data.SortMenu | Sort | Table Layout/Data/Sort | menu |  |  | P1 | verified | FLUENT19:SortMenu | Sort Ascending, Sort Descending, Sort… and Header Row (excluded from sort), as listed |
 | CT.TableLayout.Data.SortUp | Sort Ascending | Table Layout/Data/Sort/Sort Ascending | button |  | table.sortAscending | P1 | wired | FLUENT19:SortUp | Sorts the whole table by the caret's column, the header row excluded; unverified collation (numbers first, text ignoring case, empty cells last). |
 | CT.TableLayout.Data.SortDown | Sort Descending | Table Layout/Data/Sort/Sort Descending | button |  | table.sortDescending | P1 | wired | FLUENT19:SortDown | As Sort Ascending, reversed (empty cells stay last); unverified collation. |
-| CT.TableLayout.Data.ShowSortTableRowsDialog | Sort… | Table Layout/Data/Sort/Sort… | button |  | table.sortDialog | P2 | missing | FLUENT19:ShowSortTableRowsDialog |  |
+| CT.TableLayout.Data.ShowSortTableRowsDialog | Sort… | Table Layout/Data/Sort/Sort… | button |  | table.sortDialog | P2 | wired | FLUENT19:ShowSortTableRowsDialog | A Sort dialog: Sort by a column and Then by another or none, each Ascending or Descending, and Header row (excluded from sort); columns are named by the header row's text when there is one, else Column 1, 2…; `table.sortDialog` takes 1–3 keys (layout and naming unverified) |
 | CT.TableLayout.Data.HeaderRowNoFormatting | Header Row (excluded from sort) | Table Layout/Data/Sort/Header Row (excluded from sort) | check |  | table.headerRow | P2 | verified | FLUENT19:HeaderRowNoFormatting |  |
 | CT.TableLayout.Convert.ConvertToExcelSpreadsheet | Convert to Excel Spreadsheet | Table Layout/Convert/Convert to Excel Spreadsheet | button |  | table.convertToSpreadsheet | P3 | missing | FLUENT19:ConvertToExcelSpreadsheet |  |
 

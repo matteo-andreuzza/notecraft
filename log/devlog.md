@@ -443,3 +443,8 @@ this log plus a green tree is how the next agent picks up.
   pressure (egui can't tell pens from fingers); two fingers on the ruler move it and turn it
   about their midpoint, the first finger's drag becoming a drag of the ruler. Both settings are
   kept in the desktop settings with the pens.
+- **Sort… for tables** (`CT.TableLayout.Data.ShowSortTableRowsDialog`, `table.sortDialog`): a
+  Sort dialog (Sort by, Then by, each Ascending or Descending, Header row), columns named by the
+  header row's text; the engine sorts by 1–3 columns in turn, stably, and can set the header
+  row in the same undo step. The Table Layout › Sort menu is tested end to end
+  (`CT.TableLayout.Data.SortMenu` verified).

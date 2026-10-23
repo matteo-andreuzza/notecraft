@@ -220,6 +220,9 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             |s, _| sort(s, true),
         )
         .when(in_table),
+        CommandSpec::new("table.sortDialog", "CT.TableLayout.Data.ShowSortTableRowsDialog", "Sort…", "Table Layout/Data/Sort/Sort…", sort_by_keys)
+            .params(r#"{"keys"?: [{"col": int, "descending"?: bool}, …] 1–3 columns in turn (default: the caret's, ascending), "headerRow"?: bool}"#)
+            .when(in_table),
         CommandSpec::new(
             "table.headerRow",
             "CT.TableLayout.Data.HeaderRowNoFormatting",
@@ -503,18 +506,51 @@ fn sort_key(text: &str) -> (u8, f64, String) {
 
 fn sort(s: &mut Session, descending: bool) -> CmdResult {
     let ts = cur(s)?;
-    let col = ts.cols.0;
-    let t = table_mut(s, ts.table)?;
-    let skip = usize::from(t.header_row).min(t.rows.len());
-    let body = t.rows.get_mut(skip..).ok_or_else(|| CmdError::Failed("the table is gone".into()))?;
-    body.sort_by(|a, b| {
-        let ka = sort_key(&a.cells.get(col).map(TableCell::text).unwrap_or_default());
-        let kb = sort_key(&b.cells.get(col).map(TableCell::text).unwrap_or_default());
-        let ord = ka.0.cmp(&kb.0).then(ka.1.total_cmp(&kb.1)).then_with(|| ka.2.cmp(&kb.2));
-        // Empty cells stay last either way.
-        if descending && ka.0 != 2 && kb.0 != 2 { ord.reverse() } else { ord }
-    });
+    sort_rows(table_mut(s, ts.table)?, &[(ts.cols.0, descending)]);
     Ok(Value::Null)
+}
+
+/// Sort… (`table.sortDialog`): the body rows by up to three columns in turn; `headerRow` first
+/// sets whether the first row is a header (it stays on top).
+fn sort_by_keys(s: &mut Session, v: &Value) -> CmdResult {
+    let ts = cur(s)?;
+    let keys: Vec<(usize, bool)> = match v.get("keys") {
+        None => vec![(ts.cols.0, false)],
+        Some(Value::Array(a)) if (1..=3).contains(&a.len()) => {
+            a.iter().map(|k| Ok((p::req_usize(k, "col")?, p::bool(k, "descending").unwrap_or(false)))).collect::<Result<_, CmdError>>()?
+        }
+        Some(_) => return Err(CmdError::Params(r#"keys: 1 to 3 of {"col", "descending"?}"#.into())),
+    };
+    // Checked before `table_mut`, which would record an undo step.
+    let cols = s.page().and_then(|p| p.table(ts.table)).map(Table::n_cols).unwrap_or(0);
+    if let Some((c, _)) = keys.iter().find(|(c, _)| *c >= cols) {
+        return Err(CmdError::Params(format!("no column {c}: the table has {cols}")));
+    }
+    let header = p::bool(v, "headerRow");
+    let t = table_mut(s, ts.table)?;
+    if let Some(h) = header {
+        t.header_row = h;
+    }
+    sort_rows(t, &keys);
+    Ok(json!({"headerRow": t.header_row}))
+}
+
+/// Sort the rows below the header row by `keys` (column, descending) in turn; a stable sort, so
+/// rows that tie keep their order.
+fn sort_rows(t: &mut Table, keys: &[(usize, bool)]) {
+    let skip = usize::from(t.header_row).min(t.rows.len());
+    let Some(body) = t.rows.get_mut(skip..) else { return };
+    body.sort_by(|a, b| {
+        keys.iter().fold(std::cmp::Ordering::Equal, |ord, &(col, descending)| {
+            ord.then_with(|| {
+                let ka = sort_key(&a.cells.get(col).map(TableCell::text).unwrap_or_default());
+                let kb = sort_key(&b.cells.get(col).map(TableCell::text).unwrap_or_default());
+                let o = ka.0.cmp(&kb.0).then(ka.1.total_cmp(&kb.1)).then_with(|| ka.2.cmp(&kb.2));
+                // Empty cells stay last either way.
+                if descending && ka.0 != 2 && kb.0 != 2 { o.reverse() } else { o }
+            })
+        })
+    });
 }
 
 fn header_row(s: &mut Session, _: &Value) -> CmdResult {

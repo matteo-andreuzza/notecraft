@@ -441,6 +441,49 @@ fn insert_table_dialog_opens_from_the_ribbon_and_inserts() {
 }
 
 #[test]
+fn the_sort_menu_and_dialog_sort_the_table() {
+    // parity: CT.TableLayout.Data.SortMenu
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 40.0, "y": 100.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "Fruit\tShop\npear\tB\napple\tA\nfig\tB"})).unwrap();
+    a.session.run("edit.selectAll", json!({})).unwrap();
+    a.session.run("edit.selectAll", json!({})).unwrap();
+    a.session.run("insert.convertTextToTable", json!({})).unwrap();
+    let table = |a: &NoteApp| a.session.page().unwrap().objects.iter().find_map(|o| o.as_table().cloned()).unwrap();
+    let c = table(&a).rows[1].cells[0].id;
+    a.session.run("caret.set", json!({"block": c.to_string(), "para": 0, "offset": 0})).unwrap();
+    a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    a.ui.tab = "Table Layout".into();
+    let mut h = harness(a);
+    h.run();
+    let fruit = |h: &Harness<'static, NoteApp>| table(h.state()).rows.iter().map(|r| r.cells[0].text()).collect::<Vec<_>>();
+    let from_menu = |h: &mut Harness<'static, NoteApp>, item: &str| {
+        h.get_by_label("Sort").click();
+        h.run();
+        h.get_by_label(item).click();
+        h.run();
+    };
+    from_menu(&mut h, "Header Row");
+    assert!(table(h.state()).header_row);
+    from_menu(&mut h, "Sort Descending");
+    assert_eq!(fruit(&h), vec!["Fruit", "pear", "fig", "apple"]);
+    // Sort… opens on the caret's column, ascending, with the table's header row setting.
+    from_menu(&mut h, "Sort…");
+    assert_eq!(h.state().ui.dialog, Some(Dialog::SortTable { by: [Some(0), None], descending: [false, false], header: true }));
+    // By shop, then by fruit falling; with a header row the columns go by its text.
+    h.state_mut().ui.dialog = Some(Dialog::SortTable { by: [Some(1), Some(0)], descending: [false, true], header: true });
+    h.run();
+    let combos: Vec<String> = h.query_all_by_role(egui::accesskit::Role::ComboBox).filter_map(|n| n.value()).collect();
+    assert_eq!(combos, vec!["Shop", "Fruit"], "columns named by the header row");
+    h.get_by_label("OK").click();
+    h.run();
+    assert_eq!(fruit(&h), vec!["Fruit", "apple", "pear", "fig"]);
+    assert!(h.state().ui.dialog.is_none(), "OK closes the dialog");
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();

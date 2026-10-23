@@ -256,6 +256,38 @@ fn sort_by_the_caret_column() {
 }
 
 #[test]
+fn the_sort_dialog_sorts_by_several_columns_in_turn() {
+    // CT.TableLayout.Data.ShowSortTableRowsDialog (collation unverified, so not `parity:`).
+    let mut s = sample();
+    blank_page(&mut s);
+    run(&mut s, "outline.new", json!({"x": 40.0, "y": 100.0}));
+    run(&mut s, "text.insert", json!({"text": "Fruit\tShop\tPrice\npear\tB\t3\napple\tA\t2\nfig\tB\t1\nkiwi\tA\t5"}));
+    run(&mut s, "edit.selectAll", json!({}));
+    run(&mut s, "edit.selectAll", json!({}));
+    run(&mut s, "insert.convertTextToTable", json!({}));
+    at(&mut s, 2, 0);
+    let undo = s.undo_labels().len();
+    // By shop, then by price falling; the first row becomes the header on the way.
+    let keys = json!([{"col": 1}, {"col": 2, "descending": true}]);
+    assert_eq!(run(&mut s, "table.sortDialog", json!({"keys": keys, "headerRow": true}))["headerRow"], true);
+    assert_eq!(s.undo_labels().len(), undo + 1, "one undo step");
+    let fruit: Vec<String> = grid(&s).iter().map(|r| r[0].clone()).collect();
+    assert_eq!(fruit, vec!["Fruit", "kiwi", "apple", "pear", "fig"]);
+    // Without keys: the caret's column, ascending; without a header row every row sorts.
+    at(&mut s, 1, 0);
+    run(&mut s, "table.sortDialog", json!({"headerRow": false}));
+    let fruit: Vec<String> = grid(&s).iter().map(|r| r[0].clone()).collect();
+    assert_eq!(fruit, vec!["apple", "fig", "Fruit", "kiwi", "pear"]);
+    // Hostile keys change nothing and add no undo step.
+    let undo = s.undo_labels().len();
+    assert!(s.run("table.sortDialog", json!({"keys": [{"col": 3}]})).is_err());
+    assert!(s.run("table.sortDialog", json!({"keys": []})).is_err());
+    assert!(s.run("table.sortDialog", json!({"keys": [{"col": 0}, {"col": 1}, {"col": 2}, {"col": 0}]})).is_err());
+    assert!(s.run("table.sortDialog", json!({"keys": [{"col": "x"}]})).is_err());
+    assert_eq!(s.undo_labels().len(), undo);
+}
+
+#[test]
 fn convert_between_text_and_tables() {
     // parity: NC.Table.ConvertTextToTable, NC.Table.ConvertToText
     let mut s = sample();

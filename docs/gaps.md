@@ -26,8 +26,8 @@ Smaller known shortfalls:
   `missing`.
 - `--automation-read-root`/`--automation-write-root` confine the headless MCP server only; a
   running desktop app reached through `--control` is not confined.
-- Tables: no merged cells, no Sort…
-  dialog; a table is a page object beside containers rather than inside one (decision D2). Cell
+- Tables: no merged cells (the Sort… dialog sorts by up to two columns, the engine by three);
+  a table is a page object beside containers rather than inside one (decision D2). Cell
   ranges copy as tab-separated text (whole tables copy as tables, and as HTML tables for other
   applications).
 - Ctrl+Shift+Minus for subscript (the M365 shortcut table) collides with another row in the same

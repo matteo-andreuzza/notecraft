@@ -62,9 +62,8 @@ pub(crate) fn command(id: &str) -> Option<String> {
     row(id).map(|r| r.command.clone()).filter(|c| !c.is_empty())
 }
 
-/// Whether a toggle control is currently on.
 /// The table the selection is in (the caret's cell, selected cells or a selected table).
-fn current_table(app: &NoteApp) -> Option<&notecraft_engine::doc::Table> {
+pub(crate) fn current_table(app: &NoteApp) -> Option<&notecraft_engine::doc::Table> {
     use notecraft_engine::selection::{Block, PageSel};
     let page = app.session.page()?;
     match &app.session.sel.on_page {
@@ -78,6 +77,7 @@ fn current_table(app: &NoteApp) -> Option<&notecraft_engine::doc::Table> {
     }
 }
 
+/// Whether a toggle control is currently on.
 pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
     let s = &app.session;
     let fmt = || {
@@ -331,6 +331,20 @@ pub(crate) fn dialog_for(app: &NoteApp, id: &str) -> Option<crate::dialogs::Dial
         // Edit Link… starts from the link under the caret or on the selected object.
         "LinkEdit" => Some(Dialog::Link { url: app.session.current_link().unwrap_or_default(), text: String::new(), filter: String::new() }),
         "TableInsert" => Some(Dialog::InsertTable(2, 2)),
+        // Sort… starts from the caret's column, ascending.
+        "ShowSortTableRowsDialog" => {
+            use notecraft_engine::selection::{Block, PageSel};
+            let t = current_table(app)?;
+            let col = match &app.session.sel.on_page {
+                PageSel::Text(r) => match r.head.block {
+                    Block::Cell(c) => app.session.page().and_then(|p| p.table_of_cell(c)).map_or(0, |(_, _, c)| c),
+                    _ => 0,
+                },
+                PageSel::Cells { cols, .. } => cols.0,
+                _ => 0,
+            };
+            Some(Dialog::SortTable { by: [Some(col), None], descending: [false, false], header: t.header_row })
+        }
         "SymbolInsertGallery" | "SymbolsDialog" => Some(Dialog::Symbol),
         "ParagraphSpacingOptions" => {
             let p = app.session.text_range().and_then(|r| {
