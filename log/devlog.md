@@ -384,3 +384,28 @@ this log plus a green tree is how the next agent picks up.
 - Open: see `plan/handoff.md` §7 (ink leftovers: ruler, Ink to Shape, tablet pressure, pens in
   settings; picture leftovers: 45° rotation and crop, files pasted from a file manager; page
   templates need screenshots).
+
+## 2026-10-23 — M2: Paste Options on objects, Insert File on drop, pens kept, the ruler (D7)
+
+- **Paste Options in context menus** (`*.PasteGalleryMini`): a "Paste Options:" caption over
+  the four paste choices as icon buttons (Keep Source Formatting, Merge Formatting, Keep Text
+  Only, Picture; distinct icons now), each reading the system clipboard as Ctrl+V does — the
+  old menu item pasted only NoteCraft's own clipboard. Now on the ink menu too
+  (`CM.InkDrawing.PasteGalleryMini` wired).
+- **Insert File on drop** (`BEH.Paste.Files`): a dropped PDF asks Attach File / Insert
+  Printout / Cancel (several at once are asked about once); pictures still insert directly,
+  other files are attached (NoteCraft prints only PDFs and pictures).
+- **Pens kept**: the desktop settings remember the pen gallery, the selected pen, the eraser
+  size and the shape (`settings.json` › `drawing`); `DrawState::normalize` repairs what a file
+  gives back (≤ 32 pens, widths in range, the Type tool, no ruler).
+- **The ruler (decision D7, `docs/plan.md` §4.12)**: `notecraft_ink::ruler` (geometry and
+  `snap`), `DrawState.ruler` (session state, never saved or undone), `draw.ruler`
+  (`R.Draw.Tools.Ruler`, shown in the middle of the page's view) and `draw.rulerPlace`
+  (`NC.Draw.RulerPlace`, new row, verified); `draw.stroke` lays a stroke started within 12 pt of
+  a long edge along it (`"free": true` opts out), and the canvas shows the same while drawing.
+  The canvas draws it as a translucent card with millimetre ticks and its angle; a drag on it
+  moves it, the wheel over it turns it a degree a notch. Snapshot `ink-ruler.png`.
+- Numbers: wiring 613/1324 (46.3%), behaviour 162/1324 (12.2%), 308 commands.
+- Open: two-finger turning of the ruler, Snap to Grid, Draw with Touch, Ink to Shape, tablet
+  pressure on Linux; files copied in a file manager pasting as attachments; the M2 exit
+  workflows (see `plan/handoff.md` §7).
