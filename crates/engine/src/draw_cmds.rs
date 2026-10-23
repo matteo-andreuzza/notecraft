@@ -95,8 +95,11 @@ pub struct PenStyle {
 /// 1 mm in points.
 const MM: f32 = 72.0 / 25.4;
 
-/// The Draw tab's state: tool, eraser size, the pen gallery and the selected pen.
+/// The Draw tab's state: tool, eraser size, the pen gallery and the selected pen. Read back
+/// from the desktop settings (keys a file lacks take their defaults; [`DrawState::normalize`]
+/// repairs the rest).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct DrawState {
     /// The active tool.
     pub tool: DrawTool,
@@ -131,6 +134,23 @@ impl Default for DrawState {
 }
 
 impl DrawState {
+    /// Repair a state read from outside (a settings file): at most [`MAX_PENS`] pens, tip
+    /// widths in range, the default pens when none are left, a valid selected pen, and the Type
+    /// tool (a run starts typing).
+    pub fn normalize(&mut self) {
+        self.pens.truncate(MAX_PENS);
+        for p in &mut self.pens {
+            p.width = if p.width.is_nan() { 0.5 * MM } else { p.width.clamp(MIN_INK_WIDTH, MAX_INK_WIDTH) };
+        }
+        if self.pens.is_empty() {
+            self.pens = DrawState::default().pens;
+        }
+        if self.pen >= self.pens.len() {
+            self.pen = 0;
+        }
+        self.tool = DrawTool::Type;
+    }
+
     /// The selected pen (the first one if the index is stale).
     pub fn current_pen(&self) -> PenStyle {
         self.pens.get(self.pen).or(self.pens.first()).copied().unwrap_or(PenStyle { tool: InkTool::Pen, color: Rgba::BLACK, width: 0.5 * MM })

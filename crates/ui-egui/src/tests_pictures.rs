@@ -253,6 +253,36 @@ fn dropping_files_inserts_a_picture_and_an_attachment() {
 }
 
 #[test]
+fn dropping_a_pdf_asks_whether_to_attach_it_or_insert_its_printout() {
+    // BEH.Paste.Files: a file NoteCraft can print asks first.
+    let dir = std::env::temp_dir().join(format!("notecraft-drop-pdf-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let pdf = dir.join("report.pdf");
+    std::fs::write(&pdf, notecraft_codecs::pdf::sample_pdf(&[(200.0, 100.0, [0, 0, 255]), (200.0, 100.0, [255, 0, 0])])).unwrap();
+    for (button, pictures) in [("Insert Printout", 2), ("Attach File", 0)] {
+        let (a, _) = clip_app();
+        let mut h = harness(a);
+        h.run();
+        let at = h.state().canvas.viewport.center();
+        h.event(egui::Event::PointerMoved(at));
+        h.run();
+        h.input_mut().dropped_files.push(std::sync::Arc::new(DroppedPath(pdf.clone())));
+        h.run();
+        assert!(matches!(&h.state().ui.dialog, Some(crate::dialogs::Dialog::InsertFile(f)) if f.len() == 1), "BEH.Paste.Files");
+        assert!(h.query_by_label_contains("report.pdf").is_some(), "the question names the file");
+        assert!(h.state().session.page().unwrap().objects.is_empty(), "nothing inserted before the answer");
+        h.get_by_label(button).click();
+        h.run();
+        assert!(h.state().ui.dialog.is_none());
+        let page = h.state().session.page().unwrap();
+        let att = page.objects.iter().find_map(|o| o.as_attachment()).expect("the file is attached either way");
+        assert_eq!(att.name, "report.pdf");
+        assert_eq!(page.objects.iter().filter(|o| o.as_image().is_some()).count(), pictures, "{button}");
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn edit_link_on_a_picture_starts_from_its_link_and_changes_it() {
     let (mut a, id) = page_with_picture();
     a.session.run("object.select", json!({"ids": [id.to_string()]})).unwrap();
@@ -288,6 +318,30 @@ fn paste_picture_from_the_ribbon_takes_the_picture_beside_text() {
     let pics: Vec<_> = page.objects.iter().filter_map(|o| o.as_image()).collect();
     assert_eq!(pics.iter().map(|p| p.pixels).collect::<Vec<_>>(), vec![(16, 12)], "R.Home.Clipboard.PastePicture");
     assert!(page.objects.iter().filter_map(|o| o.as_outline()).all(|o| o.paragraphs.iter().all(|p| p.text() != "a caption")));
+}
+
+#[test]
+fn the_ink_menus_paste_options_paste_from_the_system_clipboard() {
+    // The menus' Paste Options are the four paste choices, and they read the system clipboard
+    // (another program's text here), not only what NoteCraft copied.
+    let (mut a, clip) = clip_app();
+    a.session.run("draw.stroke", json!({"points": [[60, 300], [200, 300]]})).unwrap();
+    a.session.sel.on_page = PageSel::None;
+    clip.lock().unwrap().text = Some("From elsewhere".into());
+    let mut h = harness(a);
+    h.run();
+    let (o, z) = (h.state().canvas.origin, h.state().canvas.zoom.max(0.1) * crate::canvas::PT);
+    right_click(&mut h, egui::pos2(o.x + 130.0 * z, o.y + 300.0 * z));
+    assert!(matches!(h.state().canvas.context_target, Some(crate::canvas::ContextTarget::Ink(_))), "the ink menu is open");
+    assert!(h.query_by_label("Paste Options:").is_some(), "CM.InkDrawing.PasteGalleryMini");
+    for choice in ["Paste: Keep Source Formatting", "Paste: Merge Formatting", "Paste: Picture"] {
+        assert!(h.query_by_label(choice).is_some(), "{choice}");
+    }
+    let at = h.get_by_label("Paste: Keep Text Only").rect().center();
+    crate::tests_canvas::click(&mut h, at);
+    let text = h.state().session.page().unwrap().plain_text();
+    assert!(text.contains("From elsewhere"), "pasted from the system clipboard: {text:?}");
+    assert!(h.query_by_label("Paste Options:").is_none(), "the menu closed");
 }
 
 #[test]

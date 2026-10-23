@@ -389,6 +389,10 @@ fn render_item(app: &mut NoteApp, ui: &mut Ui, id: &'static str, t: Tokens) {
             .on_disabled_hover_text("Not available for this object yet");
         return;
     }
+    if id.ends_with(".PasteGalleryMini") {
+        paste_row(app, ui, id, t);
+        return;
+    }
     if ribbon::special_menu(id) {
         let on = ribbon::enabled(app, id);
         ui.add_enabled_ui(on, |ui| {
@@ -402,6 +406,37 @@ fn render_item(app: &mut NoteApp, ui: &mut Ui, id: &'static str, t: Tokens) {
         return;
     }
     ribbon::menu_item(app, ui, id, t);
+}
+
+/// The choices of the menus' Paste Options row, in the reference's order (unverified).
+const PASTE_CHOICES: &[&str] =
+    &["R.Home.Clipboard.PasteKeepSource", "R.Home.Clipboard.PasteMerge", "R.Home.Clipboard.PasteText", "R.Home.Clipboard.PastePicture"];
+
+/// The menus' Paste Options (`*.PasteGalleryMini`): a "Paste Options:" caption over one icon
+/// button per paste choice. Each runs the ribbon's own command through `ribbon::fire`, so it
+/// reads the system clipboard as Ctrl+V does.
+fn paste_row(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) {
+    let caption = egui::RichText::new(format!("{}:", ribbon::label(id))).color(t.text_dim);
+    ui.add(egui::Label::new(caption).selectable(false));
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 2.0;
+        for choice in PASTE_CHOICES {
+            let on = ribbon::enabled(app, choice);
+            let (rect, resp) = ui.allocate_exact_size(egui::vec2(28.0, 28.0), egui::Sense::click());
+            let label = ribbon::label(choice);
+            resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, &label));
+            if resp.hovered() && on {
+                ui.painter().rect_filled(rect, crate::theme::radius::CONTROL, t.hover);
+            }
+            let (line, accent) = if on { (t.icon, t.accent) } else { (t.text_disabled, t.text_disabled) };
+            crate::icons::draw(ui.painter(), rect.shrink(4.0), choice, line, accent, t.ribbon_card);
+            let resp = resp.on_hover_text(ribbon::tooltip(app, choice));
+            if resp.clicked() && on {
+                ribbon::fire(app, ui, choice);
+                ui.close();
+            }
+        }
+    });
 }
 
 /// A header row of the attachment menu: the file's name (strong) and its size, read from the
@@ -561,8 +596,8 @@ mod tests {
 
     #[test]
     fn object_rows_that_dont_act_on_pictures_yet_are_disabled() {
-        // Paste Options don't act on ink yet: the row is drawn disabled.
-        assert!(!row_live("CM.InkDrawing.PasteGalleryMini"));
+        // Treat Selected Ink As has no command yet: the row is drawn disabled.
+        assert!(!row_live("CM.InkDrawing.TreatInkAsHandwriting"));
         assert!(row_live("CM.InkDrawing.TagsGallery"));
         assert!(row_live("CM.Picture.RestoreImageSize"));
         assert!(row_live("CM.FileAttachment.FileAttachmentOpen"));

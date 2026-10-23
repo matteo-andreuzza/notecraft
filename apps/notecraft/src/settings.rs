@@ -33,6 +33,9 @@ pub struct DesktopSettings {
     pub notebooks: Notebooks,
     /// Pane sizes.
     pub layout: Layout,
+    /// The Draw tab: the pen gallery, the selected pen, the eraser size and the shape (the tool
+    /// itself is not kept: a run starts typing).
+    pub drawing: notecraft_engine::DrawState,
 }
 
 /// Look.
@@ -202,6 +205,7 @@ pub fn capture(app: &NoteApp, previous: &DesktopSettings) -> DesktopSettings {
             navigation_hidden: s.view.notebook_pane_collapsed,
             collapsed: app.ui.nav_collapsed.clone(),
         },
+        drawing: notecraft_engine::DrawState { tool: notecraft_engine::DrawTool::Type, ..s.draw.clone() },
     }
 }
 
@@ -225,6 +229,8 @@ pub fn apply(app: &mut NoteApp, s: &DesktopSettings) {
     // Folds of notebooks that no longer exist are harmless; cap the list against a hostile file.
     app.ui.nav_collapsed = s.layout.collapsed.iter().take(10_000).copied().collect();
     app.ui.recent_notebooks = s.notebooks.recent.iter().take(notecraft_ui_egui::MAX_RECENT_NOTEBOOKS).cloned().collect();
+    app.session.draw = s.drawing.clone();
+    app.session.draw.normalize();
 }
 
 /// The account's user name (`USER`, `USERNAME` on Windows), or empty.
@@ -324,6 +330,8 @@ mod tests {
         app.ui.nav_collapsed.push(nb);
         app.session.prefs.author = "Grace".into();
         app.ui.recent_notebooks = vec!["/notebooks/Work".into(), "/notebooks/Home".into()];
+        app.session.run("draw.addPen", serde_json::json!({"color": "#00ff00", "width": 3.0})).unwrap();
+        app.session.run("draw.eraserLarge", serde_json::json!({})).unwrap();
         let s = capture(&app, &DesktopSettings::default());
         // The sample notebook lives in memory: nothing to reopen.
         assert!(s.notebooks.open.is_empty());
@@ -339,6 +347,12 @@ mod tests {
         assert_eq!(other.session.prefs.author, "Grace");
         // BS.Open.RecentNotebooks.
         assert_eq!(other.ui.recent_notebooks, vec!["/notebooks/Work".to_string(), "/notebooks/Home".to_string()]);
+        // R.Draw.Tools.InkStylesGallery: the pens (an added one too), the selected pen and the
+        // eraser size are remembered; the tool starts as Type.
+        assert_eq!(other.session.draw.pens, app.session.draw.pens);
+        assert_eq!(other.session.draw.current_pen().color.to_hex(), "#00ff00");
+        assert_eq!(other.session.draw.eraser, notecraft_engine::EraserKind::Large);
+        assert_eq!(other.session.draw.tool, notecraft_engine::DrawTool::Type);
         let mut bad = s.clone();
         bad.layout.notebook_pane_width = f32::NAN;
         apply(&mut other, &bad);

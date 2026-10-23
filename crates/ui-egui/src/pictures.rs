@@ -380,6 +380,7 @@ pub(crate) fn handle_drops(app: &mut NoteApp, ctx: &egui::Context) {
     }
     let at = ctx.pointer_latest_pos().filter(|p| app.canvas.viewport.contains(*p)).map(|p| app.canvas.to_page(p));
     let pictures = picture_filter();
+    let mut ask = Vec::new();
     for (k, f) in files.iter().take(MAX_DROPPED).enumerate() {
         let path = f.path();
         let mut params = json!({"path": path.display().to_string()});
@@ -389,9 +390,19 @@ pub(crate) fn handle_drops(app: &mut NoteApp, ctx: &egui::Context) {
             params["y"] = json!(pt.y.max(0.0) + d);
         }
         let ext = path.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).unwrap_or_default();
-        if !(pictures.contains(&ext.as_str()) && app.try_run(ctx, "insert.picture", params.clone()).is_ok()) {
-            app.run(ctx, "insert.file", params);
+        if pictures.contains(&ext.as_str()) && app.try_run(ctx, "insert.picture", params.clone()).is_ok() {
+            continue;
         }
+        // BEH.Paste.Files: a file NoteCraft can print asks first (attach it, or insert its
+        // printout); unless another dialog is open, when it is attached as before.
+        if ext == "pdf" && app.ui.dialog.is_none() {
+            ask.push(params);
+            continue;
+        }
+        app.run(ctx, "insert.file", params);
+    }
+    if !ask.is_empty() {
+        app.ui.dialog = Some(crate::dialogs::Dialog::InsertFile(ask));
     }
 }
 

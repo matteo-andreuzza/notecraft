@@ -61,6 +61,23 @@ fn tools_and_pens_are_session_state_without_undo() {
 }
 
 #[test]
+fn a_draw_state_read_from_outside_is_repaired() {
+    // What the desktop settings file gives back: keys it lacks take their defaults, and
+    // hostile values are clamped instead of refused.
+    let partial: crate::DrawState = serde_json::from_value(json!({"pen": 2, "eraser": "Small"})).unwrap();
+    assert_eq!((partial.pen, partial.eraser, partial.pens.len()), (2, EraserKind::Small, 5));
+    let mut d: crate::DrawState = serde_json::from_value(json!({"tool": "Pen", "pen": 40, "pens": []})).unwrap();
+    d.normalize();
+    assert_eq!((d.tool, d.pen, d.pens.len()), (DrawTool::Type, 0, 5), "no pens: the default gallery");
+    let mut many = crate::DrawState { pens: vec![d.pens[0]; 100], ..Default::default() };
+    many.pens[0].width = f32::NAN;
+    many.pens[1].width = 1e9;
+    many.normalize();
+    assert_eq!(many.pens.len(), crate::draw_cmds::MAX_PENS);
+    assert!(many.pens.iter().all(|p| (notecraft_doc::ink::MIN_INK_WIDTH..=notecraft_doc::ink::MAX_INK_WIDTH).contains(&p.width)));
+}
+
+#[test]
 fn a_stroke_is_one_object_and_one_undo_step() {
     // parity: NC.Draw.Stroke
     let (mut s, id) = with_line();

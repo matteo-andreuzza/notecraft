@@ -44,6 +44,9 @@ pub enum Dialog {
     AltText(String),
     /// Rename the selected file attachment (`CM.FileAttachment.RenameSelected`).
     RenameAttachment(String),
+    /// Insert File (`BEH.Paste.Files`): dropped files NoteCraft can print, as the parameters of
+    /// `insert.file` / `insert.printout` (path, and where they were dropped).
+    InsertFile(Vec<serde_json::Value>),
     /// Color & Thickness of the selected pen (`UI.Panes.ColorThickness`): highlighter or pen,
     /// colour `#rrggbb`, width in points.
     ColorThickness {
@@ -62,6 +65,12 @@ const SYMBOLS: &[&str] = &[
     "©", "®", "™", "€", "£", "¥", "¢", "§", "¶", "†", "‡", "•", "…", "‰", "′", "″", "°", "±", "×", "÷", "≤", "≥", "≠", "≈", "∞", "√", "∑", "π", "Ω",
     "α", "β", "γ", "Δ", "←", "→", "↑", "↓", "↔", "⇒", "★", "☆", "♥", "♦", "♣", "♠", "✓", "✗", "¼", "½", "¾",
 ];
+
+/// The file name in a dropped file's `insert.file` parameters.
+fn file_name(params: &serde_json::Value) -> String {
+    let path = params.get("path").and_then(serde_json::Value::as_str).unwrap_or_default();
+    std::path::Path::new(path).file_name().map_or_else(|| path.to_string(), |n| n.to_string_lossy().into_owned())
+}
 
 fn sections(app: &NoteApp) -> Vec<(Id, String)> {
     let mut out = Vec::new();
@@ -126,6 +135,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
         Dialog::ConfirmEmptyBin => "Empty Recycle Bin",
         Dialog::AltText(_) => "Alt Text",
         Dialog::RenameAttachment(_) => "Rename",
+        Dialog::InsertFile(_) => "Insert File",
         Dialog::ColorThickness { .. } => "Color & Thickness",
     };
     let modal = egui::Modal::new(egui::Id::new("dialog")).show(ctx, |ui| {
@@ -439,6 +449,38 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                         name.clear();
                     }
                     if ui.button("Close").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::InsertFile(files) => {
+                let names: Vec<String> = files.iter().map(file_name).collect();
+                match names.as_slice() {
+                    [one] => ui.label(format!("How do you want to insert \u{201c}{one}\u{201d}?")),
+                    many => ui.label(format!("How do you want to insert these {} files?", many.len())),
+                };
+                if names.len() > 1 {
+                    egui::ScrollArea::vertical().max_height(120.0).show(ui, |ui| {
+                        for n in &names {
+                            ui.label(RichText::new(n).color(t.page_meta));
+                        }
+                    });
+                }
+                ui.add_space(4.0);
+                ui.horizontal(|ui| {
+                    if crate::chrome::primary_button(ui, "Attach File", &t).clicked() {
+                        for p in files.iter() {
+                            app.run(ctx, "insert.file", p.clone());
+                        }
+                        close = true;
+                    }
+                    if ui.button("Insert Printout").clicked() {
+                        for p in files.iter() {
+                            app.run(ctx, "insert.printout", p.clone());
+                        }
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
                         close = true;
                     }
                 });

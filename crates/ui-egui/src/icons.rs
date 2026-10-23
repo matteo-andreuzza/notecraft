@@ -38,7 +38,7 @@ pub fn key_for(id: &str) -> &str {
 /// has the same idea.
 fn set_name(key: &str) -> Option<&'static str> {
     Some(match key {
-        "PasteMenu" | "Paste" | "PasteKeepSource" | "PasteMerge" | "PasteGallery" => "paste",
+        "PasteMenu" | "Paste" | "PasteGallery" => "paste",
         "Cut" => "cut",
         "CopyOneNote" => "copy",
         "FormatPainter" => "painter",
@@ -223,8 +223,24 @@ fn draw_own(pa: &Painter, r: Rect, id: &str, color: Color32, accent: Color32, pa
             rect(pa, r, 0.18, 0.18, 0.72, 0.92, Color32::from_rgb(0xd9, 0xb8, 0x7a), s);
             rect(pa, r, 0.34, 0.1, 0.56, 0.24, color, s);
             rect(pa, r, 0.42, 0.38, 0.88, 0.94, paper, s);
-            if k == "PasteText" {
-                text(pa, Rect::from_min_max(p(r, 0.42, 0.38), p(r, 0.88, 0.94)), "A", 0.7, color, false);
+            // The choices of the Paste Options row get a mark on the sheet: a brush (keep the
+            // source's formatting), an arrow (merge into the destination's), an "A" (text only),
+            // a landscape (picture).
+            match k {
+                "PasteText" => text(pa, Rect::from_min_max(p(r, 0.42, 0.38), p(r, 0.88, 0.94)), "A", 0.7, color, false),
+                "PasteKeepSource" => {
+                    rect(pa, r, 0.52, 0.48, 0.78, 0.62, accent, Stroke::NONE);
+                    line(pa, r, &[(0.65, 0.62), (0.65, 0.86)], s);
+                }
+                "PasteMerge" => {
+                    line(pa, r, &[(0.5, 0.66), (0.8, 0.66)], s);
+                    line(pa, r, &[(0.7, 0.56), (0.8, 0.66), (0.7, 0.76)], s);
+                }
+                "PastePicture" => {
+                    line(pa, r, &[(0.46, 0.86), (0.58, 0.66), (0.68, 0.78), (0.74, 0.7), (0.84, 0.86)], thin);
+                    pa.circle_filled(p(r, 0.72, 0.5), r.width() * 0.06, accent);
+                }
+                _ => {}
             }
         }
         "Cut" => {
