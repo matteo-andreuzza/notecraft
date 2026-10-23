@@ -410,7 +410,7 @@ this log plus a green tree is how the next agent picks up.
   pressure on Linux; files copied in a file manager pasting as attachments; the M2 exit
   workflows (see `plan/handoff.md` §7).
 
-## 2026-10-24 — M2: the exit workflows
+## 2026-10-24 — M2: the exit workflows, Snap to Grid, Draw with Touch (D8)
 
 - **Headless acceptance** (`crates/automation/tests/m2_workflows.rs`, helpers shared with M1 in
   `tests/common/mod.rs`): "a page with a table and pictures" (a table filled with Tab, rows
@@ -436,3 +436,10 @@ this log plus a green tree is how the next agent picks up.
   - Outside the M2 scope but P0/P1 and small: `CM.Tag.FindTaggedNotes`,
     `CM.OutlookTask.TagsRemove`, `CM.Bullet.ChangeToNumberList`, `CM.Number.ChangeToBullet`,
     the object rows of `CM.Text.*` (Rotate, flips, Alt Text, Set Picture as Background, Table).
+- **Decision D8 (`docs/plan.md` §4.13)**: `draw.snapToGrid` (`R.Draw.Shapes.GridSnapTo`) puts a
+  shape's two end points on the page's grid, or on 1/8 in without one, in the engine's
+  `draw.shape` and in the canvas preview; `draw.withTouch` (`R.Draw.Tools.FingerPaintingMode`,
+  on by default) off makes a finger pan with the drawing tools, a finger being a touch without
+  pressure (egui can't tell pens from fingers); two fingers on the ruler move it and turn it
+  about their midpoint, the first finger's drag becoming a drag of the ruler. Both settings are
+  kept in the desktop settings with the pens.

@@ -351,3 +351,78 @@ fn the_ruler_is_shown_turned_moved_and_drawn_along() {
     let half = h.state().session.draw.current_pen().width / 2.0;
     assert!(k[0].points.iter().all(|p| (k[0].pos.y + p.y - (top - half)).abs() < 0.05), "drawn along the edge: {:?}", k[0]);
 }
+
+/// A touch of finger `id` (no pressure, as fingers report).
+fn finger(id: u64, phase: egui::TouchPhase, pos: Pos2) -> egui::Event {
+    egui::Event::Touch { device_id: egui::TouchDeviceId(1), id: egui::TouchId(id), phase, pos, force: None }
+}
+
+#[test]
+fn two_fingers_turn_and_move_the_ruler() {
+    use egui::TouchPhase::{End, Move, Start};
+    let mut h = drawing("draw.pen");
+    h.state_mut().session.run("draw.ruler", json!({"x": 400, "y": 300})).unwrap();
+    h.run();
+    let c = h.state().canvas.to_screen(h.state().session.draw.ruler.unwrap().center);
+    let arm = |deg: f32| egui::Vec2::angled(deg.to_radians()) * 60.0;
+    // As egui-winit sends them: each finger a touch, the first one also the pointer.
+    let fingers = |h: &mut Harness<'static, NoteApp>, phase: egui::TouchPhase, deg: f32, shift: egui::Vec2| {
+        let (one, two) = (c - arm(deg) + shift, c + arm(deg) + shift);
+        h.event(finger(1, phase, one));
+        h.event(finger(2, phase, two));
+        match phase {
+            Start => press(h, one, true),
+            End => press(h, one, false),
+            _ => {
+                h.event(egui::Event::PointerMoved(one));
+                h.run();
+            }
+        }
+    };
+    fingers(&mut h, Start, 0.0, egui::Vec2::ZERO);
+    // Turning both fingers 10° clockwise about the ruler's middle turns it, in place.
+    fingers(&mut h, Move, 5.0, egui::Vec2::ZERO);
+    fingers(&mut h, Move, 10.0, egui::Vec2::ZERO);
+    let r = h.state().session.draw.ruler.unwrap();
+    assert!((r.angle - 10.0).abs() < 0.1, "turned 10°: {r:?}");
+    assert!((r.center.x - 400.0).abs() < 0.1 && (r.center.y - 300.0).abs() < 0.1, "about the point between the fingers: {r:?}");
+    // Sliding both fingers moves it with them.
+    let slide = egui::vec2(30.0, 20.0);
+    fingers(&mut h, Move, 10.0, slide);
+    fingers(&mut h, End, 10.0, slide);
+    let moved = h.state().session.draw.ruler.unwrap().center;
+    let want = h.state().canvas.to_page(c + slide);
+    assert!((moved.x - want.x).abs() < 0.1 && (moved.y - want.y).abs() < 0.1, "moved with the fingers: {moved:?} vs {want:?}");
+    assert!(strokes(&h).is_empty(), "two fingers draw nothing");
+}
+
+#[test]
+fn with_draw_with_touch_off_a_finger_moves_the_page_instead_of_drawing() {
+    // parity: R.Draw.Tools.FingerPaintingMode
+    use egui::TouchPhase::{End, Start};
+    let mut h = drawing("draw.pen");
+    h.state_mut().session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    h.run();
+    h.get_by_label("Draw with Touch").click();
+    h.run();
+    assert!(!h.state().session.draw.with_touch, "draw.withTouch");
+    let at = map(&h);
+    let (a, b) = (at(100.0, 300.0), at(220.0, 200.0));
+    // egui-winit sends a finger as a touch and as the pointer.
+    let finger_drag = |h: &mut Harness<'static, NoteApp>| {
+        h.event(finger(1, Start, a));
+        trace(h, &[a, pos2(a.x + 40.0, a.y - 30.0), b]);
+        h.event(finger(1, End, b));
+        h.run();
+    };
+    finger_drag(&mut h);
+    assert!(strokes(&h).is_empty(), "a finger doesn't draw");
+    // A mouse (or a pen) still draws.
+    trace(&mut h, &[a, pos2(a.x + 40.0, a.y - 30.0), b]);
+    assert_eq!(strokes(&h).len(), 1);
+    // Switched back on, a finger draws.
+    h.get_by_label("Draw with Touch").click();
+    h.run();
+    finger_drag(&mut h);
+    assert_eq!(strokes(&h).len(), 2);
+}

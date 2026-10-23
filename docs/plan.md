@@ -109,9 +109,10 @@ ribbon; [`ui-parity.md`](ui-parity.md)).
 4. **Ink (decision D4 / §4.10; done):** crates `ink-geom` and `ink`, `PageObject::Ink` (`.ncraft`
    format 4), the Draw tab's tools (Type, Lasso Select, Panning Hand, the four erasers, the pen
    gallery, Add Pen, Color & Thickness), strokes with pressure from egui touch force, the ink
-   and lasso context menus, 45°/90° turns and flips of ink, the ruler (D7 / §4.12). Left: recognition
-   (Ink to Text/Math), Ink Replay, tablet pressure on Linux (PhotoCraft's
-   XInput2 `tablet` crate), and crate `render` (CPU oracle for thumbnails and export).
+   and lasso context menus, 45°/90° turns and flips of ink, the ruler (D7 / §4.12), Snap to
+   Grid, Draw with Touch and two fingers on the ruler (D8 / §4.13). Left: recognition (Ink to
+   Text/Math), Ink Replay, tablet pressure on Linux (PhotoCraft's XInput2 `tablet` crate), and
+   crate `render` (CPU oracle for thumbnails and export).
 5. **Dialogs (done):** Insert Table, Link with page search, Move/Copy as a flat searchable list
    (not a tree — simplest compatible choice, noted in the catalog), Options (with the Office
    Theme), Recent Notebooks, the notebook list (Ctrl+G), Symbol. Left for later: page templates,
@@ -395,8 +396,28 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   turns it to or by an angle. On the canvas a drag that starts on the ruler moves it (with the
   pen, only away from its edges, where it draws instead); the mouse wheel over it turns it a
   degree a notch, up counterclockwise, and doesn't scroll the page (unverified).
-- **Later:** two-finger turning on touch screens, snapping the angle to 0/45/90°, the erasers
-  and the Shape tool against its edge, measuring.
+- **Later:** snapping the angle to 0/45/90°, the erasers and the Shape tool against its edge,
+  measuring. (Two-finger moving and turning: §4.13.)
+
+### 4.13 Snap to Grid, Draw with Touch, two fingers on the ruler (decision D8, 2026-10-24)
+
+- **Session settings, like the pens.** `DrawState.snap_to_grid` (off) and `DrawState.with_touch`
+  (on) are switched by `draw.snapToGrid` and `draw.withTouch` (`{"on"?: bool}`), never undone,
+  and remembered in the desktop settings with the pens (starting values unverified).
+- **Snap to Grid** moves the two points a shape is drawn between onto the nearest grid
+  crossing: the page's own grid when it shows one (View › Rule Lines › a grid), else 1/8 in
+  (9 pt, the small grid's spacing), counted from the page's top-left corner where grid lines
+  start. The engine does it in `draw.shape`; the canvas previews the same. Freehand strokes,
+  moving and resizing don't snap (what the reference snaps beyond shapes is unverified).
+- **Draw with Touch off:** a finger dragged with Pen, Eraser, Shape, Insert Space or Lasso
+  moves the page instead (the Panning Hand's gesture); the mouse and pens keep drawing. egui
+  doesn't say whether a touch is a pen or a finger, so a finger is a touch that reports no
+  pressure (winit gives pressure for pens where the platform does; a finger with pressure would
+  draw).
+- **Two fingers on the ruler** (their midpoint on it) move it with them and turn it about that
+  midpoint by the angle the fingers turn (egui's multi-touch rotation), without scrolling the
+  page. The first finger's drag (egui-winit also sends it as the pointer) becomes a drag of the
+  ruler, and a stroke, shape or lasso it had begun is dropped.
 
 ## 5. Risks
 
@@ -420,6 +441,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | D4 | 2026-10-20 | Ink strokes are page objects, one stroke per object (`PageObject::Ink`, points relative to the object's position with per-point pressure, colour, width, pen or highlighter); `.ncraft` version 4; geometry in `ink-geom` (L0), stroke operations in `ink` (L2); tools are session state (§4.10). | — (the plan named the crates; the object shape was open) | Every object command (select, lasso, delete, clipboard, order, rotate, move, undo) works on ink unchanged; [MS-ONE] ink nodes map stroke by stroke, losing only their grouping. |
 | D5 | 2026-10-21 | Tags on ink: a stroke carries `tags` like a paragraph (optional field, format 4 unchanged); the tag commands treat the selected strokes as one drawing, putting a new tag on its leftmost stroke and removing or checking it on all (§4.11). | — | Strokes are separate objects (D4), so tagging each would list one drawing many times in Find Tags; one anchor stroke keeps one entry per tag and maps to [MS-ONE]'s tag on the ink node. |
 | D6 | 2026-10-21 | Tab after a paragraph's text makes it a one-row, two-column table that takes the paragraph's place (the container splits around it); no session state, later Tabs and Enters use the table's own keys (§4.8). | — | Tables are separate objects (D2), so the paragraph must leave its container; the one-row table's existing Tab/Enter behaviour already covers "keep creating". |
+| D8 | 2026-10-24 | Snap to Grid puts shapes' end points on the page's grid (1/8 in without one); Draw with Touch off turns a pressureless touch into panning; two fingers on the ruler move and turn it (§4.13). | — | Settings only, no format change; snapping lives in the engine's `draw.shape`, so headless clients get it too. |
 | D7 | 2026-10-23 | The Draw tab's ruler is session state (`DrawState.ruler`: centre and angle in page space), never saved or undone; a stroke that starts near one of its long edges is laid along it by the engine's `draw.stroke` (§4.12). | — | No document change and no format bump; the engine owns the snapping, so the canvas, the control channel and MCP draw the same lines. |
 
 ## 7. Assumptions

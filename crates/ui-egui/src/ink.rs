@@ -254,8 +254,10 @@ pub(crate) fn draw(app: &NoteApp, painter: &Painter, page: &Page, t: Tokens, pag
         Some(Gesture::Shape { from, to }) => {
             let pen = app.session.draw.current_pen();
             let z = PT * app.canvas.zoom.max(0.1);
-            let screen: Vec<Pos2> =
-                notecraft_ink::shape_points(app.session.draw.shape, *from, *to).into_iter().map(|p| app.canvas.to_screen(p)).collect();
+            // Snap to Grid shows where the shape will land.
+            let page = app.session.page().map(|p| p.as_ref());
+            let (a, b) = (app.session.draw.grid_point(page, *from), app.session.draw.grid_point(page, *to));
+            let screen: Vec<Pos2> = notecraft_ink::shape_points(app.session.draw.shape, a, b).into_iter().map(|p| app.canvas.to_screen(p)).collect();
             let half = vec![(pen.width * z / 2.0).max(0.5); screen.len()];
             paint_stroke(painter, &screen, &half, ink_color(pen.color, pen.tool, page_text), pen.tool == InkTool::Pen);
         }
@@ -444,6 +446,38 @@ fn ruler_wheel(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &Response)
     true
 }
 
+/// Two fingers on the ruler move it and turn it about the point between them (decision D8),
+/// instead of scrolling the page. Returns true while they do.
+fn ruler_touch(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context) -> bool {
+    let Some(r) = app.session.draw.ruler else { return false };
+    let Some(m) = ui.input(|i| i.multi_touch()) else { return false };
+    let now = app.canvas.to_page(m.center_pos);
+    if !r.contains(now) {
+        return false;
+    }
+    ctx.input_mut(|i| i.smooth_scroll_delta = egui::Vec2::ZERO);
+    // The first finger is also the pointer: its drag becomes (or stays) a drag of the ruler,
+    // resumed from here when one finger lifts; a stroke, shape or lasso it began is dropped.
+    if let Some(p) = ui.input(|i| i.pointer.interact_pos()).map(|p| app.canvas.to_page(p)) {
+        let down = ui.input(|i| i.pointer.primary_down());
+        match app.canvas.ink.gesture.as_mut() {
+            Some(Gesture::Ruler { last }) => *last = p,
+            Some(Gesture::Stroke(_) | Gesture::Shape { .. } | Gesture::Lasso(_)) => app.canvas.ink.gesture = Some(Gesture::Ruler { last: p }),
+            None if down => app.canvas.ink.gesture = Some(Gesture::Ruler { last: p }),
+            _ => {}
+        }
+    }
+    let before = app.canvas.to_page(m.center_pos - m.translation_delta);
+    if m.rotation_delta == 0.0 && now == before {
+        return true;
+    }
+    let (sin, cos) = m.rotation_delta.sin_cos();
+    let (dx, dy) = (r.center.x - before.x, r.center.y - before.y);
+    let (x, y) = (now.x + dx * cos - dy * sin, now.y + dx * sin + dy * cos);
+    app.run(ctx, "draw.rulerPlace", json!({"x": x, "y": y, "turn": m.rotation_delta.to_degrees()}));
+    true
+}
+
 /// The pen pressure of this frame: the latest touch force the platform reported (winit gives
 /// one for pens on some platforms), else the last one seen in this gesture, else 0.5.
 fn pressure(app: &mut NoteApp, ui: &Ui) -> f32 {
@@ -480,7 +514,7 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
             }
         }
     }
-    if ruler_wheel(app, ui, ctx, resp) {
+    if ruler_wheel(app, ui, ctx, resp) || ruler_touch(app, ui, ctx) {
         return true;
     }
     let shift = ui.input(|i| i.modifiers.shift);
@@ -513,6 +547,18 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
         {
             if resp.drag_started() {
                 app.canvas.ink.gesture = Some(Gesture::Ruler { last: at });
+            }
+            return true;
+        }
+        // Draw with Touch off (decision D8): a finger moves the page instead. A finger is a touch
+        // without pressure; pens report pressure (winit gives touch force for them).
+        if !app.session.draw.with_touch
+            && matches!(tool, DrawTool::Pen | DrawTool::Eraser | DrawTool::Shape | DrawTool::Space | DrawTool::Lasso)
+            && app.canvas.ink.force.is_none()
+            && ui.input(|i| i.any_touches())
+        {
+            if resp.drag_started() {
+                app.canvas.ink.gesture = Some(Gesture::Pan);
             }
             return true;
         }

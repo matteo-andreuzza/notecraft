@@ -106,6 +106,39 @@ fn the_ruler_lays_strokes_along_its_edge() {
 }
 
 #[test]
+fn snap_to_grid_puts_shapes_on_the_grid_and_draw_with_touch_switches() {
+    // parity: R.Draw.Shapes.GridSnapTo
+    let mut s = sample();
+    blank_page(&mut s);
+    let ends = |s: &Session| {
+        let k = strokes(s).pop().unwrap();
+        let (a, b) = (k.points[0], k.points[k.points.len() - 1]);
+        ((k.pos.x + a.x, k.pos.y + a.y), (k.pos.x + b.x, k.pos.y + b.y))
+    };
+    let undo = s.undo_labels().len();
+    assert_eq!(run(&mut s, "draw.snapToGrid", json!({}))["snap"], true);
+    assert_eq!(s.undo_labels().len(), undo, "a setting, not an edit");
+    // No grid on the page: 1/8 in (9 pt).
+    run(&mut s, "draw.shape", json!({"kind": "line", "from": [13, 22], "to": [100, 47]}));
+    assert_eq!(ends(&s), ((9.0, 18.0), (99.0, 45.0)));
+    // A page with a large grid: its spacing (27 pt).
+    run(&mut s, "view.ruleLines", json!({"kind": "gridLarge"}));
+    run(&mut s, "draw.shape", json!({"kind": "line", "from": [13, 22], "to": [100, 47]}));
+    assert_eq!(ends(&s), ((0.0, 27.0), (108.0, 54.0)));
+    // Off: where the pointer was; freehand strokes never snap.
+    run(&mut s, "draw.snapToGrid", json!({"on": false}));
+    run(&mut s, "draw.shape", json!({"kind": "line", "from": [13, 22], "to": [100, 47]}));
+    assert_eq!(ends(&s), ((13.0, 22.0), (100.0, 47.0)));
+    run(&mut s, "draw.snapToGrid", json!({}));
+    run(&mut s, "draw.stroke", json!({"points": [[13, 22], [100, 47]]}));
+    assert_eq!(ends(&s), ((13.0, 22.0), (100.0, 47.0)));
+    // Draw with Touch (R.Draw.Tools.FingerPaintingMode) is on until switched off.
+    assert!(s.draw.with_touch);
+    assert_eq!(run(&mut s, "draw.withTouch", json!({}))["touch"], false);
+    assert_eq!(run(&mut s, "draw.withTouch", json!({"on": true}))["touch"], true);
+}
+
+#[test]
 fn a_stroke_is_one_object_and_one_undo_step() {
     // parity: NC.Draw.Stroke
     let (mut s, id) = with_line();

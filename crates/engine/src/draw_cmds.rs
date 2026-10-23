@@ -118,6 +118,12 @@ pub struct DrawState {
     /// The ruler, when shown (`R.Draw.Tools.Ruler`, decision D7).
     #[serde(default)]
     pub ruler: Option<notecraft_ink::ruler::Ruler>,
+    /// Snap to Grid: shapes start and end on the page's grid (decision D8).
+    #[serde(default)]
+    pub snap_to_grid: bool,
+    /// Draw with Touch: a finger draws with the drawing tools; off, a finger moves the page
+    /// (decision D8; a missing field means on, like [`DrawState::default`]).
+    pub with_touch: bool,
 }
 
 impl Default for DrawState {
@@ -133,11 +139,24 @@ impl Default for DrawState {
             shape: notecraft_ink::ShapeKind::Line,
             lock_shapes: false,
             ruler: None,
+            snap_to_grid: false,
+            with_touch: true,
         }
     }
 }
 
 impl DrawState {
+    /// `p` on the page's grid when Snap to Grid is on (decision D8): the grid's spacing on a
+    /// page with grid lines, else 1/8 in (the small grid's); lines start at the page's corner.
+    pub fn grid_point(&self, page: Option<&notecraft_doc::Page>, p: Point) -> Point {
+        if !self.snap_to_grid {
+            return p;
+        }
+        let lines = page.map(|pg| pg.setup.rule_lines).filter(|r| r.is_grid()).unwrap_or(notecraft_doc::RuleLines::GridSmall);
+        let step = lines.spacing().max(1.0);
+        Point::new((p.x / step).round() * step, (p.y / step).round() * step).sanitized()
+    }
+
     /// Repair a state read from outside (a settings file): at most [`MAX_PENS`] pens, tip
     /// widths in range, the default pens when none are left, a valid selected pen, the Type
     /// tool and no ruler (a run starts typing).
@@ -209,6 +228,18 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             s.draw.lock_shapes = !s.draw.lock_shapes;
             Ok(json!({"locked": s.draw.lock_shapes}))
         })
+        .pure(),
+        CommandSpec::new("draw.snapToGrid", "R.Draw.Shapes.GridSnapTo", "Snap to Grid", "Draw/Shapes/Snap to Grid", |s, v| {
+            s.draw.snap_to_grid = p::bool(v, "on").unwrap_or(!s.draw.snap_to_grid);
+            Ok(json!({"snap": s.draw.snap_to_grid}))
+        })
+        .params(r#"{"on"?: bool (default: switch)}"#)
+        .pure(),
+        CommandSpec::new("draw.withTouch", "R.Draw.Tools.FingerPaintingMode", "Draw with Touch", "Draw/Tools/Draw with Touch", |s, v| {
+            s.draw.with_touch = p::bool(v, "on").unwrap_or(!s.draw.with_touch);
+            Ok(json!({"touch": s.draw.with_touch}))
+        })
+        .params(r#"{"on"?: bool (default: switch)}"#)
         .pure(),
         CommandSpec::new("draw.ruler", "R.Draw.Tools.Ruler", "Ruler", "Draw/Tools/Ruler", toggle_ruler)
             .params(r#"{"x"?: pt, "y"?: pt centre when shown (default: the top left of the page's content area), "angle"?: degrees clockwise}"#)
@@ -364,6 +395,7 @@ fn draw_shape(s: &mut Session, v: &Value) -> CmdResult {
         None => s.draw.shape,
     };
     let (a, b) = (point_param(v, "from")?, point_param(v, "to")?);
+    let (a, b) = (s.draw.grid_point(s.page().map(|p| p.as_ref()), a), s.draw.grid_point(s.page().map(|p| p.as_ref()), b));
     let samples: Vec<(Point, f32)> = notecraft_ink::shape_points(kind, a, b).into_iter().map(|p| (p, notecraft_doc::ink::DEFAULT_PRESSURE)).collect();
     push_ink(s, v, &samples)
 }
