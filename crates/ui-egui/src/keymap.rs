@@ -210,6 +210,29 @@ fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) ->
             run(app, ctx, "text.deleteForward", json!({}));
             true
         }
+        // A selected container or table: arrows nudge it, Shift+Left/Right make a container
+        // narrower or wider (CM.NoteContainer.ObjectMove / ObjectResize; unverified step).
+        Key::ArrowLeft | Key::ArrowRight | Key::ArrowUp | Key::ArrowDown
+            if canvas && !m.alt && !media_selected(app) && block_selected(app).is_some() =>
+        {
+            let step = if m.command || m.ctrl { 10.0 } else { 1.0 };
+            let (dx, dy) = match key {
+                Key::ArrowLeft => (-step, 0.0),
+                Key::ArrowRight => (step, 0.0),
+                Key::ArrowUp => (0.0, -step),
+                _ => (0.0, step),
+            };
+            if !m.shift {
+                run(app, ctx, "object.move", json!({"dx": dx, "dy": dy}));
+            } else if let Some(o) = block_selected(app).filter(|o| !o.table)
+                && dx != 0.0
+            {
+                // The text column's width: from the text's left edge to the frame's right padding.
+                let w = (o.rect.max.x - 4.0 - o.left) / (crate::canvas::PT * app.canvas.zoom.max(0.1)) + dx;
+                run(app, ctx, "object.resize", json!({"id": o.id.to_string(), "width": w.max(notecraft_engine::doc::page::MIN_OUTLINE_WIDTH)}));
+            }
+            true
+        }
         // A selected picture or attachment: arrows nudge it, Shift+arrows resize a picture
         // (CM.Picture.ObjectMove / ObjectResize; unverified step: 1 pt, 10 with Ctrl).
         Key::ArrowLeft | Key::ArrowRight | Key::ArrowUp | Key::ArrowDown if canvas && !m.alt && media_selected(app) => {
@@ -424,6 +447,12 @@ pub fn handle_input(app: &mut NoteApp, ctx: &egui::Context) {
 }
 
 /// Whether the page selection holds a picture or attachment (arrows move it then).
+/// The layout of the note container or table selected as an object, if one is.
+fn block_selected(app: &NoteApp) -> Option<crate::canvas::OutlineLayout> {
+    let notecraft_engine::selection::PageSel::Objects { ids } = &app.session.sel.on_page else { return None };
+    app.canvas.outlines.iter().find(|o| ids.contains(&o.id)).copied()
+}
+
 fn media_selected(app: &NoteApp) -> bool {
     let (Some(page), notecraft_engine::selection::PageSel::Objects { ids }) = (app.session.page(), &app.session.sel.on_page) else { return false };
     ids.iter().any(|id| page.image(*id).is_some() || page.attachment(*id).is_some() || page.ink(*id).is_some())

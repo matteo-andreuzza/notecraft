@@ -400,6 +400,70 @@ fn right_click_on_a_container_bar_selects_it_opens_the_note_container_menu_and_r
 }
 
 #[test]
+fn the_container_menus_move_then_arrow_keys_nudge_the_container() {
+    // parity: CM.NoteContainer.OrderObjectsMenu
+    let (a, o) = page_for_context_menu("Alpha\nBeta");
+    let mut h = harness(a);
+    h.run();
+    let ol = h.state().canvas.outlines.iter().find(|x| !x.table).copied().unwrap();
+    right_click(&mut h, ol.bar.center());
+    assert!(h.query_by_label_contains("Order").is_some(), "CM.NoteContainer.OrderObjectsMenu");
+    h.get_by_label("Move").click();
+    h.run();
+    let at = |h: &Harness<'static, NoteApp>| h.state().session.page().unwrap().outline(o).unwrap().pos;
+    let before = at(&h);
+    for _ in 0..3 {
+        h.key_press(egui::Key::ArrowRight);
+        h.run();
+    }
+    h.key_press_modifiers(egui::Modifiers::CTRL, egui::Key::ArrowDown);
+    h.run();
+    assert_eq!((at(&h).x - before.x, at(&h).y - before.y), (3.0, 10.0), "CM.NoteContainer.ObjectMove: arrows nudge 1 pt, 10 with Ctrl");
+}
+
+#[test]
+fn the_container_menus_resize_then_shift_arrows_change_its_width() {
+    let (a, o) = page_for_context_menu("Alpha\nBeta");
+    let mut h = harness(a);
+    h.run();
+    let ol = h.state().canvas.outlines.iter().find(|x| !x.table).copied().unwrap();
+    right_click(&mut h, ol.bar.center());
+    h.get_by_label("Resize").click();
+    h.run();
+    let width = |h: &Harness<'static, NoteApp>| match h.state().session.page().unwrap().outline(o).unwrap().width {
+        notecraft_engine::doc::OutlineWidth::Fixed(w) => w,
+        w => panic!("not resized: {w:?}"),
+    };
+    let auto = h.state().canvas.outlines.iter().find(|x| x.id == o).map(|x| (x.rect.max.x - 4.0 - x.left) / crate::canvas::PT).unwrap();
+    h.key_press_modifiers(egui::Modifiers::SHIFT, egui::Key::ArrowRight);
+    h.run();
+    let w1 = width(&h);
+    assert!((w1 - auto - 1.0).abs() < 0.01, "from its laid-out width ({auto}) one wider: {w1}");
+    for _ in 0..2 {
+        h.key_press_modifiers(egui::Modifiers::SHIFT, egui::Key::ArrowLeft);
+        h.run();
+    }
+    assert!((width(&h) - (w1 - 2.0)).abs() < 0.01, "CM.NoteContainer.ObjectResize: Shift+Left narrows by 1 pt ({w1} → {})", width(&h));
+    let undo = h.state().session.undo_labels().len();
+    assert!(undo > 0);
+}
+
+#[test]
+fn the_handle_menus_table_submenu_opens_insert_table() {
+    // parity: CM.ParagraphHandle.TableMenu, CM.ParagraphHandle.TableInsert
+    let (a, o) = page_for_context_menu("Alpha\nBeta");
+    let mut h = harness(a);
+    h.run();
+    let handle = h.state().canvas.para(Block::Outline(o), 0).unwrap().handle.center();
+    right_click(&mut h, handle);
+    h.get_by_label_contains("Table").click();
+    h.run();
+    h.get_by_label("Insert Table").click();
+    h.run();
+    assert_eq!(h.state().ui.dialog, Some(crate::dialogs::Dialog::InsertTable(2, 2)), "Insert Table… from the handle's Table submenu");
+}
+
+#[test]
 fn right_click_in_a_table_cell_opens_the_text_menu_with_the_table_submenu() {
     // parity: CM.Text.SelectTableOneNote
     let (mut a, tid) = page_with_table();

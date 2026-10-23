@@ -355,6 +355,24 @@ fn move_objects(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 fn resize_picture(s: &mut Session, v: &Value) -> CmdResult {
+    // A note container (CM.NoteContainer.ObjectResize): `width` sets its width; without one,
+    // a hint, as Move gives (the keyboard and the right edge do the resizing).
+    let named = match p::id(v, "id")? {
+        Some(id) => Some(id),
+        None => match &s.sel.on_page {
+            PageSel::Objects { ids } => ids.first().copied(),
+            _ => None,
+        },
+    };
+    if let Some(id) = named
+        && s.page().is_some_and(|pg| pg.outline(id).is_some())
+    {
+        let Some(width) = v.get("width") else {
+            s.notice("Drag the container's right edge, or press Shift+Left or Shift+Right, to resize it.");
+            return Ok(Value::Null);
+        };
+        return crate::outline_cmds::resize_outline(s, &json!({"id": id.to_string(), "width": width}));
+    }
     // Selected ink (no picture named): the sizing handles of the ink selection box.
     if p::id(v, "id")?.is_none() && selected(s, true).is_empty() && !crate::draw_cmds::selected_ink(s).is_empty() {
         return crate::draw_cmds::resize_ink(s, v);

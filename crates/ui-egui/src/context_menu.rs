@@ -156,9 +156,6 @@ pub const HANDLE_MENU: &[Entry] = &[
     Entry::Item("CM.ParagraphHandle.PasteGalleryMini"),
     Entry::Item("CM.ParagraphHandle.Delete"),
     Entry::Item("CM.ParagraphHandle.HyperlinkCreate"),
-    Entry::Item("CM.ParagraphHandle.CopyTextFromPicture"),
-    Entry::Item("CM.ParagraphHandle.AlternativeText"),
-    Entry::Item("CM.ParagraphHandle.ImageSaveAs"),
     Entry::Submenu(
         "CM.ParagraphHandle.TableMenu",
         &[
@@ -625,7 +622,8 @@ mod tests {
             for id in &placed {
                 assert!(rows.iter().any(|r| r.id == *id), "{id} is not a catalog row");
             }
-            for r in rows.iter().filter(|r| r.id.starts_with(prefix)) {
+            // Out-of-scope rows name their replacement and may be left out of the menu.
+            for r in rows.iter().filter(|r| r.id.starts_with(prefix) && r.status != "out-of-scope") {
                 assert!(placed.contains(&r.id.as_str()), "catalog row {} is not placed in its context menu", r.id);
             }
         }

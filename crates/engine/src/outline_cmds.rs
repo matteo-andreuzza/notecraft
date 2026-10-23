@@ -315,7 +315,7 @@ fn move_outline(s: &mut Session, v: &Value) -> CmdResult {
     Ok(Value::Null)
 }
 
-fn resize_outline(s: &mut Session, v: &Value) -> CmdResult {
+pub(crate) fn resize_outline(s: &mut Session, v: &Value) -> CmdResult {
     let id = p::req_id(v, "id")?;
     let width = match v.get("width") {
         None | Some(Value::Null) => OutlineWidth::Auto,

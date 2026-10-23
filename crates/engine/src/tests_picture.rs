@@ -439,3 +439,23 @@ fn paste_picture_takes_the_picture_even_with_text() {
     assert!(s.run("edit.pastePicture", json!({"text": "T"})).is_err());
     assert!(s.run("edit.pastePicture", json!({"image": data(b"junk")})).is_err());
 }
+
+#[test]
+fn a_selected_container_moves_and_resizes_like_an_object() {
+    // CM.NoteContainer.ObjectMove / ObjectResize: without amounts they only say how.
+    let mut s = sample();
+    blank_page(&mut s);
+    run(&mut s, "outline.new", json!({"x": 40.0, "y": 100.0}));
+    run(&mut s, "text.insert", json!({"text": "note"}));
+    let o = s.page().unwrap().objects[0].id();
+    run(&mut s, "object.select", json!({"ids": [o.to_string()]}));
+    let (undo, said) = (s.undo_labels().len(), s.messages.len());
+    run(&mut s, "object.move", json!({}));
+    run(&mut s, "object.resize", json!({}));
+    assert_eq!((s.undo_labels().len(), s.messages.len()), (undo, said + 2), "two hints, no edit");
+    run(&mut s, "object.move", json!({"dx": 5.0, "dy": 0.0}));
+    run(&mut s, "object.resize", json!({"width": 300.0}));
+    let ol = s.page().unwrap().outline(o).unwrap().clone();
+    assert_eq!((ol.pos.x, ol.width), (45.0, notecraft_doc::OutlineWidth::Fixed(300.0)));
+    assert!(s.run("object.resize", json!({"width": "wide"})).is_err());
+}
