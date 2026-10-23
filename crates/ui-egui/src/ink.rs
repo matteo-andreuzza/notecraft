@@ -13,6 +13,7 @@ use notecraft_engine::doc::ink::DEFAULT_PRESSURE;
 use notecraft_engine::doc::{Id, Ink, InkTool, Page, PageObject, TagUse};
 use notecraft_engine::selection::PageSel;
 use notecraft_engine::{DrawTool, PenStyle};
+use notecraft_ink::ruler::{self, Ruler};
 use serde_json::json;
 
 use crate::canvas::PT;
@@ -71,6 +72,8 @@ pub(crate) enum Gesture {
     /// Resizing the selected ink by a handle (`pictures::handles` order): the box when the drag
     /// began and as last sent (page `x, y, w, h`), and where the pointer went down.
     Resize { handle: usize, start: (f32, f32, f32, f32), last: (f32, f32, f32, f32), grab: Point },
+    /// Moving the ruler: the last page point.
+    Ruler { last: Point },
 }
 
 /// The canvas's ink state.
@@ -242,6 +245,8 @@ pub(crate) fn draw(app: &NoteApp, painter: &Painter, page: &Page, t: Tokens, pag
                 link: None,
                 tags: Vec::new(),
             };
+            let along = app.session.draw.ruler.and_then(|r| r.snap(pts, pen.width / 2.0));
+            let pts = along.as_deref().unwrap_or(pts);
             let screen: Vec<Pos2> = pts.iter().map(|(p, _)| app.canvas.to_screen(*p)).collect();
             let half: Vec<f32> = pts.iter().map(|(_, pr)| (live.width_at(*pr) * z / 2.0).max(0.5)).collect();
             paint_stroke(painter, &screen, &half, ink_color(pen.color, pen.tool, page_text), pen.tool == InkTool::Pen);
@@ -288,6 +293,45 @@ pub(crate) fn draw(app: &NoteApp, painter: &Painter, page: &Page, t: Tokens, pag
             painter.rect(h, 1.0, t.page, Stroke::new(1.0, t.accent), egui::StrokeKind::Inside);
         }
     }
+    if let Some(r) = app.session.draw.ruler {
+        draw_ruler(app, painter, r, t);
+    }
+}
+
+/// The ruler (`R.Draw.Tools.Ruler`): a translucent card turned to its angle, millimetre ticks
+/// along its top edge with centimetres numbered, and its angle in the middle (metric scale and
+/// look unverified).
+fn draw_ruler(app: &NoteApp, painter: &Painter, r: Ruler, t: Tokens) {
+    let to = |u: f32, v: f32| app.canvas.to_screen(r.page_point(u, v));
+    let corners: Vec<Pos2> = r.corners().iter().map(|p| app.canvas.to_screen(*p)).collect();
+    painter.add(Shape::convex_polygon(corners, t.ribbon_card.gamma_multiply(0.88), Stroke::new(1.0, t.card_border)));
+    let z = PT * app.canvas.zoom.max(0.1);
+    let (half_l, top) = (ruler::LENGTH / 2.0, -ruler::WIDTH / 2.0);
+    let mm = 72.0 / 25.4;
+    let angle = r.angle.to_radians();
+    let font = egui::FontId::proportional((8.0 * z).clamp(7.0, 14.0));
+    // Millimetre ticks only when they are at least 3 px apart.
+    let step = if mm * z >= 3.0 { 1 } else { 10 };
+    let count = (ruler::LENGTH / mm) as i32;
+    for i in (0..=count).step_by(step) {
+        let u = -half_l + i as f32 * mm;
+        let len = if i % 10 == 0 {
+            12.0
+        } else if i % 5 == 0 {
+            8.0
+        } else {
+            5.0
+        };
+        painter.line_segment([to(u, top), to(u, top + len)], Stroke::new(1.0, t.text));
+        if i % 10 == 0 && i > 0 && i < count {
+            let g = painter.layout_no_wrap(format!("{}", i / 10), font.clone(), t.text_dim);
+            let at = to(u, top + 14.0) - egui::Vec2::angled(angle) * (g.size().x / 2.0);
+            painter.add(egui::epaint::TextShape::new(at, g, t.text_dim).with_angle(angle));
+        }
+    }
+    let g = painter.layout_no_wrap(format!("{}°", r.shown_angle()), egui::FontId::proportional((11.0 * z).clamp(9.0, 18.0)), t.text);
+    let at = to(0.0, 6.0) - egui::Vec2::angled(angle) * (g.size().x / 2.0);
+    painter.add(egui::epaint::TextShape::new(at, g, t.text).with_angle(angle));
 }
 
 /// The sizing handle of the ink selection box under a screen point, with the box in page
@@ -374,6 +418,32 @@ fn moves(ui: &Ui, resp: &Response) -> Vec<Pos2> {
     v
 }
 
+/// The mouse wheel over the ruler turns it a degree a notch (up: counterclockwise; unverified)
+/// instead of scrolling the page. Returns true when it turned.
+fn ruler_wheel(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &Response) -> bool {
+    let Some(r) = app.session.draw.ruler else { return false };
+    let Some(h) = resp.hover_pos() else { return false };
+    if !r.contains(app.canvas.to_page(h)) {
+        return false;
+    }
+    if app.canvas.ink.gesture.is_none() && app.session.draw.tool != DrawTool::Pen {
+        ctx.set_cursor_icon(CursorIcon::Move);
+    }
+    let notches: f32 = ui.input(|i| {
+        i.events
+            .iter()
+            .filter_map(|e| if let Event::MouseWheel { delta, modifiers, .. } = e { (!modifiers.command).then_some(delta.y) } else { None })
+            .map(f32::signum)
+            .sum()
+    });
+    if notches == 0.0 {
+        return false;
+    }
+    ctx.input_mut(|i| i.smooth_scroll_delta = egui::Vec2::ZERO);
+    app.run(ctx, "draw.rulerPlace", json!({"turn": -notches}));
+    true
+}
+
 /// The pen pressure of this frame: the latest touch force the platform reported (winit gives
 /// one for pens on some platforms), else the last one seen in this gesture, else 0.5.
 fn pressure(app: &mut NoteApp, ui: &Ui) -> f32 {
@@ -410,6 +480,9 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
             }
         }
     }
+    if ruler_wheel(app, ui, ctx, resp) {
+        return true;
+    }
     let shift = ui.input(|i| i.modifiers.shift);
     let origin = if resp.drag_started() { ui.input(|i| i.pointer.press_origin()) } else { None };
     if resp.clicked() || resp.drag_started() {
@@ -432,6 +505,17 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
     // Start.
     if let Some(o) = origin.or_else(|| resp.clicked().then(|| resp.interact_pointer_pos()).flatten()) {
         let at = app.canvas.to_page(o);
+        // On the ruler: a drag moves it and a click does nothing, except that a pen starting at
+        // its edge draws (along the edge).
+        if let Some(r) = app.session.draw.ruler
+            && r.contains(at)
+            && !(tool == DrawTool::Pen && r.snap(&[(at, pr)], 0.0).is_some())
+        {
+            if resp.drag_started() {
+                app.canvas.ink.gesture = Some(Gesture::Ruler { last: at });
+            }
+            return true;
+        }
         let in_box = selection_box(app).is_some_and(|b| b.contains(o));
         match tool {
             DrawTool::Pen => {
@@ -544,6 +628,15 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
             Some(Gesture::Shape { from, to }) => {
                 if let Some(p) = pts.last() {
                     *to = constrain(app.session.draw.shape, *from, *p, shift);
+                }
+            }
+            Some(Gesture::Ruler { last }) => {
+                if let Some(to) = pts.last().copied() {
+                    let (dx, dy) = (to.x - last.x, to.y - last.y);
+                    *last = to;
+                    if dx != 0.0 || dy != 0.0 {
+                        app.run(ctx, "draw.rulerPlace", json!({"dx": dx, "dy": dy}));
+                    }
                 }
             }
             Some(Gesture::Pan) => ui.scroll_with_delta(resp.drag_delta()),

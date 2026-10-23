@@ -342,7 +342,7 @@ The Draw tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Draw.Convert.SelectionToTextConvert | Ink to Text | Draw/Convert/Ink to Text | button |  | draw.inkToText | P2 | missing | FLUENT19:SelectionToTextConvert |  |
 | R.Draw.Convert.SelectionToMathConvert | Ink to Math | Draw/Convert/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:SelectionToMathConvert |  |
 | R.Draw.Tools.AddPen | Add Pen | Draw/Tools/Add Pen | button |  | draw.addPen | P1 | wired | GK (Microsoft 365 OneNote Draw tab) | unverified |
-| R.Draw.Tools.Ruler | Ruler | Draw/Tools/Ruler | toggle |  | draw.ruler | P2 | missing | GK (Microsoft 365 OneNote Draw tab) | unverified |
+| R.Draw.Tools.Ruler | Ruler | Draw/Tools/Ruler | toggle |  | draw.ruler | P2 | wired | GK (Microsoft 365 OneNote Draw tab) | Decision D7: a straightedge over the page (54 × 900 pt, millimetre ticks with centimetres numbered, its angle in the middle), shown in the middle of the page's view; a pen stroke started within 12 pt of a long edge runs along it; session state, never saved or undone (size, scale, snap distance, look and starting angle unverified) |
 | R.Draw.Convert.InkToShape | Ink to Shape | Draw/Convert/Ink to Shape | toggle |  | draw.inkToShape | P2 | missing | GK (Microsoft 365 OneNote Draw tab) | unverified |
 | R.Draw.Replay.InkReplay | Ink Replay | Draw/Replay/Ink Replay | button |  | draw.replay | P2 | missing | GK (Microsoft 365 OneNote Draw tab) | unverified |
 | R.Draw.Math.Math | Math (pane) | Draw/Convert/Math | button |  | draw.mathPane | P3 | missing | GK (Microsoft 365 OneNote Draw tab) | unverified |
@@ -1501,6 +1501,7 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 | NC.Draw.Stroke | Ink | Mouse/Canvas/Draw | mouse |  | draw.stroke | P1 | verified | NoteCraft (decision D4) | Dragging with a pen or highlighter draws one stroke: one page object and one undo step; the finished stroke is simplified (0.2 pt). |
 | NC.Draw.Erase | Erase | Mouse/Canvas/Erase | mouse |  | draw.erase | P1 | wired | NoteCraft (decision D4) | Dragging with an eraser erases along the path; one drag is one undo step. Eraser radii (2.5/6/12 pt) unverified |
 | NC.Draw.Shape | Shape | Mouse/Canvas/Shape | mouse |  | draw.shape | P1 | verified | NoteCraft (decision D4) | Dragging with the Shape tool draws the chosen shape with the selected pen as one ink stroke (one undo step); Shift keeps the proportions. |
+| NC.Draw.RulerPlace | Move or Turn the Ruler | Mouse/Canvas/Ruler | mouse |  | draw.rulerPlace | P2 | verified | NoteCraft (decision D7) | Moves the ruler to or by a point and turns it to or by an angle (never an undo step). On the canvas a drag that starts on the ruler, away from its edges with the pen, moves it; the mouse wheel over it turns it a degree a notch, up counterclockwise, instead of scrolling. |
 
 ## Revision history
 

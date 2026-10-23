@@ -308,3 +308,46 @@ fn a_checkbox_tag_on_ink_toggles_on_click_and_find_tags_selects_the_ink() {
     click(&mut h, item);
     assert_eq!(h.state().session.sel.on_page, PageSel::Objects { ids: vec![id] });
 }
+
+#[test]
+fn the_ruler_is_shown_turned_moved_and_drawn_along() {
+    let mut h = drawing("draw.pen");
+    h.state_mut().session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    h.run();
+    h.get_by_label("Ruler").click();
+    h.run();
+    let r = h.state().session.draw.ruler.expect("R.Draw.Tools.Ruler");
+    let c = h.state().canvas.to_screen(r.center);
+    assert!(c.distance(h.state().canvas.viewport.center()) < 2.0, "shown in the middle of the page's view");
+    // The wheel over it turns it a degree a notch, and the page doesn't scroll.
+    let origin = h.state().canvas.origin;
+    h.event(egui::Event::PointerMoved(c));
+    h.run();
+    for _ in 0..3 {
+        h.event(egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Line,
+            delta: egui::vec2(0.0, 1.0),
+            phase: egui::TouchPhase::Move,
+            modifiers: egui::Modifiers::NONE,
+        });
+        h.run();
+    }
+    assert_eq!(h.state().session.draw.ruler.unwrap().angle, 357.0, "three notches up turn it 3° counterclockwise");
+    assert_eq!(h.state().canvas.origin, origin, "the page didn't scroll");
+    h.state_mut().session.run("draw.rulerPlace", json!({"angle": 0})).unwrap();
+    h.run();
+    // A drag that starts on it (away from its edges) moves it; nothing is drawn.
+    let at = map(&h);
+    let (x, y) = (r.center.x, r.center.y);
+    drag(&mut h, at(x, y), at(x + 40.0, y + 30.0));
+    let moved = h.state().session.draw.ruler.unwrap().center;
+    assert!((moved.x - x - 40.0).abs() < 1.0 && (moved.y - y - 30.0).abs() < 1.0, "moved by the drag: {moved:?}");
+    assert!(strokes(&h).is_empty(), "moving the ruler draws nothing");
+    // The pen started just above its top edge draws along it.
+    let top = moved.y - notecraft_ink::ruler::WIDTH / 2.0;
+    trace(&mut h, &[at(moved.x - 100.0, top - 4.0), at(moved.x - 40.0, top - 9.0), at(moved.x + 60.0, top - 2.0)]);
+    let k = strokes(&h);
+    assert_eq!(k.len(), 1);
+    let half = h.state().session.draw.current_pen().width / 2.0;
+    assert!(k[0].points.iter().all(|p| (k[0].pos.y + p.y - (top - half)).abs() < 0.05), "drawn along the edge: {:?}", k[0]);
+}

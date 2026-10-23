@@ -78,6 +78,34 @@ fn a_draw_state_read_from_outside_is_repaired() {
 }
 
 #[test]
+fn the_ruler_lays_strokes_along_its_edge() {
+    // parity: NC.Draw.RulerPlace
+    let mut s = sample();
+    blank_page(&mut s);
+    let undo = s.undo_labels().len();
+    assert!(s.run("draw.rulerPlace", json!({"dx": 5})).is_err(), "no ruler to move yet");
+    run(&mut s, "draw.ruler", json!({"x": 400, "y": 300}));
+    assert!(s.draw.ruler.is_some(), "R.Draw.Tools.Ruler");
+    run(&mut s, "draw.rulerPlace", json!({"turn": -45}));
+    assert_eq!(s.draw.ruler.unwrap().angle, 315.0, "turned counterclockwise");
+    let r = run(&mut s, "draw.rulerPlace", json!({"angle": 0, "dx": 10, "dy": -10}));
+    assert_eq!((r["x"].as_f64(), r["y"].as_f64(), r["shown"].as_u64()), (Some(410.0), Some(290.0), Some(0)));
+    assert_eq!(s.undo_labels().len(), undo, "showing, moving and turning the ruler never adds an undo step");
+    // The top edge is at y = 290 − 27: a wobbly stroke started there runs along it, its side
+    // touching the edge (half of the 2 pt width above it).
+    run(&mut s, "draw.stroke", json!({"points": [[300, 260], [350, 250], [420, 266]], "width": 2.0}));
+    let k = &strokes(&s)[0];
+    assert!(k.points.iter().all(|p| (k.pos.y + p.y - 262.0).abs() < 0.01), "NC.Draw.Stroke along the ruler: {k:?}");
+    assert_eq!(k.points.len(), 2, "a straight line keeps its two ends");
+    // Away from the edges, or with "free", a stroke is drawn as it is.
+    run(&mut s, "draw.stroke", json!({"points": [[300, 100], [350, 120]]}));
+    run(&mut s, "draw.stroke", json!({"points": [[300, 260], [350, 250]], "free": true}));
+    assert!(strokes(&s)[1..].iter().all(|k| k.bounds().height() > 5.0));
+    run(&mut s, "draw.ruler", json!({}));
+    assert!(s.draw.ruler.is_none(), "the button hides it again");
+}
+
+#[test]
 fn a_stroke_is_one_object_and_one_undo_step() {
     // parity: NC.Draw.Stroke
     let (mut s, id) = with_line();

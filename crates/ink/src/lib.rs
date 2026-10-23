@@ -171,6 +171,8 @@ pub fn scale(ink: &mut Ink, origin: Point, kx: f32, ky: f32) {
     map_points(ink, |p| Point::new(origin.x + (p.x - origin.x) * kx, origin.y + (p.y - origin.y) * ky));
 }
 
+pub mod ruler;
+
 #[cfg(test)]
 mod tests;
 

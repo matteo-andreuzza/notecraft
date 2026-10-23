@@ -115,6 +115,9 @@ pub struct DrawState {
     /// Lock Drawing Mode: the Shape tool stays on after a shape (else it returns to Type).
     #[serde(default)]
     pub lock_shapes: bool,
+    /// The ruler, when shown (`R.Draw.Tools.Ruler`, decision D7).
+    #[serde(default)]
+    pub ruler: Option<notecraft_ink::ruler::Ruler>,
 }
 
 impl Default for DrawState {
@@ -129,14 +132,15 @@ impl Default for DrawState {
             pen: 0,
             shape: notecraft_ink::ShapeKind::Line,
             lock_shapes: false,
+            ruler: None,
         }
     }
 }
 
 impl DrawState {
     /// Repair a state read from outside (a settings file): at most [`MAX_PENS`] pens, tip
-    /// widths in range, the default pens when none are left, a valid selected pen, and the Type
-    /// tool (a run starts typing).
+    /// widths in range, the default pens when none are left, a valid selected pen, the Type
+    /// tool and no ruler (a run starts typing).
     pub fn normalize(&mut self) {
         self.pens.truncate(MAX_PENS);
         for p in &mut self.pens {
@@ -149,6 +153,7 @@ impl DrawState {
             self.pen = 0;
         }
         self.tool = DrawTool::Type;
+        self.ruler = None;
     }
 
     /// The selected pen (the first one if the index is stale).
@@ -205,6 +210,14 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             Ok(json!({"locked": s.draw.lock_shapes}))
         })
         .pure(),
+        CommandSpec::new("draw.ruler", "R.Draw.Tools.Ruler", "Ruler", "Draw/Tools/Ruler", toggle_ruler)
+            .params(r#"{"x"?: pt, "y"?: pt centre when shown (default: the top left of the page's content area), "angle"?: degrees clockwise}"#)
+            .pure()
+            .when(need_page),
+        CommandSpec::new("draw.rulerPlace", "NC.Draw.RulerPlace", "Move or Turn the Ruler", "Mouse/Canvas/Ruler", place_ruler)
+            .params(r#"{"x"?: pt, "y"?: pt, "angle"?: degrees} | {"dx"?: pt, "dy"?: pt, "turn"?: degrees}"#)
+            .pure()
+            .when(need_ruler),
         CommandSpec::new("draw.shape", "NC.Draw.Shape", "Shape", "Mouse/Canvas/Shape", draw_shape)
             .params(r##"{"from": [x, y], "to": [x, y] page points, "kind"?: shape (default: the chosen one), "pen"?: index, "color"?: "#rrggbb", "width"?: pt}"##)
             .when(need_page),
@@ -316,7 +329,14 @@ fn path(v: &Value, cap: usize) -> Result<Vec<(Point, f32)>, CmdError> {
 }
 
 fn stroke(s: &mut Session, v: &Value) -> CmdResult {
-    let samples = path(v, notecraft_ink::MAX_SAMPLES)?;
+    let mut samples = path(v, notecraft_ink::MAX_SAMPLES)?;
+    // R.Draw.Tools.Ruler: a stroke started at the ruler's edge runs along it.
+    if let Some(r) = s.draw.ruler
+        && p::bool(v, "free") != Some(true)
+        && let Some(along) = r.snap(&samples, stroke_pen(s, v)?.width / 2.0)
+    {
+        samples = along;
+    }
     push_ink(s, v, &samples)
 }
 
@@ -349,6 +369,46 @@ fn draw_shape(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 /// Clean `samples` and add them as a stroke drawn with the pen the params or the gallery say.
+/// The pen a stroke is drawn with: `pen` (an index) or the selected one, with `tool`, `color`
+/// and `width` overrides.
+fn stroke_pen(s: &Session, v: &Value) -> Result<PenStyle, CmdError> {
+    let base = match p::usize(v, "pen") {
+        Some(i) => *s.draw.pens.get(i).ok_or_else(|| CmdError::Params(format!("there are {} pens", s.draw.pens.len())))?,
+        None => s.draw.current_pen(),
+    };
+    pen_from(v, base)
+}
+
+/// Show the ruler (at `x, y`, else near the top left of the page's content) or hide it.
+fn toggle_ruler(s: &mut Session, v: &Value) -> CmdResult {
+    if s.draw.ruler.take().is_some() {
+        return Ok(json!({"ruler": false}));
+    }
+    let default = Point::new(crate::ops::DEFAULT_LEFT + notecraft_ink::ruler::LENGTH / 2.0, 200.0);
+    let center = match (p::f32(v, "x"), p::f32(v, "y")) {
+        (Some(x), Some(y)) => Point::new(x, y),
+        _ => default,
+    };
+    let r = notecraft_ink::ruler::Ruler::new(center, p::f32(v, "angle").unwrap_or(0.0));
+    s.draw.ruler = Some(r);
+    Ok(json!({"ruler": true, "x": r.center.x, "y": r.center.y, "angle": r.angle}))
+}
+
+/// Move or turn the ruler: to `x`, `y`, `angle`, or by `dx`, `dy`, `turn`.
+fn place_ruler(s: &mut Session, v: &Value) -> CmdResult {
+    let mut r = s.draw.ruler.ok_or_else(|| CmdError::Disabled("show the ruler first".into()))?;
+    r.center.x = p::f32(v, "x").unwrap_or(r.center.x) + p::f32(v, "dx").unwrap_or(0.0);
+    r.center.y = p::f32(v, "y").unwrap_or(r.center.y) + p::f32(v, "dy").unwrap_or(0.0);
+    r.angle = p::f32(v, "angle").unwrap_or(r.angle) + p::f32(v, "turn").unwrap_or(0.0);
+    let r = notecraft_ink::ruler::Ruler::new(r.center, r.angle);
+    s.draw.ruler = Some(r);
+    Ok(json!({"x": r.center.x, "y": r.center.y, "angle": r.angle, "shown": r.shown_angle()}))
+}
+
+fn need_ruler(s: &Session) -> Option<&'static str> {
+    if s.draw.ruler.is_none() { Some("Show the ruler first (Draw › Ruler)") } else { None }
+}
+
 fn push_ink(s: &mut Session, v: &Value, samples: &[(Point, f32)]) -> CmdResult {
     if s.page().is_some_and(|p| p.objects.len() >= MAX_PAGE_OBJECTS) {
         return Err(CmdError::Failed(format!("a page holds at most {MAX_PAGE_OBJECTS} objects")));
@@ -357,11 +417,7 @@ fn push_ink(s: &mut Session, v: &Value, samples: &[(Point, f32)]) -> CmdResult {
     if samples.is_empty() {
         return Err(CmdError::Params("the stroke has no points".into()));
     }
-    let base = match p::usize(v, "pen") {
-        Some(i) => *s.draw.pens.get(i).ok_or_else(|| CmdError::Params(format!("there are {} pens", s.draw.pens.len())))?,
-        None => s.draw.current_pen(),
-    };
-    let pen = pen_from(v, base)?;
+    let pen = stroke_pen(s, v)?;
     let id = s.new_id();
     let ink = Ink::new(id, &samples, pen.color, pen.width, pen.tool);
     s.pending_outline = None;

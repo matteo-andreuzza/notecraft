@@ -109,8 +109,8 @@ ribbon; [`ui-parity.md`](ui-parity.md)).
 4. **Ink (decision D4 / §4.10; done):** crates `ink-geom` and `ink`, `PageObject::Ink` (`.ncraft`
    format 4), the Draw tab's tools (Type, Lasso Select, Panning Hand, the four erasers, the pen
    gallery, Add Pen, Color & Thickness), strokes with pressure from egui touch force, the ink
-   and lasso context menus, 45°/90° turns and flips of ink. Left: the ruler, shapes, recognition
-   (Ink to Text/Math), Ink Replay, resizing ink by handles, tablet pressure on Linux (PhotoCraft's
+   and lasso context menus, 45°/90° turns and flips of ink, the ruler (D7 / §4.12). Left: recognition
+   (Ink to Text/Math), Ink Replay, tablet pressure on Linux (PhotoCraft's
    XInput2 `tablet` crate), and crate `render` (CPU oracle for thumbnails and export).
 5. **Dialogs (done):** Insert Table, Link with page search, Move/Copy as a flat searchable list
    (not a tree — simplest compatible choice, noted in the catalog), Options (with the Office
@@ -352,7 +352,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   then cut), coordinates through `geom::finite`, pressure clamped to 0–1 (NaN → 0.5), widths
   0.1–72 pt, a stroke without points is dropped on load, and strokes count against the
   10,000-objects-per-page cap of D3.
-- **Later:** the ruler, shapes (Ink to Shape), Ink to Text/Math (recognition), Ink Replay,
+- **Later:** Ink to Shape, Ink to Text/Math (recognition), Ink Replay,
   touch-only drawing, resizing ink by handles, the `render` crate drawing ink for export.
 
 ### 4.11 Tags on ink (decision D5, 2026-10-21)
@@ -376,6 +376,28 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 - **M3:** [MS-ONE] note tags hang off the ink node; import puts them on the node's leftmost
   stroke, export on the node that groups the page's strokes.
 
+### 4.12 The ruler (decision D7, 2026-10-23)
+
+- **Session state, not notebook data.** Draw › Ruler shows a straightedge lying over the page:
+  `DrawState.ruler: Option<Ruler { center, angle }>` (`notecraft_ink::ruler`), in page points so
+  it scrolls and zooms with the page. Showing, moving and turning it never add an undo step and
+  nothing of it is saved, in the notebook or in the settings (a run starts without it).
+- **Geometry:** 54 × 900 pt (longer than most windows are wide), centred where the page's view
+  is when shown, turned `angle` degrees clockwise on screen (0–360); it reads its angle as a
+  protractor does, 0–179° counterclockwise from horizontal. Millimetre ticks along the top edge,
+  centimetres numbered (metric scale and look unverified).
+- **Drawing along it:** a stroke whose first sample lies within 12 pt of a long edge (inside or
+  outside) is laid along that edge: every sample moves onto the line half the pen's width outside
+  it, within the ruler's length, keeping its pressure (`Ruler::snap`). The engine does it in
+  `draw.stroke` (so headless clients get it; `"free": true` opts out) and the canvas shows the
+  same while the stroke is drawn.
+- **Moving and turning:** `draw.rulerPlace` (`NC.Draw.RulerPlace`) moves it to or by a point and
+  turns it to or by an angle. On the canvas a drag that starts on the ruler moves it (with the
+  pen, only away from its edges, where it draws instead); the mouse wheel over it turns it a
+  degree a notch, up counterclockwise, and doesn't scroll the page (unverified).
+- **Later:** two-finger turning on touch screens, snapping the angle to 0/45/90°, the erasers
+  and the Shape tool against its edge, measuring.
+
 ## 5. Risks
 
 | Risk | Impact | Mitigation |
@@ -398,6 +420,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | D4 | 2026-10-20 | Ink strokes are page objects, one stroke per object (`PageObject::Ink`, points relative to the object's position with per-point pressure, colour, width, pen or highlighter); `.ncraft` version 4; geometry in `ink-geom` (L0), stroke operations in `ink` (L2); tools are session state (§4.10). | — (the plan named the crates; the object shape was open) | Every object command (select, lasso, delete, clipboard, order, rotate, move, undo) works on ink unchanged; [MS-ONE] ink nodes map stroke by stroke, losing only their grouping. |
 | D5 | 2026-10-21 | Tags on ink: a stroke carries `tags` like a paragraph (optional field, format 4 unchanged); the tag commands treat the selected strokes as one drawing, putting a new tag on its leftmost stroke and removing or checking it on all (§4.11). | — | Strokes are separate objects (D4), so tagging each would list one drawing many times in Find Tags; one anchor stroke keeps one entry per tag and maps to [MS-ONE]'s tag on the ink node. |
 | D6 | 2026-10-21 | Tab after a paragraph's text makes it a one-row, two-column table that takes the paragraph's place (the container splits around it); no session state, later Tabs and Enters use the table's own keys (§4.8). | — | Tables are separate objects (D2), so the paragraph must leave its container; the one-row table's existing Tab/Enter behaviour already covers "keep creating". |
+| D7 | 2026-10-23 | The Draw tab's ruler is session state (`DrawState.ruler`: centre and angle in page space), never saved or undone; a stroke that starts near one of its long edges is laid along it by the engine's `draw.stroke` (§4.12). | — | No document change and no format bump; the engine owns the snapping, so the canvas, the control channel and MCP draw the same lines. |
 
 ## 7. Assumptions
 

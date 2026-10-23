@@ -205,7 +205,7 @@ pub fn capture(app: &NoteApp, previous: &DesktopSettings) -> DesktopSettings {
             navigation_hidden: s.view.notebook_pane_collapsed,
             collapsed: app.ui.nav_collapsed.clone(),
         },
-        drawing: notecraft_engine::DrawState { tool: notecraft_engine::DrawTool::Type, ..s.draw.clone() },
+        drawing: notecraft_engine::DrawState { tool: notecraft_engine::DrawTool::Type, ruler: None, ..s.draw.clone() },
     }
 }
 

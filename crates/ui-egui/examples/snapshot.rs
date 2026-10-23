@@ -263,6 +263,12 @@ fn main() {
         a.ui.theme = ThemeKind::Black;
     });
     shot("ink-lasso", &out, 1.0, |a| ink_page(a, true));
+    // Draw › Ruler (decision D7), turned 30° counterclockwise, with a line drawn along it.
+    shot("ink-ruler", &out, 1.0, |a| {
+        ink_page(a, false);
+        a.session.run("draw.ruler", json!({"x": 420, "y": 330, "angle": -30})).unwrap();
+        a.session.run("draw.stroke", json!({"points": [[300, 380], [520, 250]]})).unwrap();
+    });
     shot("ink-zoom-2x", &out, 2.0, |a| {
         ink_page(a, false);
         a.session.run("view.zoom", json!({"percent": 150})).unwrap();

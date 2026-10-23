@@ -346,6 +346,11 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 app.run(ctx, cmd, json!({"path": path}));
             }
         }
+        // Draw › Ruler shows the ruler in the middle of what the page shows.
+        "draw.ruler" if app.session.draw.ruler.is_none() => {
+            let c = app.canvas.to_page(app.canvas.viewport.center());
+            app.run(ctx, cmd, json!({"x": c.x, "y": c.y}));
+        }
         // The ribbon's and menus' Paste read the system clipboard as Ctrl+V does.
         "edit.paste" | "edit.pasteKeepSource" | "edit.pasteMerge" | "edit.pasteTextOnly" | "edit.pastePicture" => {
             crate::clipboard::paste(app, ctx, cmd, None)
