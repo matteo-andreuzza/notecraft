@@ -452,3 +452,35 @@ this log plus a green tree is how the next agent picks up.
 - Open: the object menu rows above (NoteContainer Order/Move/Resize, ParagraphHandle Alt Text,
   Save As, Table), copied files from a file manager pasting as attachments, merge/split cells
   (to discuss), page templates (need screenshots).
+
+## 2026-10-24 — M2 done: object menus, merged cells (D9), page templates (D10), equations (D11)
+
+- **Object menus:** the note container's Order submenu, Move and Resize (they keep the container
+  selected and say how; the arrow keys then nudge it, Shift+Left/Right change its width), the
+  paragraph handle's Table submenu with Insert Table. The handle's picture rows (Alt Text, Save
+  As, Copy Text from Picture) are `out-of-scope`: a paragraph never holds a picture (D3), the
+  picture's own menu has them.
+- **Merged cells (decision D9, `.ncraft` version 5):** `TableCell::row_span`/`col_span`, covered
+  cells kept in the grid empty and hidden; `table.merge` joins the selected cells' text into the
+  first, `table.split` undoes it; row/column inserts and deletes, Tab and the arrows respect
+  merged cells; Sort refuses cells merged across rows; the canvas lays a merged cell over its
+  columns and rows and draws borders cell by cell. Snapshot `table-merged.png`.
+- **Page templates (decision D10):** NoteCraft's own built-in set (Academic, Blank, Business,
+  Decorative, Planners) built in code, the user's own saved in the preferences (pictures left
+  out), the last five used, and a default template per section (`Section.default_template`)
+  that New Page starts from; Insert › Page Templates opens the Templates pane; Save As Template
+  dialog; `template.list/setDefault/save/delete` for agents (new rows `NC.Templates.*`).
+  Snapshot `templates-pane.png`.
+- **Equations (decision D11):** new pure crate `notecraft-math` (L2) parses the UnicodeMath
+  linear format (fractions with whole terms as operands, scripts, radicals with degrees, large
+  operators with limits, stretchy brackets, matrices, accents, function names, control words,
+  `⬚` slots) and lays it out built up, the large signs drawn as paths; an equation is a
+  paragraph of linear text (`Paragraph::math`), built up on the canvas and edited as text in a
+  light box while the caret is in it; Enter never splits one, a pasted one stays one.
+  Insert › Equation (Alt+=) with built-in equations previewed built up, the contextual Equation
+  tab (Professional, Linear, Symbols, eleven Structures galleries, own icons and a simplified
+  layout), the equation context menu. Snapshots `equations.png`, `equation-tab.png`.
+- **The M2 exit is met:** no P0/P1 row of `R.Insert.*`, `R.Draw.*`, `CT.TableLayout.*`,
+  `CT.Equation.*`, the object `CM.*` or `BEH.Ink/Table/Paste.*` is `missing`; the headless
+  workflows pass. Audio and video (P2) are left for after M3.
+- Numbers: wiring 657/1328 (49.5%), behaviour 174/1328 (13.1%), 335 commands.

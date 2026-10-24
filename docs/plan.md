@@ -115,14 +115,16 @@ ribbon; [`ui-parity.md`](ui-parity.md)).
    crate `render` (CPU oracle for thumbnails and export).
 5. **Dialogs (done):** Insert Table, Link with page search, Move/Copy as a flat searchable list
    (not a tree — simplest compatible choice, noted in the catalog), Options (with the Office
-   Theme), Recent Notebooks, the notebook list (Ctrl+G), Symbol. Left for later: page templates,
-   equations (`math`), asynchronous file dialogs, window geometry, web persistence (IndexedDB)
-   and exports as downloads.
-6. **Audio** recording in pure Rust where possible; video stays a documented gap.
+   Theme), Recent Notebooks, the notebook list (Ctrl+G), Symbol, Sort…, Save As Template; page
+   templates (D10 / §4.15) and equations with crate `math` (D11 / §4.16) are done too. Left for
+   later: asynchronous file dialogs, window geometry, web persistence (IndexedDB) and exports as
+   downloads.
+6. **Audio** recording in pure Rust where possible; video stays a documented gap. Not done in
+   M2: its rows are P2, outside the exit criteria, and the user set it aside; it follows M3.
 
-Exit: the P0/P1 rows of `R.Insert.*`, `R.Draw.*`, `CT.TableLayout.*`, object `CM.*` and
-`BEH.Ink/Table/Paste.*` wired; headless workflows "page with a table and pictures" and
-"handwritten notes"; tag `m2-insert-draw`.
+Exit (met 2026-10-24, tag `m2-insert-draw`): the P0/P1 rows of `R.Insert.*`, `R.Draw.*`,
+`CT.TableLayout.*`, object `CM.*` and `BEH.Ink/Table/Paste.*` wired; headless workflows "page with a
+table and pictures" and "handwritten notes"; tag `m2-insert-draw`.
 
 ### M3–M5 increments
 
