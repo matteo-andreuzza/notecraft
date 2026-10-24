@@ -550,6 +550,28 @@ fn paste_paragraphs(s: &mut Session, caret: Pos, paras: Vec<Paragraph>, mode: Mo
         return Ok(caret);
     }
     let caret_fmt = ops::typing_fmt(s, caret);
+    // A pasted equation stays an equation (decision D11): in the caret's paragraph when that is
+    // empty, else in a new paragraph after it.
+    let mut caret = caret;
+    if let [eq] = paras.as_slice()
+        && let Some(view) = eq.math
+        && caret.block != Block::Title
+    {
+        let page = s.page().ok_or_else(no_page)?;
+        let target = Session::block_paras(page, caret.block).and_then(|ps| ps.get(caret.para));
+        if target.is_some_and(|p| p.math.is_none()) {
+            if !target.is_some_and(Paragraph::is_empty) {
+                let len = target.map_or(0, Paragraph::len);
+                caret = crate::text_cmds::split_at_caret(s, Pos { offset: len, ..caret })?;
+            }
+            let page = s.page_mut().ok_or_else(no_page)?;
+            if let Some(p) = Session::para_mut(page, caret.block, caret.para) {
+                p.math = Some(view);
+                p.list = None;
+                p.tags.clear();
+            }
+        }
+    }
     if caret.block == Block::Title || paras.len() == 1 {
         // One paragraph (or the title, which holds one line): insert its runs.
         let mut runs: Vec<Run> = paras.iter().flat_map(|p| p.runs.clone()).collect();

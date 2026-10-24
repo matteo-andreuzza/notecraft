@@ -26,6 +26,9 @@ Smaller known shortfalls:
   `missing`.
 - `--automation-read-root`/`--automation-write-root` confine the headless MCP server only; a
   running desktop app reached through `--control` is not confined.
+- Equations (D11) are whole paragraphs, not inline in a line of text, and are edited as their
+  linear text (built up only when the caret is elsewhere); no Ink Equation, Normal Text or
+  structure-editing menu rows yet; other applications get the linear text.
 - Page templates (D10) are NoteCraft's own, not the reference's; templates of the user's own
   leave pictures and attachments out (the settings file holds no media).
 - Tables: merged cells (D9) copy to other applications as separate cells (no HTML

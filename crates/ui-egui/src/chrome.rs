@@ -236,8 +236,9 @@ fn search(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: &Tokens) {
 /// with their objects. A contextual tab named in the UI state without its selection falls back
 /// to Home rather than showing tools for nothing.
 pub fn contextual_tabs(app: &NoteApp) -> Vec<&'static Tab> {
-    let in_table = notecraft_engine::commands::find("table.selectTable").is_some_and(|c| (c.enabled)(&app.session).is_none());
-    CONTEXTUAL.iter().filter(|t| t.name == "Table Layout" && in_table).collect()
+    let live = |id: &str| notecraft_engine::commands::find(id).is_some_and(|c| (c.enabled)(&app.session).is_none());
+    let (in_table, in_equation) = (live("table.selectTable"), live("equation.linear"));
+    CONTEXTUAL.iter().filter(|t| t.name == "Table Layout" && in_table || t.name == "Equation" && in_equation).collect()
 }
 
 /// The tab whose body the ribbon shows: the selected one if visible, else Home.

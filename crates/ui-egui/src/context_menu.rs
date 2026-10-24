@@ -149,6 +149,22 @@ pub const CONTAINER_MENU: &[Entry] = &[
     ),
 ];
 
+/// Right-click menu on an equation (catalog `CM.Equation.*`, decision D11): the clipboard and
+/// Professional/Linear; the structure-editing rows of the reference wait for in-place editing
+/// of built-up equations.
+pub const EQUATION_MENU: &[Entry] = &[
+    Entry::Item("CM.Equation.Cut"),
+    Entry::Item("CM.Equation.CopyOneNote"),
+    Entry::Item("CM.Equation.PasteGalleryMini"),
+    Entry::Item("CM.Equation.EquationProfessional"),
+    Entry::Item("CM.Equation.EquationLinearFormat"),
+];
+
+/// Whether the paragraph `para` of `block` is an equation.
+fn is_equation(app: &NoteApp, block: Block, para: usize) -> bool {
+    app.session.page().and_then(|p| notecraft_engine::Session::block_paras(p, block).and_then(|ps| ps.get(para))).is_some_and(|p| p.math.is_some())
+}
+
 /// Right-click menu on a paragraph handle (catalog `CM.ParagraphHandle.*`).
 pub const HANDLE_MENU: &[Entry] = &[
     Entry::Item("CM.ParagraphHandle.Cut"),
@@ -549,6 +565,13 @@ fn place_for(app: &mut NoteApp, ctx: &egui::Context, target: ContextTarget) {
                 app.run(ctx, "outline.selectBranch", json!({}));
             }
         }
+        // A right click on an equation selects all of it, so its menu acts on the equation.
+        ContextTarget::Text(block, para, _) if is_equation(app, block, para) => {
+            let len =
+                app.session.page().and_then(|p| notecraft_engine::Session::block_paras(p, block).and_then(|ps| ps.get(para))).map_or(0, |p| p.len());
+            app.run(ctx, "caret.set", json!({"block": block_param(block), "para": para, "offset": 0}));
+            app.run(ctx, "caret.set", json!({"block": block_param(block), "para": para, "offset": len, "extend": true}));
+        }
         ContextTarget::Text(block, para, offset) => {
             if !inside_selection(app, block, para, offset) {
                 app.run(ctx, "caret.set", json!({"block": block_param(block), "para": para, "offset": offset}));
@@ -578,6 +601,7 @@ pub fn show(app: &mut NoteApp, ui: &Ui, resp: &egui::Response, t: Tokens) {
         match target {
             ContextTarget::Container(_) => render(app, ui, CONTAINER_MENU, t),
             ContextTarget::Handle(..) => render(app, ui, HANDLE_MENU, t),
+            ContextTarget::Text(block, para, _) if is_equation(app, block, para) => render(app, ui, EQUATION_MENU, t),
             ContextTarget::Text(..) => render(app, ui, TEXT_MENU, t),
             ContextTarget::Picture(_) => render(app, ui, PICTURE_MENU, t),
             ContextTarget::Attachment(_) => render(app, ui, ATTACHMENT_MENU, t),

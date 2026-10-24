@@ -467,6 +467,20 @@ pub(crate) fn special_menu(id: &str) -> bool {
                 | "TableInsertGallery"
                 | "ShadingColorPicker"
                 | "InkShapeGallery"
+                | "InsertBuildingBlocksEquationsGallery"
+                | "EquationInsertGallery"
+                | "EquationSymbolsInsertGallery"
+                | "EquationFractionGallery"
+                | "EquationScriptGallery"
+                | "EquationRadicalGallery"
+                | "EquationIntegralGallery"
+                | "EquationLargeOperatorGallery"
+                | "EquationDelimiterGallery"
+                | "EquationFunctionGallery"
+                | "EquationAccentGallery"
+                | "EquationLimitGallery"
+                | "EquationOperatorGallery"
+                | "EquationMatrixGallery"
         )
     )
 }
@@ -540,6 +554,48 @@ pub(crate) fn table_spot(app: &NoteApp) -> Option<notecraft_engine::doc::geom::P
 pub(crate) fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, _t: Tokens) -> bool {
     let ctx = ui.ctx().clone();
     match id.rsplit('.').next() {
+        // Equations (decision D11): the built-in equations, symbols and structures, previewed
+        // built up.
+        Some("InsertBuildingBlocksEquationsGallery" | "EquationInsertGallery") => {
+            ui.label(RichText::new("Built-in").color(_t.text_dim));
+            for (i, (name, text)) in notecraft_engine::EQUATIONS.iter().enumerate() {
+                if crate::math_ui::preview(ui, name, text, 15.0, true, &_t).on_hover_text(*text).clicked() {
+                    app.run(&ctx, "insert.equation", json!({"equation": i}));
+                    ui.close();
+                }
+            }
+            ui.separator();
+            if id.starts_with("CT.") {
+                menu_item(app, ui, "R.Insert.Symbols.EquationInsertNew", _t);
+            }
+            false
+        }
+        Some("EquationSymbolsInsertGallery") => {
+            let syms: Vec<char> = notecraft_engine::EQUATION_SYMBOLS.chars().collect();
+            egui::Grid::new("equation_symbols").spacing(vec2(2.0, 2.0)).show(ui, |ui| {
+                for (i, c) in syms.iter().enumerate() {
+                    if ui.add(egui::Button::new(RichText::new(c.to_string()).size(15.0)).min_size(vec2(26.0, 26.0))).clicked() {
+                        app.run(&ctx, "equation.symbol", json!({"symbol": c.to_string()}));
+                        ui.close();
+                    }
+                    if i % 10 == 9 {
+                        ui.end_row();
+                    }
+                }
+            });
+            false
+        }
+        Some(k) if k.starts_with("Equation") && k.ends_with("Gallery") => {
+            if let Some((cmd, _, _, _, items)) = notecraft_engine::EQUATION_STRUCTURES.iter().find(|x| x.1 == id) {
+                for (i, (name, text)) in items.iter().enumerate() {
+                    if crate::math_ui::preview(ui, name, text, 15.0, false, &_t).on_hover_text(*name).clicked() {
+                        app.run(&ctx, cmd, json!({"item": i}));
+                        ui.close();
+                    }
+                }
+            }
+            false
+        }
         Some("InkShapeGallery") => {
             crate::ink::shape_gallery(app, ui, _t);
             false

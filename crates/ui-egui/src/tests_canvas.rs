@@ -284,6 +284,40 @@ fn merged_cells_lay_out_as_one_and_split_back() {
 }
 
 #[test]
+fn equations_show_built_up_and_edit_as_linear_text() {
+    // parity: R.Insert.Symbols.InsertBuildingBlocksEquationsGallery, CT.Equation.Tools.EquationInsertGallery, CM.Equation.Cut, CM.Equation.PasteGalleryMini
+    let (mut a, o) = page_for_context_menu("Intro");
+    a.ui.tab = "Insert".into();
+    let mut h = harness(a);
+    h.run();
+    // Insert › Equation › a built-in equation: a new equation paragraph, the Equation tab shows.
+    h.get_by_label("Equation").click();
+    h.run();
+    h.get_by_label("Quadratic formula").click();
+    h.run();
+    let para = |h: &Harness<'static, NoteApp>| h.state().session.page().unwrap().outline(o).unwrap().paragraphs[1].clone();
+    assert_eq!((para(&h).text(), para(&h).math), (notecraft_engine::EQUATIONS[2].1.to_string(), Some(notecraft_engine::doc::MathView::Professional)));
+    assert!(crate::chrome::contextual_tabs(h.state()).iter().any(|t| t.name == "Equation"), "the Equation tab while the caret is in it");
+    let editing = h.state().canvas.para(Block::Outline(o), 1).unwrap().clone();
+    assert!(editing.math.is_none(), "linear text while the caret is in it");
+    // Elsewhere, it shows built up: taller than a line of text.
+    h.state_mut().session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 0})).unwrap();
+    h.run();
+    let shown = h.state().canvas.para(Block::Outline(o), 1).unwrap().clone();
+    let m = shown.math.clone().expect("built up");
+    assert!(m.height() > editing.galley.size().y * 1.5, "a stacked fraction: {} vs {}", m.height(), editing.galley.size().y);
+    // Its context menu: Linear, then the equation shows as typed even without the caret.
+    right_click(&mut h, shown.rect().center());
+    assert!(h.query_by_label("Professional").is_some() && h.query_by_label("Paste Options:").is_some(), "CM.Equation");
+    h.get_by_label("Linear").click();
+    h.run();
+    assert_eq!(para(&h).math, Some(notecraft_engine::doc::MathView::Linear));
+    h.state_mut().session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 0})).unwrap();
+    h.run();
+    assert!(h.state().canvas.para(Block::Outline(o), 1).unwrap().math.is_none(), "Linear shows the text");
+}
+
+#[test]
 fn the_insert_table_grid_inserts_below_the_caret_container() {
     let (a, o) = page_with("Above the table");
     let mut h = harness(a);

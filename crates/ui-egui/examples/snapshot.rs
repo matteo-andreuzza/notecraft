@@ -280,6 +280,35 @@ fn main() {
             a.ui.tab = "Table Layout".into();
         });
     }
+    // Equations (decision D11): built up while the caret is elsewhere; one being edited, with
+    // the Equation tab.
+    let equations = |a: &mut NoteApp| {
+        a.session.run("page.new", json!({"title": "Equations"})).unwrap();
+        a.session.run("outline.new", json!({"x": 36.0, "y": 90.0})).unwrap();
+        a.session.run("text.insert", json!({"text": "Some results:"})).unwrap();
+        for eq in [
+            "x=(−b±√(b^2−4ac))/2a",
+            "∑_(k=1)^n k=(n(n+1))/2",
+            "∫_0^1 x^2 dx=1/3",
+            "e^(iπ)+1=0",
+            "A=(■(a&b@c&d)), det A=ad−bc",
+            "√(3&x^2+y^2)≤|x|+|y|",
+            "lim_(x→0) sinx/x=1",
+            "v\u{20D7}=(dx/dt, dy/dt)",
+        ] {
+            a.session.run("text.newline", json!({})).unwrap();
+            a.session.run("insert.equation", json!({"text": eq})).unwrap();
+        }
+    };
+    shot("equations", &out, 1.0, |a| {
+        equations(a);
+        a.session.run("nav.pageTitle", json!({})).unwrap();
+        a.ui.tab = "Insert".into();
+    });
+    shot("equation-tab", &out, 1.0, |a| {
+        equations(a);
+        a.ui.tab = "Equation".into();
+    });
     // Insert › Page Templates (decision D10): the pane beside a page made from Meeting notes.
     shot("templates-pane", &out, 1.0, |a| {
         a.session.run("page.newFromTemplate", json!({"template": "builtin:meeting-notes"})).unwrap();

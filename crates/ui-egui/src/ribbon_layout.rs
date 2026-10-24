@@ -640,7 +640,7 @@ pub const CONTEXTUAL: &[Tab] = &[
                     Item::Row(&["CT.Equation.Tools.EquationOptions"]),
                 ],
             },
-            Group { name: "Symbols", items: &[Item::Gallery("CT.Equation.Symbols.EquationSymbolsInsertGallery", &[], &[])] },
+            Group { name: "Symbols", items: &[Item::LargeMenu("CT.Equation.Symbols.EquationSymbolsInsertGallery", &[])] },
             Group {
                 name: "Structures",
                 items: &[

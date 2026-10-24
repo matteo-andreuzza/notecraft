@@ -198,10 +198,37 @@ const SEPARATOR: f32 = 9.0;
 /// Width of the ▾ part of a split button.
 const ARROW: f32 = 13.0;
 
+/// Contextual tabs laid out by hand (the rest follow their classic layout).
+pub const SIMPLE_CONTEXTUAL: &[SimpleTab] = &[SimpleTab {
+    name: "Equation",
+    groups: &[
+        &[
+            E("CT.Equation.Tools.EquationInsertGallery", Kind::Label, 8),
+            E("CT.Equation.Tools.EquationProfessional", Kind::Label, 7),
+            E("CT.Equation.Tools.EquationLinearFormat", Kind::Label, 7),
+            E("CT.Equation.Tools.EquationNormalText", Kind::Icon, 3),
+        ],
+        &[E("CT.Equation.Symbols.EquationSymbolsInsertGallery", Kind::Label, 6)],
+        &[
+            E("CT.Equation.Structures.EquationFractionGallery", Kind::Label, 6),
+            E("CT.Equation.Structures.EquationScriptGallery", Kind::Label, 6),
+            E("CT.Equation.Structures.EquationRadicalGallery", Kind::Label, 6),
+            E("CT.Equation.Structures.EquationIntegralGallery", Kind::Icon, 5),
+            E("CT.Equation.Structures.EquationLargeOperatorGallery", Kind::Icon, 5),
+            E("CT.Equation.Structures.EquationDelimiterGallery", Kind::Icon, 5),
+            E("CT.Equation.Structures.EquationFunctionGallery", Kind::Icon, 4),
+            E("CT.Equation.Structures.EquationAccentGallery", Kind::Icon, 4),
+            E("CT.Equation.Structures.EquationLimitGallery", Kind::Icon, 4),
+            E("CT.Equation.Structures.EquationOperatorGallery", Kind::Icon, 3),
+            E("CT.Equation.Structures.EquationMatrixGallery", Kind::Icon, 4),
+        ],
+    ],
+}];
+
 /// The tab's simplified groups: its table, or one derived from the classic layout (large controls
 /// with their label, combos and galleries as they are, the rest as icons).
 pub fn groups(tab: &Tab) -> Vec<Vec<E>> {
-    if let Some(st) = SIMPLE_TABS.iter().find(|s| s.name == tab.name) {
+    if let Some(st) = SIMPLE_TABS.iter().chain(SIMPLE_CONTEXTUAL).find(|s| s.name == tab.name) {
         return st.groups.iter().map(|g| g.to_vec()).collect();
     }
     let mut out: Vec<Vec<E>> = Vec::new();

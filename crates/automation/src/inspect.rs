@@ -107,6 +107,10 @@ pub fn page_json(p: &Page, runs: bool) -> Value {
                         if runs {
                             v["runs"] = serde_json::to_value(&para.runs).unwrap_or(Value::Null);
                         }
+                        // An equation (decision D11): its view; the text is its linear format.
+                        if let Some(m) = para.math {
+                            v["math"] = serde_json::to_value(m).unwrap_or(Value::Null);
+                        }
                         v
                     })
                     .collect();

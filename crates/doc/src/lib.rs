@@ -38,7 +38,7 @@ pub use notebook::{DeletedPage, DeletedSection, NavNode, Notebook, RecycleBin, S
 pub use page::{Outline, OutlineWidth, Page, PageObject, PageSetup, PaperSize, RuleLines};
 pub use table::{Table, TableCell, TableRow};
 pub use tags::{TagDef, TagSymbol, TagUse, builtin_tags};
-pub use text::{Align, Bullet, CharFormat, ListFormat, Numbering, ParaStyle, Paragraph, Run, Script, StyleDef, sanitize_text};
+pub use text::{Align, Bullet, CharFormat, ListFormat, MathView, Numbering, ParaStyle, Paragraph, Run, Script, StyleDef, sanitize_text};
 pub use time::{Civil, Timestamp};
 
 pub use notecraft_color as color;

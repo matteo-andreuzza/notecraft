@@ -213,10 +213,85 @@ fn table_icon(pa: &Painter, r: Rect, k: &str, color: Color32, accent: Color32, p
 
 /// NoteCraft's own drawing for catalog id `id` (controls with no counterpart in `icons_set`).
 /// `accent` and `paper` come from the theme, so the drawings follow it.
+/// The Equation tab (decision D11): each tool and structure as a small picture of what it makes,
+/// slots in the accent colour. Returns false for other keys.
+fn equation_icon(pa: &Painter, r: Rect, k: &str, color: Color32, accent: Color32, s: Stroke, thin: Stroke) -> bool {
+    let slot = |x0: f32, y0: f32, x1: f32, y1: f32| rect(pa, r, x0, y0, x1, y1, Color32::TRANSPARENT, Stroke::new(thin.width, accent));
+    match k {
+        "EquationProfessional" => {
+            text(pa, Rect::from_min_max(p(r, 0.3, 0.02), p(r, 0.7, 0.42)), "x", 0.36, color, false);
+            line(pa, r, &[(0.22, 0.5), (0.78, 0.5)], s);
+            text(pa, Rect::from_min_max(p(r, 0.3, 0.55), p(r, 0.7, 0.98)), "2", 0.36, color, false);
+        }
+        "EquationLinearFormat" => text(pa, r, "x/2", 0.42, color, false),
+        "EquationNormalText" => text(pa, r, "abc", 0.4, color, false),
+        "InkEquation" => {
+            line(pa, r, &[(0.15, 0.75), (0.35, 0.45), (0.5, 0.7), (0.7, 0.35)], Stroke::new(s.width, accent));
+            text(pa, Rect::from_min_max(p(r, 0.5, 0.45), p(r, 1.0, 1.0)), "π", 0.45, color, false);
+        }
+        "EquationOptions" => {
+            line(pa, r, &[(0.3, 0.3), (0.7, 0.7)], s);
+            line(pa, r, &[(0.45, 0.7), (0.7, 0.7), (0.7, 0.45)], s);
+        }
+        "EquationFractionGallery" => {
+            slot(0.32, 0.1, 0.68, 0.4);
+            line(pa, r, &[(0.18, 0.5), (0.82, 0.5)], s);
+            slot(0.32, 0.6, 0.68, 0.9);
+        }
+        "EquationScriptGallery" => {
+            slot(0.14, 0.38, 0.56, 0.86);
+            slot(0.62, 0.12, 0.88, 0.4);
+        }
+        "EquationRadicalGallery" => {
+            line(pa, r, &[(0.08, 0.6), (0.2, 0.55), (0.32, 0.88), (0.46, 0.14), (0.92, 0.14)], s);
+            slot(0.52, 0.3, 0.88, 0.82);
+        }
+        "EquationIntegralGallery" => {
+            line(pa, r, &[(0.18, 0.86), (0.26, 0.9), (0.32, 0.82), (0.44, 0.18), (0.5, 0.1), (0.58, 0.14)], s);
+            slot(0.6, 0.38, 0.9, 0.72);
+        }
+        "EquationLargeOperatorGallery" => {
+            line(pa, r, &[(0.56, 0.2), (0.54, 0.12), (0.1, 0.12), (0.34, 0.5), (0.1, 0.88), (0.54, 0.88), (0.56, 0.8)], s);
+            slot(0.64, 0.36, 0.92, 0.7);
+        }
+        "EquationDelimiterGallery" => {
+            line(pa, r, &[(0.3, 0.1), (0.16, 0.3), (0.16, 0.7), (0.3, 0.9)], s);
+            line(pa, r, &[(0.7, 0.1), (0.84, 0.3), (0.84, 0.7), (0.7, 0.9)], s);
+            slot(0.34, 0.32, 0.66, 0.68);
+        }
+        "EquationFunctionGallery" => {
+            text(pa, Rect::from_min_max(p(r, 0.0, 0.0), p(r, 0.62, 1.0)), "sin", 0.36, color, false);
+            slot(0.66, 0.36, 0.94, 0.66);
+        }
+        "EquationAccentGallery" => {
+            line(pa, r, &[(0.3, 0.3), (0.5, 0.12), (0.7, 0.3)], s);
+            slot(0.3, 0.42, 0.7, 0.88);
+        }
+        "EquationLimitGallery" => {
+            text(pa, Rect::from_min_max(p(r, 0.0, 0.0), p(r, 0.7, 0.62)), "lim", 0.34, color, false);
+            slot(0.18, 0.66, 0.52, 0.92);
+            slot(0.72, 0.22, 0.94, 0.48);
+        }
+        "EquationOperatorGallery" => text(pa, r, "≜", 0.6, color, false),
+        "EquationMatrixGallery" => {
+            line(pa, r, &[(0.2, 0.1), (0.1, 0.1), (0.1, 0.9), (0.2, 0.9)], s);
+            line(pa, r, &[(0.8, 0.1), (0.9, 0.1), (0.9, 0.9), (0.8, 0.9)], s);
+            for (x, y) in [(0.2, 0.2), (0.55, 0.2), (0.2, 0.55), (0.55, 0.55)] {
+                slot(x, y, x + 0.25, y + 0.25);
+            }
+        }
+        _ => return false,
+    }
+    true
+}
+
 fn draw_own(pa: &Painter, r: Rect, id: &str, color: Color32, accent: Color32, paper: Color32) {
     let s = Stroke::new((r.width() / 14.0).max(1.0), color);
     let thin = Stroke::new((r.width() / 20.0).max(1.0), color);
     let k = key_for(id);
+    if equation_icon(pa, r, k, color, accent, s, thin) {
+        return;
+    }
     match k {
         "PasteMenu" | "Paste" | "PasteKeepSource" | "PasteMerge" | "PasteText" | "PastePicture" | "PasteGallery" => {
             // Clipboard board with a sheet.

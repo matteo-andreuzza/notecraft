@@ -20,6 +20,7 @@ notecraft-codecs = { workspace = true }
 notecraft-import-export = { workspace = true }
 notecraft-ink = { workspace = true }
 notecraft-ink-geom = { workspace = true }
+notecraft-math = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

@@ -24,6 +24,7 @@ mod draw_cmds;
 mod edit_cmds;
 mod file_cmds;
 mod format_cmds;
+mod math_cmds;
 mod nav_cmds;
 mod ops;
 mod outline_cmds;
@@ -53,6 +54,7 @@ mod tests_table;
 use serde_json::Value;
 
 pub use draw_cmds::{DrawState, DrawTool, EraserKind, MAX_PATH as MAX_DRAW_PATH, PenStyle};
+pub use math_cmds::{EQUATIONS, STRUCTURES as EQUATION_STRUCTURES, SYMBOLS as EQUATION_SYMBOLS};
 pub use notecraft_doc as doc;
 pub use notecraft_search as search;
 pub use notecraft_text as text;

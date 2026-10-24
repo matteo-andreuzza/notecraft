@@ -231,7 +231,7 @@ fn after_typing(s: &mut Session, caret: Pos, typed: &str) -> Result<Pos, CmdErro
 }
 
 /// Split the caret paragraph (Enter) and return the caret at the start of the new paragraph.
-fn split_at_caret(s: &mut Session, caret: Pos) -> Result<Pos, CmdError> {
+pub(crate) fn split_at_caret(s: &mut Session, caret: Pos) -> Result<Pos, CmdError> {
     let new_id = s.new_id();
     let author = s.author();
     let now = s.now();
@@ -275,6 +275,7 @@ pub(crate) fn newline(s: &mut Session, _: &Value) -> CmdResult {
     let page = s.page().ok_or_else(no_page)?;
     let para =
         Session::block_paras(page, caret.block).and_then(|ps| ps.get(caret.para)).ok_or_else(|| CmdError::Failed("paragraph not found".into()))?;
+    let equation_end = para.math.map(|_| para.len());
     // BEH.Outline.EmptyBulletEnds: Enter on an empty list item outdents it, then ends the list;
     // on an empty to-do line it removes the checkbox (unverified exact sequence).
     if para.is_empty() && (para.list.is_some() || para.tags.iter().any(|t| t.symbol.is_checkbox())) {
@@ -301,6 +302,11 @@ pub(crate) fn newline(s: &mut Session, _: &Value) -> CmdResult {
             t::apply_format(pm, r, &|f| f.link = Some(url.clone()));
         }
     }
+    // An equation is never split (decision D11): Enter starts a paragraph after it.
+    let caret = match equation_end {
+        Some(end) => Pos { offset: end, ..caret },
+        None => caret,
+    };
     let pos = split_at_caret(s, caret)?;
     s.set_caret(pos);
     ops::touch(s, pos.block, pos.para);

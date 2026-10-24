@@ -20,6 +20,7 @@ pub mod icons;
 pub mod icons_set;
 pub mod ink;
 pub mod keymap;
+mod math_ui;
 pub mod mini_toolbar;
 pub mod nav;
 pub mod panes;

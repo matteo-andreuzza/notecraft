@@ -57,11 +57,17 @@ pub struct ParaLayout {
     pub checkboxes: Vec<(Rect, usize)>,
     /// The paragraph handle area (left of the text).
     pub handle: Rect,
+    /// An equation shown built up (decision D11): drawn instead of the galley, which still
+    /// maps clicks to its linear text.
+    pub(crate) math: Option<Arc<notecraft_math::MathBox>>,
 }
 
 impl ParaLayout {
     /// The paragraph's screen rectangle (galley bounds at its laid-out position).
     pub(crate) fn rect(&self) -> Rect {
+        if let Some(m) = &self.math {
+            return Rect::from_min_size(self.pos, vec2(m.width.max(4.0), m.height()));
+        }
         Rect::from_min_size(self.pos, self.galley.size().max(vec2(4.0, self.galley.size().y)))
     }
 
@@ -482,6 +488,12 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 painter.rect_filled(o.rect, 0.0, t.selection);
             }
         }
+        // An equation being edited shows its linear text in a light box (decision D11).
+        for pl in paras.iter().filter(|pl| pl.math.is_none() && pl.block != Block::Title) {
+            if notecraft_engine::Session::block_paras(&page, pl.block).and_then(|ps| ps.get(pl.para)).is_some_and(|p| p.math.is_some()) {
+                painter.rect_filled(pl.rect().expand2(vec2(4.0, 2.0)), crate::theme::radius::CONTROL, t.hover);
+            }
+        }
         // Selection and find highlights behind the text.
         highlights(app, &painter, &paras, t);
         let defs = app.session.tag_defs();
@@ -500,7 +512,12 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             }
         }
         for pl in &paras {
-            painter.galley(pl.pos, pl.galley.clone(), page_text);
+            match &pl.math {
+                Some(m) => crate::math_ui::draw(&ctx, &painter, pl.pos, m, page_text),
+                None => {
+                    painter.galley(pl.pos, pl.galley.clone(), page_text);
+                }
+            }
             if pl.block != Block::Title
                 && let Some(para) = notecraft_engine::Session::block_paras(&page, pl.block).and_then(|ps| ps.get(pl.para))
             {
@@ -672,6 +689,17 @@ fn layout_page(
         let c = caret?;
         (c.block == block && c.para == para && !app.canvas.preedit.is_empty()).then_some((c.offset, app.canvas.preedit.as_str()))
     };
+    // Equations (decision D11) show built up, except while the selection is in them: then their
+    // linear text is edited in place.
+    let range = app.session.text_range();
+    let editing = |block: Block, para: usize| range.is_some_and(|r| [r.anchor, r.head].iter().any(|p| p.block == block && p.para == para));
+    let math_of = |block: Block, i: usize, para: &Paragraph| -> Option<Arc<notecraft_math::MathBox>> {
+        if para.math != Some(notecraft_engine::doc::MathView::Professional) || editing(block, i) {
+            return None;
+        }
+        let size = (para.effective_fmt_at(0).size.unwrap_or(11.0) * z).max(4.0);
+        Some(Arc::new(crate::math_ui::layout(ctx, &para.text(), size)))
+    };
     // Title (BEH.Pages.Title, UI.Canvas.TitleArea).
     if !page.setup.hide_title {
         let tx = 36.0;
@@ -688,6 +716,7 @@ fn layout_page(
             text: page.title.text(),
             checkboxes: Vec::new(),
             handle: Rect::from_min_size(pos - vec2(14.0, 0.0), vec2(12.0, 12.0)),
+            math: None,
         });
     }
     for o in &page.objects {
@@ -696,7 +725,7 @@ fn layout_page(
             // Pictures and attachments: `pictures::layout`; ink: `ink::draw`.
             PageObject::Image(_) | PageObject::Attachment(_) | PageObject::Ink(_) => continue,
             PageObject::Table(tb) => {
-                let (tl, frame) = layout_table(ctx, tb, origin, zoom, t, page_text, &preedit_at, &mut paras);
+                let (tl, frame) = layout_table(ctx, tb, origin, zoom, t, page_text, &preedit_at, &math_of, &mut paras);
                 extent = extent.max(vec2(frame.rect.max.x - origin.x + 240.0, frame.rect.max.y - origin.y + 240.0));
                 tables.push(tl);
                 outlines.push(frame);
@@ -723,8 +752,11 @@ fn layout_page(
             let g = layout_para(ctx, para, wrap, zoom, t, page_text, preedit_at(Block::Outline(ol.id), i));
             let tx = x0 + lead * z;
             let pos = pos2(tx, y);
-            let w = g.size().x;
-            let h = g.size().y;
+            let math = math_of(Block::Outline(ol.id), i, para);
+            let (w, h) = match &math {
+                Some(m) => (m.width, m.height()),
+                None => (g.size().x, g.size().y),
+            };
             let mut checkboxes = Vec::new();
             let mut n_cb = 0;
             for (k, tag) in para.tags.iter().enumerate() {
@@ -739,7 +771,7 @@ fn layout_page(
             let handle_x = x0 + para.level as f32 * INDENT * z - 14.0 * zoom;
             let handle = Rect::from_min_size(pos2(handle_x, y), vec2(12.0 * zoom.max(0.6), g.rows.first().map(|r| r.height()).unwrap_or(14.0)));
             right = right.max(tx + w);
-            paras.push(ParaLayout { block: Block::Outline(ol.id), para: i, galley: g, pos, text: para.text(), checkboxes, handle });
+            paras.push(ParaLayout { block: Block::Outline(ol.id), para: i, galley: g, pos, text: para.text(), checkboxes, handle, math });
             y += h + para.space_after * z;
         }
         let width_px = match ol.width {
@@ -767,6 +799,7 @@ fn layout_table<'a>(
     t: Tokens,
     page_text: Color32,
     preedit_at: &dyn Fn(Block, usize) -> Option<(usize, &'a str)>,
+    math_of: &dyn Fn(Block, usize, &Paragraph) -> Option<Arc<notecraft_math::MathBox>>,
     paras: &mut Vec<ParaLayout>,
 ) -> (TableLayout, OutlineLayout) {
     let z = PT * zoom;
@@ -789,7 +822,7 @@ fn layout_table<'a>(
         row: usize,
         col: usize,
         span: (usize, usize),
-        paras: Vec<(usize, std::sync::Arc<egui::Galley>, f32, f32, String)>,
+        paras: Vec<(usize, std::sync::Arc<egui::Galley>, f32, f32, String, Option<Arc<notecraft_math::MathBox>>)>,
         height: f32,
     }
     let mut laid: Vec<Laid> = Vec::new();
@@ -808,8 +841,9 @@ fn layout_table<'a>(
                 let wrap = (width - 2.0 * CELL_PAD - lead).max(8.0) * z;
                 cy += para.space_before * z;
                 let g = layout_para(ctx, para, wrap, zoom, t, page_text, preedit_at(Block::Cell(cell.id), i));
-                let h = g.size().y;
-                paras_here.push((i, g, lead * z, cy, para.text()));
+                let math = math_of(Block::Cell(cell.id), i, para);
+                let h = math.as_ref().map_or(g.size().y, |m| m.height());
+                paras_here.push((i, g, lead * z, cy, para.text(), math));
                 cy += h + para.space_after * z;
             }
             laid.push(Laid { id: cell.id, row: r, col: c, span: (rs, cs), paras: paras_here, height: cy + pad });
@@ -843,7 +877,7 @@ fn layout_table<'a>(
     for l in laid {
         let (cx0, cx1) = (xs.get(l.col).copied().unwrap_or(x0), xs.get(l.col + l.span.1).copied().unwrap_or(x0));
         let (top, bottom) = (ys.get(l.row).copied().unwrap_or(y0), ys.get(l.row + l.span.0).copied().unwrap_or(y));
-        for (i, g, lead, oy, text) in l.paras {
+        for (i, g, lead, oy, text, math) in l.paras {
             paras.push(ParaLayout {
                 block: Block::Cell(l.id),
                 para: i,
@@ -852,6 +886,7 @@ fn layout_table<'a>(
                 text,
                 checkboxes: Vec::new(),
                 handle: Rect::NOTHING,
+                math,
             });
         }
         cells.push(CellLayout { id: l.id, row: l.row, col: l.col, rect: Rect::from_min_max(pos2(cx0, top), pos2(cx1, bottom)) });

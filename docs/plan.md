@@ -464,6 +464,31 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   `insert.recentTemplate`, `template.list`, `template.setDefault`, `template.save`,
   `template.delete`. The Paper Size pane (View, M4) will offer the same Save link.
 
+### 4.16 Equations (decision D11, 2026-10-24)
+
+- **An equation is a paragraph** whose text is its linear format, UnicodeMath (`x=(−b±√(b^2−4ac))/2a`,
+  the notation the reference also accepts when typing), marked `Paragraph::math` = Professional
+  or Linear (`.ncraft` version 5). Every text command works on it unchanged: typing, the caret,
+  selection, undo, copy and paste (a pasted equation stays one), search, tags. Enter never
+  splits an equation: it starts a plain paragraph after it. Equations are not inline inside a
+  line of text (the reference allows that): a whole-paragraph equation needs no inline objects
+  in the text layout, which egui's galleys don't offer.
+- **Crate `math` (L2, no dependencies)** parses the subset listed in its docs — fractions,
+  scripts, radicals, large operators with limits, stretchy brackets, matrices, accents,
+  function names, `\alpha`-style control words, `⬚` slots — and lays it out built up from a
+  caller-supplied text measure; the large signs (∑ ∏ ∫ √, brackets, bars) are line paths, so no
+  math font is needed. Input is capped (4,000 characters, nesting 48) and never panics.
+- **Showing and editing.** Professional shows the equation built up; while the selection is in
+  it, its linear text is edited in place in a light box (simplified: the reference edits built
+  up). Linear always shows the text.
+- **Surfaces.** Insert › Equation (Alt+=) with a gallery of built-in equations (NoteCraft's set
+  of common results); the contextual Equation tab while the caret is in an equation: Equation,
+  Professional, Linear, a Symbols grid and the eleven Structures galleries, each item a linear
+  template with its first `⬚` selected so typing fills it; the equation's context menu (Cut,
+  Copy, Paste Options, Professional, Linear; a right click selects the whole equation). Left
+  for later: Ink Equation and Ink to Math, Normal Text, Equation Options, the structure-editing
+  rows of the context menu, MathML in HTML.
+
 ## 5. Risks
 
 | Risk | Impact | Mitigation |
@@ -486,6 +511,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | D4 | 2026-10-20 | Ink strokes are page objects, one stroke per object (`PageObject::Ink`, points relative to the object's position with per-point pressure, colour, width, pen or highlighter); `.ncraft` version 4; geometry in `ink-geom` (L0), stroke operations in `ink` (L2); tools are session state (§4.10). | — (the plan named the crates; the object shape was open) | Every object command (select, lasso, delete, clipboard, order, rotate, move, undo) works on ink unchanged; [MS-ONE] ink nodes map stroke by stroke, losing only their grouping. |
 | D5 | 2026-10-21 | Tags on ink: a stroke carries `tags` like a paragraph (optional field, format 4 unchanged); the tag commands treat the selected strokes as one drawing, putting a new tag on its leftmost stroke and removing or checking it on all (§4.11). | — | Strokes are separate objects (D4), so tagging each would list one drawing many times in Find Tags; one anchor stroke keeps one entry per tag and maps to [MS-ONE]'s tag on the ink node. |
 | D6 | 2026-10-21 | Tab after a paragraph's text makes it a one-row, two-column table that takes the paragraph's place (the container splits around it); no session state, later Tabs and Enters use the table's own keys (§4.8). | — | Tables are separate objects (D2), so the paragraph must leave its container; the one-row table's existing Tab/Enter behaviour already covers "keep creating". |
+| D11 | 2026-10-24 | Equations are paragraphs of UnicodeMath linear text (`Paragraph::math`), laid out built up by a new pure crate `math` with line-drawn large signs; edited as linear text while the caret is in them (§4.16). | The plan named a `math` crate; inline math was open | The user asked for equations in M2; whole-paragraph equations reuse every text command and need no inline objects in egui's text layout. |
 | D10 | 2026-10-24 | Page templates: NoteCraft's own built-in set (five categories, built in code), the user's own saved in the preferences without pictures, a default template per section (`Section.default_template`), the Templates pane (§4.15). | The plan waited for reference screenshots | The user chose NoteCraft's own templates over waiting; the reference's templates are its content, so a clean-room set is needed anyway. |
 | D9 | 2026-10-24 | Merged table cells: `row_span`/`col_span` on the top-left cell, covered cells kept in the grid empty and hidden; `table.merge`/`table.split`; `.ncraft` version 5 (§4.14). | Merging was left out of D2 ("needs a model change") | The full grid keeps every row/column command and the format's row/cell lists unchanged; [MS-ONE] stores tables the same way. The user approved the change. |
 | D8 | 2026-10-24 | Snap to Grid puts shapes' end points on the page's grid (1/8 in without one); Draw with Touch off turns a pressureless touch into panning; two fingers on the ruler move and turn it (§4.13). | — | Settings only, no format change; snapping lives in the engine's `draw.shape`, so headless clients get it too. |

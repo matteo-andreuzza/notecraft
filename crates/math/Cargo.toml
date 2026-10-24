@@ -1,0 +1,17 @@
+[package]
+name = "notecraft-math"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "NoteCraft L2 equations: the UnicodeMath linear format parsed and laid out as built-up math"
+
+[lints]
+workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+proptest = { workspace = true }
