@@ -280,6 +280,12 @@ fn main() {
             a.ui.tab = "Table Layout".into();
         });
     }
+    // Insert › Page Templates (decision D10): the pane beside a page made from Meeting notes.
+    shot("templates-pane", &out, 1.0, |a| {
+        a.session.run("page.newFromTemplate", json!({"template": "builtin:meeting-notes"})).unwrap();
+        a.session.run("insert.pageTemplates", json!({"on": true})).unwrap();
+        a.ui.tab = "Insert".into();
+    });
     // Merged cells (decision D9): the header across all three columns, a cell over two rows.
     shot("table-merged", &out, 1.0, |a| {
         table_page(a);

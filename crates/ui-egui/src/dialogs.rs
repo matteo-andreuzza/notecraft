@@ -47,6 +47,14 @@ pub enum Dialog {
     /// Insert File (`BEH.Paste.Files`): dropped files NoteCraft can print, as the parameters of
     /// `insert.file` / `insert.printout` (path, and where they were dropped).
     InsertFile(Vec<serde_json::Value>),
+    /// Save current page as a template (decision D10): its name, and whether it becomes the
+    /// current section's default.
+    SaveTemplate {
+        /// Template name.
+        name: String,
+        /// Also the section's default template.
+        default: bool,
+    },
     /// Sort… of the current table (`CT.TableLayout.Data.ShowSortTableRowsDialog`): the column to
     /// sort by and an optional second one, each descending or not, and the header row.
     SortTable {
@@ -148,6 +156,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
         Dialog::InsertFile(_) => "Insert File",
         Dialog::ColorThickness { .. } => "Color & Thickness",
         Dialog::SortTable { .. } => "Sort",
+        Dialog::SaveTemplate { .. } => "Save As Template",
     };
     let modal = egui::Modal::new(egui::Id::new("dialog")).show(ctx, |ui| {
         ui.set_min_width(380.0);
@@ -195,6 +204,24 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                         // changes it; otherwise it makes a new one.
                         let cmd = if app.disabled_reason("link.edit").is_none() { "link.edit" } else { "insert.link" };
                         app.run(ctx, cmd, p);
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::SaveTemplate { name, default } => {
+                ui.label("Template name:");
+                let r = ui.text_edit_singleline(name);
+                if !r.has_focus() && name.is_empty() {
+                    r.request_focus();
+                }
+                ui.checkbox(default, "Set as default template for new pages in the current section");
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if crate::chrome::primary_button(ui, "Save", &t).clicked() && !name.trim().is_empty() {
+                        app.run(ctx, "template.save", json!({"name": name.trim(), "default": *default}));
                         close = true;
                     }
                     if ui.button("Cancel").clicked() {

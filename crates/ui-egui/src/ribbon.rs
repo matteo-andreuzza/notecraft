@@ -113,6 +113,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "draw.shapes" => s.draw.tool == notecraft_engine::DrawTool::Shape,
         "draw.lockDrawingMode" => s.draw.lock_shapes,
         "draw.ruler" => s.draw.ruler.is_some(),
+        "insert.pageTemplates" => s.view.templates_pane,
         "draw.snapToGrid" => s.draw.snap_to_grid,
         "draw.withTouch" => s.draw.with_touch,
         "draw.lasso" => s.draw.tool == notecraft_engine::DrawTool::Lasso,
@@ -683,6 +684,23 @@ pub(crate) fn swatch_grid(
 }
 
 pub(crate) fn menu_item(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) {
+    // Recently Used Templates: the templates themselves, latest first.
+    if id.ends_with(".StationeryMostRecentlyUsedList") {
+        let recent = app.session.prefs.recent_templates.clone();
+        ui.label(RichText::new(label(id)).color(t.text_dim));
+        if recent.is_empty() {
+            ui.add_enabled(false, egui::Button::new(RichText::new("(none yet)").color(t.text_disabled)).frame(false));
+        }
+        for (i, tpl) in recent.iter().enumerate() {
+            if ui.add(egui::Button::new(crate::panes::template_name(tpl)).frame(false).min_size(vec2(170.0, 22.0))).clicked() {
+                let ctx = ui.ctx().clone();
+                app.run(&ctx, "insert.recentTemplate", json!({"index": i}));
+                ui.close();
+            }
+        }
+        ui.separator();
+        return;
+    }
     let on = enabled(app, id);
     let mut text = RichText::new(label(id));
     if !on {

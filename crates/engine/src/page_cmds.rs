@@ -221,7 +221,7 @@ pub(crate) fn make_page(s: &mut Session, title: &str) -> Page {
 }
 
 /// Insert `page` into `section` at `index` and open it with the caret in the title.
-fn insert_and_open(s: &mut Session, section: Id, index: usize, page: Page) -> CmdResult {
+pub(crate) fn insert_and_open(s: &mut Session, section: Id, index: usize, page: Page) -> CmdResult {
     let pid = page.id;
     let title_len = page.title.len();
     let sec = s.ws.section_mut(section).ok_or_else(|| CmdError::Failed("that section no longer exists".into()))?;
@@ -240,7 +240,7 @@ fn new_page(s: &mut Session, v: &Value) -> CmdResult {
         None => s.sel.section.ok_or_else(|| CmdError::Disabled("open a section first".into()))?,
     };
     let title = p::str(v, "title").unwrap_or("").to_string();
-    let page = make_page(s, &title);
+    let page = crate::template_cmds::new_page_in(s, section, &title);
     let sec = s.ws.section(section).ok_or_else(|| CmdError::Params("no such section".into()))?;
     let index = match p::id(v, "after")? {
         Some(after) => sec.page_index(after).map(|i| sec.page_family(i).end).unwrap_or(sec.pages.len()),
@@ -260,7 +260,7 @@ fn new_below(s: &mut Session, _: &Value) -> CmdResult {
     let (sid, i, sec) = current(s)?;
     let level = sec.pages.get(i).map(|p| p.level).unwrap_or(0);
     let at = sec.page_family(i).end;
-    let mut page = make_page(s, "");
+    let mut page = crate::template_cmds::new_page_in(s, sid, "");
     page.level = level;
     insert_and_open(s, sid, at, page)
 }
@@ -268,7 +268,7 @@ fn new_below(s: &mut Session, _: &Value) -> CmdResult {
 fn new_subpage(s: &mut Session, _: &Value) -> CmdResult {
     let (sid, i, sec) = current(s)?;
     let level = sec.pages.get(i).map(|p| p.level).unwrap_or(0);
-    let mut page = make_page(s, "");
+    let mut page = crate::template_cmds::new_page_in(s, sid, "");
     page.level = (level + 1).min(notecraft_doc::page::MAX_PAGE_LEVEL);
     insert_and_open(s, sid, i + 1, page)
 }

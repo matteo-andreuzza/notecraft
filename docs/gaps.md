@@ -26,6 +26,8 @@ Smaller known shortfalls:
   `missing`.
 - `--automation-read-root`/`--automation-write-root` confine the headless MCP server only; a
   running desktop app reached through `--control` is not confined.
+- Page templates (D10) are NoteCraft's own, not the reference's; templates of the user's own
+  leave pictures and attachments out (the settings file holds no media).
 - Tables: merged cells (D9) copy to other applications as separate cells (no HTML
   colspan/rowspan yet), and Sort refuses cells merged across rows; the Sort… dialog sorts by up
   to two columns, the engine by three. A table is a page object beside containers rather than

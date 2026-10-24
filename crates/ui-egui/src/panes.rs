@@ -1,5 +1,6 @@
-//! Task panes: the Tags Summary (Find Tags), the pinned search results, and the find-on-page
-//! bar (catalog `UI.Panes.FindTags`, `UI.Nav.SearchResultsPane`, `UI.Nav.FindOnPage`). In the 2024
+//! Task panes: the Tags Summary (Find Tags), the Templates pane, the pinned search results, and
+//! the find-on-page bar (catalog `UI.Panes.FindTags`, `UI.Panes.Templates`,
+//! `UI.Nav.SearchResultsPane`, `UI.Nav.FindOnPage`). In the 2024
 //! look (`docs/ui-parity.md` §3 rows 15–16) the panes are cards at the right of the page with a
 //! title and ✕, and the find bar is a card floating over the page's top right corner.
 
@@ -98,6 +99,111 @@ pub fn tags_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             }
         });
     });
+}
+
+/// The name a template id shows (`builtin:<slug>` or `my:<name>`).
+pub(crate) fn template_name(id: &str) -> String {
+    match id.split_once(':') {
+        Some(("builtin", slug)) => {
+            notecraft_engine::BUILT_IN_TEMPLATES.iter().find(|b| b.slug == slug).map_or_else(|| slug.to_string(), |b| b.name.to_string())
+        }
+        Some((_, name)) => name.to_string(),
+        None => id.to_string(),
+    }
+}
+
+/// The Templates pane (Insert › Page Templates; decision D10): templates by category, a click
+/// adds a page from one; the section's default template; Save current page as a template.
+pub fn templates_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    pane_panel("templates_pane", 280.0, &t).show(ui, |ui| {
+        card_frame(&t).show(ui, |ui| {
+            ui.set_min_size(ui.available_size());
+            if card_header(ui, "Templates", &t) {
+                app.session.view.templates_pane = false;
+            }
+            ui.add_space(4.0);
+            ui.label(RichText::new("Add a page").strong().color(t.text));
+            ui.label(RichText::new("Click a template to add a page based on it.").size(12.0).color(t.text_dim));
+            ui.add_space(4.0);
+            let mine: Vec<String> = app.session.prefs.templates.iter().map(|x| x.name.clone()).collect();
+            let mut categories: Vec<&str> = Vec::new();
+            for b in notecraft_engine::BUILT_IN_TEMPLATES {
+                if !categories.contains(&b.category) {
+                    categories.push(b.category);
+                }
+            }
+            egui::ScrollArea::vertical().id_salt("templates_scroll").max_height((ui.available_height() - 120.0).max(80.0)).show(ui, |ui| {
+                let recent = app.session.prefs.recent_templates.clone();
+                if !recent.is_empty() {
+                    egui::CollapsingHeader::new("Recently Used Templates").default_open(true).show(ui, |ui| {
+                        for id in &recent {
+                            template_row(app, ui, &ctx, id, &template_name(id), "", false, &t);
+                        }
+                    });
+                }
+                for cat in categories {
+                    egui::CollapsingHeader::new(cat).default_open(cat == "Blank").show(ui, |ui| {
+                        for b in notecraft_engine::BUILT_IN_TEMPLATES.iter().filter(|b| b.category == cat) {
+                            template_row(app, ui, &ctx, &format!("builtin:{}", b.slug), b.name, b.description, false, &t);
+                        }
+                    });
+                }
+                if !mine.is_empty() {
+                    egui::CollapsingHeader::new(notecraft_engine::MY_TEMPLATES).default_open(true).show(ui, |ui| {
+                        for name in &mine {
+                            template_row(app, ui, &ctx, &format!("my:{name}"), name, "", true, &t);
+                        }
+                    });
+                }
+            });
+            ui.separator();
+            ui.label(RichText::new("Always use a specific template").strong().color(t.text));
+            ui.label(RichText::new("Pick a template for new pages in the current section.").size(12.0).color(t.text_dim));
+            let current = app.session.sel.section.and_then(|id| app.session.ws.section(id)).and_then(|s| s.default_template.clone());
+            let mut chosen = current.clone();
+            egui::ComboBox::from_id_salt("default_template")
+                .width(220.0)
+                .selected_text(chosen.as_deref().map_or_else(|| "No Default Template".to_string(), template_name))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut chosen, None, "No Default Template");
+                    for b in notecraft_engine::BUILT_IN_TEMPLATES {
+                        ui.selectable_value(&mut chosen, Some(format!("builtin:{}", b.slug)), b.name);
+                    }
+                    for name in &mine {
+                        ui.selectable_value(&mut chosen, Some(format!("my:{name}")), name);
+                    }
+                });
+            if chosen != current {
+                app.run(&ctx, "template.setDefault", json!({"template": chosen}));
+            }
+            ui.add_space(6.0);
+            ui.label(RichText::new("Create new template").strong().color(t.text));
+            if ui.link("Save current page as a template").clicked() && app.session.page().is_some() {
+                let name = app.session.page().map(|p| p.display_title()).unwrap_or_default();
+                app.ui.dialog = Some(crate::dialogs::Dialog::SaveTemplate { name, default: false });
+            }
+        });
+    });
+}
+
+/// One template in the pane: a click adds a page from it; the user's own have Delete on a right
+/// click.
+fn template_row(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, id: &str, name: &str, about: &str, mine: bool, t: &Tokens) {
+    let resp = ui.add(egui::Button::new(RichText::new(name).color(t.text)).frame(false).min_size(vec2(200.0, 22.0)));
+    let resp = if about.is_empty() { resp } else { resp.on_hover_text(about) };
+    if resp.clicked() {
+        app.run(ctx, "page.newFromTemplate", json!({"template": id}));
+        app.canvas.focused = true;
+    }
+    if mine {
+        resp.context_menu(|ui| {
+            if ui.button("Delete").clicked() {
+                app.run(ctx, "template.delete", json!({"template": id}));
+                ui.close();
+            }
+        });
+    }
 }
 
 fn group_label(g: &str) -> &'static str {

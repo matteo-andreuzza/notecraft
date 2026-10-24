@@ -82,7 +82,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Panes.CustomizeTags | Customize Tags dialog: new tag, modify (name, symbol, font colour, highlight colour), reorder, remove | Window/Panes/Customize Tags | surface |  |  | P1 | missing | FLUENT19:TagsCustomize; GK |  |
 | UI.Panes.PageVersions | Page versions listed under the page in the page list, by date and author | Window/Panes/Page Versions | surface |  |  | P1 | missing | FLUENT19:PageVersions |  |
 | UI.Panes.RecycleBin | Notebook Recycle Bin as a special section with Deleted Pages / Deleted Sections | Window/Panes/Recycle Bin | surface |  |  | P0 | missing | FLUENT19:RecycleBin; GK |  |
-| UI.Panes.Templates | Templates pane (categories, preview, Choose default template) | Window/Panes/Templates | surface |  |  | P1 | missing | FLUENT19:PageTemplatesTaskpane |  |
+| UI.Panes.Templates | Templates pane (categories, preview, Choose default template) | Window/Panes/Templates | surface |  |  | P1 | wired | FLUENT19:PageTemplatesTaskpane | Decision D10: NoteCraft's own templates by category (Academic, Blank, Business, Decorative, Planners; their content is NoteCraft's, not the reference's), Recently Used Templates, My Templates (right-click › Delete), Always use a specific template for the current section, and Save current page as a template (name, and Set as default); a click adds a page from a template (look and set unverified) |
 | UI.Panes.PaperSize | Paper Size pane (size, orientation, width, height, print margins, Save current page as a template) | Window/Panes/Paper Size | surface |  |  | P1 | missing | FLUENT19:PaperSize |  |
 | UI.Panes.Password | Password Protection pane (Set Password, Remove Password, Lock All, options) | Window/Panes/Password Protection | surface |  |  | P1 | missing | FLUENT19:PasswordProtectSection |  |
 | UI.Panes.Research | Research / Thesaurus pane | Window/Panes/Research | surface |  |  | P3 | missing | FLUENT19:ResearchPane |  |
@@ -273,10 +273,10 @@ The Insert tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Insert.TimeStamp.DateInsert | Date | Insert/Time Stamp/Date | button | `Alt+Shift+D` | insert.date | P1 | verified | FLUENT19:DateInsert |  |
 | R.Insert.TimeStamp.TimeInsert | Time | Insert/Time Stamp/Time | button | `Alt+Shift+T` | insert.time | P1 | verified | FLUENT19:TimeInsert |  |
 | R.Insert.TimeStamp.DateAndTimeInsertOneNote | Date & Time | Insert/Time Stamp/Date & Time | button | `Alt+Shift+F` | insert.dateTime | P1 | verified | FLUENT19:DateAndTimeInsertOneNote |  |
-| R.Insert.Pages.PageTemplatesSplitButton | Page Templates | Insert/Pages/Page Templates | split |  | insert.pageTemplates | P1 | missing | FLUENT19:PageTemplatesSplitButton |  |
-| R.Insert.Pages.PageTemplatesTaskpane | Page Templates… | Insert/Pages/Page Templates/Page Templates… | toggle |  | insert.pageTemplates | P1 | missing | FLUENT19:PageTemplatesTaskpane |  |
-| R.Insert.Pages.StationeryMostRecentlyUsedList | Recently Used Templates | Insert/Pages/Page Templates/Recently Used Templates | gallery |  | insert.recentTemplate | P2 | missing | FLUENT19:StationeryMostRecentlyUsedList |  |
-| R.Insert.Pages.NewPageFromStationery | Page from Template | Insert/Pages/Page Templates/Page from Template | button |  | page.newFromTemplate | P2 | missing | FLUENT19:NewPageFromStationery |  |
+| R.Insert.Pages.PageTemplatesSplitButton | Page Templates | Insert/Pages/Page Templates | split |  | insert.pageTemplates | P1 | verified | FLUENT19:PageTemplatesSplitButton | Decision D10: opens or closes the Templates pane (UI.Panes.Templates); its drop-down has Page Templates…, Recently Used Templates and Page from Template |
+| R.Insert.Pages.PageTemplatesTaskpane | Page Templates… | Insert/Pages/Page Templates/Page Templates… | toggle |  | insert.pageTemplates | P1 | verified | FLUENT19:PageTemplatesTaskpane | Opens the Templates pane |
+| R.Insert.Pages.StationeryMostRecentlyUsedList | Recently Used Templates | Insert/Pages/Page Templates/Recently Used Templates | gallery |  | insert.recentTemplate | P2 | wired | FLUENT19:StationeryMostRecentlyUsedList | The last five templates used, latest first, by name (count unverified) |
+| R.Insert.Pages.NewPageFromStationery | Page from Template | Insert/Pages/Page Templates/Page from Template | button |  | page.newFromTemplate | P2 | wired | FLUENT19:NewPageFromStationery | A page from the section's default template, else a blank page, at the end of the section (unverified) |
 | R.Insert.Symbols.InsertBuildingBlocksEquationsGallery | Equation | Insert/Symbols/Equation | gallery | `Alt+=` | insert.equation | P2 | missing | FLUENT19:InsertBuildingBlocksEquationsGallery |  |
 | R.Insert.Symbols.EquationInsertNew | Insert New Equation | Insert/Symbols/Equation/Insert New Equation | button | `Alt+=` | insert.equation | P2 | missing | FLUENT19:EquationInsertNew |  |
 | R.Insert.Symbols.SymbolInsertGallery | Symbol | Insert/Symbols/Symbol | gallery |  | insert.symbol | P2 | wired | FLUENT19:SymbolInsertGallery |  |
@@ -1050,7 +1050,7 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.HighlighterMode | Highlighter Mode | Quick Access Toolbar/Commands Not in the Ribbon/Highlighter Mode | toggle |  | draw.highlighterMode | P2 | missing | FLUENT19:HighlighterMode |  |
 | QAT.NR.HideRibbon | Hide Ribbon | Quick Access Toolbar/Commands Not in the Ribbon/Hide Ribbon | toggle |  | ui.hideRibbon | P2 | missing | FLUENT19:HideRibbon |  |
 | QAT.NR.OfficeFeedbackBackstage | Feedback | Quick Access Toolbar/Commands Not in the Ribbon/Feedback | button |  | help.feedback | P3 | missing | FLUENT19:OfficeFeedbackBackstage |  |
-| QAT.NR.NewPageFromTemplate | New Page from Template | Quick Access Toolbar/Commands Not in the Ribbon/New Page from Template | button |  | page.newFromTemplate | P2 | missing | FLUENT19:NewPageFromTemplate |  |
+| QAT.NR.NewPageFromTemplate | New Page from Template | Quick Access Toolbar/Commands Not in the Ribbon/New Page from Template | button |  | page.newFromTemplate | P2 | wired | FLUENT19:NewPageFromTemplate | As Insert › Page Templates › Page from Template (unverified) |
 | QAT.NR.PasteAsInkOneNote | Paste as Ink | Quick Access Toolbar/Commands Not in the Ribbon/Paste as Ink | button |  | edit.pasteInk | P3 | missing | FLUENT19:PasteAsInkOneNote |  |
 | QAT.NR.ZoomCurrent75 | 75% | Quick Access Toolbar/Commands Not in the Ribbon/75% | button |  | view.zoom75 | P3 | wired | FLUENT19:ZoomCurrent75 |  |
 | QAT.NR.Spelling | Spelling | Quick Access Toolbar/Commands Not in the Ribbon/Spelling | button | `F7` | review.spelling | P1 | missing | FLUENT19:Spelling |  |
@@ -1502,6 +1502,10 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 | NC.Draw.Erase | Erase | Mouse/Canvas/Erase | mouse |  | draw.erase | P1 | wired | NoteCraft (decision D4) | Dragging with an eraser erases along the path; one drag is one undo step. Eraser radii (2.5/6/12 pt) unverified |
 | NC.Draw.Shape | Shape | Mouse/Canvas/Shape | mouse |  | draw.shape | P1 | verified | NoteCraft (decision D4) | Dragging with the Shape tool draws the chosen shape with the selected pen as one ink stroke (one undo step); Shift keeps the proportions. |
 | NC.Draw.RulerPlace | Move or Turn the Ruler | Mouse/Canvas/Ruler | mouse |  | draw.rulerPlace | P2 | verified | NoteCraft (decision D7) | Moves the ruler to or by a point and turns it to or by an angle (never an undo step). On the canvas a drag that starts on the ruler, away from its edges with the pen, moves it; the mouse wheel over it turns it a degree a notch, up counterclockwise, instead of scrolling. |
+| NC.Templates.List | List Templates | Window/Panes/Templates | button |  | template.list | P2 | verified | NoteCraft (decision D10) | Every template (id, name, category, description), the current section's default and the recently used ones, for agents. |
+| NC.Templates.SetDefault | Choose Default Template | Window/Panes/Templates/Choose default template | button |  | template.setDefault | P2 | wired | NoteCraft (decision D10) | The template new pages of a section start from (stored with the section), or none. |
+| NC.Templates.Save | Save Current Page as a Template | Window/Panes/Templates/Save current page as a template | button |  | template.save | P2 | wired | NoteCraft (decision D10) | Keeps the page's text, tables, ink and page setup under a name in the preferences (pictures and attachments are left out); optionally the section's default. |
+| NC.Templates.Delete | Delete Template | Window/Panes/Templates/My Templates/Delete | button |  | template.delete | P2 | wired | NoteCraft (decision D10) | Deletes one of the user's own templates. |
 
 ## Revision history
 

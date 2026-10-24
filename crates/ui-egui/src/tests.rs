@@ -484,6 +484,54 @@ fn the_sort_menu_and_dialog_sort_the_table() {
 }
 
 #[test]
+fn the_templates_pane_adds_pages_and_saves_the_current_one() {
+    // parity: UI.Panes.Templates, R.Insert.Pages.PageTemplatesTaskpane, R.Insert.Pages.StationeryMostRecentlyUsedList
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    a.ui.tab = "Insert".into();
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Page Templates").click();
+    h.run();
+    assert!(h.state().session.view.templates_pane, "Insert › Page Templates opens the pane");
+    h.get_by_label("Business").click();
+    h.run();
+    let pages = h.state().session.section().unwrap().pages.len();
+    h.get_by_label("Meeting notes").click();
+    h.run();
+    assert_eq!(h.state().session.section().unwrap().pages.len(), pages + 1, "a click adds a page from the template");
+    assert!(
+        h.state()
+            .session
+            .page()
+            .unwrap()
+            .objects
+            .iter()
+            .filter_map(|o| o.as_outline())
+            .any(|o| o.paragraphs.iter().any(|p| p.text() == "Action items"))
+    );
+    assert!(h.query_by_label("Recently Used Templates").is_some());
+    // Save current page as a template: a name, and it lists under My Templates.
+    h.get_by_label("Save current page as a template").click();
+    h.run();
+    assert!(matches!(h.state().ui.dialog, Some(Dialog::SaveTemplate { .. })));
+    h.state_mut().ui.dialog = Some(Dialog::SaveTemplate { name: "Standup".into(), default: true });
+    h.run();
+    h.get_by_label("Save").click();
+    h.run();
+    assert_eq!(h.state().session.prefs.templates.len(), 1);
+    assert_eq!(h.state().session.section().unwrap().default_template.as_deref(), Some("my:Standup"));
+    assert!(h.query_by_label("Standup").is_some(), "My Templates lists it");
+    // The split button's drop-down lists recently used templates by name.
+    h.get_by_label("Page Templates").click();
+    h.run();
+    h.get_by_label("Page Templates").click();
+    h.run();
+    assert!(h.state().session.view.templates_pane, "a second click on the icon half closes and a third reopens it");
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();

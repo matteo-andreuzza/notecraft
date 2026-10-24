@@ -441,6 +441,29 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   drawn cell by cell. `notebook.inspect` gives `rowSpan`/`colSpan`, and `covered` for hidden
   places. HTML copied out keeps the grid but not the merge (a gap).
 
+### 4.15 Page templates (decision D10, 2026-10-24)
+
+- **NoteCraft's own templates.** No reference screenshots were available and the reference's
+  templates are its content, so the built-in set is NoteCraft's: Academic (Lecture notes, Study
+  plan), Blank (Blank, Lined, Small grid, Large grid), Business (Meeting notes, Project
+  overview), Decorative (Sky, Sand, Mint page colours) and Planners (To-do list, Weekly
+  planner), built in code from headings, To Do/Question tags, tables with a header row, rule
+  lines and page colours (`template_cmds.rs`). Their look can be matched later from screenshots.
+- **The user's own** ("My Templates"): Save current page as a template keeps the page's text,
+  tables, ink and page setup under a name in the preferences (with the desktop settings);
+  pictures and attachments are left out, since the settings file holds no media. A page from a
+  template gets fresh ids (`ops::clone_page_fresh`); the template's title is kept when it has
+  one, built-ins leave it empty.
+- **Ids and defaults.** Templates are `builtin:<slug>` or `my:<name>`. A section can name a
+  default template (`Section.default_template`, format 5); New Page, New Page Below and New
+  Subpage in that section start from it (a deleted template falls back to a blank page). The
+  last five used are remembered for Recently Used Templates.
+- **Surfaces.** Insert › Page Templates opens the Templates pane (categories, Recently Used, My
+  Templates with Delete, Always use a specific template, Save current page as a template with a
+  Save As Template dialog). Commands: `insert.pageTemplates`, `page.newFromTemplate`,
+  `insert.recentTemplate`, `template.list`, `template.setDefault`, `template.save`,
+  `template.delete`. The Paper Size pane (View, M4) will offer the same Save link.
+
 ## 5. Risks
 
 | Risk | Impact | Mitigation |
@@ -463,6 +486,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | D4 | 2026-10-20 | Ink strokes are page objects, one stroke per object (`PageObject::Ink`, points relative to the object's position with per-point pressure, colour, width, pen or highlighter); `.ncraft` version 4; geometry in `ink-geom` (L0), stroke operations in `ink` (L2); tools are session state (§4.10). | — (the plan named the crates; the object shape was open) | Every object command (select, lasso, delete, clipboard, order, rotate, move, undo) works on ink unchanged; [MS-ONE] ink nodes map stroke by stroke, losing only their grouping. |
 | D5 | 2026-10-21 | Tags on ink: a stroke carries `tags` like a paragraph (optional field, format 4 unchanged); the tag commands treat the selected strokes as one drawing, putting a new tag on its leftmost stroke and removing or checking it on all (§4.11). | — | Strokes are separate objects (D4), so tagging each would list one drawing many times in Find Tags; one anchor stroke keeps one entry per tag and maps to [MS-ONE]'s tag on the ink node. |
 | D6 | 2026-10-21 | Tab after a paragraph's text makes it a one-row, two-column table that takes the paragraph's place (the container splits around it); no session state, later Tabs and Enters use the table's own keys (§4.8). | — | Tables are separate objects (D2), so the paragraph must leave its container; the one-row table's existing Tab/Enter behaviour already covers "keep creating". |
+| D10 | 2026-10-24 | Page templates: NoteCraft's own built-in set (five categories, built in code), the user's own saved in the preferences without pictures, a default template per section (`Section.default_template`), the Templates pane (§4.15). | The plan waited for reference screenshots | The user chose NoteCraft's own templates over waiting; the reference's templates are its content, so a clean-room set is needed anyway. |
 | D9 | 2026-10-24 | Merged table cells: `row_span`/`col_span` on the top-left cell, covered cells kept in the grid empty and hidden; `table.merge`/`table.split`; `.ncraft` version 5 (§4.14). | Merging was left out of D2 ("needs a model change") | The full grid keeps every row/column command and the format's row/cell lists unchanged; [MS-ONE] stores tables the same way. The user approved the change. |
 | D8 | 2026-10-24 | Snap to Grid puts shapes' end points on the page's grid (1/8 in without one); Draw with Touch off turns a pressureless touch into panning; two fingers on the ruler move and turn it (§4.13). | — | Settings only, no format change; snapping lives in the engine's `draw.shape`, so headless clients get it too. |
 | D7 | 2026-10-23 | The Draw tab's ruler is session state (`DrawState.ruler`: centre and angle in page space), never saved or undone; a stroke that starts near one of its long edges is laid along it by the engine's `draw.stroke` (§4.12). | — | No document change and no format bump; the engine owns the snapping, so the canvas, the control channel and MCP draw the same lines. |

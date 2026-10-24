@@ -66,12 +66,16 @@ pub struct Section {
     /// When the section was created.
     #[serde(default)]
     pub created: Timestamp,
+    /// The template new pages of this section start from (Templates › Choose default template;
+    /// decision D10): `builtin:<slug>` or `my:<name>`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_template: Option<String>,
 }
 
 impl Section {
     /// A new empty section.
     pub fn new(id: Id, name: &str, color: SectionColor, now: Timestamp) -> Section {
-        Section { id, name: clean_name(name), color, pages: Vec::new(), created: now }
+        Section { id, name: clean_name(name), color, pages: Vec::new(), created: now, default_template: None }
     }
 
     /// Index of the page with `id`.

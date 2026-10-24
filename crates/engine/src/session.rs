@@ -62,6 +62,10 @@ pub struct Prefs {
     pub default_scope: ScopeKind,
     /// Backups to keep per notebook.
     pub backup_copies: usize,
+    /// Page templates of the user's own (decision D10).
+    pub templates: Vec<crate::template_cmds::SavedTemplate>,
+    /// Recently used templates, latest first.
+    pub recent_templates: Vec<String>,
 }
 
 impl Default for Prefs {
@@ -77,6 +81,8 @@ impl Default for Prefs {
             custom_tags: Vec::new(),
             default_scope: ScopeKind::AllNotebooks,
             backup_copies: 2,
+            templates: Vec::new(),
+            recent_templates: Vec::new(),
         }
     }
 }
@@ -145,6 +151,8 @@ pub struct ViewState {
     pub page_list_width: f32,
     /// Find Tags pane open.
     pub tags_pane: bool,
+    /// Templates pane open (Insert › Page Templates).
+    pub templates_pane: bool,
     /// The recycle bin of this notebook is being viewed.
     pub recycle_view: Option<Id>,
 }
@@ -162,6 +170,7 @@ impl Default for ViewState {
             find: FindState::default(),
             page_list_width: 200.0,
             tags_pane: false,
+            templates_pane: false,
             recycle_view: None,
         }
     }
