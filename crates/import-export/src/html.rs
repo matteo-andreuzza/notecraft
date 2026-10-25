@@ -29,8 +29,52 @@ pub const MAX_PARAGRAPHS: usize = 50_000;
 /// Most inline pictures produced.
 pub const MAX_IMAGES: usize = 256;
 
-/// A table as rows of cells, each cell a list of paragraphs.
+/// A table as rows of cells, each cell a list of paragraphs. Rows may be ragged; a place a
+/// merged cell covers holds no paragraphs.
 pub type Cells = Vec<Vec<Vec<Paragraph>>>;
+
+/// A merged cell (decision D9; HTML `rowspan`/`colspan`): the place of its top-left cell and
+/// how many rows and columns it covers, its own included.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Span {
+    /// Row of the top-left cell.
+    pub row: usize,
+    /// Column of the top-left cell.
+    pub col: usize,
+    /// Rows covered (at least 1).
+    pub rows: usize,
+    /// Columns covered (at least 1).
+    pub cols: usize,
+}
+
+/// A table: its cells, laid out on the grid, and its merged cells.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct TableBlock {
+    /// The cells, row by row.
+    pub cells: Cells,
+    /// The merged cells (none overlap; each starts at a place of `cells`).
+    pub spans: Vec<Span>,
+}
+
+impl TableBlock {
+    /// A table without merged cells.
+    pub fn plain(cells: Cells) -> TableBlock {
+        TableBlock { cells, spans: Vec::new() }
+    }
+
+    /// Row by row, whether a merged cell covers the place (it is not written).
+    fn covered(&self) -> Vec<Vec<bool>> {
+        let mut g: Vec<Vec<bool>> = self.cells.iter().map(|r| vec![false; r.len()]).collect();
+        for s in &self.spans {
+            for (r, row) in g.iter_mut().enumerate().skip(s.row).take(s.rows) {
+                for (c, x) in row.iter_mut().enumerate().skip(s.col).take(s.cols) {
+                    *x |= (r, c) != (s.row, s.col);
+                }
+            }
+        }
+        g
+    }
+}
 
 /// What a fragment holds, in reading order.
 #[derive(Debug, Clone, PartialEq)]
@@ -38,7 +82,7 @@ pub enum Block {
     /// A paragraph.
     Para(Paragraph),
     /// A table.
-    Table(Cells),
+    Table(TableBlock),
     /// An inline picture: `src` is its `data:image/…;base64,…` URI, as found (undecoded).
     Image {
         /// The `data:` URI.
@@ -66,12 +110,49 @@ struct Open {
     color: bool,
 }
 
-#[derive(Default)]
+/// A table being read, laid out as HTML does: each cell takes the first place in its row that
+/// no cell above (a `rowspan`) or to its left covers.
 struct TableState {
-    rows: Cells,
-    row: Vec<Vec<Paragraph>>,
+    /// Cells placed so far: row, column, rows and columns covered, paragraphs.
+    placed: Vec<(usize, usize, usize, usize, Vec<Paragraph>)>,
+    /// The current row (rows without cells or covered places are not counted).
+    row: usize,
+    /// Whether a row is open (`<tr>` or a cell seen since the last row ended): `</tr>` and the
+    /// next `<tr>` both end a row, and only the first may count it.
+    row_open: bool,
+    /// Whether the current row has a cell of its own.
+    row_has_cells: bool,
+    /// Where the next cell of the current row may start.
+    col: usize,
+    /// Per column: how many rows, the current one included, a placed cell still covers.
+    cover: Vec<usize>,
+    /// The paragraphs of the open cell.
     cell: Vec<Paragraph>,
     cell_open: bool,
+    /// The open cell's `rowspan` and `colspan`.
+    span: (usize, usize),
+}
+
+impl Default for TableState {
+    fn default() -> TableState {
+        TableState {
+            placed: Vec::new(),
+            row: 0,
+            row_open: false,
+            row_has_cells: false,
+            col: 0,
+            cover: Vec::new(),
+            cell: Vec::new(),
+            cell_open: false,
+            span: (1, 1),
+        }
+    }
+}
+
+/// A `rowspan`/`colspan` value: a number from 1 (missing, zero or garbage count as 1; the
+/// caller clamps to the table limits).
+fn span_attr(attrs: &str, name: &str) -> usize {
+    attr(attrs, name).and_then(|v| v.trim().parse::<usize>().ok()).filter(|n| *n > 0).unwrap_or(1)
 }
 
 struct Reader {
@@ -433,7 +514,12 @@ impl Reader {
                     self.table = Some(TableState::default());
                 }
             }
-            "tr" if self.table_depth == 1 => self.end_row(),
+            "tr" if self.table_depth == 1 => {
+                self.end_row();
+                if let Some(t) = &mut self.table {
+                    t.row_open = true;
+                }
+            }
             // A table inside a table is text: its cells separated by spaces.
             "tr" | "td" | "th" if self.table_depth > 1 => self.text(" "),
             "td" | "th" if self.table_depth == 1 => {
@@ -442,6 +528,8 @@ impl Reader {
                 }
                 if let Some(t) = &mut self.table {
                     t.cell_open = true;
+                    t.row_open = true;
+                    t.span = (span_attr(attrs, "rowspan"), span_attr(attrs, "colspan"));
                 }
                 if tag == "th" {
                     self.fmt.push(Fmt::Bold);
@@ -541,40 +629,87 @@ impl Reader {
         }
     }
 
-    /// The current cell ends: its paragraphs join the row (within the table limits).
+    /// The current cell ends: its paragraphs take the first free place of the row (within the
+    /// table limits), covering the rows and columns its spans ask for.
     fn end_cell(&mut self) {
         self.flush();
         if let Some(t) = &mut self.table {
             let paras = std::mem::take(&mut t.cell);
-            let so_far: usize = t.rows.iter().map(Vec::len).sum::<usize>() + t.row.len();
-            if t.cell_open && t.row.len() < MAX_COLS && so_far < MAX_CELLS {
-                t.row.push(paras);
+            let busy = |t: &TableState, c: usize| t.cover.get(c).is_some_and(|n| *n > 0);
+            let mut c = t.col;
+            while c < MAX_COLS && busy(t, c) {
+                c += 1;
+            }
+            if t.cell_open && c < MAX_COLS && t.row < MAX_ROWS && t.placed.len() < MAX_CELLS {
+                // A cell never reaches into a place a cell above already covers.
+                let mut cols = t.span.1.min(MAX_COLS - c);
+                if let Some(k) = (c..c + cols).position(|x| busy(t, x)) {
+                    cols = k.max(1);
+                }
+                let rows = t.span.0.min(MAX_ROWS - t.row);
+                if t.cover.len() < c + cols {
+                    t.cover.resize(c + cols, 0);
+                }
+                for n in t.cover.iter_mut().skip(c).take(cols) {
+                    *n = rows;
+                }
+                t.placed.push((t.row, c, rows, cols, paras));
+                t.col = c + cols;
+                t.row_has_cells = true;
             }
             t.cell_open = false;
+            t.span = (1, 1);
         }
     }
 
-    /// The current row ends (closing an open cell first).
+    /// The current row ends (closing an open cell first). A row counts when it has a cell or a
+    /// cell from above reaches into it.
     fn end_row(&mut self) {
         if self.table.as_ref().is_some_and(|t| t.cell_open) {
             self.end_cell();
         }
-        if let Some(t) = &mut self.table {
-            let r = std::mem::take(&mut t.row);
-            if !r.is_empty() && t.rows.len() < MAX_ROWS {
-                t.rows.push(r);
+        if let Some(t) = &mut self.table
+            && std::mem::take(&mut t.row_open)
+        {
+            if (t.row_has_cells || t.cover.iter().any(|n| *n > 0)) && t.row < MAX_ROWS {
+                t.row += 1;
+                for n in &mut t.cover {
+                    *n = n.saturating_sub(1);
+                }
             }
+            t.col = 0;
+            t.row_has_cells = false;
         }
     }
 
-    /// The table ends: it joins the output if it has any cell.
+    /// The table ends: it joins the output if it has any cell. Spans past the last row stop
+    /// there, and rows past the cell limit are dropped.
     fn end_table(&mut self) {
         self.end_row();
-        if let Some(t) = self.table.take()
-            && !t.rows.is_empty()
-        {
-            self.out.push(Block::Table(t.rows));
+        let Some(t) = self.table.take() else { return };
+        if t.placed.is_empty() {
+            return;
         }
+        let n_cols = t.placed.iter().map(|p| p.1 + p.3).max().unwrap_or(1).max(1);
+        let n_rows = t.row.min(MAX_CELLS / n_cols).max(1);
+        // Rows stay ragged (the end of a row needs no padding); a covered place inside a row is
+        // an empty cell.
+        let mut block = TableBlock::default();
+        block.cells.resize_with(n_rows, Vec::new);
+        for (r, c, rows, cols, paras) in t.placed {
+            let Some(row) = block.cells.get_mut(r) else { continue };
+            if row.len() < c + 1 {
+                row.resize_with(c + 1, Vec::new);
+            }
+            if let Some(cell) = row.get_mut(c) {
+                *cell = paras;
+            }
+            let rows = rows.min(n_rows - r);
+            if (rows, cols) != (1, 1) {
+                block.spans.push(Span { row: r, col: c, rows, cols });
+            }
+        }
+        self.out.push(Block::Table(block));
     }
 }
 
@@ -758,13 +893,27 @@ pub fn write(blocks: &[Block]) -> String {
                     out.push_str(&format!("</{tag}>"));
                 }
             },
-            Block::Table(rows) => {
+            Block::Table(table) => {
                 close_to(&mut out, &mut lists, 0);
                 out.push_str("<table border=\"1\" style=\"border-collapse:collapse\">");
-                for row in rows {
+                let covered = table.covered();
+                let anchors: std::collections::HashMap<(usize, usize), Span> = table.spans.iter().map(|s| ((s.row, s.col), *s)).collect();
+                for (r, row) in table.cells.iter().enumerate() {
                     out.push_str("<tr>");
-                    for cell in row {
-                        out.push_str("<td>");
+                    for (c, cell) in row.iter().enumerate() {
+                        if covered.get(r).and_then(|cv| cv.get(c)).copied().unwrap_or(false) {
+                            continue;
+                        }
+                        out.push_str("<td");
+                        if let Some(s) = anchors.get(&(r, c)) {
+                            if s.rows > 1 {
+                                out.push_str(&format!(" rowspan=\"{}\"", s.rows));
+                            }
+                            if s.cols > 1 {
+                                out.push_str(&format!(" colspan=\"{}\"", s.cols));
+                            }
+                        }
+                        out.push('>');
                         let inner: Vec<Block> = cell.iter().cloned().map(Block::Para).collect();
                         let html = write(&inner);
                         out.push_str(html.trim_start_matches("<meta charset=\"utf-8\">"));

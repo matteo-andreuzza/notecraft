@@ -383,6 +383,26 @@ fn convert_between_text_and_tables() {
 }
 
 #[test]
+fn merged_cells_copy_and_paste_as_html_spans() {
+    // Copy: a merged cell becomes `colspan`/`rowspan` for other applications (decision D9).
+    let mut s = filled(2, 3);
+    let tid = table(&s).id.to_string();
+    run(&mut s, "table.selectRange", json!({"table": tid, "rows": [0, 0], "cols": [0, 1]}));
+    run(&mut s, "table.merge", json!({}));
+    run(&mut s, "table.selectTable", json!({}));
+    let html = run(&mut s, "edit.copy", json!({}))["html"].as_str().unwrap().to_string();
+    assert!(html.contains("<td colspan=\"2\">"), "{html}");
+    assert_eq!(html.matches("<td").count(), 5, "the covered place is not written: {html}");
+    // Paste: spans from another application make merged cells.
+    blank_page(&mut s);
+    let html = "<table><tr><td rowspan=\"2\">Tall</td><td>a</td></tr><tr><td>b</td></tr></table>";
+    run(&mut s, "edit.paste", json!({"text": "Tall\ta\nb", "html": html}));
+    assert_eq!(spans(&s), vec![vec![(2, 1), (1, 1)], vec![(1, 1), (1, 1)]], "BEH.Paste.HTML");
+    assert_eq!(grid(&s), vec![vec!["Tall".to_string(), "a".into()], vec![String::new(), "b".into()]]);
+    assert!(table(&s).is_covered(1, 0));
+}
+
+#[test]
 fn tables_copy_with_their_page_and_survive_undo() {
     let mut s = filled(2, 2);
     let pid = s.sel.page.unwrap();

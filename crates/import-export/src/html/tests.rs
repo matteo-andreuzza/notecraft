@@ -6,7 +6,8 @@ fn texts(blocks: &[Block]) -> Vec<String> {
         .iter()
         .map(|b| match b {
             Block::Para(p) => p.text(),
-            Block::Table(rows) => rows
+            Block::Table(t) => t
+                .cells
                 .iter()
                 .map(|r| r.iter().map(|c| c.iter().map(Paragraph::text).collect::<Vec<_>>().join("/")).collect::<Vec<_>>().join("|"))
                 .collect::<Vec<_>>()
@@ -62,8 +63,8 @@ fn nested_lists_become_levels() {
 fn tables_are_tables() {
     let b = parse("<p>Before</p><table><tr><th>Item</th><th>Qty</th></tr><tr><td>Pears</td><td><p>4</p><p>ripe</p></td></tr></table><p>After</p>");
     assert_eq!(texts(&b), vec!["Before", "Item|Qty\nPears|4/ripe", "After"]);
-    let Block::Table(rows) = &b[1] else { panic!() };
-    assert_eq!(rows[0][0][0].runs[0].fmt.bold, Some(true), "header cells are bold");
+    let Block::Table(t) = &b[1] else { panic!() };
+    assert_eq!(t.cells[0][0][0].runs[0].fmt.bold, Some(true), "header cells are bold");
     // Unclosed cells and rows, a nested table flattened into its cell, a ragged row.
     let b = parse("<table><tr><td>a<td>b<tr><td><table><tr><td>x</td><td>y</td></tr></table></table>");
     assert_eq!(texts(&b), vec!["a|b\nx y"]);
@@ -101,12 +102,33 @@ fn hostile_sizes_are_bounded() {
     // A huge table stops at the cell limit.
     let row = format!("<tr>{}</tr>", "<td>x</td>".repeat(200));
     let b = parse(&format!("<table>{}</table>", row.repeat(400)));
-    let Block::Table(rows) = &b[0] else { panic!() };
-    assert!(rows.iter().all(|r| r.len() <= MAX_COLS));
-    assert!(rows.iter().map(Vec::len).sum::<usize>() <= MAX_CELLS);
+    let Block::Table(t) = &b[0] else { panic!() };
+    assert!(t.cells.iter().all(|r| r.len() <= MAX_COLS));
+    assert!(t.cells.iter().map(Vec::len).sum::<usize>() <= MAX_CELLS);
+    // Hostile spans are clamped to the table limits and the rows the table has.
+    let b = parse("<table><tr><td rowspan=999999999 colspan=99999>a</td><td>b</td></tr><tr><td>c</td></tr></table>");
+    let Block::Table(t) = &b[0] else { panic!() };
+    assert_eq!(t.spans, vec![Span { row: 0, col: 0, rows: 2, cols: MAX_COLS }]);
+    assert_eq!(texts(&b), vec!["a\n"], "no place is left for b and c");
     // Many paragraphs stop at the paragraph limit.
     let many = "<p>p</p>".repeat(MAX_PARAGRAPHS + 10);
     assert_eq!(parse(&many).len(), MAX_PARAGRAPHS);
+}
+
+#[test]
+fn merged_cells_read_and_write_as_spans() {
+    // A header across two columns; a cell down two rows pushes the next row's cell right.
+    let b = parse(
+        "<table><tr><td colspan=\"2\">Head</td></tr><tr><td rowspan='2'>Tall</td><td>x</td></tr><tr><td>y</td></tr>\
+         <tr><td>z</td><td colspan=0>w</td></tr></table>",
+    );
+    let Block::Table(t) = &b[0] else { panic!() };
+    assert_eq!(texts(&b), vec!["Head\nTall|x\n|y\nz|w"]);
+    assert_eq!(t.spans, vec![Span { row: 0, col: 0, rows: 1, cols: 2 }, Span { row: 1, col: 0, rows: 2, cols: 1 }], "BEH.Paste.HTML");
+    let html = write(&b);
+    assert!(html.contains("<td colspan=\"2\">") && html.contains("<td rowspan=\"2\">"), "{html}");
+    assert_eq!(html.matches("<td").count(), 6, "covered places are not written: {html}");
+    assert_eq!(parse(&html), b, "{html}");
 }
 
 #[test]

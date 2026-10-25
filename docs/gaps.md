@@ -31,8 +31,7 @@ Smaller known shortfalls:
   structure-editing menu rows yet; other applications get the linear text.
 - Page templates (D10) are NoteCraft's own, not the reference's; templates of the user's own
   leave pictures and attachments out (the settings file holds no media).
-- Tables: merged cells (D9) copy to other applications as separate cells (no HTML
-  colspan/rowspan yet), and Sort refuses cells merged across rows; the Sort… dialog sorts by up
+- Tables: Sort refuses cells merged across rows (D9); the Sort… dialog sorts by up
   to two columns, the engine by three. A table is a page object beside containers rather than
   inside one (decision D2). Cell ranges copy as tab-separated text (whole tables copy as tables, and as HTML tables for other
   applications).

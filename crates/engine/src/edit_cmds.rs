@@ -428,7 +428,7 @@ fn below(s: &Session, anchor: Option<notecraft_doc::Id>, v: &Value) -> Result<no
 fn paste_blocks(s: &mut Session, v: &Value, blocks: Vec<html::Block>, mode: Mode) -> CmdResult {
     enum Seg {
         Paras(Vec<Paragraph>),
-        Table(html::Cells),
+        Table(html::TableBlock),
         Image(String, String),
     }
     let mut segs: Vec<Seg> = Vec::new();
@@ -475,10 +475,10 @@ fn paste_blocks(s: &mut Session, v: &Value, blocks: Vec<html::Block>, mode: Mode
                 s.set_caret(Pos::new(Block::Outline(oid), last, end));
                 anchor = Some(oid);
             }
-            Seg::Table(cells) => {
+            Seg::Table(mut block) => {
                 let at = below(s, anchor, v)?;
-                let cells = cells.into_iter().map(|row| row.into_iter().map(|c| adapt(c, mode)).collect()).collect();
-                let t = crate::table_cmds::table_from_cells(s, at, cells);
+                block.cells = block.cells.into_iter().map(|row| row.into_iter().map(|c| adapt(c, mode)).collect()).collect();
+                let t = crate::table_cmds::table_from_cells(s, at, block);
                 let id = t.id;
                 s.page_mut().ok_or_else(no_page)?.objects.push(notecraft_doc::PageObject::Table(t));
                 anchor = Some(id);

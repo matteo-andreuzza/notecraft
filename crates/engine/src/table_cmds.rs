@@ -638,21 +638,31 @@ fn column_width(s: &mut Session, v: &Value) -> CmdResult {
     Ok(Value::Null)
 }
 
-/// Rows `rows` of `t` as paragraphs: cells joined by tabs, a cell's paragraphs by spaces, the
-/// runs (and so the formatting) kept. Used by Convert to Text and by Copy of cells.
-/// The cells of a rectangle of `t` as paragraph lists, for the HTML clipboard.
-pub(crate) fn cells_of(t: &Table, rows: (usize, usize), cols: (usize, usize)) -> Vec<Vec<Vec<Paragraph>>> {
-    t.rows
-        .iter()
-        .skip(rows.0)
-        .take(rows.1.saturating_sub(rows.0) + 1)
-        .map(|r| r.cells.iter().skip(cols.0).take(cols.1.saturating_sub(cols.0) + 1).map(|c| c.paragraphs.clone()).collect())
-        .collect()
+/// The cells of a rectangle of `t` as paragraph lists with its merged cells (clipped to the
+/// rectangle), for the HTML clipboard.
+pub(crate) fn cells_of(t: &Table, rows: (usize, usize), cols: (usize, usize)) -> notecraft_import_export::html::TableBlock {
+    use notecraft_import_export::html::{Span, TableBlock};
+    let (n_rows, n_cols) = (rows.1.saturating_sub(rows.0) + 1, cols.1.saturating_sub(cols.0) + 1);
+    let mut block = TableBlock::default();
+    for (r, row) in t.rows.iter().enumerate().skip(rows.0).take(n_rows) {
+        let mut cells = Vec::new();
+        for (c, cell) in row.cells.iter().enumerate().skip(cols.0).take(n_cols) {
+            cells.push(cell.paragraphs.clone());
+            let (rs, cs) = cell.span();
+            if (rs, cs) != (1, 1) {
+                let (r, c) = (r - rows.0, c - cols.0);
+                block.spans.push(Span { row: r, col: c, rows: rs.min(n_rows - r), cols: cs.min(n_cols - c) });
+            }
+        }
+        block.cells.push(cells);
+    }
+    block
 }
 
-/// A new table at `pos` holding `cells` (rows of cells of paragraphs, from pasted HTML): ragged
-/// rows are padded, the table limits applied, every id fresh.
-pub(crate) fn table_from_cells(s: &mut Session, pos: Point, cells: Vec<Vec<Vec<Paragraph>>>) -> Table {
+/// A new table at `pos` holding `block` (rows of cells of paragraphs and merged cells, from
+/// pasted HTML): ragged rows are padded, the table limits applied, every id fresh.
+pub(crate) fn table_from_cells(s: &mut Session, pos: Point, block: notecraft_import_export::html::TableBlock) -> Table {
+    let cells = block.cells;
     let cols = cells.iter().map(Vec::len).max().unwrap_or(1).clamp(1, MAX_COLS);
     let rows = cells.len().clamp(1, MAX_ROWS).min(MAX_CELLS / cols);
     let id = s.new_id();
@@ -679,6 +689,13 @@ pub(crate) fn table_from_cells(s: &mut Session, pos: Point, cells: Vec<Vec<Vec<P
             stamp(s, c);
         }
     }
+    for sp in block.spans {
+        if let Some(cell) = table.cell_mut(sp.row, sp.col) {
+            cell.row_span = u32::try_from(sp.rows).unwrap_or(u32::MAX);
+            cell.col_span = u32::try_from(sp.cols).unwrap_or(u32::MAX);
+        }
+    }
+    // Spans past the clamped size, or overlapping, are repaired here (decision D9).
     table.normalize();
     table
 }
@@ -768,6 +785,8 @@ pub(crate) fn caret_in_first_cell(s: &mut Session, t: Id) {
     }
 }
 
+/// Rows `rows` of `t` as paragraphs: cells joined by tabs, a cell's paragraphs by spaces, the
+/// runs (and so the formatting) kept. Used by Convert to Text and by Copy of cells.
 pub(crate) fn rows_as_paragraphs(t: &Table, rows: (usize, usize), cols: (usize, usize), mint: &mut dyn FnMut() -> Id) -> Vec<Paragraph> {
     let mut out = Vec::new();
     for r in t.rows.iter().skip(rows.0).take(rows.1.saturating_sub(rows.0) + 1) {

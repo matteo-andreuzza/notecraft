@@ -441,7 +441,10 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   refuses a table with cells merged across rows (split them first). The canvas lays a merged
   cell over its columns' widths, a tall one stretches the last of its rows, and borders are
   drawn cell by cell. `notebook.inspect` gives `rowSpan`/`colSpan`, and `covered` for hidden
-  places. HTML copied out keeps the grid but not the merge (a gap).
+  places. HTML copied out writes a merged cell as `colspan`/`rowspan` and leaves out the places
+  it covers; HTML pasted in is laid out on the grid as browsers do (a cell takes the first
+  place no `rowspan` above covers; spans clamped to the table limits and its rows), so its
+  merged cells survive (2026-10-25).
 
 ### 4.15 Page templates (decision D10, 2026-10-24)
 
