@@ -260,6 +260,17 @@ pub(crate) fn draw_selection(painter: &egui::Painter, m: &MediaLayout, t: Tokens
     }
 }
 
+/// The resize cursor over sizing handle `i` (in [`handles`] order).
+pub(crate) fn handle_cursor(i: usize) -> egui::CursorIcon {
+    use egui::CursorIcon;
+    match i {
+        0 | 2 => CursorIcon::ResizeNwSe,
+        1 | 3 => CursorIcon::ResizeNeSw,
+        4 | 6 => CursorIcon::ResizeVertical,
+        _ => CursorIcon::ResizeHorizontal,
+    }
+}
+
 /// The eight sizing handles: corners (top-left, top-right, bottom-right, bottom-left), then
 /// edges (top, right, bottom, left).
 pub(crate) fn handles(r: Rect) -> [Rect; 8] {

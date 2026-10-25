@@ -178,15 +178,10 @@ fn redo_to(s: &mut Session, v: &Value) -> CmdResult {
 pub(crate) fn copy_selection(s: &mut Session) -> Result<String, CmdError> {
     if s.sel.focus == FocusArea::PageList {
         let section = s.section().ok_or_else(no_page)?;
-        let mut ids = s.sel.pages.clone();
-        if let Some(p) = s.sel.page
-            && !ids.contains(&p)
-        {
-            ids.insert(0, p);
-        }
+        let ids = crate::page_cmds::selected_pages(s);
         let pages: Vec<_> = section.pages.iter().filter(|p| ids.contains(&p.id)).cloned().collect();
         let text = pages.iter().map(|p| p.display_title()).collect::<Vec<_>>().join("\n");
-        s.clipboard = crate::session::Clipboard { paragraphs: Vec::new(), text: text.clone(), pages, objects: Vec::new(), html: String::new() };
+        s.clipboard = crate::session::Clipboard { text: text.clone(), pages, ..Default::default() };
         return Ok(text);
     }
     let page = s.page().ok_or_else(no_page)?;

@@ -410,22 +410,7 @@ fn scope_label(k: notecraft_engine::ScopeKind) -> &'static str {
 fn search_box(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: Tokens) {
     let ctx = ui.ctx().clone();
     let id = egui::Id::new("search_box");
-    let focused = ctx.memory(|m| m.has_focus(id));
-    let hovered = ui.rect_contains_pointer(r);
-    let stroke = if focused {
-        Stroke::new(1.0, t.accent)
-    } else if hovered {
-        Stroke::new(1.0, t.input_border)
-    } else {
-        Stroke::new(1.0, t.card_border)
-    };
-    ui.painter().rect(r, radius::SEARCH, t.input, stroke, egui::StrokeKind::Inside);
-    // The whole box is the click target and what a screen reader announces.
-    let area = ui.interact(r, id.with("area"), Sense::click());
-    area.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Search notebooks"));
-    if area.clicked() {
-        ctx.memory_mut(|m| m.request_focus(id));
-    }
+    crate::chrome::search_frame(ui, r, &t, id, "Search notebooks");
     icons::search(ui.painter(), Rect::from_center_size(pos2(r.min.x + 14.0, r.center().y), vec2(14.0, 14.0)), t.icon);
     let hint = "Search notebooks";
     let mut q = app.ui.search.clone();

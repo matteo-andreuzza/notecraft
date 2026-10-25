@@ -12,7 +12,7 @@ use notecraft_doc::{Id, Outline, Page, PageObject, ParaStyle, Paragraph, RuleLin
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
-use crate::ops::{self, DEFAULT_LEFT, need_page, no_page};
+use crate::ops::{self, DEFAULT_LEFT, need_page, need_section, no_page};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
 
 /// Most templates of the user's own.
@@ -135,13 +135,9 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
     ]
 }
 
-fn need_section(s: &Session) -> Option<&'static str> {
-    if s.sel.section.is_none() { Some("Open a section first") } else { None }
-}
-
 fn need_recent(s: &Session) -> Option<&'static str> {
-    if s.sel.section.is_none() {
-        return Some("Open a section first");
+    if let Some(why) = need_section(s) {
+        return Some(why);
     }
     if s.prefs.recent_templates.is_empty() { Some("No template used yet") } else { None }
 }

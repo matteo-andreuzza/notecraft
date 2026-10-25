@@ -227,9 +227,6 @@ pub fn font_grid() -> Vec<[Rgba; 5]> {
         .collect()
 }
 
-/// The default font colour ("Automatic"): black text.
-pub const AUTOMATIC_TEXT: Rgba = Rgba::BLACK;
-
 #[cfg(test)]
 mod tests {
     use super::*;

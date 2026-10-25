@@ -6,13 +6,9 @@ use std::sync::Arc;
 use notecraft_doc::{DeletedPage, Id, Page, Paragraph, Section};
 use serde_json::{Value, json};
 
-use crate::ops::{self, no_page};
+use crate::ops::{self, need_section, no_page};
 use crate::selection::{Block, FocusArea, PageSel, Pos};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
-
-fn need_section(s: &Session) -> Option<&'static str> {
-    if s.sel.section.is_some() && s.section().is_some() { None } else { Some("Open a section first") }
-}
 
 fn need_page_sel(s: &Session) -> Option<&'static str> {
     if s.page().is_some() { None } else { Some("No page is selected") }
@@ -300,14 +296,21 @@ fn rename(s: &mut Session, v: &Value) -> CmdResult {
     Ok(Value::Null)
 }
 
-/// Move the selected pages (current page plus multi-selection) to the recycle bin.
-pub(crate) fn delete_pages_to_bin(s: &mut Session) -> Result<usize, CmdError> {
+/// The selected pages: the current page first (when it isn't in the multi-selection), then
+/// the multi-selection in the order it was made.
+pub(crate) fn selected_pages(s: &Session) -> Vec<notecraft_doc::Id> {
     let mut ids = s.sel.pages.clone();
     if let Some(p) = s.sel.page
         && !ids.contains(&p)
     {
         ids.insert(0, p);
     }
+    ids
+}
+
+/// Move the selected pages (current page plus multi-selection) to the recycle bin.
+pub(crate) fn delete_pages_to_bin(s: &mut Session) -> Result<usize, CmdError> {
+    let ids = selected_pages(s);
     let mut n = 0;
     for id in ids {
         if delete_one(s, id)? {
@@ -329,7 +332,7 @@ fn delete_one(s: &mut Session, pid: Id) -> Result<bool, CmdError> {
     let range = if collapsed { fam.clone() } else { i..i + 1 };
     let section_name = sec.name.clone();
     let secm = s.ws.section_mut(sid).ok_or_else(no_page)?;
-    let removed: Vec<Arc<Page>> = secm.pages.drain(range.clone()).collect();
+    let removed: Vec<Arc<Page>> = secm.pages.drain(range).collect();
     if !collapsed {
         // Former children of the deleted page move up one level.
         for p in secm.pages.iter_mut().skip(i).take(fam.len().saturating_sub(1)) {
@@ -514,10 +517,7 @@ fn copy_link(s: &mut Session, v: &Value) -> CmdResult {
     let pid = target_page(s, v)?;
     let title = s.ws.page(pid).map(|p| p.display_title()).ok_or_else(|| CmdError::Params("no such page".into()))?;
     let link = page_link(pid);
-    let mut para = ops::new_para(s);
-    para.runs.push(notecraft_doc::Run::new(&title, notecraft_doc::CharFormat { link: Some(link.clone()), ..Default::default() }));
-    s.clipboard =
-        crate::session::Clipboard { paragraphs: vec![para], text: link.clone(), pages: Vec::new(), objects: Vec::new(), html: String::new() };
+    ops::set_link_clipboard(s, &title, &link);
     Ok(json!({"link": link, "text": link}))
 }
 

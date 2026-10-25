@@ -22,6 +22,22 @@ pub(crate) fn no_page() -> CmdError {
     CmdError::Disabled("no page is open".into())
 }
 
+pub(crate) fn need_notebook(s: &Session) -> Option<&'static str> {
+    if s.notebook().is_some() { None } else { Some("Open a notebook first") }
+}
+
+pub(crate) fn need_section(s: &Session) -> Option<&'static str> {
+    if s.section().is_some() { None } else { Some("Open a section first") }
+}
+
+/// Put a link on the engine clipboard: as notes, `title` linked to `link`; as plain text, the
+/// link itself (Copy Link to Page / Section / Paragraph).
+pub(crate) fn set_link_clipboard(s: &mut Session, title: &str, link: &str) {
+    let mut para = new_para(s);
+    para.runs.push(notecraft_doc::Run::new(title, notecraft_doc::CharFormat { link: Some(link.to_string()), ..Default::default() }));
+    s.clipboard = crate::session::Clipboard { paragraphs: vec![para], text: link.to_string(), ..Default::default() };
+}
+
 pub(crate) fn need_page(s: &Session) -> Option<&'static str> {
     if s.sel.page.is_some() { None } else { Some("No page is open") }
 }

@@ -4,13 +4,9 @@
 use notecraft_doc::Id;
 use serde_json::{Value, json};
 
-use crate::ops::{need_page, no_page};
+use crate::ops::{need_page, need_section, no_page};
 use crate::selection::{Block, FocusArea, Pos};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
-
-fn need_section(s: &Session) -> Option<&'static str> {
-    if s.section().is_some() { None } else { Some("Select a section first") }
-}
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![

@@ -222,9 +222,8 @@ fn para_count(s: &Session, block: Block) -> usize {
 
 fn hidden(s: &Session, block: Block, para: usize) -> bool {
     match block {
-        Block::Title => false,
         Block::Outline(id) => s.page().and_then(|p| p.outline(id)).is_some_and(|o| o.is_hidden(para)),
-        Block::Cell(_) => false,
+        Block::Title | Block::Cell(_) => false,
     }
 }
 

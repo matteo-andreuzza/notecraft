@@ -350,7 +350,7 @@ fn move_paragraph(s: &mut Session, v: &Value) -> CmdResult {
         return Err(CmdError::Params("no such paragraph".into()));
     }
     let r = src.subtree(para);
-    let mut block: Vec<_> = src.paragraphs.drain(r.clone()).collect();
+    let mut block: Vec<_> = src.paragraphs.drain(r).collect();
     let base = block.first().map(|p| p.level).unwrap_or(0);
     let target_level = match (level, at_point) {
         (Some(l), _) => Some(l.min(notecraft_doc::text::MAX_LEVEL as usize) as u8),

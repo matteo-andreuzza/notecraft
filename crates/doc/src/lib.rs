@@ -43,19 +43,3 @@ pub use time::{Civil, Timestamp};
 
 pub use notecraft_color as color;
 pub use notecraft_geom as geom;
-
-/// Errors from model operations.
-#[derive(Debug, thiserror::Error, Clone, PartialEq, Eq)]
-pub enum DocError {
-    /// No object with this id.
-    #[error("no {kind} with id {id}")]
-    NotFound {
-        /// What was looked for.
-        kind: &'static str,
-        /// The id.
-        id: Id,
-    },
-    /// The operation would break an invariant.
-    #[error("{0}")]
-    Invalid(String),
-}

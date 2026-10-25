@@ -443,16 +443,15 @@ pub fn handle_input(app: &mut NoteApp, ctx: &egui::Context) {
             }
         });
     }
-    let _ = Block::Title;
 }
 
-/// Whether the page selection holds a picture or attachment (arrows move it then).
 /// The layout of the note container or table selected as an object, if one is.
 fn block_selected(app: &NoteApp) -> Option<crate::canvas::OutlineLayout> {
     let notecraft_engine::selection::PageSel::Objects { ids } = &app.session.sel.on_page else { return None };
     app.canvas.outlines.iter().find(|o| ids.contains(&o.id)).copied()
 }
 
+/// Whether the page selection holds a picture or attachment (arrows move it then).
 fn media_selected(app: &NoteApp) -> bool {
     let (Some(page), notecraft_engine::selection::PageSel::Objects { ids }) = (app.session.page(), &app.session.sel.on_page) else { return false };
     ids.iter().any(|id| page.image(*id).is_some() || page.attachment(*id).is_some() || page.ink(*id).is_some())

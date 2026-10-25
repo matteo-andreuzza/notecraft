@@ -79,9 +79,9 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .params(r#"{"scope"?: "page"|"section"|"sectionGroup"|"notebook"|"all", "group"?: "tag"|"section"|"title"|"date"|"text", "unchecked"?: bool}"#)
             .pure(),
         // BEH.Tags.SummaryPage — Create Summary Page.
-        CommandSpec::new("tag.summaryPage", "BEH.Tags.SummaryPage", "Create Summary Page", "Behaviour/Tags", summary_page).params(r#"{"scope"?: ..., "group"?: ..., "unchecked"?: bool}"#).when(|s| {
-            if s.sel.section.is_some() { None } else { Some("Open a section first") }
-        }),
+        CommandSpec::new("tag.summaryPage", "BEH.Tags.SummaryPage", "Create Summary Page", "Behaviour/Tags", summary_page)
+            .params(r#"{"scope"?: ..., "group"?: ..., "unchecked"?: bool}"#)
+            .when(ops::need_section),
         // R.Home.Tags.TagsCustomize — add, modify or remove a custom tag (stored in preferences).
         CommandSpec::new("tag.customize", "R.Home.Tags.TagsCustomize", "Customize Tags", "Home/Tags/Customize Tags", customize)
             .params(r##"{"action": "add"|"modify"|"remove", "key"?: string, "name"?: string, "symbol"?: string, "fontColor"?: "#rrggbb", "highlight"?: "#rrggbb"}"##)
@@ -288,18 +288,6 @@ struct Found {
 /// What Find Tags and summary pages show for a tagged stroke (unverified wording).
 const INK_TEXT: &str = "Ink drawing";
 
-fn scope_kind(v: &Value) -> Result<Option<ScopeKind>, CmdError> {
-    Ok(match p::str(v, "scope") {
-        None => None,
-        Some("page") => Some(ScopeKind::Page),
-        Some("section") => Some(ScopeKind::Section),
-        Some("sectionGroup") => Some(ScopeKind::SectionGroup),
-        Some("notebook") => Some(ScopeKind::Notebook),
-        Some("all") => Some(ScopeKind::AllNotebooks),
-        Some(o) => return Err(CmdError::Params(format!("unknown scope `{o}`"))),
-    })
-}
-
 fn collect(s: &Session, kind: ScopeKind, unchecked_only: bool) -> Vec<Found> {
     let scope = s.scope(kind);
     let mut out = Vec::new();
@@ -369,7 +357,7 @@ fn group_key(f: &Found, group: &str, offset: i32) -> String {
 }
 
 fn find_tags(s: &mut Session, v: &Value) -> CmdResult {
-    let kind = scope_kind(v)?.unwrap_or(ScopeKind::AllNotebooks);
+    let kind = crate::search_cmds::parse_scope(v)?.unwrap_or(ScopeKind::AllNotebooks);
     let group = p::str(v, "group").unwrap_or("tag");
     if !matches!(group, "tag" | "section" | "title" | "date" | "text") {
         return Err(CmdError::Params(format!("unknown grouping `{group}`")));
@@ -389,7 +377,7 @@ fn find_tags(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 fn summary_page(s: &mut Session, v: &Value) -> CmdResult {
-    let kind = scope_kind(v)?.unwrap_or(ScopeKind::AllNotebooks);
+    let kind = crate::search_cmds::parse_scope(v)?.unwrap_or(ScopeKind::AllNotebooks);
     let group = p::str(v, "group").unwrap_or("tag").to_string();
     let found = collect(s, kind, p::bool(v, "unchecked").unwrap_or(false));
     let sid = s.sel.section.ok_or_else(no_page)?;

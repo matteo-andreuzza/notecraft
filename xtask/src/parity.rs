@@ -487,7 +487,7 @@ pub fn run(root: &Path, check: bool) -> Result<(), String> {
         pct(report.all.verified, report.all.total),
         report.commands
     );
-    let mut errors = report.errors.clone();
+    let mut errors = report.errors;
     if check {
         if std::fs::read_to_string(&checklist_path).unwrap_or_default() != checklist {
             errors.push("docs/parity-checklist.md is stale: run `cargo xtask parity` and commit it".into());

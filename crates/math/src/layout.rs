@@ -132,8 +132,7 @@ impl L<'_> {
         match n {
             Node::Row(items) => self.row(items, s, display, d),
             Node::Ident(t) => self.text(t, s, true),
-            Node::Number(t) | Node::Text(t) => self.text(t, s, false),
-            Node::Op(t) => self.text(t, s, false),
+            Node::Number(t) | Node::Text(t) | Node::Op(t) => self.text(t, s, false),
             Node::Placeholder => {
                 let (w, h) = (0.55 * s, 0.7 * s);
                 MathBox {

@@ -197,15 +197,7 @@ fn after_typing(s: &mut Session, caret: Pos, typed: &str) -> Result<Pos, CmdErro
     // BEH.Text.HyperlinkAuto: a URL followed by whitespace becomes a link.
     if typed.ends_with(char::is_whitespace) {
         let before = caret.offset.saturating_sub(typed.len());
-        if let Some(r) = t::detect_url_before(&text, before)
-            && para.fmt_at(r.end).link.is_none()
-        {
-            let url = t::url_target(text.get(r.clone()).unwrap_or(""));
-            let page = s.page_mut().ok_or_else(no_page)?;
-            if let Some(pm) = Session::para_mut(page, caret.block, caret.para) {
-                t::apply_format(pm, r, &|f| f.link = Some(url.clone()));
-            }
-        }
+        autolink(s, caret, &text, before)?;
     }
     // BEH.Links.Wiki: "[[Page name]]" links to that page, creating it in this section.
     if s.prefs.wiki_links && text.get(..caret.offset).is_some_and(|h| h.ends_with("]]")) {
@@ -257,6 +249,24 @@ pub(crate) fn split_at_caret(s: &mut Session, caret: Pos) -> Result<Pos, CmdErro
 }
 
 /// Enter.
+/// BEH.Text.HyperlinkAuto: the URL ending at `end` in the caret's paragraph (whose text is
+/// `text`) becomes a link, unless it already is one. Read-only until there is a change, so a
+/// no-op records no undo step.
+fn autolink(s: &mut Session, caret: Pos, text: &str, end: usize) -> Result<(), CmdError> {
+    let Some(r) = t::detect_url_before(text, end) else { return Ok(()) };
+    let linked =
+        s.page().and_then(|p| Session::block_paras(p, caret.block)?.get(caret.para).map(|para| para.fmt_at(r.end).link.is_some())).unwrap_or(true);
+    if linked {
+        return Ok(());
+    }
+    let url = t::url_target(text.get(r.clone()).unwrap_or(""));
+    let page = s.page_mut().ok_or_else(no_page)?;
+    if let Some(pm) = Session::para_mut(page, caret.block, caret.para) {
+        t::apply_format(pm, r, &|f| f.link = Some(url.clone()));
+    }
+    Ok(())
+}
+
 pub(crate) fn newline(s: &mut Session, _: &Value) -> CmdResult {
     // In the title, Enter moves to the page body (the first container, created if needed).
     if s.sel.caret().is_some_and(|c| c.block == Block::Title) {
@@ -293,15 +303,7 @@ pub(crate) fn newline(s: &mut Session, _: &Value) -> CmdResult {
     }
     // A URL right before the caret becomes a link on Enter too.
     let text = para.text();
-    if let Some(r) = t::detect_url_before(&text, caret.offset)
-        && para.fmt_at(r.end).link.is_none()
-    {
-        let url = t::url_target(text.get(r.clone()).unwrap_or(""));
-        let page = s.page_mut().ok_or_else(no_page)?;
-        if let Some(pm) = Session::para_mut(page, caret.block, caret.para) {
-            t::apply_format(pm, r, &|f| f.link = Some(url.clone()));
-        }
-    }
+    autolink(s, caret, &text, caret.offset)?;
     // An equation is never split (decision D11): Enter starts a paragraph after it.
     let caret = match equation_end {
         Some(end) => Pos { offset: end, ..caret },

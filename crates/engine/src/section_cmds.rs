@@ -6,17 +6,9 @@ use std::sync::Arc;
 use notecraft_doc::{DeletedSection, Id, NavNode, Section, SectionColor, SectionGroup};
 use serde_json::{Value, json};
 
-use crate::ops::no_page;
+use crate::ops::{need_notebook, need_section, no_page, set_link_clipboard};
 use crate::selection::{Block, Pos};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
-
-fn need_notebook(s: &Session) -> Option<&'static str> {
-    if s.notebook().is_some() { None } else { Some("Open a notebook first") }
-}
-
-fn need_section(s: &Session) -> Option<&'static str> {
-    if s.section().is_some() { None } else { Some("Select a section first") }
-}
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
@@ -360,13 +352,6 @@ fn color(s: &mut Session, v: &Value) -> CmdResult {
     let sec = s.ws.section_mut(sid).ok_or_else(|| CmdError::Params("no such section".into()))?;
     sec.color = c;
     Ok(Value::Null)
-}
-
-fn set_link_clipboard(s: &mut Session, title: &str, link: &str) {
-    let mut para = crate::ops::new_para(s);
-    para.runs.push(notecraft_doc::Run::new(title, notecraft_doc::CharFormat { link: Some(link.to_string()), ..Default::default() }));
-    s.clipboard =
-        crate::session::Clipboard { paragraphs: vec![para], text: link.to_string(), pages: Vec::new(), objects: Vec::new(), html: String::new() };
 }
 
 fn copy_link(s: &mut Session, v: &Value) -> CmdResult {

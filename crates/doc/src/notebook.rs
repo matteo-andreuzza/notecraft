@@ -96,21 +96,7 @@ impl Section {
 
     /// Whether page `i` is hidden in the page list because a parent page is collapsed.
     pub fn page_hidden(&self, i: usize) -> bool {
-        let Some(p) = self.pages.get(i) else { return true };
-        let mut need = p.level;
-        for j in (0..i).rev() {
-            let Some(q) = self.pages.get(j) else { break };
-            if q.level < need {
-                if q.collapsed {
-                    return true;
-                }
-                need = q.level;
-                if need == 0 {
-                    break;
-                }
-            }
-        }
-        false
+        crate::page::hidden_under_collapsed(&self.pages, i, |p| (p.level, p.collapsed))
     }
 
     /// Enforce invariants: the first page is top level and no page is more than one level

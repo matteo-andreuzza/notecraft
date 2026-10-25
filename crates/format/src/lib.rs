@@ -35,7 +35,7 @@ use std::io::{Cursor, Read, Write};
 use std::sync::Arc;
 
 use notecraft_doc::media::{MAX_ATTACHMENT_BYTES, collect_blobs, provide_blobs};
-use notecraft_doc::{Id, NavNode, Notebook, RecycleBin, Section, SectionColor, SectionGroup};
+use notecraft_doc::{Id, NavNode, Notebook, RecycleBin, Section, SectionColor};
 use serde::{Deserialize, Serialize};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -390,11 +390,6 @@ impl NameAlloc {
 /// Build a notebook skeleton from its root TOC (sections empty, to be filled by the loader).
 pub fn toc_for(id: Id, name: &str, color: SectionColor, entries: Vec<TocEntry>) -> Toc {
     Toc { format: TOC_MAGIC.into(), version: VERSION, id, name: name.to_string(), color, entries }
-}
-
-/// Placeholder group for a TOC group entry.
-pub fn group_from_entry(id: Id, name: &str) -> SectionGroup {
-    SectionGroup { id, name: notecraft_doc::clean_name(name), children: Vec::new() }
 }
 
 /// Wrap a section as a navigation node.

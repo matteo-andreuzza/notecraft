@@ -49,10 +49,8 @@ pub(crate) fn label(id: &str) -> String {
 
 /// The params a control passes to its command (gallery items carry their value).
 pub(crate) fn params_for(id: &str) -> Value {
-    let k = id.rsplit('.').next().unwrap_or("");
-    match k {
-        "FindToday" => json!({"range": "today"}),
-        "PasteText" => json!({}),
+    match id.rsplit('.').next() {
+        Some("FindToday") => json!({"range": "today"}),
         _ => json!({}),
     }
 }
@@ -551,22 +549,22 @@ pub(crate) fn table_spot(app: &NoteApp) -> Option<notecraft_engine::doc::geom::P
 }
 
 /// Draw the special drop-down content; returns true when drawn.
-pub(crate) fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, _t: Tokens) -> bool {
+pub(crate) fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) -> bool {
     let ctx = ui.ctx().clone();
     match id.rsplit('.').next() {
         // Equations (decision D11): the built-in equations, symbols and structures, previewed
         // built up.
         Some("InsertBuildingBlocksEquationsGallery" | "EquationInsertGallery") => {
-            ui.label(RichText::new("Built-in").color(_t.text_dim));
+            ui.label(RichText::new("Built-in").color(t.text_dim));
             for (i, (name, text)) in notecraft_engine::EQUATIONS.iter().enumerate() {
-                if crate::math_ui::preview(ui, name, text, 15.0, true, &_t).on_hover_text(*text).clicked() {
+                if crate::math_ui::preview(ui, name, text, 15.0, true, &t).on_hover_text(*text).clicked() {
                     app.run(&ctx, "insert.equation", json!({"equation": i}));
                     ui.close();
                 }
             }
             ui.separator();
             if id.starts_with("CT.") {
-                menu_item(app, ui, "R.Insert.Symbols.EquationInsertNew", _t);
+                menu_item(app, ui, "R.Insert.Symbols.EquationInsertNew", t);
             }
             false
         }
@@ -588,7 +586,7 @@ pub(crate) fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, _t: Tokens) -> b
         Some(k) if k.starts_with("Equation") && k.ends_with("Gallery") => {
             if let Some((cmd, _, _, _, items)) = notecraft_engine::EQUATION_STRUCTURES.iter().find(|x| x.1 == id) {
                 for (i, (name, text)) in items.iter().enumerate() {
-                    if crate::math_ui::preview(ui, name, text, 15.0, false, &_t).on_hover_text(*name).clicked() {
+                    if crate::math_ui::preview(ui, name, text, 15.0, false, &t).on_hover_text(*name).clicked() {
                         app.run(&ctx, cmd, json!({"item": i}));
                         ui.close();
                     }
@@ -597,11 +595,11 @@ pub(crate) fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, _t: Tokens) -> b
             false
         }
         Some("InkShapeGallery") => {
-            crate::ink::shape_gallery(app, ui, _t);
+            crate::ink::shape_gallery(app, ui, t);
             false
         }
         Some("TableInsertGallery") => {
-            table_grid(app, ui, _t);
+            table_grid(app, ui, t);
             ui.separator();
             false
         }

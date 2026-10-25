@@ -277,11 +277,6 @@ pub fn ready(ctx: &egui::Context, name: &str) -> bool {
     installed.is_some_and(|i| ctx.cumulative_pass_nr() > i.pass && i.names.iter().any(|n| n == name))
 }
 
-/// Whether a bold face is available.
-pub fn has_bold(ctx: &egui::Context) -> bool {
-    ready(ctx, "bold")
-}
-
 /// Whether a font name is a monospace family.
 pub fn is_mono(name: &str) -> bool {
     let n = name.to_ascii_lowercase();

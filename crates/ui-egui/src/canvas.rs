@@ -348,8 +348,7 @@ pub(crate) fn text_format(ctx: &egui::Context, f: &CharFormat, zoom: f32, t: Tok
     }
     tf.valign = match script {
         Script::Super => Align::TOP,
-        Script::Sub => Align::BOTTOM,
-        Script::Normal => Align::BOTTOM,
+        Script::Sub | Script::Normal => Align::BOTTOM,
     };
     tf
 }
@@ -423,7 +422,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let avail = ui.available_rect_before_wrap();
     // Scroll requests from the engine (Page Up/Down, Ctrl+Home/End, find).
     let mut scroll_req = app.session.scroll_request.take();
-    let out = egui::ScrollArea::both().id_salt(("canvas", page.id)).auto_shrink([false, false]).show_viewport(ui, |ui, viewport| {
+    egui::ScrollArea::both().id_salt(("canvas", page.id)).auto_shrink([false, false]).show_viewport(ui, |ui, viewport| {
         let min = ui.min_rect().min;
         app.canvas.origin = min + vec2(MARGIN, MARGIN);
         app.canvas.zoom = zoom;
@@ -649,7 +648,6 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             ui.scroll_to_rect(r, None);
         }
     });
-    let _ = out;
 }
 
 /// The page content size of the last frame (screen points).
@@ -790,7 +788,6 @@ fn layout_page(
 
 /// Lay out a table: each cell's paragraphs wrap at the column width; a row is as tall as its
 /// tallest cell. Returns the table's layout and its frame (for the move bar).
-#[allow(clippy::too_many_arguments)]
 fn layout_table<'a>(
     ctx: &egui::Context,
     tb: &Table,
@@ -1060,12 +1057,7 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
     };
     if let Some(h) = hover {
         if let Some((_, i)) = picture_handle(app, h) {
-            ctx.set_cursor_icon(match i {
-                0 | 2 => CursorIcon::ResizeNwSe,
-                1 | 3 => CursorIcon::ResizeNeSw,
-                4 | 6 => CursorIcon::ResizeVertical,
-                _ => CursorIcon::ResizeHorizontal,
-            });
+            ctx.set_cursor_icon(crate::pictures::handle_cursor(i));
         } else if app.canvas.outlines.iter().any(|o| o.resize.contains(h)) || app.canvas.tables.iter().any(|tl| tl.border_at(h).is_some()) {
             ctx.set_cursor_icon(CursorIcon::ResizeHorizontal);
         } else if app.canvas.outlines.iter().any(|o| o.bar.contains(h)) {

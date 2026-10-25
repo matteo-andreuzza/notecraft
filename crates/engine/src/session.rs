@@ -393,11 +393,6 @@ impl Session {
         self.undo.iter().rev().map(|e| e.label.clone()).collect()
     }
 
-    /// Labels of the redo stack, newest first.
-    pub fn redo_labels(&self) -> Vec<String> {
-        self.redo.iter().rev().map(|e| e.label.clone()).collect()
-    }
-
     pub(crate) fn undo_step(&mut self) -> bool {
         let Some(e) = self.undo.pop() else { return false };
         let cur = HistoryEntry { label: e.label.clone(), ws: std::mem::replace(&mut self.ws, e.ws), sel: std::mem::replace(&mut self.sel, e.sel) };

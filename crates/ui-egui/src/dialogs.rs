@@ -3,7 +3,7 @@
 //! Notebook Properties, Paragraph Spacing, Customize Tags, and confirmations.
 
 use egui::{RichText, vec2};
-use notecraft_engine::doc::{Id, NavNode};
+use notecraft_engine::doc::{Id, NavNode, Section};
 use serde_json::json;
 
 use crate::{NoteApp, Tokens};
@@ -90,46 +90,39 @@ fn file_name(params: &serde_json::Value) -> String {
     std::path::Path::new(path).file_name().map_or_else(|| path.to_string(), |n| n.to_string_lossy().into_owned())
 }
 
-fn sections(app: &NoteApp) -> Vec<(Id, String)> {
-    let mut out = Vec::new();
-    for nb in &app.session.ws.notebooks {
-        fn walk(nodes: &[NavNode], prefix: &str, out: &mut Vec<(Id, String)>, depth: usize) {
-            if depth > 16 {
-                return;
-            }
-            for n in nodes {
-                match n {
-                    NavNode::Section(s) => out.push((s.id, format!("{prefix}{}", s.name))),
-                    NavNode::Group(g) => walk(&g.children, &format!("{prefix}{} › ", g.name), out, depth + 1),
-                }
+/// Every section with its path `Notebook › Group › … › Section`, in tab order (group depth
+/// capped like the model's own walks).
+fn section_paths(app: &NoteApp) -> Vec<(&Section, String)> {
+    fn walk<'a>(nodes: &'a [NavNode], prefix: &str, out: &mut Vec<(&'a Section, String)>, depth: usize) {
+        if depth > notecraft_engine::doc::notebook::MAX_GROUP_DEPTH {
+            return;
+        }
+        for n in nodes {
+            match n {
+                NavNode::Section(s) => out.push((s, format!("{prefix}{}", s.name))),
+                NavNode::Group(g) => walk(&g.children, &format!("{prefix}{} › ", g.name), out, depth + 1),
             }
         }
+    }
+    let mut out = Vec::new();
+    for nb in &app.session.ws.notebooks {
         walk(&nb.children, &format!("{} › ", nb.name), &mut out, 0);
     }
     out
+}
+
+fn sections(app: &NoteApp) -> Vec<(Id, String)> {
+    section_paths(app).into_iter().map(|(s, path)| (s.id, path)).collect()
 }
 
 /// Every page, named `Notebook › … › Section › Page` (for the Link dialog's page search;
 /// `UI.Dialogs.Link`).
 fn pages(app: &NoteApp) -> Vec<(Id, String)> {
     let mut out = Vec::new();
-    for nb in &app.session.ws.notebooks {
-        fn walk(nodes: &[NavNode], prefix: &str, out: &mut Vec<(Id, String)>, depth: usize) {
-            if depth > 16 {
-                return;
-            }
-            for n in nodes {
-                match n {
-                    NavNode::Section(s) => {
-                        for p in &s.pages {
-                            out.push((p.id, format!("{prefix}{} › {}", s.name, p.display_title())));
-                        }
-                    }
-                    NavNode::Group(g) => walk(&g.children, &format!("{prefix}{} › ", g.name), out, depth + 1),
-                }
-            }
+    for (s, path) in section_paths(app) {
+        for p in &s.pages {
+            out.push((p.id, format!("{path} › {}", p.display_title())));
         }
-        walk(&nb.children, &format!("{} › ", nb.name), &mut out, 0);
     }
     out
 }

@@ -10,12 +10,8 @@ use std::sync::Arc;
 use notecraft_doc::{NavNode, Notebook, Section, SectionColor};
 use serde_json::{Value, json};
 
-use crate::ops::no_page;
+use crate::ops::{need_notebook, no_page};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
-
-fn need_notebook(s: &Session) -> Option<&'static str> {
-    if s.notebook().is_some() { None } else { Some("Open a notebook first") }
-}
 
 fn need_bin(s: &Session) -> Option<&'static str> {
     match s.notebook() {

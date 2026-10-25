@@ -2345,10 +2345,8 @@ version = "0.1.0"
 dependencies = [
  "notecraft-color",
  "notecraft-geom",
- "proptest",
  "serde",
  "serde_json",
- "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -2365,7 +2363,6 @@ dependencies = [
  "notecraft-math",
  "notecraft-search",
  "notecraft-text",
- "proptest",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -2377,7 +2374,6 @@ version = "0.1.0"
 dependencies = [
  "craft-atomic",
  "notecraft-doc",
- "proptest",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -2431,7 +2427,6 @@ name = "notecraft-search"
 version = "0.1.0"
 dependencies = [
  "notecraft-doc",
- "proptest",
 ]
 
 [[package]]

@@ -76,5 +76,12 @@ mod tests {
         assert_eq!(decode("TW\nE").unwrap(), b"Ma");
         assert_eq!(decode("data:image/png;base64,TWFu").unwrap(), b"Man");
         assert_eq!(decode("TWF*"), None);
+        // RFC 4648 §10 test vectors.
+        for (input, want) in
+            [("", ""), ("f", "Zg=="), ("fo", "Zm8="), ("foo", "Zm9v"), ("foob", "Zm9vYg=="), ("fooba", "Zm9vYmE="), ("foobar", "Zm9vYmFy")]
+        {
+            assert_eq!(encode(input.as_bytes()), want);
+        }
+        assert_eq!(encode(&[0xff, 0xfe, 0xfd]), "//79");
     }
 }

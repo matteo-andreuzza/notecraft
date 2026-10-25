@@ -3,7 +3,7 @@
 //! Pages that need a Microsoft service (Share with People, sign-in) are listed disabled with the
 //! reason, never faked.
 
-use egui::{Align, Color32, Frame, Layout, Margin, RichText, Sense, Stroke, Ui, vec2};
+use egui::{Align, Frame, Layout, Margin, RichText, Sense, Stroke, Ui, vec2};
 use serde_json::json;
 
 use crate::{Backstage, NoteApp, ThemeKind, Tokens};
@@ -88,7 +88,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             Backstage::Info => info(app, ui, &ctx, t),
             Backstage::New => new_notebook(app, ui, &ctx, t),
             Backstage::Open => open(app, ui, &ctx, t),
-            Backstage::Export => export(app, ui, &ctx, t),
+            Backstage::Export => export(app, ui, &ctx),
             Backstage::Account => account(app, ui, t),
             Backstage::Options => options(app, ui, &ctx, t),
         }
@@ -198,11 +198,10 @@ fn open(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
     }
     ui.add_space(14.0);
     // BS.Open.RecentNotebooks.
+    ui.label(RichText::new("Recent Notebooks").strong());
     if app.ui.recent_notebooks.is_empty() {
-        ui.label(RichText::new("Recent Notebooks").strong());
         ui.label(RichText::new("Notebooks you open appear here.").size(12.0).color(t.page_meta));
     } else {
-        ui.label(RichText::new("Recent Notebooks").strong());
         for path in app.ui.recent_notebooks.clone() {
             let name = std::path::Path::new(&path).file_name().and_then(|n| n.to_str()).unwrap_or(&path);
             if ui.button(name).on_hover_text(&path).clicked() && app.run(ctx, "file.openRecent", json!({"path": path})).is_some() {
@@ -212,10 +211,9 @@ fn open(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
     }
     ui.add_space(14.0);
     ui.label(RichText::new("Open Section (.one) files and .onepkg packages: coming with M3 (OneNote file import).").size(12.0).color(t.page_meta));
-    let _ = Color32::TRANSPARENT;
 }
 
-fn export(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
+fn export(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context) {
     heading(ui, "Export");
     ui.label("Export the current notebook as a single NoteCraft archive (.ncraft-archive).");
     if ui.button("Export Notebook…").clicked() {
@@ -234,20 +232,24 @@ fn export(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
     ] {
         ui.add_enabled(false, egui::Button::new(fmt)).on_disabled_hover_text(format!("Arrives with {when}"));
     }
-    let _ = t;
 }
 
-fn account(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
-    heading(ui, "Account");
-    ui.label(RichText::new("Office Theme").strong());
+/// The Office Theme choices, one selectable label each (File › Account and File › Options).
+fn theme_picker(app: &mut NoteApp, ui: &mut Ui) {
     ui.horizontal(|ui| {
-        // OPT.General.OfficeTheme / UI.Window.DarkMode.
         for k in ThemeKind::ALL {
             if ui.selectable_label(app.ui.theme == k, k.label()).clicked() {
                 app.ui.theme = k;
             }
         }
     });
+}
+
+fn account(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    heading(ui, "Account");
+    ui.label(RichText::new("Office Theme").strong());
+    // OPT.General.OfficeTheme / UI.Window.DarkMode.
+    theme_picker(app, ui);
     ui.add_space(20.0);
     ui.label(RichText::new("About NoteCraft").strong());
     ui.label(format!("NoteCraft {} — an open-source, local-first notebook. MIT OR Apache-2.0.", env!("CARGO_PKG_VERSION")));
@@ -273,13 +275,7 @@ fn options(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
         ui.add_space(6.0);
         // OPT.General.OfficeTheme (also in File › Account, UI.Window.DarkMode).
         ui.label("Office Theme");
-        ui.horizontal(|ui| {
-            for k in ThemeKind::ALL {
-                if ui.selectable_label(app.ui.theme == k, k.label()).clicked() {
-                    app.ui.theme = k;
-                }
-            }
-        });
+        theme_picker(app, ui);
         ui.add_space(10.0);
         ui.label(RichText::new("Advanced › Editing").strong());
         let mut bullets = app.session.prefs.auto_bullets;

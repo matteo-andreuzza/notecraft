@@ -94,10 +94,8 @@ fn gallery_button(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extr
     if on && resp.hovered() {
         ui.painter().rect_filled(rect, crate::theme::radius::CONTROL, t.hover);
     }
-    let color = if on { t.icon } else { t.text_disabled };
     let (line, accent) = if on { (t.icon, t.accent) } else { (t.text_disabled, t.text_disabled) };
     crate::icons::draw(ui.painter(), rect.shrink(3.0), id, line, accent, t.ribbon_card);
-    let _ = color;
     let resp = resp.on_hover_text(ribbon::tooltip(app, id));
     egui::Popup::menu(&resp).show(|ui| {
         ui.set_min_width(170.0);

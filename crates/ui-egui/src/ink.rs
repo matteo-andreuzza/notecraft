@@ -501,12 +501,7 @@ pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &R
             DrawTool::Type => {
                 if let Some(h) = resp.hover_pos() {
                     if let Some((i, _)) = handle_at(app, h) {
-                        ctx.set_cursor_icon(match i {
-                            0 | 2 => CursorIcon::ResizeNwSe,
-                            1 | 3 => CursorIcon::ResizeNeSw,
-                            4 | 6 => CursorIcon::ResizeVertical,
-                            _ => CursorIcon::ResizeHorizontal,
-                        });
+                        ctx.set_cursor_icon(crate::pictures::handle_cursor(i));
                     } else if selection_box(app).is_some_and(|b| b.contains(h)) || hit(app, h).is_some() {
                         ctx.set_cursor_icon(CursorIcon::Move);
                     }

@@ -20,6 +20,3 @@ zip = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 craft-atomic = { workspace = true }
-
-[dev-dependencies]
-proptest = { workspace = true }

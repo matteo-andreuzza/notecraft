@@ -337,6 +337,12 @@ impl Parser {
     }
 
     fn scripts(&mut self, base: Node) -> Node {
+        let (sub, sup) = self.sub_sup();
+        if sub.is_none() && sup.is_none() { base } else { Node::Script { base: Box::new(base), sub, sup } }
+    }
+
+    /// A `_sub` and a `^sup`, each at most once and in either order.
+    fn sub_sup(&mut self) -> (Option<Box<Node>>, Option<Box<Node>>) {
         let (mut sub, mut sup) = (None, None);
         loop {
             match self.peek() {
@@ -351,7 +357,7 @@ impl Parser {
                 _ => break,
             }
         }
-        if sub.is_none() && sup.is_none() { base } else { Node::Script { base: Box::new(base), sub, sup } }
+        (sub, sup)
     }
 
     /// A script or limit: one piece (its parentheses removed), a sign and a piece (`x^-1`).
@@ -443,20 +449,7 @@ impl Parser {
             }
             c if NARY.contains(&c) => {
                 self.i += 1;
-                let (mut sub, mut sup) = (None, None);
-                loop {
-                    match self.peek() {
-                        Some('_') if sub.is_none() => {
-                            self.i += 1;
-                            sub = Some(Box::new(self.operand()));
-                        }
-                        Some('^') if sup.is_none() => {
-                            self.i += 1;
-                            sup = Some(Box::new(self.operand()));
-                        }
-                        _ => break,
-                    }
-                }
+                let (sub, sup) = self.sub_sup();
                 self.skip_spaces();
                 self.depth += 1;
                 let body = match self.peek() {

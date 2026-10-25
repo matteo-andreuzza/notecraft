@@ -146,11 +146,11 @@ fn account(app: &NoteApp, ui: &mut Ui, t: &Tokens) {
     resp.on_hover_text(format!("{name}\nSigning in needs a Microsoft account; set your name in File › Options."));
 }
 
-/// The title-bar Search: type a command name, pick it to run it; the last row hands the text to
-/// Search notebooks (catalog `UI.Window.SearchBox`, `UI.Window.TellMe`).
-fn search(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: &Tokens) {
+/// The rounded frame of a search box (accent when focused, darker when hovered); the whole box
+/// is the click target that focuses the field `id`, and the `label` a screen reader announces.
+/// Shared by the title-bar Search and Search notebooks. Returns whether the field has focus.
+pub(crate) fn search_frame(ui: &mut Ui, r: Rect, t: &Tokens, id: egui::Id, label: &str) -> bool {
     let ctx = ui.ctx().clone();
-    let id = egui::Id::new(SEARCH_ID);
     let focused = ctx.memory(|m| m.has_focus(id));
     let hovered = ui.rect_contains_pointer(r);
     let stroke = if focused {
@@ -161,13 +161,21 @@ fn search(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: &Tokens) {
         Stroke::new(1.0, t.card_border)
     };
     ui.painter().rect(r, radius::SEARCH, t.input, stroke, egui::StrokeKind::Inside);
-    icons::search(ui.painter(), Rect::from_center_size(pos2(r.min.x + 16.0, r.center().y), vec2(size::ICON, size::ICON)), t.icon);
-    // The whole box is the click target (and the "Search" a screen reader announces).
     let area = ui.interact(r, id.with("area"), Sense::click());
-    area.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Search"));
+    area.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, label));
     if area.clicked() {
         ctx.memory_mut(|m| m.request_focus(id));
     }
+    focused
+}
+
+/// The title-bar Search: type a command name, pick it to run it; the last row hands the text to
+/// Search notebooks (catalog `UI.Window.SearchBox`, `UI.Window.TellMe`).
+fn search(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: &Tokens) {
+    let ctx = ui.ctx().clone();
+    let id = egui::Id::new(SEARCH_ID);
+    search_frame(ui, r, t, id, "Search");
+    icons::search(ui.painter(), Rect::from_center_size(pos2(r.min.x + 16.0, r.center().y), vec2(size::ICON, size::ICON)), t.icon);
     let mut text: String = ctx.data_mut(|d| d.get_temp::<String>(id).unwrap_or_default());
     let edit = Rect::from_min_max(pos2(r.min.x + 30.0, r.min.y + 1.0), pos2(r.max.x - 8.0, r.max.y - 1.0));
     let resp = ui.put(

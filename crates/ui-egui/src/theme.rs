@@ -75,8 +75,6 @@ pub mod size {
     pub const PAGE_ROW: f32 = 28.0;
     /// Default navigation pane width.
     pub const NAV_WIDTH: f32 = 220.0;
-    /// Default page column width.
-    pub const PAGE_COLUMN_WIDTH: f32 = 200.0;
     /// Gap between the ribbon card and the window edges.
     pub const CARD_MARGIN: f32 = 6.0;
     /// Horizontal padding inside tree and page rows.
@@ -89,8 +87,6 @@ pub mod size {
     pub const SEARCH_HEIGHT: f32 = 26.0;
     /// A small (simplified ribbon, menu) icon.
     pub const ICON: f32 = 16.0;
-    /// A large (classic ribbon) icon.
-    pub const ICON_LARGE: f32 = 32.0;
     /// A small square button.
     pub const BUTTON: f32 = 28.0;
 }

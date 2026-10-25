@@ -95,21 +95,7 @@ impl Outline {
 
     /// Whether paragraph `i` is hidden because an ancestor is collapsed.
     pub fn is_hidden(&self, i: usize) -> bool {
-        let Some(p) = self.paragraphs.get(i) else { return true };
-        let mut need = p.level;
-        for j in (0..i).rev() {
-            let Some(q) = self.paragraphs.get(j) else { break };
-            if q.level < need {
-                if q.collapsed {
-                    return true;
-                }
-                need = q.level;
-                if need == 0 {
-                    break;
-                }
-            }
-        }
-        false
+        hidden_under_collapsed(&self.paragraphs, i, |p| (p.level, p.collapsed))
     }
 
     /// Whether every paragraph is empty (an empty container disappears when the caret leaves
@@ -584,6 +570,27 @@ impl Page {
             o.set_pos(Point::new(finite(p.x), finite(p.y)));
         }
     }
+}
+
+/// Whether item `i` of a levelled list (paragraphs of an outline, pages of a section) is hidden
+/// because an ancestor — the nearest earlier item at each lower level — is collapsed. An index
+/// past the end counts as hidden.
+pub(crate) fn hidden_under_collapsed<T>(items: &[T], i: usize, level_collapsed: impl Fn(&T) -> (u8, bool)) -> bool {
+    let Some(item) = items.get(i) else { return true };
+    let mut need = level_collapsed(item).0;
+    for q in items.get(..i).unwrap_or_default().iter().rev() {
+        let (level, collapsed) = level_collapsed(q);
+        if level < need {
+            if collapsed {
+                return true;
+            }
+            need = level;
+            if need == 0 {
+                break;
+            }
+        }
+    }
+    false
 }
 
 #[cfg(test)]
