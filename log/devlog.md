@@ -484,3 +484,40 @@ this log plus a green tree is how the next agent picks up.
   `CT.Equation.*`, the object `CM.*` or `BEH.Ink/Table/Paste.*` is `missing`; the headless
   workflows pass. Audio and video (P2) are left for after M3.
 - Numbers: wiring 657/1328 (49.5%), behaviour 174/1328 (13.1%), 335 commands.
+
+## 2026-10-25 — Code review: duplicated, dead and slow code; HTML spans; two dialogs
+
+Branch `chore/code-review` (from `main` = `c03d1ed`). A review pass for duplicated, obsolete,
+redundant and unoptimised code, found with a line-window duplicate scanner (exact and with
+identifiers normalised), an unused-public-item scan and clippy's extra lints; only changes that
+were certain landed, behaviour unchanged (every test green after each commit).
+
+- **Dead code removed:** `icons_set.rs` kept all 306 icons ported from WordCraft but only the 57
+  that `icons::set_name` maps to can be painted (1455 → 399 lines); `icons::draw_own` had 34
+  arms (and parts of 19) for keys `set_name` always routes to the set. Unused items:
+  `DocError` (and doc's `thiserror`), `AUTOMATIC_TEXT`, `PAGE_COLUMN_WIDTH`, `ICON_LARGE`,
+  `has_bold`, `Dirty::is_clean`, `NotebookStore::section_path`, `Session::redo_labels`,
+  `group_from_entry`; `proptest` dev-deps of four crates that never used it; `let _ = x;`
+  lines that only hid dead variables and imports; redundant `too_many_arguments` allows.
+- **Duplicates merged:** `automation::base64` (a copy of `engine::b64::encode`, now a
+  re-export); `need_section`/`need_notebook` (six copies, now in `ops`), the link clipboard
+  (four), search scope parsing, the search box frame, URL autolink on typing and Enter,
+  "hidden under a collapsed ancestor" (pages and paragraphs), the math parser's scripts, the
+  dialogs' section walk, attachment insertion (files and printouts), object drag start, the
+  handle cursor, the theme picker, `execute_request`/`save_now` (headless and the desktop
+  control channel), Back/Forward (`travel`), the UI tests' `harness()`.
+- **Fixes found on the way:** going to an empty section skipped the 200-entry Back cap and
+  kept a stale Forward stack (one `leave_page` now); stale M1 comments; an orphan doc comment.
+- **Faster:** `text::snap` (twice per `Session::text_range`, which many enabled predicates call
+  every frame) scanned the paragraph from its start: now a grapheme cursor around the offset,
+  pinned to the old scan by a proptest; `Paragraph::text_cow` avoids a copy for single-run
+  paragraphs; `ribbon::command` returns `&'static str`; `with_spans` collects merged cells once.
+- **M2 leftovers:** merged cells copy to other applications as HTML `colspan`/`rowspan` (covered
+  places left out) and pasted HTML spans make merged cells (`html::TableBlock`, the reader lays
+  cells out as browsers do, hostile spans clamped); `UI.Dialogs.ParagraphSpacing` verified and
+  `UI.Dialogs.NotebookProperties` wired (display name and colour; no location/format choice).
+- Numbers: wiring 659/1328 (49.6%), behaviour 175/1328 (13.2%), 335 commands.
+- Open: `link.open` still shows enabled off a link (its `url` param makes a `when` predicate
+  wrong; needs a UI-side check); the two loggers of the binaries are near copies (kept: they
+  differ in filtering); the canvas lays every page out each frame (a cache by revision would be
+  a larger change). Next: M3 (`plan/next-session-prompt.md`), starting with the D12 proposal.

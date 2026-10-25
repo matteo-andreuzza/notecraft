@@ -442,6 +442,45 @@ fn insert_table_dialog_opens_from_the_ribbon_and_inserts() {
 }
 
 #[test]
+fn paragraph_spacing_dialog_shows_the_paragraph_and_sets_it() {
+    // parity: UI.Dialogs.ParagraphSpacing
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 40.0, "y": 100.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "spaced"})).unwrap();
+    a.session.run("para.spacingDialog", json!({"before": 3, "after": 4, "line": 5})).unwrap();
+    // The dialog opens with the caret paragraph's before, after and at-least line spacing.
+    assert_eq!(crate::ribbon::dialog_for(&a, "R.Home.BasicText.ParagraphSpacingOptions"), Some(Dialog::Spacing(3.0, 4.0, 5.0)));
+    a.ui.dialog = Some(Dialog::Spacing(6.0, 12.0, 18.0));
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Paragraph Spacing").is_some(), "UI.Dialogs.ParagraphSpacing shows");
+    assert!(h.query_by_label("Line Spacing (at least):").is_some());
+    h.get_by_label("OK").click();
+    h.run();
+    let s = &h.state().session;
+    let r = s.text_range().unwrap();
+    let p = notecraft_engine::Session::block_paras(s.page().unwrap(), r.head.block).unwrap()[r.head.para].clone();
+    assert_eq!((p.space_before, p.space_after, p.line_spacing), (6.0, 12.0, 18.0), "OK applies the three values");
+    assert!(h.state().ui.dialog.is_none(), "OK closes the dialog");
+}
+
+#[test]
+fn notebook_properties_dialog_renames_the_notebook() {
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    let nb = a.session.notebook().unwrap().id;
+    a.ui.dialog = Some(Dialog::NotebookProperties(nb, "Field notes".into()));
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Notebook Properties").is_some(), "UI.Dialogs.NotebookProperties");
+    h.get_by_label("OK").click();
+    h.run();
+    assert_eq!(h.state().session.notebook().unwrap().name, "Field notes", "OK sets the display name");
+}
+
+#[test]
 fn the_sort_menu_and_dialog_sort_the_table() {
     // parity: CT.TableLayout.Data.SortMenu
     use crate::dialogs::Dialog;
