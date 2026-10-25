@@ -512,7 +512,7 @@ impl Session {
         let paras = Session::block_paras(page, pos.block)?;
         let last = paras.len().checked_sub(1)?;
         let para = pos.para.min(last);
-        let text = paras.get(para)?.text();
+        let text = paras.get(para)?.text_cow();
         Some(Pos { block: pos.block, para, offset: notecraft_text::snap(&text, pos.offset) })
     }
 
@@ -543,18 +543,23 @@ impl Session {
     pub fn goto_page(&mut self, page: Id) -> Result<(), CmdError> {
         let (sid, _) = self.ws.locate_page(page).ok_or_else(|| CmdError::Failed("that page no longer exists".into()))?;
         let nb = self.ws.notebook_of(sid).map(|n| n.id);
-        if let Some(cur) = self.sel.page
-            && cur != page
-        {
-            self.last_sel.insert(cur, self.sel.on_page.clone());
-            self.nav_back.push(cur);
-            if self.nav_back.len() > 200 {
-                self.nav_back.remove(0);
-            }
-            self.nav_forward.clear();
+        if self.sel.page != Some(page) {
+            self.leave_page();
         }
         self.show_page(nb, sid, page);
         Ok(())
+    }
+
+    /// Leaving the current page for another: remember its selection and push it on the Back
+    /// stack (capped at 200; a new visit clears Forward).
+    fn leave_page(&mut self) {
+        let Some(cur) = self.sel.page else { return };
+        self.last_sel.insert(cur, self.sel.on_page.clone());
+        self.nav_back.push(cur);
+        if self.nav_back.len() > 200 {
+            self.nav_back.remove(0);
+        }
+        self.nav_forward.clear();
     }
 
     /// Show a page without touching the Back/Forward stacks.
@@ -578,10 +583,7 @@ impl Session {
         match s.pages.first().map(|p| p.id) {
             Some(p) => self.goto_page(p),
             None => {
-                if let Some(cur) = self.sel.page {
-                    self.last_sel.insert(cur, self.sel.on_page.clone());
-                    self.nav_back.push(cur);
-                }
+                self.leave_page();
                 self.sel.notebook = self.ws.notebook_of(section).map(|n| n.id);
                 self.sel.section = Some(section);
                 self.sel.page = None;
@@ -623,7 +625,7 @@ impl Session {
     }
 
     /// The search index, refreshed for pages that changed since the last query. Pages of
-    /// locked sections are never indexed (none exist in M1: passwords come in M4).
+    /// locked sections are never indexed (none exist yet: passwords come in M4).
     pub fn index(&mut self) -> &Index {
         let mut seen: HashSet<Id> = HashSet::new();
         let mut updates: Vec<(PageMeta, String, String)> = Vec::new();

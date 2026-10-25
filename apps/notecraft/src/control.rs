@@ -126,14 +126,10 @@ pub fn handle(app: &mut NoteApp, ctx: &egui::Context, input: &mut Vec<egui::Even
     };
     match method {
         "engine.execute" | "command" => {
-            let id = s("command").ok_or("missing `command`")?;
-            let params = p.get("params").cloned().filter(|v| !v.is_null()).unwrap_or(json!({}));
+            let (id, params) = headless::execute_request(p)?;
             app.try_run(ctx, id, params).map_err(|e| format!("{id}: {e}"))
         }
-        "notebook.save" => {
-            let errors = app.session.save_dirty();
-            if errors.is_empty() { Ok(json!({"saved": true})) } else { Err(errors.join("; ")) }
-        }
+        "notebook.save" => headless::save_now(&mut app.session),
         "ui.inspect" => Ok(app.inspect_ui(ctx)),
         "ui.key" => {
             let name = s("key").ok_or("missing `key`")?;

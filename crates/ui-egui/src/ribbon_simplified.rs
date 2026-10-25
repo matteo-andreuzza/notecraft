@@ -422,7 +422,7 @@ fn entry(app: &mut NoteApp, ui: &mut Ui, e: &E, c: Option<&Control>, t: Tokens) 
         || c.is_some_and(|c| c.kids.iter().any(|k| rb::enabled(app, k)) || c.gallery.is_some()) && app.session.page().is_some()
         || rb::special_menu(id) && app.session.page().is_some();
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, &lab));
-    let is_checked = rb::command(id).is_some_and(|cmd| rb::checked(app, &cmd));
+    let is_checked = rb::command(id).is_some_and(|cmd| rb::checked(app, cmd));
     let p = ui.painter();
     if is_checked {
         p.rect_filled(rect, radius::CONTROL, t.checked);

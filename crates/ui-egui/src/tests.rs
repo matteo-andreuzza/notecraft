@@ -24,7 +24,8 @@ fn present(h: &Harness<'static, NoteApp>, row: &str, label: &str) {
     assert!(h.query_by_label(label).is_some(), "{row}: no control labelled `{label}`");
 }
 
-fn harness(app: NoteApp) -> Harness<'static, NoteApp> {
+/// A 1280 × 800 harness running the whole window.
+pub(crate) fn harness(app: NoteApp) -> Harness<'static, NoteApp> {
     Harness::builder().with_size(egui::vec2(1280.0, 800.0)).build_ui_state(|ui, app: &mut NoteApp| app.ui(ui), app)
 }
 

@@ -9,11 +9,7 @@ use notecraft_engine::selection::Block;
 use serde_json::json;
 
 use crate::NoteApp;
-use crate::tests::app;
-
-fn harness(app: NoteApp) -> Harness<'static, NoteApp> {
-    Harness::builder().with_size(egui::vec2(1280.0, 800.0)).build_ui_state(|ui, app: &mut NoteApp| app.ui(ui), app)
-}
+use crate::tests::{app, harness};
 
 /// A new page with one container at (60, 120) pt holding `text` (newlines = paragraphs).
 pub(crate) fn page_with(text: &str) -> (NoteApp, Id) {

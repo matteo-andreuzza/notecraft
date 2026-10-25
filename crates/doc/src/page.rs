@@ -1,9 +1,9 @@
 //! Pages and what is on them: note containers (outlines) on a free-form canvas.
 //!
 //! A page is a free-form canvas in page space (points, origin top-left; see `notecraft-geom`).
-//! Everything on it is a [`PageObject`] with a position; in M1 the only kind is the
-//! [`Outline`] (a "note container"); M2 adds the [`Table`], pictures ([`Image`]) and attached
-//! files ([`Attachment`]), then ink, printouts and media.
+//! Everything on it is a [`PageObject`] with a position: an [`Outline`] (a "note container"),
+//! a [`Table`], a picture ([`Image`], printouts included), an attached file ([`Attachment`]) or
+//! an ink stroke ([`Ink`]).
 //!
 //! **Outlines are flat.** The reference stores a tree of outline elements ([MS-ONE]
 //! `jcidOutlineElementNode` with `ElementChildNodes`); NoteCraft stores the same structure as a

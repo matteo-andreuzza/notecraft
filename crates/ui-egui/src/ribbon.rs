@@ -56,8 +56,8 @@ pub(crate) fn params_for(id: &str) -> Value {
 }
 
 /// Command id for a control, if any.
-pub(crate) fn command(id: &str) -> Option<String> {
-    row(id).map(|r| r.command.clone()).filter(|c| !c.is_empty())
+pub(crate) fn command(id: &str) -> Option<&'static str> {
+    row(id).map(|r| r.command.as_str()).filter(|c| !c.is_empty())
 }
 
 /// The table the selection is in (the caret's cell, selected cells or a selected table).
@@ -300,7 +300,7 @@ pub(crate) fn tooltip(app: &NoteApp, id: &str) -> String {
         s.push_str(&format!(" ({})", r.shortcut.replace("Mod", "Ctrl")));
     }
     let reason = match command(id) {
-        Some(c) => app.disabled_reason(&c),
+        Some(c) => app.disabled_reason(c),
         None => {
             if row(id).is_some_and(|r| r.status == "out-of-scope") {
                 Some("Needs a Microsoft service; not available in NoteCraft".into())
@@ -317,7 +317,7 @@ pub(crate) fn tooltip(app: &NoteApp, id: &str) -> String {
 
 pub(crate) fn enabled(app: &NoteApp, id: &str) -> bool {
     match command(id) {
-        Some(c) => app.disabled_reason(&c).is_none(),
+        Some(c) => app.disabled_reason(c).is_none(),
         None => false,
     }
 }
@@ -384,10 +384,10 @@ pub(crate) fn fire(app: &mut NoteApp, ui: &Ui, id: &str) {
     }
     if let Some(c) = command(id) {
         let ctx = ui.ctx().clone();
-        if crate::pictures::host_action(app, &ctx, &c) {
+        if crate::pictures::host_action(app, &ctx, c) {
             return;
         }
-        app.run(&ctx, &c, params_for(id));
+        app.run(&ctx, c, params_for(id));
     }
 }
 
@@ -399,7 +399,7 @@ fn large(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], t: Tokens) {
     let (rect, resp) = ui.allocate_exact_size(vec2(w, CONTENT_H), Sense::click());
     let on = enabled(app, id) || !kids.is_empty() && kids.iter().any(|k| enabled(app, k)) || special_menu(id);
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, &lab));
-    let is_checked = command(id).is_some_and(|c| checked(app, &c));
+    let is_checked = command(id).is_some_and(|c| checked(app, c));
     let p = ui.painter();
     if is_checked {
         p.rect_filled(rect, crate::theme::radius::CONTROL, t.checked);
@@ -760,7 +760,7 @@ pub(crate) fn menu_item(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) {
     if !on {
         text = text.color(t.text_disabled);
     }
-    let is_checked = command(id).is_some_and(|c| checked(app, &c));
+    let is_checked = command(id).is_some_and(|c| checked(app, c));
     let btn = egui::Button::new(text).selected(is_checked).frame(false).min_size(vec2(170.0, 22.0));
     let resp = ui.add_enabled(on, btn).on_hover_text(tooltip(app, id)).on_disabled_hover_text(tooltip(app, id));
     if resp.clicked() {
@@ -778,7 +778,7 @@ pub(crate) fn small(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], wit
     let (rect, resp) = ui.allocate_exact_size(vec2(w, 22.0), Sense::click());
     let on = enabled(app, id) || kids.iter().any(|k| enabled(app, k)) || special_menu(id) && app.session.page().is_some();
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, &lab));
-    let is_checked = command(id).is_some_and(|c| checked(app, &c));
+    let is_checked = command(id).is_some_and(|c| checked(app, c));
     let p = ui.painter();
     if is_checked {
         p.rect_filled(rect, crate::theme::radius::CONTROL, t.checked);
@@ -884,7 +884,7 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
     };
     let frame_rect = ui.allocate_exact_size(vec2(width, CONTENT_H), Sense::hover()).0;
     ui.painter().rect_stroke(frame_rect, 2.0, Stroke::new(1.0, t.border), egui::StrokeKind::Inside);
-    let on = app.disabled_reason(command(id).as_deref().unwrap_or("")).is_none();
+    let on = app.disabled_reason(command(id).unwrap_or("")).is_none();
     let inner = frame_rect.shrink(2.0);
     let visible = if is_tags {
         4
@@ -898,7 +898,7 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
     for (i, item) in items.iter().take(visible).enumerate() {
         let r = Rect::from_min_size(pos2(inner.min.x, inner.min.y + i as f32 * row_h), vec2(inner.width() - 16.0, row_h));
         let resp = ui.interact(r, ui.id().with((id, i)), Sense::click());
-        let enabled_item = command(item).map(|c| app.disabled_reason(&c).is_none()).unwrap_or(on);
+        let enabled_item = command(item).map(|c| app.disabled_reason(c).is_none()).unwrap_or(on);
         if resp.hovered() && enabled_item {
             ui.painter().rect_filled(r, 1.0, t.hover);
         }
@@ -942,13 +942,13 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
 pub(crate) fn gallery_menu(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&str], t: Tokens) {
     let ctx = ui.ctx().clone();
     let is_tags = id.ends_with("TagsGallery");
-    let on = app.disabled_reason(command(id).as_deref().unwrap_or("")).is_none();
+    let on = app.disabled_reason(command(id).unwrap_or("")).is_none();
     let defs = app.session.tag_defs();
     ui.set_min_width(220.0);
     egui::ScrollArea::vertical().max_height(420.0).show(ui, |ui| {
         for item in items {
             let lab = label(item);
-            let enabled_item = command(item).map(|c| app.disabled_reason(&c).is_none()).unwrap_or(on);
+            let enabled_item = command(item).map(|c| app.disabled_reason(c).is_none()).unwrap_or(on);
             let resp = ui.horizontal(|ui| {
                 if is_tags && let Some(def) = defs.iter().find(|d| d.name == lab) {
                     let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
@@ -976,7 +976,7 @@ pub(crate) fn gallery_menu(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&s
 
 pub(crate) fn gallery_pick(app: &mut NoteApp, ctx: &egui::Context, gallery_id: &str, item: &str) {
     if let Some(c) = command(item) {
-        app.run(ctx, &c, json!({}));
+        app.run(ctx, c, json!({}));
         return;
     }
     // Gallery items without a dedicated command go through the gallery's command with a value.

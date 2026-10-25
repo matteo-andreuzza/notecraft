@@ -42,7 +42,7 @@ Not files, but listed so their origin is on record.
 
 | Path | What | Author | Source | Licence |
 |---|---|---|---|---|
-| `crates/ui-egui/src/icons_set.rs` | the 2024-style ribbon and interface icons (20 × 20 grid, 1.25 stroke, line + accent) | the ArtCraft team | ported from WordCraft's `crates/ui-egui/src/icons.rs` (same team; original artwork, no external assets) | MIT OR Apache-2.0 |
+| `crates/ui-egui/src/icons_set.rs` | the 2024-style ribbon and interface icons (20 × 20 grid, 1.25 stroke, line + accent) | the ArtCraft team | ported from WordCraft's `crates/ui-egui/src/icons.rs` (same team; original artwork, no external assets); only the icons NoteCraft maps controls to are kept | MIT OR Apache-2.0 |
 | `crates/ui-egui/src/icons.rs` | NoteCraft's own icons for controls the set above lacks, the tag symbols and the interface glyphs | NoteCraft contributors | original | MIT OR Apache-2.0 |
 
 ## Reference material (not bundled)

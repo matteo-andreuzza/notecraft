@@ -9,12 +9,8 @@ use notecraft_engine::selection::PageSel;
 use serde_json::json;
 
 use crate::NoteApp;
-use crate::tests::app;
+use crate::tests::{app, harness};
 use crate::tests_canvas::{drag, right_click};
-
-fn harness(app: NoteApp) -> Harness<'static, NoteApp> {
-    Harness::builder().with_size(egui::vec2(1280.0, 800.0)).build_ui_state(|ui, app: &mut NoteApp| app.ui(ui), app)
-}
 
 /// A PNG made here: `w × h`, a gradient.
 pub(crate) fn png(w: u32, h: u32) -> Vec<u8> {

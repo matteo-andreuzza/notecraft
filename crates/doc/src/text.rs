@@ -558,6 +558,16 @@ impl Paragraph {
         self.runs.iter().map(|r| r.text.as_str()).collect()
     }
 
+    /// [`Paragraph::text`] without a copy when the paragraph has at most one run (the common
+    /// case), for hot read-only paths.
+    pub fn text_cow(&self) -> std::borrow::Cow<'_, str> {
+        match self.runs.as_slice() {
+            [] => std::borrow::Cow::Borrowed(""),
+            [r] => std::borrow::Cow::Borrowed(r.text.as_str()),
+            _ => std::borrow::Cow::Owned(self.text()),
+        }
+    }
+
     /// Length of the text in bytes.
     pub fn len(&self) -> usize {
         self.runs.iter().map(|r| r.text.len()).sum()
