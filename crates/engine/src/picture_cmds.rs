@@ -282,6 +282,14 @@ fn insert_file(s: &mut Session, v: &Value) -> CmdResult {
     room_for_one(s)?;
     let (bytes, from_path) = read_input(v, MAX_ATTACHMENT_BYTES)?;
     let name = p::str(v, "name").map(str::to_string).or(from_path).unwrap_or_default();
+    let id = push_attachment(s, v, name, bytes)?;
+    s.sel.on_page = PageSel::Objects { ids: vec![id] };
+    Ok(json!({"attachment": id.to_string()}))
+}
+
+/// Add a file attachment icon holding `bytes` where `v`'s `x`/`y` (or the default spot) say;
+/// returns its id. The caller checked the page has room.
+pub(crate) fn push_attachment(s: &mut Session, v: &Value, name: String, bytes: Vec<u8>) -> Result<Id, CmdError> {
     let page = s.page().ok_or_else(no_page)?;
     let pos = ops::insert_pos(s, page, v);
     let (id, blob_id) = (s.new_id(), s.new_id());
@@ -289,8 +297,7 @@ fn insert_file(s: &mut Session, v: &Value) -> CmdResult {
     a.normalize();
     s.pending_outline = None;
     s.page_mut().ok_or_else(no_page)?.objects.push(PageObject::Attachment(a));
-    s.sel.on_page = PageSel::Objects { ids: vec![id] };
-    Ok(json!({"attachment": id.to_string()}))
+    Ok(id)
 }
 
 /// Apply `f` to every selected picture.

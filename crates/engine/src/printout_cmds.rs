@@ -17,7 +17,7 @@ use notecraft_doc::media::{ATTACHMENT_SIZE, MAX_ATTACHMENT_BYTES, MAX_PAGE_OBJEC
 use notecraft_doc::{Attachment, Blob, Id, Image, PageObject, geom::Point};
 use serde_json::{Value, json};
 
-use crate::ops::{self, need_page, no_page};
+use crate::ops::{need_page, no_page};
 use crate::selection::PageSel;
 use crate::{CmdError, CmdResult, CommandSpec, Session};
 
@@ -157,13 +157,7 @@ fn insert_printout(s: &mut Session, v: &Value) -> CmdResult {
     // Render first: a file that can't be printed leaves the page untouched.
     let (pages, total) = print(&bytes)?;
     let name = crate::p::str(v, "name").map(str::to_string).or(from_path).unwrap_or_else(|| "Printout.pdf".into());
-    let page = s.page().ok_or_else(no_page)?;
-    let pos = ops::insert_pos(s, page, v);
-    let (id, blob) = (s.new_id(), s.new_id());
-    let mut a = Attachment { id, pos, name, blob: Blob::new(blob, Arc::from(bytes)), alt_text: String::new(), link: None };
-    a.normalize();
-    s.pending_outline = None;
-    s.page_mut().ok_or_else(no_page)?.objects.push(PageObject::Attachment(a));
+    let id = crate::picture_cmds::push_attachment(s, v, name, bytes)?;
     let ids = place_pages(s, id, pages, total)?;
     s.sel.on_page = PageSel::Objects { ids: vec![id] };
     Ok(json!({"attachment": id.to_string(), "pages": ids.iter().map(Id::to_string).collect::<Vec<_>>(), "total": total}))

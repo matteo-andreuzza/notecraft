@@ -59,18 +59,27 @@ pub(crate) fn table_sel(s: &Session) -> Option<TableSel> {
 
 /// Grow the cell range `rows` × `cols` until it holds every merged cell it touches (decision D9).
 fn with_spans(t: &Table, mut rows: (usize, usize), mut cols: (usize, usize)) -> ((usize, usize), (usize, usize)) {
+    // The merged cells as (first row, last row, first column, last column), found once: the
+    // loop below may pass over them several times, and runs in enabled predicates every frame.
+    let merged: Vec<(usize, usize, usize, usize)> = t
+        .rows
+        .iter()
+        .enumerate()
+        .flat_map(|(r, row)| {
+            row.cells.iter().enumerate().filter(|(_, c)| c.is_merged()).map(move |(c, cell)| {
+                let (rs, cs) = cell.span();
+                (r, r + rs - 1, c, c + cs - 1)
+            })
+        })
+        .collect();
     loop {
         let mut grew = false;
-        for (r, row) in t.rows.iter().enumerate() {
-            for (c, cell) in row.cells.iter().enumerate().filter(|(_, c)| c.is_merged()) {
-                let (rs, cs) = cell.span();
-                let (r1, c1) = (r + rs - 1, c + cs - 1);
-                if r <= rows.1 && r1 >= rows.0 && c <= cols.1 && c1 >= cols.0 {
-                    let (nr, nc) = ((rows.0.min(r), rows.1.max(r1)), (cols.0.min(c), cols.1.max(c1)));
-                    if (nr, nc) != (rows, cols) {
-                        (rows, cols) = (nr, nc);
-                        grew = true;
-                    }
+        for &(r, r1, c, c1) in &merged {
+            if r <= rows.1 && r1 >= rows.0 && c <= cols.1 && c1 >= cols.0 {
+                let (nr, nc) = ((rows.0.min(r), rows.1.max(r1)), (cols.0.min(c), cols.1.max(c1)));
+                if (nr, nc) != (rows, cols) {
+                    (rows, cols) = (nr, nc);
+                    grew = true;
                 }
             }
         }

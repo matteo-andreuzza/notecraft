@@ -1036,6 +1036,14 @@ fn highlights(app: &NoteApp, painter: &egui::Painter, paras: &[ParaLayout], t: T
 }
 
 /// Mouse interaction.
+/// Start dragging object `id`, grabbed at screen point `p` (kept at the same spot under the
+/// pointer while it moves).
+fn start_move(app: &mut NoteApp, id: Id, p: Pos2) {
+    let pos = app.session.page().and_then(|pg| pg.objects.iter().find(|x| x.id() == id).map(PageObject::pos)).unwrap_or_default();
+    let grab = app.canvas.to_page(p);
+    app.canvas.drag = Some(Drag::Move { id, grab_page: notecraft_engine::doc::geom::Vec2::new(grab.x - pos.x, grab.y - pos.y) });
+}
+
 fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Response) {
     // The Draw tools, and clicks or drags on ink (`ink.rs`).
     if app.canvas.drag.is_none() && crate::ink::interact(app, ui, ctx, resp) {
@@ -1105,9 +1113,7 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
         if let Some(o) = app.canvas.outlines.iter().find(|o| o.bar.contains(p)).copied() {
             app.run(ctx, "object.select", json!({"ids": [o.id.to_string()]}));
             if resp.drag_started() {
-                let pos = app.session.page().and_then(|pg| pg.objects.iter().find(|x| x.id() == o.id).map(PageObject::pos)).unwrap_or_default();
-                let grab = app.canvas.to_page(p);
-                app.canvas.drag = Some(Drag::Move { id: o.id, grab_page: notecraft_engine::doc::geom::Vec2::new(grab.x - pos.x, grab.y - pos.y) });
+                start_move(app, o.id, p);
             }
             return;
         }
@@ -1149,9 +1155,7 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
                 crate::pictures::host_action(app, ctx, "attachment.open");
             }
             if resp.drag_started() {
-                let pos = app.session.page().and_then(|pg| pg.objects.iter().find(|x| x.id() == m.id).map(PageObject::pos)).unwrap_or_default();
-                let grab = app.canvas.to_page(p);
-                app.canvas.drag = Some(Drag::Move { id: m.id, grab_page: notecraft_engine::doc::geom::Vec2::new(grab.x - pos.x, grab.y - pos.y) });
+                start_move(app, m.id, p);
             }
             return;
         }
