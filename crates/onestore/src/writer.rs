@@ -669,6 +669,38 @@ pub mod section {
         pub paragraphs: Vec<(u8, String)>,
         /// Store the text as TextExtendedAscii (Windows-1252) instead of RichEditTextUnicode.
         pub ascii: bool,
+        /// Run formats and paragraph styles, by paragraph index (missing: plain text).
+        pub styles: Vec<FixtureStyle>,
+    }
+
+    /// A paragraph's formatting: runs ending at UTF-16 positions, a style id, an alignment.
+    #[derive(Debug, Clone, Default)]
+    pub struct FixtureStyle {
+        /// `(end, format)`; the last run's end is ignored (it ends with the text).
+        pub runs: Vec<(u32, FixtureFormat)>,
+        pub style_id: Option<String>,
+        pub align: Option<u8>,
+        /// NumberListFormat characters (without the length unit) and ListRestart.
+        pub list: Option<(Vec<u16>, Option<u32>)>,
+        /// Note tags: `(label, NoteTagShape, completed)`.
+        pub tags: Vec<(String, u16, bool)>,
+    }
+
+    /// One jcidParagraphStyleObjectForText (§2.2.43).
+    #[derive(Debug, Clone, Default)]
+    pub struct FixtureFormat {
+        pub bold: bool,
+        pub italic: bool,
+        pub underline: bool,
+        pub strike: bool,
+        pub superscript: bool,
+        pub subscript: bool,
+        pub hidden: bool,
+        pub hyperlink: bool,
+        pub font: Option<String>,
+        pub half_points: Option<u16>,
+        pub color: Option<u32>,
+        pub highlight: Option<u32>,
     }
 
     /// Writes a section of `pages`.
@@ -762,10 +794,89 @@ pub mod section {
             } else {
                 r.add(prop::RICH_EDIT_TEXT_UNICODE, Val::Bytes(wz(text)));
             }
+            if let Some(style) = o.styles.get(i) {
+                let mut fmts = Vec::new();
+                for (k, (_, f)) in style.runs.iter().enumerate() {
+                    let fid = ExtendedGuid::new(rt.guid, 2 + k as u32);
+                    let mut fp = PropSetBuilder::default();
+                    for (on, id) in [
+                        (f.bold, prop::BOLD),
+                        (f.italic, prop::ITALIC),
+                        (f.underline, prop::UNDERLINE),
+                        (f.strike, prop::STRIKETHROUGH),
+                        (f.superscript, prop::SUPERSCRIPT),
+                        (f.subscript, prop::SUBSCRIPT),
+                        (f.hidden, prop::HIDDEN),
+                        (f.hyperlink, prop::HYPERLINK),
+                    ] {
+                        if on {
+                            fp.add(id, Val::Bool(true));
+                        }
+                    }
+                    if let Some(font) = &f.font {
+                        fp.add(prop::FONT, Val::Bytes(wz(font)));
+                    }
+                    if let Some(h) = f.half_points {
+                        fp.add(prop::FONT_SIZE, Val::U16(h));
+                    }
+                    if let Some(c) = f.color {
+                        fp.add(prop::FONT_COLOR, Val::U32(c));
+                    }
+                    if let Some(c) = f.highlight {
+                        fp.add(prop::HIGHLIGHT, Val::U32(c));
+                    }
+                    rev.object(fid, jcid::PARAGRAPH_STYLE, &fp);
+                    fmts.push(rev.cid(fid));
+                }
+                if !fmts.is_empty() {
+                    let ends: Vec<u8> = style.runs.iter().take(style.runs.len() - 1).flat_map(|(e, _)| e.to_le_bytes()).collect();
+                    r.add(prop::TEXT_RUN_INDEX, Val::Bytes(ends));
+                    r.add(prop::TEXT_RUN_FORMATTING, Val::Objects(fmts));
+                }
+                if let Some(id) = &style.style_id {
+                    let sid = ExtendedGuid::new(rt.guid, 200);
+                    let mut sp = PropSetBuilder::default();
+                    sp.add(prop::PARAGRAPH_STYLE_ID, Val::Bytes(wz(id)));
+                    rev.object(sid, jcid::PARAGRAPH_STYLE, &sp);
+                    let c = rev.cid(sid);
+                    r.add(prop::PARAGRAPH_STYLE, Val::Object(c));
+                }
+                if let Some(a) = style.align {
+                    r.add(prop::PARAGRAPH_ALIGNMENT, Val::U8(a));
+                }
+                let mut states = Vec::new();
+                for (k, (label, shape, done)) in style.tags.iter().enumerate() {
+                    let did = ExtendedGuid::new(rt.guid, 210 + k as u32);
+                    let mut d = PropSetBuilder::default();
+                    d.add(prop::NOTE_TAG_LABEL, Val::Bytes(wz(label)));
+                    d.add(prop::NOTE_TAG_SHAPE, Val::U16(*shape));
+                    rev.object(did, jcid::NOTE_TAG_DEFINITION, &d);
+                    let mut st = PropSetBuilder::default();
+                    let c = rev.cid(did);
+                    st.add(prop::NOTE_TAG_DEFINITION_OID, Val::Object(c));
+                    st.add(prop::ACTION_ITEM_STATUS, Val::U16(u16::from(*done)));
+                    states.push(st);
+                }
+                if !states.is_empty() {
+                    r.add(prop::NOTE_TAG_STATES, Val::Array(states));
+                }
+            }
             rev.object(rt, jcid::RICH_TEXT_OE, &r);
             let mut e = PropSetBuilder::default();
             let rc = rev.cid(rt);
             e.add(prop::CONTENT_CHILD_NODES, Val::Objects(vec![rc]));
+            if let Some((chars, restart)) = o.styles.get(i).and_then(|st| st.list.as_ref()) {
+                let lid = ExtendedGuid::new(rt.guid, 201);
+                let mut l = PropSetBuilder::default();
+                let units: Vec<u8> = std::iter::once(chars.len() as u16).chain(chars.iter().copied()).flat_map(u16::to_le_bytes).collect();
+                l.add(prop::NUMBER_LIST_FORMAT, Val::Bytes(units));
+                if let Some(r) = restart {
+                    l.add(prop::LIST_RESTART, Val::U32(*r));
+                }
+                rev.object(lid, jcid::NUMBER_LIST, &l);
+                let c = rev.cid(lid);
+                e.add(prop::LIST_NODES, Val::Objects(vec![c]));
+            }
             let kids: Vec<_> = (0..n).filter(|&k| parents[k] == Some(i)).map(|k| rev.cid(ids[2 * k])).collect();
             if !kids.is_empty() {
                 e.add(prop::ELEMENT_CHILD_NODES, Val::Objects(kids));

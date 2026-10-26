@@ -130,3 +130,90 @@ mod prop_tests {
         }
     }
 }
+
+#[test]
+fn text_runs_keep_their_formats_styles_and_alignment() {
+    use crate::writer::section::{FixtureFormat, FixtureStyle};
+    use notecraft_color::Rgba;
+    use notecraft_doc::text::{Align, ParaStyle, Script};
+    // "Bold red, italic 14pt Arial, x²" with a hidden run that must not show.
+    let text = "Bold red, italic x2";
+    let runs = vec![
+        (8, FixtureFormat { bold: true, color: Some(0x0000_00FF), ..FixtureFormat::default() }),
+        (10, FixtureFormat::default()),
+        (
+            16,
+            FixtureFormat {
+                italic: true,
+                font: Some("Arial".into()),
+                half_points: Some(28),
+                highlight: Some(0x0000_FFFF),
+                ..FixtureFormat::default()
+            },
+        ),
+        (17, FixtureFormat::default()),
+        (18, FixtureFormat { hidden: true, ..FixtureFormat::default() }),
+        (0, FixtureFormat { superscript: true, ..FixtureFormat::default() }),
+    ];
+    let mut o = outline(&[(0, text), (0, "Heading")]);
+    o.styles = vec![
+        FixtureStyle { runs, style_id: Some("p".into()), align: Some(1), ..FixtureStyle::default() },
+        FixtureStyle { style_id: Some("h2".into()), ..FixtureStyle::default() },
+    ];
+    let i = import(&write(&[FixturePage { title: "F".into(), outlines: vec![o], ..FixturePage::default() }]));
+    let page = &i.section.pages[0];
+    let paras: Vec<_> = page.objects.iter().filter_map(PageObject::as_outline).flat_map(|o| o.paragraphs.clone()).collect();
+    let p = &paras[0];
+    assert_eq!(p.text(), "Bold red, italic 2", "the hidden run is dropped");
+    let runs: Vec<_> = p.runs.iter().map(|r| r.text.as_str()).collect();
+    assert_eq!(runs, vec!["Bold red", ", ", "italic", " ", "2"]);
+    assert_eq!(p.runs[0].fmt.bold, Some(true));
+    assert_eq!(p.runs[0].fmt.color, Some(Rgba::rgb(255, 0, 0)), "COLORREF is 0x00BBGGRR");
+    assert_eq!(p.runs[2].fmt.italic, Some(true));
+    assert_eq!(p.runs[2].fmt.font.as_deref(), Some("Arial"));
+    assert_eq!(p.runs[2].fmt.size, Some(14.0), "half points");
+    assert_eq!(p.runs[2].fmt.highlight, Some(Rgba::rgb(255, 255, 0)));
+    assert_eq!(p.runs[4].fmt.script, Some(Script::Super));
+    assert_eq!((p.style, p.align), (ParaStyle::Normal, Align::Center));
+    assert_eq!(paras[1].style, ParaStyle::Heading2);
+    assert_eq!(i.report.lost.get("hidden text runs"), Some(&1), "FMT.One.ReadRichText");
+}
+
+#[test]
+fn forged_run_positions_are_clamped() {
+    use crate::writer::section::{FixtureFormat, FixtureStyle};
+    let mut o = outline(&[(0, "abc")]);
+    let bold = FixtureFormat { bold: true, ..FixtureFormat::default() };
+    o.styles = vec![FixtureStyle { runs: vec![(99, bold.clone()), (1, bold.clone()), (0, bold)], ..FixtureStyle::default() }];
+    let i = import(&write(&[FixturePage { title: "F".into(), outlines: vec![o], ..FixturePage::default() }]));
+    let p = &i.section.pages[0].objects[0].as_outline().unwrap().paragraphs[0];
+    assert_eq!(p.text(), "abc");
+}
+
+#[test]
+fn lists_and_note_tags() {
+    use crate::writer::section::FixtureStyle;
+    use notecraft_doc::tags::TagSymbol;
+    use notecraft_doc::text::{Bullet, ListFormat, Numbering};
+    let mut o = outline(&[(0, "milk"), (0, "first"), (0, "second"), (0, "call Ann"), (0, "plain")]);
+    let style = |list: Option<(Vec<u16>, Option<u32>)>, tags: Vec<(String, u16, bool)>| FixtureStyle { list, tags, ..FixtureStyle::default() };
+    o.styles = vec![
+        style(Some((vec![0x2022], None)), vec![("To Do".into(), 1, true)]),
+        style(Some((vec![0xFFFD, 0, u16::from(b'.')], Some(3))), vec![]),
+        style(Some((vec![0xFFFD, 4, u16::from(b')')], None)), vec![("Important".into(), 13, false), ("Ask Bob".into(), 15, false)]),
+        style(None, vec![("Call back".into(), 1, false)]),
+    ];
+    let i = import(&write(&[FixturePage { title: "L".into(), outlines: vec![o], ..FixturePage::default() }]));
+    let paras = &i.section.pages[0].objects[0].as_outline().unwrap().paragraphs;
+    assert_eq!(paras[0].list, Some(ListFormat::Bullet(Bullet::Disc)), "FMT.One.ReadLists");
+    assert_eq!(paras[1].list, Some(ListFormat::Number { style: Numbering::Decimal, restart: Some(3) }));
+    assert_eq!(paras[2].list, Some(ListFormat::Number { style: Numbering::LowerAlphaParen, restart: None }));
+    assert_eq!(paras[4].list, None);
+    let tags = |k: usize| paras[k].tags.iter().map(|t| (t.key.as_str(), t.symbol, t.checked)).collect::<Vec<_>>();
+    assert_eq!(tags(0), vec![("todo", TagSymbol::Checkbox, true)], "FMT.One.ReadTags");
+    assert_eq!(tags(2), vec![("important", TagSymbol::Star, false), ("onenote-ask-bob", TagSymbol::Question, false)]);
+    assert_eq!(paras[2].tags[1].name, "Ask Bob");
+    assert_eq!(tags(3), vec![("call-back", TagSymbol::CheckboxPhone, false)], "built-in names keep NoteCraft's icon");
+    assert_eq!(i.report.kept.get("note tags"), Some(&4));
+    assert_eq!(i.report.kept.get("list items"), Some(&3));
+}

@@ -4,10 +4,12 @@
 use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
+use notecraft_color::Rgba;
 use notecraft_doc::id::IdGen;
 use notecraft_doc::notebook::{Section, SectionColor};
 use notecraft_doc::page::{MAX_PAGE_LEVEL, Outline, OutlineWidth, Page, PageObject};
-use notecraft_doc::text::{MAX_LEVEL, ParaStyle, Paragraph};
+use notecraft_doc::tags::{TagSymbol, TagUse, builtin_tags};
+use notecraft_doc::text::{Align, Bullet, CharFormat, ListFormat, MAX_LEVEL, Numbering, ParaStyle, Paragraph, Run, Script};
 use notecraft_doc::time::Timestamp;
 use notecraft_geom::Point;
 
@@ -16,7 +18,7 @@ use crate::Limits;
 use crate::bytes::utf16_lossy;
 use crate::error::{OneError, Result};
 use crate::header::FileKind;
-use crate::propset::PropertySet;
+use crate::propset::{PropertySet, Value};
 use crate::revision::{ObjectSpace, ROOT_CONTENT, ROOT_METADATA, Store};
 use crate::types::ExtendedGuid;
 
@@ -218,8 +220,13 @@ impl Walk<'_, '_> {
                 let Some(object) = space.objects.get(&content) else { continue };
                 match (object.jcid.0, space.props(&content)) {
                     (jcid::RICH_TEXT_OE, Some(rt)) => {
-                        let mut p = Paragraph::with_text(self.ids.next_id(), &text_of(rt));
+                        let mut p = self.paragraph(space, rt);
                         p.level = u8::try_from(level).unwrap_or(MAX_LEVEL).min(MAX_LEVEL);
+                        p.list = element.objects(prop::LIST_NODES).first().and_then(|l| space.props(l)).and_then(list_format);
+                        if p.list.is_some() {
+                            self.report.keep("list items");
+                        }
+                        p.tags = self.tags(space, rt);
                         out.push(p);
                         self.report.keep("paragraphs");
                     }
@@ -231,6 +238,221 @@ impl Walk<'_, '_> {
             }
             self.elements(space, element, level + 1, out);
         }
+    }
+}
+
+impl Walk<'_, '_> {
+    /// A rich text node (§2.2.23) as a paragraph: its text cut into runs at TextRunIndex
+    /// (§2.2.76, positions in UTF-16 code units) with the formats of TextRunFormatting
+    /// (§2.2.77), and the paragraph style (§2.2.80) and alignment (§2.3.94).
+    fn paragraph(&mut self, space: &ObjectSpace, rt: &PropertySet) -> Paragraph {
+        let mut p = Paragraph::new(self.ids.next_id());
+        let units: Vec<u16> = text_of(rt).encode_utf16().collect();
+        let formats = rt.objects(prop::TEXT_RUN_FORMATTING);
+        let ends: Vec<usize> = rt
+            .bytes(prop::TEXT_RUN_INDEX)
+            .map(|b| b.as_chunks::<4>().0.iter().map(|c| u32::from_le_bytes(*c) as usize).collect())
+            .unwrap_or_default();
+        let mut start = 0;
+        for (i, fid) in formats.iter().enumerate() {
+            // The last run ends at the end of the text; ends are clamped to stay increasing.
+            let end = ends.get(i).copied().unwrap_or(units.len()).clamp(start, units.len());
+            let piece = String::from_utf16_lossy(units.get(start..end).unwrap_or_default());
+            start = end;
+            let style = space.props(fid);
+            if style.and_then(|s| s.bool(prop::HIDDEN)) == Some(true) {
+                self.report.lose("hidden text runs");
+                continue;
+            }
+            if style.and_then(|s| s.bool(prop::HYPERLINK)) == Some(true) {
+                // The link target of a text run is not in the public specification.
+                self.report.lose("text hyperlinks (text kept)");
+            }
+            if !piece.is_empty() {
+                p.runs.push(Run::new(&piece, style.map(char_format).unwrap_or_default()));
+            }
+            if end == units.len() {
+                break;
+            }
+        }
+        if start < units.len() {
+            // Text past the last formatted run (or no TextRunFormatting at all) is plain.
+            p.runs.push(Run::new(&String::from_utf16_lossy(units.get(start..).unwrap_or_default()), CharFormat::default()));
+        }
+        let style = rt.objects(prop::PARAGRAPH_STYLE).first().and_then(|s| space.props(s)).cloned();
+        if let Some(id) = style.as_ref().and_then(|s| s.bytes(prop::PARAGRAPH_STYLE_ID)).map(wz) {
+            p.style = para_style(&id);
+        }
+        let align = rt.uint(prop::PARAGRAPH_ALIGNMENT).or_else(|| style.as_ref().and_then(|s| s.uint(prop::PARAGRAPH_ALIGNMENT)));
+        p.align = match align {
+            Some(1) => Align::Center,
+            Some(2) => Align::Right,
+            _ => Align::Left,
+        };
+        p.normalize();
+        if p.runs.iter().any(|r| r.fmt != CharFormat::default()) {
+            self.report.keep("formatted paragraphs");
+        }
+        p
+    }
+}
+
+impl Walk<'_, '_> {
+    /// §2.2.88 NoteTagStates: one NoteTagState (§2.2.42) per tag, each naming its shared
+    /// definition (§2.2.41: label, shape) and its status (§2.3.91: bit 0 Completed).
+    fn tags(&mut self, space: &ObjectSpace, rt: &PropertySet) -> Vec<TagUse> {
+        let Some(Value::Array(states)) = rt.get(prop::NOTE_TAG_STATES) else { return Vec::new() };
+        let builtins = builtin_tags();
+        let mut out: Vec<TagUse> = Vec::new();
+        for state in states {
+            let Some(def) = state.objects(prop::NOTE_TAG_DEFINITION_OID).first().and_then(|d| space.props(d)) else {
+                self.report.warnings.push("a note tag names no definition".into());
+                continue;
+            };
+            let label = def.bytes(prop::NOTE_TAG_LABEL).map(wz).unwrap_or_default();
+            let shape = def.uint(prop::NOTE_TAG_SHAPE).or_else(|| state.uint(prop::NOTE_TAG_SHAPE)).unwrap_or(0);
+            let checkable = is_checkable(shape);
+            let completed = state.uint(prop::ACTION_ITEM_STATUS).is_some_and(|s| s & 1 != 0);
+            // A built-in tag with the same name keeps NoteCraft's key and icon; others get a
+            // key from their label and the nearest icon for their shape.
+            let tag = match builtins.iter().find(|b| b.name.eq_ignore_ascii_case(label.trim())) {
+                Some(b) => TagUse { key: b.key.clone(), name: b.name.clone(), symbol: b.symbol, checked: false },
+                None => TagUse {
+                    key: slug(&label, shape),
+                    name: if label.is_empty() { "Tag".into() } else { label },
+                    symbol: symbol(shape),
+                    checked: false,
+                },
+            };
+            let tag = TagUse { checked: checkable && completed, ..tag };
+            if out.iter().any(|t| t.key == tag.key) {
+                continue;
+            }
+            out.push(tag);
+            self.report.keep("note tags");
+        }
+        out
+    }
+}
+
+/// §2.3.86: the shapes whose icon is a check box.
+fn is_checkable(shape: u64) -> bool {
+    matches!(shape, 1..=12 | 28 | 30 | 32 | 48 | 50 | 52 | 69 | 71 | 73 | 89..=99)
+}
+
+/// The NoteCraft icon nearest to a §2.3.86 shape (colours are not kept).
+fn symbol(shape: u64) -> TagSymbol {
+    use TagSymbol as S;
+    match shape {
+        28 | 48 | 69 => S::CheckboxOne,
+        30 | 50 | 71 => S::CheckboxTwo,
+        94..=96 => S::CheckboxPerson,
+        89..=93 | 97..=99 => S::CheckboxFlag,
+        1..=12 | 32 | 52 | 73 => S::Checkbox,
+        13 | 34 | 40 | 54 | 61 | 75 => S::Star,
+        15 | 111 => S::Question,
+        17 => S::Exclamation,
+        18 | 114 | 118 => S::Person,
+        21 => S::Bulb,
+        23 => S::House,
+        27 => S::Key,
+        109 | 110 => S::Phone,
+        124 | 125 => S::Globe,
+        106..=108 => S::Envelope,
+        121 => S::Music,
+        122 => S::Film,
+        14 => S::FlagA,
+        _ => S::None,
+    }
+}
+
+/// A key for a tag that is not built in: its label in lowercase words joined by dashes.
+fn slug(label: &str, shape: u64) -> String {
+    let s: String = label.to_lowercase().chars().map(|c| if c.is_alphanumeric() { c } else { '-' }).collect();
+    let s = s.split('-').filter(|w| !w.is_empty()).collect::<Vec<_>>().join("-");
+    if s.is_empty() { format!("onenote-tag-{shape}") } else { format!("onenote-{s}") }
+}
+
+/// §2.2.25 jcidNumberListNode → a list format. §2.3.20 NumberListFormat: UTF-16 units, the
+/// first is the length; 0xFFFD followed by an MSONFC ([MS-OSHARED] §2.2.1.3) is the number.
+fn list_format(node: &PropertySet) -> Option<ListFormat> {
+    let units: Vec<u16> = node.bytes(prop::NUMBER_LIST_FORMAT)?.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c)).collect();
+    let len = usize::from(*units.first()?);
+    let chars = units.get(1..).unwrap_or_default();
+    let chars = chars.get(..len.min(chars.len())).unwrap_or_default();
+    if let Some(at) = chars.iter().position(|&u| u == 0xFFFD) {
+        let nfc = chars.get(at + 1).copied().unwrap_or(0);
+        let paren = chars.get(at + 2) == Some(&u16::from(b')'));
+        let style = match (nfc, paren) {
+            (1, _) => Numbering::UpperRoman,
+            (2, _) => Numbering::LowerRoman,
+            (3, _) => Numbering::UpperAlpha,
+            (4, true) => Numbering::LowerAlphaParen,
+            (4, false) => Numbering::LowerAlpha,
+            (_, true) => Numbering::DecimalParen,
+            _ => Numbering::Decimal,
+        };
+        let restart = node.uint(prop::LIST_RESTART).and_then(|r| u32::try_from(r).ok()).filter(|r| *r > 0);
+        return Some(ListFormat::Number { style, restart });
+    }
+    let bullet = match char::decode_utf16(chars.iter().copied()).next().and_then(|r| r.ok()) {
+        Some('o' | '◦' | '○') => Bullet::Circle,
+        Some('▪' | '■' | '§' | '□') => Bullet::Square,
+        Some('-' | '–' | '—') => Bullet::Dash,
+        Some('➢' | '➤' | '→' | 'Ø' | '>') => Bullet::Arrow,
+        Some('◆' | '♦' | 'v') => Bullet::Diamond,
+        _ => Bullet::Disc,
+    };
+    Some(ListFormat::Bullet(bullet))
+}
+
+/// §2.2.43 jcidParagraphStyleObjectForText → a character format (unset properties stay unset).
+fn char_format(s: &PropertySet) -> CharFormat {
+    let script = match (s.bool(prop::SUPERSCRIPT), s.bool(prop::SUBSCRIPT)) {
+        (Some(true), _) => Some(Script::Super),
+        (_, Some(true)) => Some(Script::Sub),
+        _ => None,
+    };
+    CharFormat {
+        font: s.bytes(prop::FONT).map(wz).filter(|f| !f.is_empty()),
+        // §2.3.16: half points, 12–288.
+        size: s.uint(prop::FONT_SIZE).map(|h| (h.clamp(2, 1000) as f32) / 2.0),
+        bold: s.bool(prop::BOLD),
+        italic: s.bool(prop::ITALIC),
+        underline: s.bool(prop::UNDERLINE),
+        strike: s.bool(prop::STRIKETHROUGH),
+        script,
+        color: s.uint(prop::FONT_COLOR).and_then(colorref),
+        highlight: s.uint(prop::HIGHLIGHT).and_then(colorref),
+        link: None,
+    }
+}
+
+/// §2.2.8 COLORREF: 0x00BBGGRR, or 0xFF000000 for "automatic" (`None`).
+fn colorref(v: u64) -> Option<Rgba> {
+    if v > 0x00FF_FFFF {
+        return None;
+    }
+    let [r, g, b, _] = (v as u32).to_le_bytes();
+    Some(Rgba::rgb(r, g, b))
+}
+
+/// §2.2.83 ParagraphStyleId → a NoteCraft style. The spec's examples show "p" and
+/// "PageTitle"; the heading, citation, quote and code names are the HTML-like ones the
+/// reference is believed to use (unverified, `docs/parity.md`).
+fn para_style(id: &str) -> ParaStyle {
+    match id {
+        "h1" => ParaStyle::Heading1,
+        "h2" => ParaStyle::Heading2,
+        "h3" => ParaStyle::Heading3,
+        "h4" => ParaStyle::Heading4,
+        "h5" => ParaStyle::Heading5,
+        "h6" => ParaStyle::Heading6,
+        "PageTitle" => ParaStyle::PageTitle,
+        "cite" => ParaStyle::Citation,
+        "blockquote" => ParaStyle::Quote,
+        "code" => ParaStyle::Code,
+        _ => ParaStyle::Normal,
     }
 }
 

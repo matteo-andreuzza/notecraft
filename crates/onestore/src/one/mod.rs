@@ -37,12 +37,40 @@ pub mod jcid {
     pub const PAGE_METADATA: u32 = 0x0002_0030;
     pub const EMBEDDED_FILE: u32 = 0x0006_0035;
     pub const PAGE_MANIFEST: u32 = 0x0006_0037;
+    /// jcidParagraphStyleObject and jcidParagraphStyleObjectForText (§2.2.43, §2.2.44).
+    pub const PARAGRAPH_STYLE: u32 = 0x0012_004D;
+    pub const NOTE_TAG_DEFINITION: u32 = 0x0012_0043;
 }
 
 /// [MS-ONE] §2.1.12 PropertyIDs of the properties read (with their type bits, as the spec
 /// lists them; lookups compare the 26-bit id only).
 pub mod prop {
     #![allow(missing_docs)]
+    pub const BOLD: u32 = 0x0800_1C04;
+    pub const ITALIC: u32 = 0x0800_1C05;
+    pub const UNDERLINE: u32 = 0x0800_1C06;
+    pub const STRIKETHROUGH: u32 = 0x0800_1C07;
+    pub const SUPERSCRIPT: u32 = 0x0800_1C08;
+    pub const SUBSCRIPT: u32 = 0x0800_1C09;
+    pub const FONT: u32 = 0x1C00_1C0A;
+    pub const FONT_SIZE: u32 = 0x1000_1C0B;
+    pub const FONT_COLOR: u32 = 0x1400_1C0C;
+    pub const HIGHLIGHT: u32 = 0x1400_1C0D;
+    pub const TEXT_RUN_INDEX: u32 = 0x1C00_1E12;
+    pub const TEXT_RUN_FORMATTING: u32 = 0x2400_1E13;
+    pub const HYPERLINK: u32 = 0x0800_1E14;
+    pub const HIDDEN: u32 = 0x0800_1E16;
+    pub const PARAGRAPH_STYLE: u32 = 0x2000_342C;
+    pub const PARAGRAPH_STYLE_ID: u32 = 0x1C00_345A;
+    pub const PARAGRAPH_ALIGNMENT: u32 = 0x0C00_3477;
+    pub const NUMBER_LIST_FORMAT: u32 = 0x1C00_1C1A;
+    pub const LIST_NODES: u32 = 0x2400_1C26;
+    pub const LIST_RESTART: u32 = 0x1400_1CB7;
+    pub const NOTE_TAG_SHAPE: u32 = 0x1000_3464;
+    pub const NOTE_TAG_LABEL: u32 = 0x1C00_3468;
+    pub const NOTE_TAG_DEFINITION_OID: u32 = 0x2000_3488;
+    pub const NOTE_TAG_STATES: u32 = 0x0400_3489;
+    pub const ACTION_ITEM_STATUS: u32 = 0x1000_3470;
     pub const OFFSET_FROM_PARENT_HORIZ: u32 = 0x1400_1C14;
     pub const OFFSET_FROM_PARENT_VERT: u32 = 0x1400_1C15;
     pub const LAYOUT_MAX_WIDTH: u32 = 0x1400_1C1B;
