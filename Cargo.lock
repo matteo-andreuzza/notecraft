@@ -2361,6 +2361,7 @@ dependencies = [
  "notecraft-ink",
  "notecraft-ink-geom",
  "notecraft-math",
+ "notecraft-onestore",
  "notecraft-search",
  "notecraft-text",
  "serde",
@@ -2420,6 +2421,16 @@ name = "notecraft-math"
 version = "0.1.0"
 dependencies = [
  "proptest",
+]
+
+[[package]]
+name = "notecraft-onestore"
+version = "0.1.0"
+dependencies = [
+ "notecraft-doc",
+ "notecraft-geom",
+ "proptest",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

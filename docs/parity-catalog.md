@@ -532,7 +532,7 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Open.OpenNotebook | Open: Open Notebook (browse) | File/Open/Browse | page | `Mod+O` | file.openNotebook | P0 | wired | FLUENT19:ButtonOpenBrowse |  |
 | BS.Open.RecentNotebooks | Open: Recent Notebooks | File/Open/Recent Notebooks | list |  | file.openRecent | P0 | verified | FLUENT19:GroupRecentDocuments |  |
 | BS.Open.SharedWithMe | Open: Shared with Me | File/Open/Shared with Me | list |  |  | P3 | out-of-scope | FLUENT19:GroupSharedWithMeDocuments |  |
-| BS.Open.OpenSection | Open: Open Section (.one file) | File/Open/Open Section | button | `Mod+Alt+Shift+O` | file.openSection | P1 | missing | FLUENT19:JotOpenFile; KBD365 |  |
+| BS.Open.OpenSection | Open: Open Section (.one file) | File/Open/Open Section | button | `Mod+Alt+Shift+O` | file.openSection | P1 | wired | FLUENT19:JotOpenFile; KBD365 | imports a copy of the .one as a new section (decision D12); the reference opens the file in place — unverified |
 | BS.Print.Print | Print: Print | File/Print/Print | button | `Mod+P` | file.print | P1 | missing | FLUENT19:FilePrint |  |
 | BS.Print.Preview | Print: Print Preview (range, paper, header/footer) | File/Print/Print Preview | dialog |  | file.printPreview | P2 | missing | FLUENT19:FilePrintPreview |  |
 | BS.Share.WithPeople | Share: Share with People | File/Share/Share with People | page |  |  | P3 | out-of-scope | FLUENT19:ShareWithPeople |  |
@@ -1443,9 +1443,9 @@ Interop constructs. Per-construct preserved/degraded/dropped numbers for `.one` 
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| FMT.One.Read | Read .one section files (OneNote 2010–2016 format, revision store) | Files/One | format |  |  | P0 | missing | [MS-ONESTORE] §2; [MS-ONE] §2 | M3 |
-| FMT.One.ReadPages | Pages, titles, levels (subpages), creation times | Files/One | format |  |  | P0 | missing | [MS-ONE] jcidPageNode, PageLevel, CachedTitleString |  |
-| FMT.One.ReadOutlines | Outlines, outline elements, indentation, position and width | Files/One | format |  |  | P0 | missing | [MS-ONE] jcidOutlineNode, jcidOutlineElementNode |  |
+| FMT.One.Read | Read .one section files (OneNote 2010–2016 format, revision store) | Files/One | format |  |  | P0 | wired | [MS-ONESTORE] §2; [MS-ONE] §2 | M3 (D12): crate onestore; read-only; pages, titles, outlines and plain text so far (formats, lists, tags, pictures, tables, attachments, ink next) |
+| FMT.One.ReadPages | Pages, titles, levels (subpages), creation times | Files/One | format |  |  | P0 | verified | [MS-ONE] jcidPageNode, PageLevel, CachedTitleString | title from the title outline, else CachedTitleString; PageLevel 1–3 → subpage levels; LastModifiedTime, TopologyCreationTimeStamp |
+| FMT.One.ReadOutlines | Outlines, outline elements, indentation, position and width | Files/One | format |  |  | P0 | wired | [MS-ONE] jcidOutlineNode, jcidOutlineElementNode | text, nesting levels, fixed width; position = OffsetFromParent × 36 pt, PageMarginOrigin not applied — unverified |
 | FMT.One.ReadRichText | Rich text: runs, fonts, sizes, bold/italic/underline/strike, colours, highlight, hyperlinks | Files/One | format |  |  | P0 | missing | [MS-ONE] jcidRichTextOENode, TextRunFormatting, jcidParagraphStyleObject |  |
 | FMT.One.ReadLists | Bulleted and numbered lists | Files/One | format |  |  | P0 | missing | [MS-ONE] jcidNumberListNode |  |
 | FMT.One.ReadTags | Note tags (shape, label, checked state) | Files/One | format |  |  | P0 | missing | [MS-ONE] jcidNoteTagSharedDefinitionContainer, NoteTagState |  |
@@ -1455,7 +1455,7 @@ Interop constructs. Per-construct preserved/degraded/dropped numbers for `.one` 
 | FMT.One.ReadInk | Ink strokes (paths, pressure, colour, width) | Files/One | format |  |  | P1 | missing | [MS-ONE] jcidInkDataNode, InkStrokeProperties |  |
 | FMT.One.ReadVersions | Page history (revisions) | Files/One | format |  |  | P2 | missing | [MS-ONESTORE] revision manifests |  |
 | FMT.One.ReadEncrypted | Password-protected sections (.one with encryption) | Files/One | format |  |  | P2 | missing | [MS-ONESTORE] §2.3.4.? encryption (public spec section to be cited at implementation) | unverified scope |
-| FMT.One.Write | Write .one section files OneNote can open | Files/One | format |  |  | P1 | missing | [MS-ONESTORE]; [MS-ONE] | M3 |
+| FMT.One.Write | Write .one section files OneNote can open | Files/One | format |  |  | P1 | missing | [MS-ONESTORE]; [MS-ONE] | read-only in M3 (decision D12); export decided after real-file measurements |
 | FMT.Onetoc2.Read | Read .onetoc2 notebook table of contents (section order, colours) | Files/Onetoc2 | format |  |  | P0 | missing | [MS-ONETOC2]? ([MS-ONE] §2.? jcidSectionNode / table of contents) | unverified spec name |
 | FMT.Onetoc2.Write | Write .onetoc2 | Files/Onetoc2 | format |  |  | P2 | missing | [MS-ONE] |  |
 | FMT.Onepkg.Read | Read .onepkg packages (CAB archive of a notebook) | Files/Onepkg | format |  |  | P0 | missing | [MS-CAB] |  |

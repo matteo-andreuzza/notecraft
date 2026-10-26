@@ -494,6 +494,37 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   for later: Ink Equation and Ink to Math, Normal Text, Equation Options, the structure-editing
   rows of the context menu, MathML in HTML.
 
+### 4.17 Reading OneNote's files (decision D12, 2026-10-27)
+
+- **Crate `onestore` (L4, depends on `doc` only, works on `&[u8]`, builds for wasm)** reads the
+  revision store of [MS-ONESTORE] — header (§2.3.1), transaction log (§2.3.3), file node list
+  fragments (§2.4), the file nodes of §2.5, object spaces, revision manifests with their
+  dependencies, roles and contexts, object groups and global identification tables (§2.1),
+  property sets (§2.6) and file data store objects (§2.6.13) — and walks the [MS-ONE] content
+  on top: section → page series → page object spaces → page, title, outlines, outline
+  elements, rich text. Every structure cites its section; the public specifications are the
+  only source (clean room).
+- **Read-only in M3.** `.one` export is decided later, after measuring real files; the reader
+  never writes the user's file. A `.one` is **imported as a copy**: File › Open › Open Section
+  (`file.openSection`, Ctrl+Alt+Shift+O) adds it to the current notebook as a new section and
+  opens its first page (one undo step). The reference opens the file in place; that is a
+  documented difference.
+- **Every byte is hostile.** Bounds-checked reads, chunk references checked against the file,
+  visited sets on fragment chains and revision dependencies, caps on file size, fragments,
+  file nodes and nesting (`onestore::Limits`); a damaged object is skipped and reported, a
+  damaged structure is an error, never a panic. Tests truncate and flip bytes of synthetic
+  files and feed random tails.
+- **Fixtures are synthetic.** A test writer (`onestore::writer`, tests and the `fixtures`
+  feature only) builds files from the same structures; no Microsoft file is ever committed.
+  Fidelity on real files is measured by the user locally and recorded as numbers only.
+- **The report.** Each import lists what was kept, what is not imported yet (pictures, tables,
+  attachments…) and how many damaged objects were skipped, in the notice and the command's
+  result: the per-construct fidelity table of `parity.md` comes from it.
+- **Order of work.** (1) structures, revisions, pages with titles and plain text — done;
+  (2) text formats, lists, tags, tables, pictures, attachments, ink; (3) `.onetoc2` (notebook
+  structure); (4) `.onepkg` ([MS-CAB]). Password-protected sections are refused with a clear
+  message (M4).
+
 ## 5. Risks
 
 | Risk | Impact | Mitigation |
@@ -516,6 +547,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | D4 | 2026-10-20 | Ink strokes are page objects, one stroke per object (`PageObject::Ink`, points relative to the object's position with per-point pressure, colour, width, pen or highlighter); `.ncraft` version 4; geometry in `ink-geom` (L0), stroke operations in `ink` (L2); tools are session state (§4.10). | — (the plan named the crates; the object shape was open) | Every object command (select, lasso, delete, clipboard, order, rotate, move, undo) works on ink unchanged; [MS-ONE] ink nodes map stroke by stroke, losing only their grouping. |
 | D5 | 2026-10-21 | Tags on ink: a stroke carries `tags` like a paragraph (optional field, format 4 unchanged); the tag commands treat the selected strokes as one drawing, putting a new tag on its leftmost stroke and removing or checking it on all (§4.11). | — | Strokes are separate objects (D4), so tagging each would list one drawing many times in Find Tags; one anchor stroke keeps one entry per tag and maps to [MS-ONE]'s tag on the ink node. |
 | D6 | 2026-10-21 | Tab after a paragraph's text makes it a one-row, two-column table that takes the paragraph's place (the container splits around it); no session state, later Tabs and Enters use the table's own keys (§4.8). | — | Tables are separate objects (D2), so the paragraph must leave its container; the one-row table's existing Tab/Enter behaviour already covers "keep creating". |
+| D12 | 2026-10-27 | OneNote's `.one` files are read by a new crate `onestore` (L4) from the public [MS-ONESTORE]/[MS-ONE] specifications, read-only, and imported as a copy into the current notebook (File › Open › Open Section); synthetic fixtures from its own test writer; a per-construct report of what was kept (§4.17). | The plan listed `.one` export "where the specs allow" in M3 | The user approved the proposal on 2026-10-27: read-only first, real-file fidelity measured locally by the user (never committed), copy rather than open in place. |
 | D11 | 2026-10-24 | Equations are paragraphs of UnicodeMath linear text (`Paragraph::math`), laid out built up by a new pure crate `math` with line-drawn large signs; edited as linear text while the caret is in them (§4.16). | The plan named a `math` crate; inline math was open | The user asked for equations in M2; whole-paragraph equations reuse every text command and need no inline objects in egui's text layout. |
 | D10 | 2026-10-24 | Page templates: NoteCraft's own built-in set (five categories, built in code), the user's own saved in the preferences without pictures, a default template per section (`Section.default_template`), the Templates pane (§4.15). | The plan waited for reference screenshots | The user chose NoteCraft's own templates over waiting; the reference's templates are its content, so a clean-room set is needed anyway. |
 | D9 | 2026-10-24 | Merged table cells: `row_span`/`col_span` on the top-left cell, covered cells kept in the grid empty and hidden; `table.merge`/`table.split`; `.ncraft` version 5 (§4.14). | Merging was left out of D2 ("needs a model change") | The full grid keeps every row/column command and the format's row/cell lists unchanged; [MS-ONE] stores tables the same way. The user approved the change. |

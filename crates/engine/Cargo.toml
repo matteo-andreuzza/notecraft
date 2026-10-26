@@ -21,7 +21,11 @@ notecraft-import-export = { workspace = true }
 notecraft-ink = { workspace = true }
 notecraft-ink-geom = { workspace = true }
 notecraft-math = { workspace = true }
+notecraft-onestore = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+
+[dev-dependencies]
+notecraft-onestore = { workspace = true, features = ["fixtures"] }

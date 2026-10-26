@@ -521,3 +521,32 @@ were certain landed, behaviour unchanged (every test green after each commit).
   wrong; needs a UI-side check); the two loggers of the binaries are near copies (kept: they
   differ in filtering); the canvas lays every page out each frame (a cache by revision would be
   a larger change). Next: M3 (`plan/next-session-prompt.md`), starting with the D12 proposal.
+
+## 2026-10-27 — M3 starts: decision D12, crate `onestore`, Open Section
+
+- **D12 approved** (the three questions answered: read-only in M3, real-file fidelity measured by
+  the user locally, import as a copy). `docs/plan.md` §4.17 and the D12 row. Branch `m3/interop`
+  from `chore/code-review` (the review branch is pushed to `origin`, not merged yet).
+- **Crate `onestore` (L4, `doc` + `geom` only, wasm-clean)**, written from the public
+  [MS-ONESTORE]/[MS-ONE] PDFs (rev. 13.3, local copies in `plan/specs/`, never committed), every
+  structure cited: `bytes` (bounds-checked cursor), `types` (§2.2), `header` (§2.3.1; OneNote
+  2007 and foreign files are `Unsupported`), `txlog` (§2.3.3, uncommitted nodes ignored),
+  `nodelist` (§2.4: fragment chains, magic numbers, loops refused), `filenode` (§2.4.3, the §2.5
+  nodes; unknown nodes skipped by size), `propset` (§2.6.1–2.6.9, generic by stored type,
+  references resolved), `revision` (§2.1: object spaces, current revision of role 0x1/default
+  context, dependency chains with loop guard, object groups, global id tables incl. `.onetoc2`
+  Entry2/3, file data store §2.6.13, encrypted spaces → `Encrypted`), `one` ([MS-ONE] walk:
+  section → page series → page spaces → title, outlines, nested outline elements, Unicode and
+  Windows-1252 text, PageLevel, times) with a per-construct `Report`. `#![deny(clippy::indexing_slicing)]`.
+- **Test writer** `onestore::writer` (tests + `fixtures` feature): raw nodes and lists, property
+  sets, whole stores (`StoreBuilder`), synthetic sections (`writer::section`). 46 tests incl.
+  every truncation, byte flips and a proptest of random tails (no panic).
+- **`file.openSection`** (`BS.Open.OpenSection`, Ctrl+Alt+Shift+O, `onenote_cmds.rs`): path or
+  base64 `data`, a unique section name, one undo step, the report in a notice and the result.
+- Catalog: `FMT.One.ReadPages` verified; `FMT.One.Read`, `FMT.One.ReadOutlines`,
+  `BS.Open.OpenSection` wired (outline position ignores PageMarginOrigin — unverified; the
+  reference opens sections in place). Numbers: wiring 663/1328 (49.9%), behaviour 176/1328
+  (13.3%), 336 commands.
+- Open (D12 order of work, step 2): text formats (TextRunIndex/TextRunFormatting →
+  jcidParagraphStyleObject), lists, tags, tables, pictures, attachments, ink; then `.onetoc2`,
+  `.onepkg`; the UI file picker for Open Section; a CLI `import-one` report command.
