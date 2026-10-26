@@ -4,7 +4,7 @@
 //!
 //! The builder appends blocks to a buffer that starts with a 1,024-byte header, records one
 //! transaction-log entry per list it writes, and fills the header in [`FileBuilder::finish`].
-#![allow(clippy::indexing_slicing, missing_docs)]
+#![allow(clippy::indexing_slicing, clippy::unwrap_used, missing_docs)]
 
 use crate::filenode::NodeHeader;
 use crate::header::{FFV_ONE, FFV_ONETOC2, FileKind, GUID_FILE_FORMAT, GUID_FILE_TYPE_ONE, GUID_FILE_TYPE_ONETOC2, HEADER_SIZE};
@@ -655,6 +655,12 @@ pub mod section {
         /// Seconds since 1980 ([MS-ONE] §2.3.1 Time32) for LastModifiedTime; 0 leaves it out.
         pub modified: u32,
         pub outlines: Vec<FixtureOutline>,
+        /// Pictures on the page: `(x, y in half inches, file bytes, alt text)`.
+        pub pictures: Vec<(f32, f32, Vec<u8>, String)>,
+        /// Attached files on the page: `(name, bytes)`.
+        pub attachments: Vec<(String, Vec<u8>)>,
+        /// Tables, each in its own outline at `(x, y)`: cell texts by row, column widths.
+        pub tables: Vec<(f32, f32, Vec<Vec<String>>, Vec<f32>)>,
     }
 
     /// An outline to write.
@@ -671,6 +677,8 @@ pub mod section {
         pub ascii: bool,
         /// Run formats and paragraph styles, by paragraph index (missing: plain text).
         pub styles: Vec<FixtureStyle>,
+        /// Pictures in outline elements after the paragraphs (file bytes).
+        pub inline_pictures: Vec<Vec<u8>>,
     }
 
     /// A paragraph's formatting: runs ending at UTF-16 positions, a style id, an alignment.
@@ -726,7 +734,7 @@ pub mod section {
             s.add(prop::ELEMENT_CHILD_NODES, Val::Objects(vec![series_c]));
             rev.object(section, jcid::SECTION, &s).root(section, ROOT_CONTENT);
         }
-        for (page, space) in pages.iter().zip(&page_spaces) {
+        for (pi, (page, space)) in pages.iter().zip(&page_spaces).enumerate() {
             let ids: Vec<ExtendedGuid> = (0..6).map(|_| new_id()).collect();
             let (rid, manifest, page_node, title_node, title_outline, meta) = (ids[0], ids[1], ids[2], ids[3], ids[4], ids[5]);
             let mut outline_ids = Vec::new();
@@ -737,7 +745,103 @@ pub mod section {
                 pending.push((id, o.clone(), (0..o.paragraphs.len() * 2).map(|_| new_id()).collect::<Vec<_>>()));
             }
             let title_paras = (0..2).map(|_| new_id()).collect::<Vec<_>>();
+            // File data first: the store builder owns it, the revision only names it.
+            let mut files = Vec::new();
+            for (k, (_, _, bytes, _)) in page.pictures.iter().enumerate() {
+                files.push(b.file_data(Guid::new(0xF11E_0000 + k as u32, 1, pi as u16, [3; 8]), bytes));
+            }
+            let mut attach_files = Vec::new();
+            for (k, (_, bytes)) in page.attachments.iter().enumerate() {
+                attach_files.push(b.file_data(Guid::new(0xA77A_0000 + k as u32, 1, pi as u16, [3; 8]), bytes));
+            }
+            let mut inline_files = Vec::new();
+            for (k, o) in page.outlines.iter().enumerate() {
+                for (j, bytes) in o.inline_pictures.iter().enumerate() {
+                    inline_files.push((k, b.file_data(Guid::new(0x1A1E_0000 + (k * 64 + j) as u32, 1, pi as u16, [3; 8]), bytes)));
+                }
+            }
+            let mut extra_ids = Vec::new();
+            for _ in 0..(page.pictures.len() * 2 + page.attachments.len() * 2 + page.tables.len() * 64 + inline_files.len() * 3) {
+                extra_ids.push(new_id());
+            }
+            let mut extra = extra_ids.into_iter();
             let rev = b.space(*space).revision(rid, ExtendedGuid::NIL);
+            let mut page_children = Vec::new();
+            for ((x, y, _, alt), r) in page.pictures.iter().zip(&files) {
+                let (node, data) = (extra.next().unwrap(), extra.next().unwrap());
+                rev.file_object(data, jcid::PICTURE_CONTAINER, r, ".png");
+                let mut p = PropSetBuilder::default();
+                let c = rev.cid(data);
+                p.add(prop::PICTURE_CONTAINER, Val::Object(c));
+                p.add(prop::OFFSET_FROM_PARENT_HORIZ, Val::U32(x.to_bits()));
+                p.add(prop::OFFSET_FROM_PARENT_VERT, Val::U32(y.to_bits()));
+                p.add(prop::IMAGE_ALT_TEXT, Val::Bytes(wz(alt)));
+                rev.object(node, jcid::IMAGE, &p);
+                page_children.push(node);
+            }
+            for ((name, _), r) in page.attachments.iter().zip(&attach_files) {
+                let (node, data) = (extra.next().unwrap(), extra.next().unwrap());
+                rev.file_object(data, jcid::EMBEDDED_FILE_CONTAINER, r, ".bin");
+                let mut p = PropSetBuilder::default();
+                let c = rev.cid(data);
+                p.add(prop::EMBEDDED_FILE_CONTAINER, Val::Object(c));
+                p.add(prop::EMBEDDED_FILE_NAME, Val::Bytes(wz(name)));
+                rev.object(node, jcid::EMBEDDED_FILE, &p);
+                page_children.push(node);
+            }
+            for (x, y, cells, widths) in &page.tables {
+                let (outline_id, oe, table) = (extra.next().unwrap(), extra.next().unwrap(), extra.next().unwrap());
+                let mut row_ids = Vec::new();
+                for row in cells {
+                    let row_id = extra.next().unwrap();
+                    let mut cell_ids = Vec::new();
+                    for text in row {
+                        let cell_id = extra.next().unwrap();
+                        let para = FixtureOutline { paragraphs: vec![(0, text.clone())], ..FixtureOutline::default() };
+                        let ids: Vec<ExtendedGuid> = (0..2).map(|_| extra.next().unwrap()).collect();
+                        write_elements(rev, cell_id, &para, &ids, jcid::TABLE_CELL);
+                        cell_ids.push(rev.cid(cell_id));
+                    }
+                    let mut r = PropSetBuilder::default();
+                    r.add(prop::ELEMENT_CHILD_NODES, Val::Objects(cell_ids));
+                    rev.object(row_id, jcid::TABLE_ROW, &r);
+                    row_ids.push(rev.cid(row_id));
+                }
+                let mut t = PropSetBuilder::default();
+                t.add(prop::ELEMENT_CHILD_NODES, Val::Objects(row_ids));
+                t.add(prop::ROW_COUNT, Val::U32(cells.len() as u32));
+                t.add(prop::COLUMN_COUNT, Val::U32(widths.len() as u32));
+                let mut wb = vec![widths.len() as u8];
+                wb.extend(widths.iter().flat_map(|w| w.to_le_bytes()));
+                t.add(prop::TABLE_COLUMN_WIDTHS, Val::Bytes(wb));
+                t.add(prop::TABLE_BORDERS_VISIBLE, Val::Bool(true));
+                rev.object(table, jcid::TABLE, &t);
+                let mut e = PropSetBuilder::default();
+                let tc = rev.cid(table);
+                e.add(prop::CONTENT_CHILD_NODES, Val::Objects(vec![tc]));
+                rev.object(oe, jcid::OUTLINE_ELEMENT, &e);
+                let mut o = PropSetBuilder::default();
+                let ec = rev.cid(oe);
+                o.add(prop::ELEMENT_CHILD_NODES, Val::Objects(vec![ec]));
+                o.add(prop::OFFSET_FROM_PARENT_HORIZ, Val::U32(x.to_bits()));
+                o.add(prop::OFFSET_FROM_PARENT_VERT, Val::U32(y.to_bits()));
+                rev.object(outline_id, jcid::OUTLINE, &o);
+                page_children.push(outline_id);
+            }
+            let mut inline: Vec<(usize, ExtendedGuid)> = Vec::new();
+            for (k, r) in &inline_files {
+                let (oe, node, data) = (extra.next().unwrap(), extra.next().unwrap(), extra.next().unwrap());
+                rev.file_object(data, jcid::PICTURE_CONTAINER, r, ".png");
+                let mut p = PropSetBuilder::default();
+                let c = rev.cid(data);
+                p.add(prop::PICTURE_CONTAINER, Val::Object(c));
+                rev.object(node, jcid::IMAGE, &p);
+                let mut e = PropSetBuilder::default();
+                let nc = rev.cid(node);
+                e.add(prop::CONTENT_CHILD_NODES, Val::Objects(vec![nc]));
+                rev.object(oe, jcid::OUTLINE_ELEMENT, &e);
+                inline.push((*k, oe));
+            }
             // The title: a title node holding one outline flagged IsTitleText.
             let title = FixtureOutline { paragraphs: vec![(0, page.title.clone())], ..FixtureOutline::default() };
             write_outline(rev, title_outline, &title, &title_paras, true);
@@ -745,13 +849,14 @@ pub mod section {
             let c = rev.cid(title_outline);
             t.add(prop::ELEMENT_CHILD_NODES, Val::Objects(vec![c]));
             rev.object(title_node, jcid::TITLE, &t);
-            for (id, o, para_ids) in &pending {
-                write_outline(rev, *id, o, para_ids, false);
+            for (k, (id, o, para_ids)) in pending.iter().enumerate() {
+                let extra_oes: Vec<ExtendedGuid> = inline.iter().filter(|(i, _)| *i == k).map(|(_, oe)| *oe).collect();
+                write_outline_with(rev, *id, o, para_ids, false, &extra_oes);
             }
             let mut p = PropSetBuilder::default();
             let tc = rev.cid(title_node);
             p.add(prop::STRUCTURE_ELEMENT_CHILD_NODES, Val::Objects(vec![tc]));
-            let oc = outline_ids.iter().map(|o| rev.cid(*o)).collect();
+            let oc = outline_ids.iter().chain(&page_children).map(|o| rev.cid(*o)).collect();
             p.add(prop::ELEMENT_CHILD_NODES, Val::Objects(oc));
             if page.modified != 0 {
                 p.add(prop::LAST_MODIFIED_TIME, Val::U32(page.modified));
@@ -776,8 +881,40 @@ pub mod section {
         s.encode_utf16().chain([0]).flat_map(u16::to_le_bytes).collect()
     }
 
-    /// `ids` holds two ids per paragraph (outline element, rich text node).
     fn write_outline(rev: &mut RevBuilder, id: ExtendedGuid, o: &FixtureOutline, ids: &[ExtendedGuid], title: bool) {
+        write_outline_with(rev, id, o, ids, title, &[]);
+    }
+
+    /// A table cell (or any container) holding `o`'s paragraphs.
+    fn write_elements(rev: &mut RevBuilder, id: ExtendedGuid, o: &FixtureOutline, ids: &[ExtendedGuid], container: u32) {
+        let top = write_paragraphs(rev, o, ids);
+        let mut p = PropSetBuilder::default();
+        p.add(prop::ELEMENT_CHILD_NODES, Val::Objects(top));
+        rev.object(id, container, &p);
+    }
+
+    /// `ids` holds two ids per paragraph (outline element, rich text node); `extra_oes` are
+    /// outline elements appended after the paragraphs.
+    fn write_outline_with(rev: &mut RevBuilder, id: ExtendedGuid, o: &FixtureOutline, ids: &[ExtendedGuid], title: bool, extra_oes: &[ExtendedGuid]) {
+        let mut top = write_paragraphs(rev, o, ids);
+        top.extend(extra_oes.iter().map(|e| rev.cid(*e)));
+        let mut p = PropSetBuilder::default();
+        p.add(prop::ELEMENT_CHILD_NODES, Val::Objects(top));
+        if title {
+            p.add(prop::IS_TITLE_TEXT, Val::Bool(true));
+        } else {
+            p.add(prop::OFFSET_FROM_PARENT_HORIZ, Val::U32(o.x.to_bits()));
+            p.add(prop::OFFSET_FROM_PARENT_VERT, Val::U32(o.y.to_bits()));
+        }
+        if let Some(w) = o.width {
+            p.add(prop::LAYOUT_MAX_WIDTH, Val::U32(w.to_bits()));
+            p.add(prop::IS_LAYOUT_SIZE_SET_BY_USER, Val::Bool(true));
+        }
+        rev.object(id, jcid::OUTLINE, &p);
+    }
+
+    /// Writes the paragraphs' outline elements and returns the top-level ones.
+    fn write_paragraphs(rev: &mut RevBuilder, o: &FixtureOutline, ids: &[ExtendedGuid]) -> Vec<crate::types::CompactId> {
         let n = o.paragraphs.len();
         // children[i]: the paragraphs directly under paragraph i (None: under the outline).
         let mut parents: Vec<Option<usize>> = Vec::with_capacity(n);
@@ -883,19 +1020,6 @@ pub mod section {
             }
             rev.object(oe, jcid::OUTLINE_ELEMENT, &e);
         }
-        let mut p = PropSetBuilder::default();
-        let top: Vec<_> = (0..n).filter(|&k| parents[k].is_none()).map(|k| rev.cid(ids[2 * k])).collect();
-        p.add(prop::ELEMENT_CHILD_NODES, Val::Objects(top));
-        if title {
-            p.add(prop::IS_TITLE_TEXT, Val::Bool(true));
-        } else {
-            p.add(prop::OFFSET_FROM_PARENT_HORIZ, Val::U32(o.x.to_bits()));
-            p.add(prop::OFFSET_FROM_PARENT_VERT, Val::U32(o.y.to_bits()));
-        }
-        if let Some(w) = o.width {
-            p.add(prop::LAYOUT_MAX_WIDTH, Val::U32(w.to_bits()));
-            p.add(prop::IS_LAYOUT_SIZE_SET_BY_USER, Val::Bool(true));
-        }
-        rev.object(id, jcid::OUTLINE, &p);
+        (0..n).filter(|&k| parents[k].is_none()).map(|k| rev.cid(ids[2 * k])).collect()
     }
 }

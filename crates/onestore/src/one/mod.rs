@@ -39,6 +39,11 @@ pub mod jcid {
     pub const PAGE_MANIFEST: u32 = 0x0006_0037;
     /// jcidParagraphStyleObject and jcidParagraphStyleObjectForText (§2.2.43, §2.2.44).
     pub const PARAGRAPH_STYLE: u32 = 0x0012_004D;
+    pub const TABLE_ROW: u32 = 0x0006_0023;
+    pub const TABLE_CELL: u32 = 0x0006_0024;
+    /// File data objects (§2.2.33, §2.2.36).
+    pub const EMBEDDED_FILE_CONTAINER: u32 = 0x0008_0036;
+    pub const PICTURE_CONTAINER: u32 = 0x0008_0039;
     pub const NOTE_TAG_DEFINITION: u32 = 0x0012_0043;
 }
 
@@ -71,6 +76,19 @@ pub mod prop {
     pub const NOTE_TAG_DEFINITION_OID: u32 = 0x2000_3488;
     pub const NOTE_TAG_STATES: u32 = 0x0400_3489;
     pub const ACTION_ITEM_STATUS: u32 = 0x1000_3470;
+    pub const LAYOUT_MAX_HEIGHT: u32 = 0x1400_1C1C;
+    pub const PICTURE_CONTAINER: u32 = 0x2000_1C3F;
+    pub const ROW_COUNT: u32 = 0x1400_1D57;
+    pub const COLUMN_COUNT: u32 = 0x1400_1D58;
+    pub const TABLE_BORDERS_VISIBLE: u32 = 0x0800_1D5E;
+    pub const TABLE_COLUMN_WIDTHS: u32 = 0x1C00_1D66;
+    pub const EMBEDDED_FILE_CONTAINER: u32 = 0x2000_1D9B;
+    pub const EMBEDDED_FILE_NAME: u32 = 0x1C00_1D9C;
+    pub const IMAGE_FILENAME: u32 = 0x1C00_1DD7;
+    pub const WZ_HYPERLINK_URL: u32 = 0x1C00_1E20;
+    pub const IMAGE_ALT_TEXT: u32 = 0x1C00_1E58;
+    pub const PICTURE_WIDTH: u32 = 0x1400_34CD;
+    pub const PICTURE_HEIGHT: u32 = 0x1400_34CE;
     pub const OFFSET_FROM_PARENT_HORIZ: u32 = 0x1400_1C14;
     pub const OFFSET_FROM_PARENT_VERT: u32 = 0x1400_1C15;
     pub const LAYOUT_MAX_WIDTH: u32 = 0x1400_1C1B;

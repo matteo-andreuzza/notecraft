@@ -2,6 +2,7 @@ use notecraft_doc::id::IdGen;
 use notecraft_doc::page::{OutlineWidth, PageObject};
 use notecraft_doc::time::Timestamp;
 
+use super::map::LINE;
 use super::*;
 use crate::error::OneError;
 use crate::writer::section::{FixtureOutline, FixturePage, write};
@@ -216,4 +217,46 @@ fn lists_and_note_tags() {
     assert_eq!(tags(3), vec![("call-back", TagSymbol::CheckboxPhone, false)], "built-in names keep NoteCraft's icon");
     assert_eq!(i.report.kept.get("note tags"), Some(&4));
     assert_eq!(i.report.kept.get("list items"), Some(&3));
+}
+
+/// A small PNG made with the codecs crate (no fixture files).
+fn png(w: u32, h: u32) -> Vec<u8> {
+    let px = (0..w * h).flat_map(|i| [(i * 7) as u8, 90, 30, 255]).collect();
+    notecraft_codecs::encode_png(&notecraft_codecs::Rgba8::new(w, h, px).unwrap(), &notecraft_codecs::Limits::PICTURE).unwrap()
+}
+
+#[test]
+fn pictures_attachments_and_tables() {
+    let mut o = outline(&[(0, "see below"), (0, "and more")]);
+    o.inline_pictures = vec![png(4, 2)];
+    let page = FixturePage {
+        title: "Media".into(),
+        outlines: vec![o],
+        pictures: vec![(4.0, 6.0, png(16, 8), "a chart".into()), (1.0, 1.0, b"not a picture".to_vec(), String::new())],
+        attachments: vec![("report.pdf".into(), b"%PDF-1.7 tiny".to_vec())],
+        tables: vec![(2.0, 10.0, vec![vec!["a".into(), "b".into()], vec!["c".into(), "d".into()]], vec![3.0, 5.0])],
+        ..FixturePage::default()
+    };
+    let i = import(&write(&[page]));
+    let p = &i.section.pages[0];
+    let images: Vec<_> = p.objects.iter().filter_map(PageObject::as_image).collect();
+    assert_eq!(images.len(), 2, "FMT.One.ReadImages");
+    let chart = images.iter().find(|im| im.alt_text == "a chart").unwrap();
+    assert_eq!(chart.pixels, (16, 8));
+    assert_eq!((chart.pos.x, chart.pos.y), (144.0, 216.0));
+    assert_eq!((chart.width, chart.height), (12.0, 6.0), "96 dpi without a stored size");
+    let inline = images.iter().find(|im| im.pixels == (4, 2)).unwrap();
+    assert_eq!((inline.pos.x, inline.pos.y), (72.0, 144.0 + 2.0 * LINE), "below the outline's two paragraphs");
+    let files: Vec<_> = p.objects.iter().filter_map(PageObject::as_attachment).collect();
+    assert_eq!(files.len(), 1, "FMT.One.ReadAttachments");
+    assert_eq!((files[0].name.as_str(), &files[0].blob.bytes[..]), ("report.pdf", &b"%PDF-1.7 tiny"[..]));
+    let tables: Vec<_> = p.objects.iter().filter_map(PageObject::as_table).collect();
+    assert_eq!(tables.len(), 1, "FMT.One.ReadTables");
+    let t = tables[0];
+    let cells: Vec<Vec<String>> =
+        t.rows.iter().map(|r| r.cells.iter().map(|c| c.paragraphs.iter().map(|p| p.text()).collect::<String>()).collect()).collect();
+    assert_eq!(cells, vec![vec!["a", "b"], vec!["c", "d"]]);
+    assert_eq!(t.columns, vec![108.0, 180.0]);
+    assert!(t.borders);
+    assert_eq!(i.report.lost.len(), 1, "{:?}", i.report.lost);
 }

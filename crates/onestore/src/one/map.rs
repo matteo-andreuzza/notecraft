@@ -4,10 +4,13 @@
 use std::collections::{BTreeMap, HashSet};
 use std::sync::Arc;
 
+use notecraft_codecs::{Limits as CodecLimits, probe};
 use notecraft_color::Rgba;
 use notecraft_doc::id::IdGen;
+use notecraft_doc::media::{Attachment, Blob, Image, MAX_ATTACHMENT_BYTES, MAX_PAGE_OBJECTS, MAX_PICTURE_BYTES};
 use notecraft_doc::notebook::{Section, SectionColor};
 use notecraft_doc::page::{MAX_PAGE_LEVEL, Outline, OutlineWidth, Page, PageObject};
+use notecraft_doc::table::Table;
 use notecraft_doc::tags::{TagSymbol, TagUse, builtin_tags};
 use notecraft_doc::text::{Align, Bullet, CharFormat, ListFormat, MAX_LEVEL, Numbering, ParaStyle, Paragraph, Run, Script};
 use notecraft_doc::time::Timestamp;
@@ -19,11 +22,13 @@ use crate::bytes::utf16_lossy;
 use crate::error::{OneError, Result};
 use crate::header::FileKind;
 use crate::propset::{PropertySet, Value};
-use crate::revision::{ObjectSpace, ROOT_CONTENT, ROOT_METADATA, Store};
+use crate::revision::{ObjectData, ObjectSpace, ROOT_CONTENT, ROOT_METADATA, Store};
 use crate::types::ExtendedGuid;
 
 /// [MS-ONE] lengths are in half inches (§2.3.18): 36 points.
 const HALF_INCH: f32 = 36.0;
+/// The height given to each paragraph when placing content found inside an outline below it.
+pub(crate) const LINE: f32 = 20.0;
 /// Milliseconds from 1601-01-01 (FILETIME, [MS-DTYP] §2.3.3) to 1970-01-01.
 const FILETIME_TO_UNIX_MS: i64 = 11_644_473_600_000;
 /// Milliseconds from 1970-01-01 to 1980-01-01 ([MS-ONE] §2.3.1 Time32 epoch).
@@ -79,7 +84,7 @@ pub fn read_section(file: &[u8], name: &str, ids: &mut IdGen, now: Timestamp) ->
     if store.kind() != FileKind::Section {
         return Err(OneError::Unsupported("this is a notebook's table of contents (.onetoc2), not a section".into()));
     }
-    let mut w = Walk { store: &store, ids, report: Report::default(), now, depth: limits.max_depth };
+    let mut w = Walk { store: &store, ids, report: Report::default(), now, depth: limits.max_depth, extras: Vec::new() };
     w.report.warnings = store.warnings.clone();
     let mut section = Section::new(w.ids.next_id(), name, SectionColor::default(), now);
     for space_id in w.page_spaces() {
@@ -102,6 +107,9 @@ struct Walk<'s, 'a> {
     report: Report,
     now: Timestamp,
     depth: usize,
+    /// Pictures, tables and files met inside the outline being walked, with the number of
+    /// paragraphs before them: NoteCraft keeps them as page objects beside the outline.
+    extras: Vec<(usize, PageObject)>,
 }
 
 impl Walk<'_, '_> {
@@ -169,6 +177,7 @@ impl Walk<'_, '_> {
         let outline = outlines.iter().filter_map(|o| space.props(o)).find(|o| o.bool(prop::IS_TITLE_TEXT) == Some(true))?;
         let mut paras = Vec::new();
         self.elements(space, outline, 0, &mut paras);
+        self.extras.clear();
         let text = paras.iter().map(Paragraph::text).collect::<Vec<_>>().join(" ");
         Some(text).filter(|t| !t.trim().is_empty())
     }
@@ -180,31 +189,182 @@ impl Walk<'_, '_> {
             self.report.warnings.push(format!("page content {id:?} could not be read"));
             return;
         };
+        let at = |p: &PropertySet| {
+            Point::new(
+                p.f32(prop::OFFSET_FROM_PARENT_HORIZ).unwrap_or(0.0) * HALF_INCH,
+                p.f32(prop::OFFSET_FROM_PARENT_VERT).unwrap_or(0.0) * HALF_INCH,
+            )
+        };
         match object.jcid.0 {
             jcid::OUTLINE => {
                 let mut paras = Vec::new();
+                self.extras.clear();
                 self.elements(space, props, 0, &mut paras);
-                if paras.is_empty() {
-                    return;
+                let pos = at(props);
+                let extras = std::mem::take(&mut self.extras);
+                if !paras.is_empty() {
+                    let mut outline = Outline::new(self.ids.next_id(), pos, self.ids.next_id());
+                    if props.bool(prop::IS_LAYOUT_SIZE_SET_BY_USER) == Some(true)
+                        && let Some(w) = props.f32(prop::LAYOUT_MAX_WIDTH)
+                    {
+                        outline.width = OutlineWidth::Fixed(w * HALF_INCH);
+                    }
+                    outline.paragraphs = paras;
+                    outline.normalize();
+                    self.push(page, PageObject::Outline(outline));
+                    self.report.keep("outlines");
                 }
-                let x = props.f32(prop::OFFSET_FROM_PARENT_HORIZ).unwrap_or(0.0) * HALF_INCH;
-                let y = props.f32(prop::OFFSET_FROM_PARENT_VERT).unwrap_or(0.0) * HALF_INCH;
-                let mut outline = Outline::new(self.ids.next_id(), Point::new(x, y), self.ids.next_id());
-                if props.bool(prop::IS_LAYOUT_SIZE_SET_BY_USER) == Some(true)
-                    && let Some(w) = props.f32(prop::LAYOUT_MAX_WIDTH)
-                {
-                    outline.width = OutlineWidth::Fixed(w * HALF_INCH);
+                // Content inside the outline goes below the paragraphs before it (an estimate
+                // of their height: NoteCraft has no objects inside outlines).
+                for (before, mut object) in extras {
+                    object.set_pos(Point::new(pos.x, pos.y + before as f32 * LINE));
+                    self.push(page, object);
                 }
-                outline.paragraphs = paras;
-                outline.normalize();
-                page.objects.push(PageObject::Outline(outline));
-                self.report.keep("outlines");
             }
-            jcid::IMAGE => self.report.lose("pictures"),
-            jcid::EMBEDDED_FILE => self.report.lose("attachments"),
-            jcid::TABLE => self.report.lose("tables"),
-            _ => self.report.lose("other page objects"),
+            jcid::IMAGE => {
+                if let Some(o) = self.image(space, props, at(props)) {
+                    self.push(page, o);
+                }
+            }
+            jcid::EMBEDDED_FILE => {
+                if let Some(o) = self.attachment(space, props, at(props)) {
+                    self.push(page, o);
+                }
+            }
+            jcid::TABLE => {
+                if let Some(o) = self.table(space, props, at(props)) {
+                    self.push(page, o);
+                }
+            }
+            _ => self.report.lose("other page objects (ink, audio…)"),
         }
+    }
+
+    /// Adds an object unless the page is full ([`MAX_PAGE_OBJECTS`]).
+    fn push(&mut self, page: &mut Page, object: PageObject) {
+        if page.objects.len() >= MAX_PAGE_OBJECTS {
+            self.report.lose("objects over the page limit");
+            return;
+        }
+        page.objects.push(object);
+    }
+
+    /// §2.2.24 jcidImageNode: the picture's bytes (PictureContainer → jcidPictureContainer14),
+    /// its size (PictureWidth/Height, else LayoutMaxWidth/Height, in half inches; else 96 dpi),
+    /// alt text and link.
+    fn image(&mut self, space: &ObjectSpace, props: &PropertySet, pos: Point) -> Option<PageObject> {
+        let Some(bytes) = file_data(self.store, space, props, prop::PICTURE_CONTAINER) else {
+            self.report.lose("pictures whose data is missing");
+            return None;
+        };
+        if bytes.len() > MAX_PICTURE_BYTES {
+            self.report.lose("pictures over the size limit");
+            return None;
+        }
+        let Ok(info) = probe(bytes, &CodecLimits::PICTURE) else {
+            self.report.lose("pictures in formats NoteCraft can't show (EMF, WMF, TIFF…)");
+            return None;
+        };
+        let pixels = (info.width, info.height);
+        let width =
+            props.f32(prop::PICTURE_WIDTH).or_else(|| props.f32(prop::LAYOUT_MAX_WIDTH)).map(|w| w * HALF_INCH).unwrap_or(pixels.0 as f32 * 0.75);
+        let height =
+            props.f32(prop::PICTURE_HEIGHT).or_else(|| props.f32(prop::LAYOUT_MAX_HEIGHT)).map(|h| h * HALF_INCH).unwrap_or(pixels.1 as f32 * 0.75);
+        let blob = Blob::new(self.ids.next_id(), Arc::from(bytes));
+        let mut image = Image::new(self.ids.next_id(), pos, blob, pixels, width, height);
+        image.alt_text = props.bytes(prop::IMAGE_ALT_TEXT).map(wz).unwrap_or_default();
+        image.link = props.bytes(prop::WZ_HYPERLINK_URL).map(wz);
+        image.normalize();
+        self.report.keep("pictures");
+        Some(PageObject::Image(image))
+    }
+
+    /// §2.2.32 jcidEmbeddedFileNode: the file (EmbeddedFileContainer → §2.2.33) and its name.
+    fn attachment(&mut self, space: &ObjectSpace, props: &PropertySet, pos: Point) -> Option<PageObject> {
+        let Some(bytes) = file_data(self.store, space, props, prop::EMBEDDED_FILE_CONTAINER) else {
+            // `<file>` references name a file beside the section, which an import can't reach.
+            self.report.lose("attachments whose data is outside the section file");
+            return None;
+        };
+        if bytes.len() > MAX_ATTACHMENT_BYTES {
+            self.report.lose("attachments over the size limit");
+            return None;
+        }
+        let name = props.bytes(prop::EMBEDDED_FILE_NAME).map(wz).filter(|n| !n.trim().is_empty()).unwrap_or_else(|| "attachment".into());
+        let mut a = Attachment {
+            id: self.ids.next_id(),
+            pos,
+            name,
+            blob: Blob::new(self.ids.next_id(), Arc::from(bytes)),
+            alt_text: String::new(),
+            link: None,
+        };
+        a.normalize();
+        self.report.keep("attachments");
+        Some(PageObject::Attachment(a))
+    }
+
+    /// §2.2.26 jcidTableNode → rows (§2.2.27) → cells (§2.2.28) → outline elements; column
+    /// widths from TableColumnWidths (§2.2.66: a count byte, then half-inch floats).
+    fn table(&mut self, space: &ObjectSpace, props: &PropertySet, pos: Point) -> Option<PageObject> {
+        let rows: Vec<Vec<Vec<Paragraph>>> = props
+            .objects(prop::ELEMENT_CHILD_NODES)
+            .iter()
+            .filter_map(|r| space.props(r))
+            .map(|row| row.objects(prop::ELEMENT_CHILD_NODES).iter().filter_map(|c| space.props(c)).collect::<Vec<_>>())
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|cells| {
+                cells
+                    .into_iter()
+                    .map(|cell| {
+                        let mut paras = Vec::new();
+                        self.elements(space, cell, 0, &mut paras);
+                        paras
+                    })
+                    .collect()
+            })
+            .collect();
+        let cols = rows.iter().map(Vec::len).max().unwrap_or(0);
+        if rows.is_empty() || cols == 0 {
+            self.report.lose("empty tables");
+            return None;
+        }
+        let ids = &mut *self.ids;
+        let mut table = Table::new(ids.next_id(), pos, rows.len(), cols, &mut || ids.next_id());
+        for (r, row) in rows.into_iter().enumerate() {
+            for (c, paras) in row.into_iter().enumerate() {
+                if let Some(cell) = table.rows.get_mut(r).and_then(|row| row.cells.get_mut(c))
+                    && !paras.is_empty()
+                {
+                    cell.paragraphs = paras;
+                }
+            }
+        }
+        if let Some(b) = props.bytes(prop::TABLE_COLUMN_WIDTHS) {
+            let n = usize::from(b.first().copied().unwrap_or(0));
+            let widths: Vec<f32> = b
+                .get(1..)
+                .unwrap_or_default()
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .take(n)
+                .map(|c| f32::from_le_bytes(*c) * HALF_INCH)
+                .filter(|w| w.is_finite())
+                .collect();
+            for (col, w) in table.columns.iter_mut().zip(widths) {
+                *col = w;
+            }
+        }
+        if let Some(v) = props.bool(prop::TABLE_BORDERS_VISIBLE) {
+            table.borders = v;
+        }
+        // Pictures inside cells have no place in a NoteCraft cell.
+        self.extras.retain(|_| false);
+        table.normalize();
+        self.report.keep("tables");
+        Some(PageObject::Table(table))
     }
 
     /// The outline elements under `parent` (an outline or an outline element), flattened into
@@ -230,10 +390,25 @@ impl Walk<'_, '_> {
                         out.push(p);
                         self.report.keep("paragraphs");
                     }
-                    (jcid::IMAGE, _) => self.report.lose("pictures"),
-                    (jcid::TABLE, _) => self.report.lose("tables"),
-                    (jcid::EMBEDDED_FILE, _) => self.report.lose("attachments"),
-                    _ => self.report.lose("other outline content"),
+                    (jcid::IMAGE, Some(p)) => {
+                        if let Some(o) = self.image(space, p, Point::new(0.0, 0.0)) {
+                            self.extras.push((out.len(), o));
+                        }
+                    }
+                    (jcid::TABLE, Some(p)) => {
+                        let saved = std::mem::take(&mut self.extras);
+                        let table = self.table(space, p, Point::new(0.0, 0.0));
+                        self.extras = saved;
+                        if let Some(o) = table {
+                            self.extras.push((out.len(), o));
+                        }
+                    }
+                    (jcid::EMBEDDED_FILE, Some(p)) => {
+                        if let Some(o) = self.attachment(space, p, Point::new(0.0, 0.0)) {
+                            self.extras.push((out.len(), o));
+                        }
+                    }
+                    _ => self.report.lose("other outline content (ink, audio…)"),
                 }
             }
             self.elements(space, element, level + 1, out);
@@ -453,6 +628,15 @@ fn para_style(id: &str) -> ParaStyle {
         "blockquote" => ParaStyle::Quote,
         "code" => ParaStyle::Code,
         _ => ParaStyle::Normal,
+    }
+}
+
+/// The bytes of the file data object that property `id` of `holder` names.
+fn file_data<'a>(store: &Store<'a>, space: &ObjectSpace, holder: &PropertySet, id: u32) -> Option<&'a [u8]> {
+    let oid = holder.objects(id).into_iter().next()?;
+    match &space.objects.get(&oid)?.data {
+        ObjectData::File { reference, .. } => store.file_bytes(reference),
+        _ => None,
     }
 }
 

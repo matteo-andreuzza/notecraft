@@ -16,6 +16,7 @@ workspace = true
 fixtures = []
 
 [dependencies]
+notecraft-codecs = { workspace = true }
 notecraft-color = { workspace = true }
 notecraft-doc = { workspace = true }
 notecraft-geom = { workspace = true }
