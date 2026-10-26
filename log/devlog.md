@@ -550,3 +550,17 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Open (D12 order of work, step 2): text formats (TextRunIndex/TextRunFormatting →
   jcidParagraphStyleObject), lists, tags, tables, pictures, attachments, ink; then `.onetoc2`,
   `.onepkg`; the UI file picker for Open Section; a CLI `import-one` report command.
+- **Later the same day** (`84dc81a`, `4220d3f`, and the pictures commit): Open Section in the
+  backstage and on Ctrl+Alt+Shift+O through the host picker (UI test with a fake picker,
+  `backstage-open` snapshot); rich text (TextRunIndex/TextRunFormatting, character formats,
+  style ids, alignment; hidden runs dropped; text hyperlink targets are not in the public spec),
+  lists (NumberListFormat/MSONFC, ListRestart), note tags (built-in names keep NoteCraft's tag,
+  others the nearest icon for NoteTagShape), pictures (PictureContainer → file data store,
+  `codecs::probe` for pixels), attachments (EmbeddedFileContainer), tables (rows, cells, column
+  widths, borders); content inside outlines becomes page objects below them (unverified
+  placement). `onestore` now depends on `codecs` too. 50 tests. Rows `FMT.One.ReadRichText`,
+  `ReadLists`, `ReadTags`, `ReadImages`, `ReadTables`, `ReadAttachments` wired. Numbers:
+  wiring 669/1328 (50.4%), behaviour 176/1328 (13.3%), 336 commands.
+- Open: ink (its [MS-ONE] structures), merged cells and shading in `.one` tables, `.onetoc2`,
+  `.onepkg`, a CLI report command, the per-construct fidelity table once the user has measured
+  real files.
