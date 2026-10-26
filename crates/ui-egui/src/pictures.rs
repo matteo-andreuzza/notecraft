@@ -335,6 +335,12 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 app.run(ctx, cmd, json!({"path": path}));
             }
         }
+        // BS.Open.OpenSection: a OneNote section file, imported as a copy (decision D12).
+        "file.openSection" => {
+            if let Some(path) = app.host.pick_file("Open Section", &[("OneNote sections", &["one"])]) {
+                app.run(ctx, cmd, json!({"path": path}));
+            }
+        }
         "insert.file" => {
             if let Some(path) = app.host.pick_file("Insert File", &[]) {
                 app.run(ctx, cmd, json!({"path": path}));

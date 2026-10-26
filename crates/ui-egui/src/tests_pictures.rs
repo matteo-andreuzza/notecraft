@@ -363,3 +363,39 @@ fn a_picture_in_front_of_text_is_drawn_and_clicked_over_it() {
     crate::tests_canvas::click(&mut h, p);
     assert!(matches!(h.state().session.sel.caret(), Some(c) if c.block == notecraft_engine::selection::Block::Outline(o)));
 }
+
+// ---- File › Open › Open Section (decision D12), through a host whose picker returns a file. ----
+
+struct PickHost(String);
+
+impl crate::Host for PickHost {
+    fn clock(&self) -> notecraft_engine::Clock {
+        notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 }
+    }
+    fn pick_file(&mut self, _title: &str, filters: &[(&str, &[&str])]) -> Option<String> {
+        assert_eq!(filters.first().map(|f| f.1), Some(&["one"][..]), "the picker offers .one files");
+        Some(self.0.clone())
+    }
+}
+
+#[test]
+fn ctrl_alt_shift_o_opens_a_section_file_from_the_picker() {
+    use notecraft_onestore::writer::section::{FixturePage, write};
+    let dir = std::env::temp_dir().join(format!("notecraft-ui-open-section-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("Recipes.one");
+    std::fs::write(&path, write(&[FixturePage { title: "Pancakes".into(), ..FixturePage::default() }])).unwrap();
+    let mut s = notecraft_engine::Session::with_sample(notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 });
+    s.prefs.author = "Tester".into();
+    let a = NoteApp::new(s, Box::new(PickHost(path.to_string_lossy().into_owned())));
+    let mut h = harness(a);
+    h.run();
+    let m = egui::Modifiers { alt: true, shift: true, ..egui::Modifiers::COMMAND };
+    h.event(egui::Event::Key { key: egui::Key::O, physical_key: None, pressed: true, repeat: false, modifiers: m });
+    h.run();
+    let app = h.state();
+    let names: Vec<_> = app.session.notebook().unwrap().sections().iter().map(|s| s.name.clone()).collect();
+    assert!(names.contains(&"Recipes".to_string()), "BS.Open.OpenSection: {names:?}");
+    assert_eq!(app.session.page().unwrap().title.text(), "Pancakes");
+    let _ = std::fs::remove_dir_all(&dir);
+}

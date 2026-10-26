@@ -210,6 +210,7 @@ fn main() {
     });
     shot("backstage-info", &out, 1.0, |a| a.ui.backstage = Some(Backstage::Info));
     shot("backstage-options", &out, 1.0, |a| a.ui.backstage = Some(Backstage::Options));
+    shot("backstage-open", &out, 1.0, |a| a.ui.backstage = Some(Backstage::Open));
     for (name, kind) in [("theme-white", ThemeKind::White), ("theme-dark-gray", ThemeKind::DarkGray), ("theme-black", ThemeKind::Black)] {
         shot(name, &out, 1.0, |a| a.ui.theme = kind);
     }

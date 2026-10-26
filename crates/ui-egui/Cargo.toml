@@ -26,5 +26,6 @@ log = { workspace = true }
 skrifa = { version = "0.44", default-features = false, features = ["std"] }
 
 [dev-dependencies]
+notecraft-onestore = { workspace = true, features = ["fixtures"] }
 egui_kittest = { workspace = true, features = ["wgpu", "snapshot"] }
 image = { version = "0.25", default-features = false, features = ["png"] }

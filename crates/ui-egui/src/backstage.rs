@@ -210,7 +210,17 @@ fn open(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
         }
     }
     ui.add_space(14.0);
-    ui.label(RichText::new("Open Section (.one) files and .onepkg packages: coming with M3 (OneNote file import).").size(12.0).color(t.page_meta));
+    // BS.Open.OpenSection: the section is copied into the current notebook (decision D12).
+    let has_notebook = app.session.notebook().is_some();
+    let button = ui
+        .add_enabled(has_notebook, egui::Button::new("Open Section…  (Ctrl+Alt+Shift+O)"))
+        .on_hover_text("Import a OneNote section (.one) into this notebook as a copy; the file itself is not changed")
+        .on_disabled_hover_text("Open a notebook first");
+    if button.clicked() {
+        crate::pictures::host_action(app, ctx, "file.openSection");
+        app.ui.backstage = None;
+    }
+    ui.label(RichText::new("OneNote packages (.onepkg) and notebooks (.onetoc2): coming later in M3.").size(12.0).color(t.page_meta));
 }
 
 fn export(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context) {

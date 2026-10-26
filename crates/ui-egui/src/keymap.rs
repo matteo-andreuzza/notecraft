@@ -151,6 +151,10 @@ fn caret_on_link(app: &NoteApp) -> bool {
 }
 
 fn run(app: &mut NoteApp, ctx: &egui::Context, id: &str, params: Value) {
+    // Open Section's shortcut asks the host for the file first.
+    if id == "file.openSection" && crate::pictures::host_action(app, ctx, id) {
+        return;
+    }
     app.run(ctx, id, params);
     app.canvas.caret_moved(ctx);
 }
