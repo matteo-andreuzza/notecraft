@@ -82,6 +82,7 @@ pub mod prop {
     pub const COLUMN_COUNT: u32 = 0x1400_1D58;
     pub const TABLE_BORDERS_VISIBLE: u32 = 0x0800_1D5E;
     pub const TABLE_COLUMN_WIDTHS: u32 = 0x1C00_1D66;
+    pub const CELL_SHADING_COLOR: u32 = 0x1400_1E26;
     pub const EMBEDDED_FILE_CONTAINER: u32 = 0x2000_1D9B;
     pub const EMBEDDED_FILE_NAME: u32 = 0x1C00_1D9C;
     pub const IMAGE_FILENAME: u32 = 0x1C00_1DD7;

@@ -661,6 +661,8 @@ pub mod section {
         pub attachments: Vec<(String, Vec<u8>)>,
         /// Tables, each in its own outline at `(x, y)`: cell texts by row, column widths.
         pub tables: Vec<(f32, f32, Vec<Vec<String>>, Vec<f32>)>,
+        /// CellShadingColor (COLORREF) of the cell at `(row, column)` in every table.
+        pub cell_shading: Vec<(usize, usize, u32)>,
     }
 
     /// An outline to write.
@@ -792,14 +794,20 @@ pub mod section {
             for (x, y, cells, widths) in &page.tables {
                 let (outline_id, oe, table) = (extra.next().unwrap(), extra.next().unwrap(), extra.next().unwrap());
                 let mut row_ids = Vec::new();
-                for row in cells {
+                for (r, row) in cells.iter().enumerate() {
                     let row_id = extra.next().unwrap();
                     let mut cell_ids = Vec::new();
-                    for text in row {
+                    for (c, text) in row.iter().enumerate() {
                         let cell_id = extra.next().unwrap();
                         let para = FixtureOutline { paragraphs: vec![(0, text.clone())], ..FixtureOutline::default() };
                         let ids: Vec<ExtendedGuid> = (0..2).map(|_| extra.next().unwrap()).collect();
-                        write_elements(rev, cell_id, &para, &ids, jcid::TABLE_CELL);
+                        let top = write_paragraphs(rev, &para, &ids);
+                        let mut p = PropSetBuilder::default();
+                        p.add(prop::ELEMENT_CHILD_NODES, Val::Objects(top));
+                        if let Some((_, _, color)) = page.cell_shading.iter().find(|(sr, sc, _)| (*sr, *sc) == (r, c)) {
+                            p.add(prop::CELL_SHADING_COLOR, Val::U32(*color));
+                        }
+                        rev.object(cell_id, jcid::TABLE_CELL, &p);
                         cell_ids.push(rev.cid(cell_id));
                     }
                     let mut r = PropSetBuilder::default();
@@ -883,14 +891,6 @@ pub mod section {
 
     fn write_outline(rev: &mut RevBuilder, id: ExtendedGuid, o: &FixtureOutline, ids: &[ExtendedGuid], title: bool) {
         write_outline_with(rev, id, o, ids, title, &[]);
-    }
-
-    /// A table cell (or any container) holding `o`'s paragraphs.
-    fn write_elements(rev: &mut RevBuilder, id: ExtendedGuid, o: &FixtureOutline, ids: &[ExtendedGuid], container: u32) {
-        let top = write_paragraphs(rev, o, ids);
-        let mut p = PropSetBuilder::default();
-        p.add(prop::ELEMENT_CHILD_NODES, Val::Objects(top));
-        rev.object(id, container, &p);
     }
 
     /// `ids` holds two ids per paragraph (outline element, rich text node); `extra_oes` are

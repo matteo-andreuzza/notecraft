@@ -305,9 +305,11 @@ impl Walk<'_, '_> {
     }
 
     /// §2.2.26 jcidTableNode → rows (§2.2.27) → cells (§2.2.28) → outline elements; column
-    /// widths from TableColumnWidths (§2.2.66: a count byte, then half-inch floats).
+    /// widths from TableColumnWidths (§2.2.66: a count byte, then half-inch floats); cell
+    /// backgrounds from CellShadingColor (§2.2.97). Merged cells are not in the public
+    /// specification.
     fn table(&mut self, space: &ObjectSpace, props: &PropertySet, pos: Point) -> Option<PageObject> {
-        let rows: Vec<Vec<Vec<Paragraph>>> = props
+        let rows: Vec<Vec<(Vec<Paragraph>, Option<Rgba>)>> = props
             .objects(prop::ELEMENT_CHILD_NODES)
             .iter()
             .filter_map(|r| space.props(r))
@@ -320,7 +322,7 @@ impl Walk<'_, '_> {
                     .map(|cell| {
                         let mut paras = Vec::new();
                         self.elements(space, cell, 0, &mut paras);
-                        paras
+                        (paras, cell.uint(prop::CELL_SHADING_COLOR).and_then(colorref))
                     })
                     .collect()
             })
@@ -333,11 +335,14 @@ impl Walk<'_, '_> {
         let ids = &mut *self.ids;
         let mut table = Table::new(ids.next_id(), pos, rows.len(), cols, &mut || ids.next_id());
         for (r, row) in rows.into_iter().enumerate() {
-            for (c, paras) in row.into_iter().enumerate() {
-                if let Some(cell) = table.rows.get_mut(r).and_then(|row| row.cells.get_mut(c))
-                    && !paras.is_empty()
-                {
+            for (c, (paras, shading)) in row.into_iter().enumerate() {
+                let Some(cell) = table.rows.get_mut(r).and_then(|row| row.cells.get_mut(c)) else { continue };
+                if !paras.is_empty() {
                     cell.paragraphs = paras;
+                }
+                if shading.is_some() {
+                    cell.shading = shading;
+                    self.report.keep("shaded cells");
                 }
             }
         }

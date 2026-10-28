@@ -1,3 +1,4 @@
+use notecraft_color::Rgba;
 use notecraft_doc::id::IdGen;
 use notecraft_doc::page::{OutlineWidth, PageObject};
 use notecraft_doc::time::Timestamp;
@@ -135,7 +136,6 @@ mod prop_tests {
 #[test]
 fn text_runs_keep_their_formats_styles_and_alignment() {
     use crate::writer::section::{FixtureFormat, FixtureStyle};
-    use notecraft_color::Rgba;
     use notecraft_doc::text::{Align, ParaStyle, Script};
     // "Bold red, italic 14pt Arial, x²" with a hidden run that must not show.
     let text = "Bold red, italic x2";
@@ -235,6 +235,8 @@ fn pictures_attachments_and_tables() {
         pictures: vec![(4.0, 6.0, png(16, 8), "a chart".into()), (1.0, 1.0, b"not a picture".to_vec(), String::new())],
         attachments: vec![("report.pdf".into(), b"%PDF-1.7 tiny".to_vec())],
         tables: vec![(2.0, 10.0, vec![vec!["a".into(), "b".into()], vec!["c".into(), "d".into()]], vec![3.0, 5.0])],
+        // 0x00BBGGRR: a red cell; "automatic" (0xFF000000) means no shading.
+        cell_shading: vec![(0, 1, 0x0000_00FF), (1, 0, 0xFF00_0000)],
         ..FixturePage::default()
     };
     let i = import(&write(&[page]));
@@ -258,5 +260,8 @@ fn pictures_attachments_and_tables() {
     assert_eq!(cells, vec![vec!["a", "b"], vec!["c", "d"]]);
     assert_eq!(t.columns, vec![108.0, 180.0]);
     assert!(t.borders);
+    let shading: Vec<Option<Rgba>> = t.rows.iter().flat_map(|r| r.cells.iter().map(|c| c.shading)).collect();
+    assert_eq!(shading, vec![None, Some(Rgba::rgb(255, 0, 0)), None, None], "CellShadingColor");
+    assert_eq!(i.report.kept.get("shaded cells"), Some(&1));
     assert_eq!(i.report.lost.len(), 1, "{:?}", i.report.lost);
 }

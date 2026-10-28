@@ -521,7 +521,8 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   attachments…) and how many damaged objects were skipped, in the notice and the command's
   result: the per-construct fidelity table of `parity.md` comes from it.
 - **Order of work.** (1) structures, revisions, pages with titles and plain text — done;
-  (2) text formats, lists, tags, tables, pictures, attachments, ink; (3) `.onetoc2` (notebook
+  (2) text formats, lists, tags, tables, pictures, attachments — done (ink and merged cells are
+  not in the public [MS-ONE] rev 13.3, so they stay reported lost); (3) `.onetoc2` (notebook
   structure); (4) `.onepkg` ([MS-CAB]). Password-protected sections are refused with a clear
   message (M4).
 
