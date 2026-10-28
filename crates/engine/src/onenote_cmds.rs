@@ -1,6 +1,7 @@
 //! OneNote's own files (decision D12): File › Open › Open Section imports a `.one` section file
 //! into the current notebook as a new section, and File › Open › Browse on a OneNote notebook
-//! folder (or its `.onetoc2`) imports the whole notebook as an in-memory copy. The original
+//! folder (or its `.onetoc2`), or on a `.onepkg` package, imports the whole notebook as an
+//! in-memory copy. The original
 //! files are only read, never changed; what the reader does not import yet is listed in the
 //! notice and the command's result.
 
@@ -63,163 +64,266 @@ fn open_section(s: &mut Session, v: &Value) -> CmdResult {
     }))
 }
 
-/// Most section files one notebook import reads.
 #[cfg(not(target_arch = "wasm32"))]
-const MAX_NOTEBOOK_SECTIONS: usize = 10_000;
-/// Most bytes one notebook import reads in all (each file is also capped by [`MAX_ONE_BYTES`]).
-#[cfg(not(target_arch = "wasm32"))]
-const MAX_NOTEBOOK_BYTES: u64 = 4 << 30;
-/// Deepest section group nesting followed (folders can be deep or linked in loops).
-#[cfg(not(target_arch = "wasm32"))]
-const MAX_GROUP_DEPTH: usize = 16;
+pub(crate) use notebook_import::{extension, is_onenote_folder};
 
-/// The lower-case extension of `path` ("one", "onetoc2"…).
+/// Whole OneNote notebooks: a notebook folder (its `.onetoc2` beside the `.one` files) or a
+/// `.onepkg` package ([MS-CAB]), imported as an in-memory copy (decision D12). Desktop only:
+/// both start from the file system.
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn extension(path: &std::path::Path) -> Option<String> {
-    path.extension().map(|e| e.to_string_lossy().to_lowercase())
-}
+mod notebook_import {
+    use std::collections::BTreeMap;
+    use std::path::{Path, PathBuf};
+    use std::sync::Arc;
 
-/// Whether `dir` is a OneNote notebook folder: no NoteCraft table of contents, and a
-/// `.onetoc2` or `.one` file directly inside it.
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn is_onenote_folder(dir: &std::path::Path) -> bool {
-    if dir.join(notecraft_format::TOC_FILE).exists() {
-        return false;
+    use notecraft_doc::{NavNode, SectionColor};
+    use notecraft_onestore::Report;
+    use serde_json::json;
+
+    use super::{MAX_ONE_BYTES, MAX_WARNINGS_SHOWN};
+    use crate::{CmdError, CmdResult, Session};
+
+    /// Most section files one notebook import reads.
+    const MAX_NOTEBOOK_SECTIONS: usize = 10_000;
+    /// Most bytes one notebook import reads in all (each file is also capped by [`MAX_ONE_BYTES`]).
+    const MAX_NOTEBOOK_BYTES: u64 = 4 << 30;
+    /// The largest `.onepkg` read (its files unpack within [`MAX_NOTEBOOK_BYTES`]).
+    const MAX_ONEPKG_BYTES: usize = 1 << 31;
+    /// Deepest section group nesting followed (folders can be deep or linked in loops).
+    const MAX_GROUP_DEPTH: usize = 16;
+
+    /// The lower-case extension of `path` ("one", "onetoc2"…).
+    pub(crate) fn extension(path: &Path) -> Option<String> {
+        path.extension().map(|e| e.to_string_lossy().to_lowercase())
     }
-    let Ok(entries) = std::fs::read_dir(dir) else { return false };
-    entries.flatten().any(|e| matches!(extension(&e.path()).as_deref(), Some("one" | "onetoc2")))
-}
 
-/// The walk over a OneNote notebook folder.
-#[cfg(not(target_arch = "wasm32"))]
-struct FolderImport {
-    report: notecraft_onestore::Report,
-    sections: usize,
-    bytes: u64,
-}
+    /// Whether `dir` is a OneNote notebook folder: no NoteCraft table of contents, and a
+    /// `.onetoc2` or `.one` file directly inside it.
+    pub(crate) fn is_onenote_folder(dir: &Path) -> bool {
+        if dir.join(notecraft_format::TOC_FILE).exists() {
+            return false;
+        }
+        let Ok(entries) = std::fs::read_dir(dir) else { return false };
+        entries.flatten().any(|e| matches!(extension(&e.path()).as_deref(), Some("one" | "onetoc2")))
+    }
 
-#[cfg(not(target_arch = "wasm32"))]
-impl FolderImport {
-    /// The sections (`.one` files) and section groups (subfolders holding some) of `dir`, by
-    /// name: the order the `.onetoc2` keeps is not in the public [MS-ONE] (its PropertyIDs are
-    /// not published), so the folder order stands in for it.
-    fn dir(&mut self, s: &mut Session, dir: &std::path::Path, depth: usize) -> Vec<NavNode> {
-        let entries = match std::fs::read_dir(dir) {
-            Ok(rd) => rd,
-            Err(e) => {
-                self.report.warnings.push(format!("{}: {e}", dir.display()));
-                return Vec::new();
+    /// Where a notebook import reads its files; paths are components below the notebook root.
+    trait Source {
+        /// The entries of the folder `dir`: name, and whether it is a folder.
+        fn list(&self, dir: &[String]) -> Result<Vec<(String, bool)>, String>;
+        /// The size of the file at `path`, as far as it is known before reading.
+        fn size(&self, path: &[String]) -> u64;
+        /// The file's bytes (each file is read once).
+        fn take(&mut self, path: &[String]) -> Result<Vec<u8>, String>;
+        /// `path` for messages.
+        fn show(&self, path: &[String]) -> String;
+    }
+
+    /// A notebook folder on disk.
+    struct Disk(PathBuf);
+
+    impl Disk {
+        fn path(&self, path: &[String]) -> PathBuf {
+            path.iter().fold(self.0.clone(), |p, c| p.join(c))
+        }
+    }
+
+    impl Source for Disk {
+        fn list(&self, dir: &[String]) -> Result<Vec<(String, bool)>, String> {
+            let full = self.path(dir);
+            let entries = std::fs::read_dir(&full).map_err(|e| format!("{}: {e}", full.display()))?;
+            // Symbolic links are not followed: a link back up would loop.
+            Ok(entries
+                .flatten()
+                .filter_map(|e| {
+                    let kind = e.file_type().ok()?;
+                    (!kind.is_symlink()).then(|| (e.file_name().to_string_lossy().to_string(), kind.is_dir()))
+                })
+                .collect())
+        }
+        fn size(&self, path: &[String]) -> u64 {
+            std::fs::metadata(self.path(path)).map(|m| m.len()).unwrap_or(0)
+        }
+        fn take(&mut self, path: &[String]) -> Result<Vec<u8>, String> {
+            let full = self.path(path);
+            let file = full.to_str().ok_or_else(|| format!("{}: the file name is not valid Unicode", full.display()))?;
+            crate::picture_cmds::read_path(file, MAX_ONE_BYTES).map(|(bytes, _)| bytes).map_err(|e| e.to_string())
+        }
+        fn show(&self, path: &[String]) -> String {
+            self.path(path).display().to_string()
+        }
+    }
+
+    /// The files of an unpacked `.onepkg`.
+    struct Package {
+        name: String,
+        files: BTreeMap<Vec<String>, Vec<u8>>,
+    }
+
+    impl Source for Package {
+        fn list(&self, dir: &[String]) -> Result<Vec<(String, bool)>, String> {
+            let mut out: Vec<(String, bool)> = Vec::new();
+            for path in self.files.keys().filter(|p| p.len() > dir.len() && p.starts_with(dir)) {
+                let Some(name) = path.get(dir.len()) else { continue };
+                let is_dir = path.len() > dir.len() + 1;
+                if !out.iter().any(|(n, d)| n == name && *d == is_dir) {
+                    out.push((name.clone(), is_dir));
+                }
             }
-        };
-        // Symbolic links are not followed: a link back up would loop.
-        let mut entries: Vec<(String, std::path::PathBuf, bool)> = entries
-            .flatten()
-            .filter_map(|e| {
-                let kind = e.file_type().ok()?;
-                (!kind.is_symlink()).then(|| (e.file_name().to_string_lossy().to_string(), e.path(), kind.is_dir()))
-            })
+            Ok(out)
+        }
+        fn size(&self, path: &[String]) -> u64 {
+            self.files.get(path).map_or(0, |d| d.len() as u64)
+        }
+        fn take(&mut self, path: &[String]) -> Result<Vec<u8>, String> {
+            self.files.remove(path).ok_or_else(|| format!("{}: missing from the package", self.show(path)))
+        }
+        fn show(&self, path: &[String]) -> String {
+            format!("{}/{}", self.name, path.join("/"))
+        }
+    }
+
+    /// The walk over a notebook's folders.
+    struct Walk {
+        report: Report,
+        sections: usize,
+        bytes: u64,
+    }
+
+    impl Walk {
+        /// The sections (`.one` files) and section groups (subfolders holding some) of `dir`,
+        /// by name: the order the `.onetoc2` keeps is not in the public [MS-ONE] (its
+        /// PropertyIDs are not published), so the folder order stands in for it.
+        fn dir(&mut self, s: &mut Session, src: &mut dyn Source, dir: &[String]) -> Vec<NavNode> {
+            let mut entries = match src.list(dir) {
+                Ok(e) => e,
+                Err(e) => {
+                    self.report.warnings.push(e);
+                    return Vec::new();
+                }
+            };
             // Hidden entries and OneNote's own recycle bin folder (deleted pages) are skipped.
-            .filter(|(name, ..)| !name.starts_with('.') && !name.eq_ignore_ascii_case("OneNote_RecycleBin"))
-            .collect();
-        entries.sort_by_key(|(name, ..)| name.to_lowercase());
-        let mut out = Vec::new();
-        for (name, path, is_dir) in entries {
-            if is_dir {
-                if depth + 1 >= MAX_GROUP_DEPTH {
-                    self.report.warnings.push(format!("{}: section groups nested too deeply", path.display()));
+            entries.retain(|(name, _)| !name.starts_with('.') && !name.eq_ignore_ascii_case("OneNote_RecycleBin"));
+            entries.sort_by_key(|(name, _)| name.to_lowercase());
+            let mut out = Vec::new();
+            for (name, is_dir) in entries {
+                let path: Vec<String> = dir.iter().cloned().chain([name.clone()]).collect();
+                if is_dir {
+                    if path.len() >= MAX_GROUP_DEPTH {
+                        self.report.warnings.push(format!("{}: section groups nested too deeply", src.show(&path)));
+                        continue;
+                    }
+                    let children = self.dir(s, src, &path);
+                    if !children.is_empty() {
+                        let name = notecraft_doc::clean_name(&name);
+                        out.push(NavNode::Group(notecraft_doc::SectionGroup { id: s.new_id(), name, children }));
+                    }
                     continue;
                 }
-                let children = self.dir(s, &path, depth + 1);
-                if !children.is_empty() {
-                    let name = notecraft_doc::clean_name(&name);
-                    out.push(NavNode::Group(notecraft_doc::SectionGroup { id: s.new_id(), name, children }));
-                }
-                continue;
-            }
-            match extension(&path).as_deref() {
-                Some("one") => {
-                    if let Some(section) = self.section(s, &path) {
-                        out.push(NavNode::Section(Arc::new(section)));
+                match extension(Path::new(&name)).as_deref() {
+                    Some("one") => {
+                        if let Some(section) = self.section(s, src, &path) {
+                            out.push(NavNode::Section(Arc::new(section)));
+                        }
                     }
+                    Some("onetoc2") => self.report.lose_one("section order and colours (.onetoc2 is not in the public spec)"),
+                    _ => {}
                 }
-                Some("onetoc2") => self.report.lose_one("section order and colours (.onetoc2 is not in the public spec)"),
-                _ => {}
             }
+            out
         }
-        out
-    }
 
-    /// One `.one` file as a section named after the file (§2.2.94: the file name overrides
-    /// the name the notebook stores).
-    fn section(&mut self, s: &mut Session, path: &std::path::Path) -> Option<notecraft_doc::Section> {
-        if self.sections >= MAX_NOTEBOOK_SECTIONS {
-            self.report.lose_one("section files over the notebook limit");
-            return None;
-        }
-        let len = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
-        if self.bytes.saturating_add(len) > MAX_NOTEBOOK_BYTES {
-            self.report.lose_one("section files over the notebook size limit");
-            return None;
-        }
-        let shown = path.display().to_string();
-        let Some(file) = path.to_str() else {
-            self.report.warnings.push(format!("{shown}: the file name is not valid Unicode"));
-            return None;
-        };
-        let bytes = match crate::picture_cmds::read_path(file, MAX_ONE_BYTES) {
-            Ok((bytes, _)) => bytes,
-            Err(e) => {
-                self.report.warnings.push(e.to_string());
+        /// One `.one` file as a section named after the file ([MS-ONE] §2.2.94: the file name
+        /// overrides the name the notebook stores).
+        fn section(&mut self, s: &mut Session, src: &mut dyn Source, path: &[String]) -> Option<notecraft_doc::Section> {
+            if self.sections >= MAX_NOTEBOOK_SECTIONS {
+                self.report.lose_one("section files over the notebook limit");
                 return None;
             }
-        };
-        self.bytes = self.bytes.saturating_add(bytes.len() as u64);
-        let stem = path.file_stem().map(|n| notecraft_doc::clean_name(&n.to_string_lossy())).filter(|n| !n.is_empty());
-        let name = stem.unwrap_or_else(|| "Imported Section".into());
-        let now = s.now();
-        match notecraft_onestore::read_section(&bytes, &name, &mut s.ids, now) {
-            Ok(import) => {
-                let mut section = import.section;
-                section.color = SectionColor::rotation(self.sections);
-                self.sections += 1;
-                self.report.absorb(import.report);
-                Some(section)
+            if self.bytes.saturating_add(src.size(path)) > MAX_NOTEBOOK_BYTES {
+                self.report.lose_one("section files over the notebook size limit");
+                return None;
             }
-            Err(e) => {
-                self.report.warnings.push(format!("{shown}: {e}"));
-                None
+            let bytes = match src.take(path) {
+                Ok(b) => b,
+                Err(e) => {
+                    self.report.warnings.push(e);
+                    return None;
+                }
+            };
+            self.bytes = self.bytes.saturating_add(bytes.len() as u64);
+            let file = path.last().map(String::as_str).unwrap_or_default();
+            let stem = Path::new(file).file_stem().map(|n| notecraft_doc::clean_name(&n.to_string_lossy())).filter(|n| !n.is_empty());
+            let name = stem.unwrap_or_else(|| "Imported Section".into());
+            let now = s.now();
+            match notecraft_onestore::read_section(&bytes, &name, &mut s.ids, now) {
+                Ok(import) => {
+                    let mut section = import.section;
+                    section.color = SectionColor::rotation(self.sections);
+                    self.sections += 1;
+                    self.report.absorb(import.report);
+                    Some(section)
+                }
+                Err(e) => {
+                    self.report.warnings.push(format!("{}: {e}", src.show(path)));
+                    None
+                }
             }
         }
     }
-}
 
-#[cfg(not(target_arch = "wasm32"))]
-impl Session {
-    /// Imports the OneNote notebook folder `root` as a new in-memory notebook (decision D12:
-    /// a copy; nothing is ever written into the folder).
-    pub(crate) fn import_onenote_folder(&mut self, root: &std::path::Path) -> CmdResult {
-        let mut walk = FolderImport { report: notecraft_onestore::Report::default(), sections: 0, bytes: 0 };
-        let children = walk.dir(self, root, 0);
-        if walk.sections == 0 {
-            return Err(CmdError::Failed(format!("{}: no OneNote section (.one) could be read", root.display())));
+    impl Session {
+        /// Imports the OneNote notebook folder `root` as a new in-memory notebook (decision
+        /// D12: a copy; nothing is ever written into the folder).
+        pub(crate) fn import_onenote_folder(&mut self, root: &Path) -> CmdResult {
+            let name = root.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            self.import_notebook(&mut Disk(root.to_path_buf()), &name, Report::default())
         }
-        let folder = root.file_name().map(|n| notecraft_doc::clean_name(&n.to_string_lossy())).filter(|n| !n.is_empty());
-        let name = folder.unwrap_or_else(|| "OneNote Notebook".into());
-        let mut nb = notecraft_doc::Notebook::new(self.new_id(), &name, SectionColor::default());
-        nb.children = children;
-        nb.normalize();
-        let id = nb.id;
-        self.add_notebook(nb);
-        let report = walk.report;
-        self.notice(format!("{name}: a copy in memory (export it to keep it); {}", report.summary()));
-        Ok(json!({
-            "notebook": id.to_string(),
-            "sections": walk.sections,
-            "imported": report.kept,
-            "notImported": report.lost,
-            "damaged": report.warnings.len(),
-        "warnings": report.warnings.iter().take(MAX_WARNINGS_SHOWN).collect::<Vec<_>>(),
-        }))
+
+        /// Imports the `.onepkg` package at `path` ([MS-CAB]) as a new in-memory notebook named
+        /// after the file. A package whose files all sit in one top folder is read from inside
+        /// it (the layout the reference writes is not documented — unverified).
+        pub(crate) fn import_onepkg(&mut self, path: &Path) -> CmdResult {
+            let file = path.to_str().ok_or_else(|| CmdError::Failed(format!("{}: the file name is not valid Unicode", path.display())))?;
+            let (bytes, _) = crate::picture_cmds::read_path(file, MAX_ONEPKG_BYTES)?;
+            let limits = notecraft_onestore::CabLimits { max_files: MAX_NOTEBOOK_SECTIONS * 2, max_total_bytes: MAX_NOTEBOOK_BYTES };
+            let cab = notecraft_onestore::read_cabinet(&bytes, &limits).map_err(|e| CmdError::Failed(format!("{}: {e}", path.display())))?;
+            drop(bytes);
+            let mut files: BTreeMap<Vec<String>, Vec<u8>> = cab.files.into_iter().map(|f| (f.path, f.data)).collect();
+            let tops: std::collections::BTreeSet<&String> = files.keys().filter_map(|p| p.first()).collect();
+            if tops.len() == 1 && files.keys().all(|p| p.len() > 1) {
+                files = files.into_iter().map(|(p, d)| (p.into_iter().skip(1).collect(), d)).collect();
+            }
+            let name = path.file_stem().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            let report = Report { warnings: cab.warnings, ..Report::default() };
+            self.import_notebook(&mut Package { name: name.clone(), files }, &name, report)
+        }
+
+        /// A notebook called `name` from the sections in `src`.
+        fn import_notebook(&mut self, src: &mut dyn Source, name: &str, report: Report) -> CmdResult {
+            let mut walk = Walk { report, sections: 0, bytes: 0 };
+            let children = walk.dir(self, src, &[]);
+            if walk.sections == 0 {
+                let why = walk.report.warnings.first().map(|w| format!(" ({w})")).unwrap_or_default();
+                return Err(CmdError::Failed(format!("{name}: no OneNote section (.one) could be read{why}")));
+            }
+            let name = Some(notecraft_doc::clean_name(name)).filter(|n| !n.is_empty()).unwrap_or_else(|| "OneNote Notebook".into());
+            let mut nb = notecraft_doc::Notebook::new(self.new_id(), &name, SectionColor::default());
+            nb.children = children;
+            nb.normalize();
+            let id = nb.id;
+            self.add_notebook(nb);
+            let report = walk.report;
+            self.notice(format!("{name}: a copy in memory (export it to keep it); {}", report.summary()));
+            Ok(json!({
+                "notebook": id.to_string(),
+                "sections": walk.sections,
+                "imported": report.kept,
+                "notImported": report.lost,
+                "damaged": report.warnings.len(),
+                "warnings": report.warnings.iter().take(MAX_WARNINGS_SHOWN).collect::<Vec<_>>(),
+            }))
+        }
     }
 }
 
@@ -381,5 +485,44 @@ mod tests {
         assert!(matches!(e, crate::CmdError::Failed(_)), "{e}");
         assert_eq!(s.ws.notebooks.len(), notebooks);
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn a_onepkg_opens_as_an_in_memory_copy() {
+        use notecraft_onestore::writer::cab::{Compression, write};
+        let dir = std::env::temp_dir().join(format!("notecraft-onepkg-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let one = fixture();
+        let pkg = dir.join("Trip Notes.onepkg");
+        // The files sit in one top folder, which the import steps into.
+        let files: [(&str, &[u8]); 4] = [
+            ("Trip\\Open Notebook.onetoc2", b"toc"),
+            ("Trip\\Travel.one", &one),
+            ("Trip\\Work\\Projects.one", &one),
+            ("Trip\\Broken.one", &one[..1500]),
+        ];
+        std::fs::write(&pkg, write(&files, Compression::MsZip)).unwrap();
+        let mut s = sample();
+        let r = run(&mut s, "file.openNotebook", json!({"path": pkg.to_str().unwrap()}));
+        assert_eq!(r["sections"], 2, "FMT.Onepkg.Read");
+        assert_eq!(r["damaged"], 1);
+        let nb = s.notebook().unwrap();
+        assert_eq!(nb.name, "Trip Notes");
+        let top: Vec<String> = nb
+            .children
+            .iter()
+            .map(|n| match n {
+                notecraft_doc::NavNode::Section(sec) => sec.name.clone(),
+                notecraft_doc::NavNode::Group(g) => format!("{}/{}", g.name, g.children.len()),
+            })
+            .collect();
+        assert_eq!(top, vec!["Travel", "Work/1"]);
+        // LZX packages and other files fail cleanly.
+        std::fs::write(&pkg, write(&files, Compression::Other(3))).unwrap();
+        assert!(matches!(s.run("file.openNotebook", json!({"path": pkg.to_str().unwrap()})), Err(crate::CmdError::Failed(_))));
+        std::fs::write(&pkg, b"not a cabinet").unwrap();
+        assert!(matches!(s.run("file.openNotebook", json!({"path": pkg.to_str().unwrap()})), Err(crate::CmdError::Failed(_))));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

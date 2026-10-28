@@ -148,6 +148,7 @@ impl Session {
         // A OneNote notebook, by its folder or its .onetoc2, is imported as a copy (D12).
         let folder = match crate::onenote_cmds::extension(root).as_deref() {
             Some("onetoc2") => root.parent().unwrap_or(root),
+            Some("onepkg") => return self.import_onepkg(root),
             _ => root,
         };
         if crate::onenote_cmds::is_onenote_folder(folder) {

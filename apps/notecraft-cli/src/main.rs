@@ -38,8 +38,8 @@ usage: notecraft-cli <command>
   mcp --connect 127.0.0.1:PORT
                             MCP server bridged to a running app (`notecraft --control PORT`),
                             with screenshots, keys and clicks
-  onenote PATH [--json]     import a OneNote .one file, notebook folder or .onetoc2 into a
-                            throwaway session and print what was kept and what was not
+  onenote PATH [--json]     import a OneNote .one file, notebook folder, .onetoc2 or .onepkg
+                            into a throwaway session and print what was kept and what was not
                             (the files are only read)
   --version
 
@@ -270,12 +270,12 @@ fn batch(o: &Opts) -> Result<(), String> {
 }
 
 /// `onenote PATH`: the fidelity report of a OneNote import (decision D12), for measuring real
-/// files. A `.one` file goes into the sample notebook; a folder or `.onetoc2` becomes its own
+/// files. A `.one` file goes into the sample notebook; a folder, `.onetoc2` or `.onepkg` becomes its own
 /// in-memory notebook. Nothing is saved.
 fn onenote(o: &Opts) -> Result<(), String> {
     let path = match o.positional.as_slice() {
         [path] => path,
-        [] => return Err("onenote needs a .one file, a notebook folder or a .onetoc2".into()),
+        [] => return Err("onenote needs a .one file, a notebook folder, a .onetoc2 or a .onepkg".into()),
         [_, extra, ..] => return Err(format!("onenote: unexpected argument `{extra}`")),
     };
     let mut s = Session::with_sample(clock());

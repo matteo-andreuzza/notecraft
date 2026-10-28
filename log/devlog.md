@@ -595,3 +595,25 @@ were certain landed, behaviour unchanged (every test green after each commit).
   the clean room). The `cab` crate (MIT) was rejected: unchecked indexing and `unreachable!`
   on its read path. Plan: a bounded CAB reader in `onestore` (MSZIP via `miniz_oxide`,
   LZX/Quantum refused) once the spec is in `plan/specs/`.
+
+## 2026-10-29 — M3: `.onepkg` packages
+
+- Specs: the official [MS-CAB] (v20101026) and [MS-MCI] PDFs are gone from Microsoft's sites;
+  the Wayback Machine copy of a mirror (`web.archive.org/web/2025…/rfc.nop.hu/winprot2/MS-CAB.pdf`,
+  `MS-MCI.pdf`) is Microsoft's own document. Both in `plan/specs/` (text beside them).
+- `onestore::cab` (`read_cabinet`, `CabLimits`): CFHEADER/CFFOLDER/CFFILE/CFDATA with every
+  offset checked; stored and MSZIP folders (fresh decoder per block on a buffer that starts
+  with the previous 32 KB, so back-references across blocks work — [MS-MCI] §2); Quantum, LZX,
+  split cabinets refused; names UTF-8 or Windows-1252, `..`/empty parts dropped; a damaged
+  folder costs only its files (warnings); caps on files and bytes unpacked; csum not verified
+  (optional per §2.4.1). New dependency `miniz_oxide` 0.9 (already in the tree via flate2).
+  The `cab` crate was rejected (panics on its read path). Tests: the spec's §3 example byte
+  for byte, a hand-made fixed-Huffman block referring into the previous block, truncations,
+  byte flips, a proptest. Fixture writer `writer::cab`.
+- Engine: the notebook import walks a `Source` (disk folder or unpacked package);
+  `file.openNotebook` on a `.onepkg` imports an in-memory copy named after the file, stepping
+  into a single top folder (package layout unverified). CLI `onenote` takes `.onepkg` too.
+- Catalog: `FMT.Onepkg.Read` wired. Numbers: wiring 671/1328 (50.5%), behaviour 176/1328
+  (13.3%), 336 commands.
+- Open: the fidelity table in `parity.md` after the user's real-file measurements
+  (`notecraft-cli onenote PATH`); then the M3 exports/imports (PDF/DOCX/HTML/Markdown, ENEX…).

@@ -16,6 +16,7 @@ workspace = true
 fixtures = []
 
 [dependencies]
+miniz_oxide = { workspace = true }
 notecraft-codecs = { workspace = true }
 notecraft-color = { workspace = true }
 notecraft-doc = { workspace = true }

@@ -679,7 +679,7 @@ fn wz(bytes: &[u8]) -> String {
 }
 
 /// "Extended ASCII" (§2.2.89) read as Windows-1252, the code page of the Western editions.
-fn windows_1252(bytes: &[u8]) -> String {
+pub(crate) fn windows_1252(bytes: &[u8]) -> String {
     const HIGH: [char; 32] = [
         '€', '\u{81}', '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹', 'Œ', '\u{8D}', 'Ž', '\u{8F}', '\u{90}', '‘', '’', '“', '”', '•', '–', '—',
         '˜', '™', 'š', '›', 'œ', '\u{9D}', 'ž', 'Ÿ',

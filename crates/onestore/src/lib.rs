@@ -1,7 +1,7 @@
 //! NoteCraft's reader of OneNote's own files (layer **L4**, interop; decision D12,
 //! `docs/plan.md` §4.17): `.one` sections and `.onetoc2` notebook tables of contents in the
 //! revision store format of the public Open Specification **[MS-ONESTORE]**, whose objects carry
-//! the page content described by **[MS-ONE]**.
+//! the page content described by **[MS-ONE]**, and `.onepkg` packages ([MS-CAB] cabinets, [`cab`]).
 //!
 //! It sits at L4 because it turns foreign bytes into the document model (L1) and nothing above
 //! the engine needs to know the format; it has no UI or platform dependencies and works on a
@@ -21,6 +21,7 @@
 #![deny(clippy::indexing_slicing)]
 
 pub(crate) mod bytes;
+pub mod cab;
 pub mod error;
 pub mod filenode;
 pub mod header;
@@ -33,6 +34,7 @@ pub mod types;
 #[cfg(any(test, feature = "fixtures"))]
 pub mod writer;
 
+pub use cab::{CabFile, CabLimits, Cabinet, read_cabinet};
 pub use error::{OneError, Result};
 pub use header::{FileKind, Header};
 pub use one::{Import, Report, read_section};

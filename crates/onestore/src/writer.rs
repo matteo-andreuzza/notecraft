@@ -1023,3 +1023,85 @@ pub mod section {
         (0..n).filter(|&k| parents[k].is_none()).map(|k| rev.cid(ids[2 * k])).collect()
     }
 }
+
+/// Cabinet files ([MS-CAB] §2) holding `.onepkg` packages: one folder, no reserve, no checksum.
+pub mod cab {
+    /// The folder's compression ([MS-CAB] §2.2.3 typeCompress).
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum Compression {
+        /// tcompTYPE_NONE.
+        None,
+        /// tcompTYPE_MSZIP: each 32 KB block deflated on its own ([MS-MCI] §2).
+        MsZip,
+        /// Any other value, written as is (the data is stored).
+        Other(u16),
+    }
+
+    /// A cabinet of `files` (`\`-separated names, data); names with non-ASCII characters get
+    /// _A_NAME_IS_UTF.
+    pub fn write(files: &[(&str, &[u8])], compression: Compression) -> Vec<u8> {
+        let all: Vec<u8> = files.iter().flat_map(|(_, d)| d.iter().copied()).collect();
+        let blocks: Vec<(Vec<u8>, usize)> = all
+            .chunks(32 * 1024)
+            .map(|chunk| match compression {
+                Compression::MsZip => {
+                    let mut b = b"CK".to_vec();
+                    b.extend(miniz_oxide::deflate::compress_to_vec(chunk, 6));
+                    (b, chunk.len())
+                }
+                _ => (chunk.to_vec(), chunk.len()),
+            })
+            .collect();
+        blocks_cab(files, &blocks, compression)
+    }
+
+    /// A cabinet whose single folder holds the given CFDATA blocks `(ab, cbUncomp)` as they are.
+    pub fn blocks_cab(files: &[(&str, &[u8])], blocks: &[(Vec<u8>, usize)], compression: Compression) -> Vec<u8> {
+        let type_compress = match compression {
+            Compression::None => 0u16,
+            Compression::MsZip => 1,
+            Compression::Other(n) => n,
+        };
+        let mut entries = Vec::new();
+        let mut offset = 0u32;
+        for (name, data) in files {
+            entries.extend((data.len() as u32).to_le_bytes());
+            entries.extend(offset.to_le_bytes());
+            entries.extend(0u16.to_le_bytes()); // iFolder
+            entries.extend(0x226Cu16.to_le_bytes()); // date
+            entries.extend(0x59BAu16.to_le_bytes()); // time
+            let attribs: u16 = if name.is_ascii() { 0x20 } else { 0xA0 };
+            entries.extend(attribs.to_le_bytes());
+            entries.extend(name.as_bytes());
+            entries.push(0);
+            offset += data.len() as u32;
+        }
+        let coff_files = 36 + 8;
+        let coff_data = coff_files + entries.len();
+        let mut data = Vec::new();
+        for (ab, size) in blocks {
+            data.extend(0u32.to_le_bytes());
+            data.extend((ab.len() as u16).to_le_bytes());
+            data.extend((*size as u16).to_le_bytes());
+            data.extend(ab);
+        }
+        let mut f = b"MSCF".to_vec();
+        f.extend(0u32.to_le_bytes());
+        f.extend(((coff_data + data.len()) as u32).to_le_bytes());
+        f.extend(0u32.to_le_bytes());
+        f.extend((coff_files as u32).to_le_bytes());
+        f.extend(0u32.to_le_bytes());
+        f.extend([3, 1]); // version 1.3
+        f.extend(1u16.to_le_bytes()); // cFolders
+        f.extend((files.len() as u16).to_le_bytes());
+        f.extend(0u16.to_le_bytes()); // flags
+        f.extend(0x0622u16.to_le_bytes()); // setID
+        f.extend(0u16.to_le_bytes()); // iCabinet
+        f.extend((coff_data as u32).to_le_bytes());
+        f.extend((blocks.len() as u16).to_le_bytes());
+        f.extend(type_compress.to_le_bytes());
+        f.extend(entries);
+        f.extend(data);
+        f
+    }
+}

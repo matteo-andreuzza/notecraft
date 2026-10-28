@@ -18,6 +18,7 @@
 
 mod map;
 
+pub(crate) use map::windows_1252;
 pub use map::{Import, Report, read_section};
 
 /// [MS-ONE] §2.1.13 JCIDs of the objects read.
