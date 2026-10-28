@@ -12,6 +12,9 @@ use serde_json::{Value, json};
 use crate::ops::need_notebook;
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
 
+/// The damage messages a result lists (the count is always complete).
+const MAX_WARNINGS_SHOWN: usize = 50;
+
 /// The largest `.one` file read (the reader's own limit is higher; a section this large is
 /// already far beyond what the reference writes).
 const MAX_ONE_BYTES: usize = 1 << 30;
@@ -21,7 +24,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         // BS.Open.OpenSection — Ctrl+Alt+Shift+O.
         CommandSpec::new("file.openSection", "BS.Open.OpenSection", "Open Section", "File/Open/Open Section", open_section)
             .key("Mod+Alt+Shift+O")
-            .params(r#"{"path": .one file | "data": base64 with "name", "name"?: section name, "notebook"?: id} → {section, page?, imported, notImported, damaged}"#)
+            .params(r#"{"path": .one file | "data": base64 with "name", "name"?: section name, "notebook"?: id} → {section, page?, imported, notImported, damaged, warnings}"#)
             .when(need_notebook),
     ]
 }
@@ -56,6 +59,7 @@ fn open_section(s: &mut Session, v: &Value) -> CmdResult {
         "imported": report.kept,
         "notImported": report.lost,
         "damaged": report.warnings.len(),
+        "warnings": report.warnings.iter().take(MAX_WARNINGS_SHOWN).collect::<Vec<_>>(),
     }))
 }
 
@@ -214,6 +218,7 @@ impl Session {
             "imported": report.kept,
             "notImported": report.lost,
             "damaged": report.warnings.len(),
+        "warnings": report.warnings.iter().take(MAX_WARNINGS_SHOWN).collect::<Vec<_>>(),
         }))
     }
 }

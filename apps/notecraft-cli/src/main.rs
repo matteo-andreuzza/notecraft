@@ -38,6 +38,9 @@ usage: notecraft-cli <command>
   mcp --connect 127.0.0.1:PORT
                             MCP server bridged to a running app (`notecraft --control PORT`),
                             with screenshots, keys and clicks
+  onenote PATH [--json]     import a OneNote .one file, notebook folder or .onetoc2 into a
+                            throwaway session and print what was kept and what was not
+                            (the files are only read)
   --version
 
 --notebook DIR opens a notebook folder, or creates one there if it doesn't exist.
@@ -101,6 +104,7 @@ fn dispatch(args: &[String]) -> Result<(), String> {
         Some("commands") => list(&Opts::parse("commands", rest, &[], &["--json"])?),
         Some("run") => run(&Opts::parse("run", rest, RUN_VALUES, RUN_SWITCHES)?),
         Some("batch") => batch(&Opts::parse("batch", rest, &["--notebook", "--author"], RUN_SWITCHES)?),
+        Some("onenote") => onenote(&Opts::parse("onenote", rest, &[], &["--json"])?),
         Some("mcp") => serve_mcp(&Opts::parse("mcp", rest, MCP_VALUES, MCP_SWITCHES)?),
         Some("--version" | "-V") => {
             println!("notecraft-cli {}", env!("CARGO_PKG_VERSION"));
@@ -265,6 +269,54 @@ fn batch(o: &Opts) -> Result<(), String> {
     finish(&mut s, o.has("--print"))
 }
 
+/// `onenote PATH`: the fidelity report of a OneNote import (decision D12), for measuring real
+/// files. A `.one` file goes into the sample notebook; a folder or `.onetoc2` becomes its own
+/// in-memory notebook. Nothing is saved.
+fn onenote(o: &Opts) -> Result<(), String> {
+    let path = match o.positional.as_slice() {
+        [path] => path,
+        [] => return Err("onenote needs a .one file, a notebook folder or a .onetoc2".into()),
+        [_, extra, ..] => return Err(format!("onenote: unexpected argument `{extra}`")),
+    };
+    let mut s = Session::with_sample(clock());
+    let is_section = Path::new(path).extension().is_some_and(|e| e.eq_ignore_ascii_case("one"));
+    let id = if is_section { "file.openSection" } else { "file.openNotebook" };
+    let out = exec(&mut s, id, json!({"path": path}))?;
+    if o.has("--json") {
+        println!("{out}");
+    } else {
+        print!("{}", onenote_report(&out));
+    }
+    Ok(())
+}
+
+/// The import result as text: one construct per line.
+fn onenote_report(out: &Value) -> String {
+    let mut text = String::new();
+    let counts = |key: &str| {
+        out.get(key)
+            .and_then(Value::as_object)
+            .map(|m| m.iter().map(|(k, v)| format!("  {:>6}  {k}\n", v.as_u64().unwrap_or(0))).collect::<String>())
+            .unwrap_or_default()
+    };
+    if let Some(n) = out.get("sections").and_then(Value::as_u64) {
+        text.push_str(&format!("sections read: {n}\n"));
+    }
+    text.push_str("imported:\n");
+    text.push_str(&counts("imported"));
+    let lost = counts("notImported");
+    if !lost.is_empty() {
+        text.push_str("not imported:\n");
+        text.push_str(&lost);
+    }
+    let damaged = out.get("damaged").and_then(Value::as_u64).unwrap_or(0);
+    text.push_str(&format!("damaged objects skipped: {damaged}\n"));
+    for w in out.get("warnings").and_then(Value::as_array).into_iter().flatten().filter_map(Value::as_str) {
+        text.push_str(&format!("  {w}\n"));
+    }
+    text
+}
+
 /// The MCP backend the options ask for: a headless session (optionally confined to the roots)
 /// or a running app.
 fn mcp_backend(o: &Opts) -> Result<Box<dyn Backend>, String> {
@@ -351,6 +403,11 @@ mod tests {
     fn run_and_batch_check_their_arguments() {
         assert!(dispatch(&args(&["run", "stray"])).unwrap_err().contains("unexpected argument"));
         assert!(dispatch(&args(&["batch"])).unwrap_err().contains("needs a file"));
+        assert!(dispatch(&args(&["onenote"])).unwrap_err().contains("needs a .one file"));
+        assert!(dispatch(&args(&["onenote", "/nonexistent/x.one"])).unwrap_err().contains("file.openSection"));
+        let report =
+            onenote_report(&json!({"sections": 2, "imported": {"pages": 3}, "notImported": {"ink": 1}, "damaged": 1, "warnings": ["a.one: bad"]}));
+        assert_eq!(report, "sections read: 2\nimported:\n       3  pages\nnot imported:\n       1  ink\ndamaged objects skipped: 1\n  a.one: bad\n");
         assert!(dispatch(&args(&["frobnicate"])).unwrap_err().contains("unknown command"));
         assert!(dispatch(&args(&["run", "--sample", "--cmd", "page.new={\"title\":\"T\"}"])).is_ok());
         assert!(dispatch(&args(&["run", "--sample", "--cmd", "page.new={bad"])).unwrap_err().contains("bad JSON"));

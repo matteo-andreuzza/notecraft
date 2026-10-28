@@ -587,3 +587,11 @@ were certain landed, behaviour unchanged (every test green after each commit).
   670/1328 (50.5%), behaviour 176/1328 (13.3%), 336 commands.
 - Open: `.onepkg` ([MS-CAB]: download the spec to `plan/specs/`, unpack to the same folder
   import); a CLI report command; the fidelity table after the user's real-file measurements.
+- **Later:** `notecraft-cli onenote PATH [--json]` prints the fidelity report of a `.one`, a
+  OneNote folder or a `.onetoc2` (throwaway session, nothing saved): the tool for the user's
+  real-file measurements. Both import results now list the damage messages (`warnings`, ≤ 50).
+  `.onepkg` is on hold: the official [MS-CAB] PDF could not be found (the learn.microsoft.com
+  and officeprotocoldoc URLs return 404; only secondary/GPL sources online, not usable under
+  the clean room). The `cab` crate (MIT) was rejected: unchecked indexing and `unreachable!`
+  on its read path. Plan: a bounded CAB reader in `onestore` (MSZIP via `miniz_oxide`,
+  LZX/Quantum refused) once the spec is in `plan/specs/`.

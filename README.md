@@ -82,6 +82,7 @@ loads at run time (`libxkbcommon`, `libwayland-client` or `libX11`, Vulkan or GL
 notecraft-cli commands                      # every command: id, catalog id, menu path, shortcut, params
 notecraft-cli run --notebook ~/Notebooks/Work --cmd 'page.new={"title":"Agenda"}' --print
 notecraft-cli batch script.jsonl --sample   # one {"command": id, "params": {...}} per line
+notecraft-cli onenote ~/OneNote/Work          # what a OneNote import keeps and leaves out (read-only)
 notecraft-cli mcp --notebook ~/Notebooks/Work   # MCP server over stdio (headless)
 claude mcp add notecraft -- notecraft-cli mcp   # Claude Code
 ```
