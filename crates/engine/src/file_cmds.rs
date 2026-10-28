@@ -145,6 +145,14 @@ impl Session {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn open_path(&mut self, path: &str) -> CmdResult {
         let root = std::path::Path::new(path);
+        // A OneNote notebook, by its folder or its .onetoc2, is imported as a copy (D12).
+        let folder = match crate::onenote_cmds::extension(root).as_deref() {
+            Some("onetoc2") => root.parent().unwrap_or(root),
+            _ => root,
+        };
+        if crate::onenote_cmds::is_onenote_folder(folder) {
+            return self.import_onenote_folder(folder);
+        }
         let canon = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
         if let Some((id, _)) = self.stores.iter().find(|(_, st)| std::fs::canonicalize(&st.root).unwrap_or_else(|_| st.root.clone()) == canon) {
             let id = *id;

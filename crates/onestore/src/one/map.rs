@@ -63,6 +63,22 @@ impl Report {
         *self.lost.entry(what).or_default() += 1;
     }
 
+    /// Adds another import's counts and warnings (a notebook of many section files).
+    pub fn absorb(&mut self, other: Report) {
+        for (k, v) in other.kept {
+            *self.kept.entry(k).or_default() += v;
+        }
+        for (k, v) in other.lost {
+            *self.lost.entry(k).or_default() += v;
+        }
+        self.warnings.extend(other.warnings);
+    }
+
+    /// Counts a construct left out by the caller (files a notebook import skipped).
+    pub fn lose_one(&mut self, what: &'static str) {
+        self.lose(what);
+    }
+
     /// One line per construct, for notices and the CLI.
     pub fn summary(&self) -> String {
         let list = |m: &BTreeMap<&str, usize>| m.iter().map(|(k, v)| format!("{v} {k}")).collect::<Vec<_>>().join(", ");

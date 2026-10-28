@@ -177,7 +177,7 @@ pub(crate) fn read_input(v: &Value, cap: usize) -> Result<(Vec<u8>, Option<Strin
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn read_path(path: &str, cap: usize) -> Result<(Vec<u8>, Option<String>), CmdError> {
+pub(crate) fn read_path(path: &str, cap: usize) -> Result<(Vec<u8>, Option<String>), CmdError> {
     use std::io::Read;
     let fail = |e: std::io::Error| CmdError::Failed(format!("{path}: {e}"));
     let f = std::fs::File::open(path).map_err(fail)?;

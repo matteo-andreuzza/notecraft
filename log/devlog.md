@@ -564,3 +564,26 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Open: ink (its [MS-ONE] structures), merged cells and shading in `.one` tables, `.onetoc2`,
   `.onepkg`, a CLI report command, the per-construct fidelity table once the user has measured
   real files.
+
+## 2026-10-28 — M3: table shading, OneNote notebook folders; ink and TOC are not public
+
+- **What the public spec leaves out** (checked in `plan/specs/ms-one.txt`, rev 13.3,
+  2022-11-15): no ink JCID or property, no merged-cell property, and none of the `.onetoc2`
+  PropertyIDs (FileIdentityGuid, FolderChildFilename, NotebookColor,
+  NotebookElementOrderingID, TOCEntryIndex_OidIndex: the structures are described, their ids
+  are not in the 144-entry table). Under the clean room they can't be read: ink stays reported
+  lost (`FMT.One.ReadInk` missing, note says blocked), spans read as 1.
+- `.one` tables: CellShadingColor (§2.2.97) → `TableCell::shading` (automatic = none); the
+  fixture writer shades cells (`FixturePage::cell_shading`).
+- **OneNote notebook folders** (user's choice): `file.openNotebook` on a folder with a
+  `.onetoc2`/`.one` and no NoteCraft TOC (or on the `.onetoc2` itself) imports an in-memory
+  copy (`onenote_cmds::import_onenote_folder`): each `.one` a section named by its file, each
+  subfolder with sections a group, sorted by name; `OneNote_RecycleBin`, hidden entries and
+  symlinks skipped; limits on files, total bytes and depth; damaged files are warnings, a
+  folder with nothing readable fails cleanly; nothing is ever written to the folder (test
+  compares the listing after `save_dirty`). Before this, such a folder opened as an empty
+  NoteCraft notebook that would have written into it. `onestore::Report::absorb`/`lose_one`.
+- Catalog: `FMT.Onetoc2.Read` wired (order from the folder — unverified). Numbers: wiring
+  670/1328 (50.5%), behaviour 176/1328 (13.3%), 336 commands.
+- Open: `.onepkg` ([MS-CAB]: download the spec to `plan/specs/`, unpack to the same folder
+  import); a CLI report command; the fidelity table after the user's real-file measurements.

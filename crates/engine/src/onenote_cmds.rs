@@ -1,6 +1,8 @@
 //! OneNote's own files (decision D12): File › Open › Open Section imports a `.one` section file
-//! into the current notebook as a new section. The original file is only read, never changed;
-//! what the reader does not import yet is listed in the notice and the command's result.
+//! into the current notebook as a new section, and File › Open › Browse on a OneNote notebook
+//! folder (or its `.onetoc2`) imports the whole notebook as an in-memory copy. The original
+//! files are only read, never changed; what the reader does not import yet is listed in the
+//! notice and the command's result.
 
 use std::sync::Arc;
 
@@ -55,6 +57,165 @@ fn open_section(s: &mut Session, v: &Value) -> CmdResult {
         "notImported": report.lost,
         "damaged": report.warnings.len(),
     }))
+}
+
+/// Most section files one notebook import reads.
+#[cfg(not(target_arch = "wasm32"))]
+const MAX_NOTEBOOK_SECTIONS: usize = 10_000;
+/// Most bytes one notebook import reads in all (each file is also capped by [`MAX_ONE_BYTES`]).
+#[cfg(not(target_arch = "wasm32"))]
+const MAX_NOTEBOOK_BYTES: u64 = 4 << 30;
+/// Deepest section group nesting followed (folders can be deep or linked in loops).
+#[cfg(not(target_arch = "wasm32"))]
+const MAX_GROUP_DEPTH: usize = 16;
+
+/// The lower-case extension of `path` ("one", "onetoc2"…).
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn extension(path: &std::path::Path) -> Option<String> {
+    path.extension().map(|e| e.to_string_lossy().to_lowercase())
+}
+
+/// Whether `dir` is a OneNote notebook folder: no NoteCraft table of contents, and a
+/// `.onetoc2` or `.one` file directly inside it.
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn is_onenote_folder(dir: &std::path::Path) -> bool {
+    if dir.join(notecraft_format::TOC_FILE).exists() {
+        return false;
+    }
+    let Ok(entries) = std::fs::read_dir(dir) else { return false };
+    entries.flatten().any(|e| matches!(extension(&e.path()).as_deref(), Some("one" | "onetoc2")))
+}
+
+/// The walk over a OneNote notebook folder.
+#[cfg(not(target_arch = "wasm32"))]
+struct FolderImport {
+    report: notecraft_onestore::Report,
+    sections: usize,
+    bytes: u64,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl FolderImport {
+    /// The sections (`.one` files) and section groups (subfolders holding some) of `dir`, by
+    /// name: the order the `.onetoc2` keeps is not in the public [MS-ONE] (its PropertyIDs are
+    /// not published), so the folder order stands in for it.
+    fn dir(&mut self, s: &mut Session, dir: &std::path::Path, depth: usize) -> Vec<NavNode> {
+        let entries = match std::fs::read_dir(dir) {
+            Ok(rd) => rd,
+            Err(e) => {
+                self.report.warnings.push(format!("{}: {e}", dir.display()));
+                return Vec::new();
+            }
+        };
+        // Symbolic links are not followed: a link back up would loop.
+        let mut entries: Vec<(String, std::path::PathBuf, bool)> = entries
+            .flatten()
+            .filter_map(|e| {
+                let kind = e.file_type().ok()?;
+                (!kind.is_symlink()).then(|| (e.file_name().to_string_lossy().to_string(), e.path(), kind.is_dir()))
+            })
+            // Hidden entries and OneNote's own recycle bin folder (deleted pages) are skipped.
+            .filter(|(name, ..)| !name.starts_with('.') && !name.eq_ignore_ascii_case("OneNote_RecycleBin"))
+            .collect();
+        entries.sort_by_key(|(name, ..)| name.to_lowercase());
+        let mut out = Vec::new();
+        for (name, path, is_dir) in entries {
+            if is_dir {
+                if depth + 1 >= MAX_GROUP_DEPTH {
+                    self.report.warnings.push(format!("{}: section groups nested too deeply", path.display()));
+                    continue;
+                }
+                let children = self.dir(s, &path, depth + 1);
+                if !children.is_empty() {
+                    let name = notecraft_doc::clean_name(&name);
+                    out.push(NavNode::Group(notecraft_doc::SectionGroup { id: s.new_id(), name, children }));
+                }
+                continue;
+            }
+            match extension(&path).as_deref() {
+                Some("one") => {
+                    if let Some(section) = self.section(s, &path) {
+                        out.push(NavNode::Section(Arc::new(section)));
+                    }
+                }
+                Some("onetoc2") => self.report.lose_one("section order and colours (.onetoc2 is not in the public spec)"),
+                _ => {}
+            }
+        }
+        out
+    }
+
+    /// One `.one` file as a section named after the file (§2.2.94: the file name overrides
+    /// the name the notebook stores).
+    fn section(&mut self, s: &mut Session, path: &std::path::Path) -> Option<notecraft_doc::Section> {
+        if self.sections >= MAX_NOTEBOOK_SECTIONS {
+            self.report.lose_one("section files over the notebook limit");
+            return None;
+        }
+        let len = std::fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+        if self.bytes.saturating_add(len) > MAX_NOTEBOOK_BYTES {
+            self.report.lose_one("section files over the notebook size limit");
+            return None;
+        }
+        let shown = path.display().to_string();
+        let Some(file) = path.to_str() else {
+            self.report.warnings.push(format!("{shown}: the file name is not valid Unicode"));
+            return None;
+        };
+        let bytes = match crate::picture_cmds::read_path(file, MAX_ONE_BYTES) {
+            Ok((bytes, _)) => bytes,
+            Err(e) => {
+                self.report.warnings.push(e.to_string());
+                return None;
+            }
+        };
+        self.bytes = self.bytes.saturating_add(bytes.len() as u64);
+        let stem = path.file_stem().map(|n| notecraft_doc::clean_name(&n.to_string_lossy())).filter(|n| !n.is_empty());
+        let name = stem.unwrap_or_else(|| "Imported Section".into());
+        let now = s.now();
+        match notecraft_onestore::read_section(&bytes, &name, &mut s.ids, now) {
+            Ok(import) => {
+                let mut section = import.section;
+                section.color = SectionColor::rotation(self.sections);
+                self.sections += 1;
+                self.report.absorb(import.report);
+                Some(section)
+            }
+            Err(e) => {
+                self.report.warnings.push(format!("{shown}: {e}"));
+                None
+            }
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Session {
+    /// Imports the OneNote notebook folder `root` as a new in-memory notebook (decision D12:
+    /// a copy; nothing is ever written into the folder).
+    pub(crate) fn import_onenote_folder(&mut self, root: &std::path::Path) -> CmdResult {
+        let mut walk = FolderImport { report: notecraft_onestore::Report::default(), sections: 0, bytes: 0 };
+        let children = walk.dir(self, root, 0);
+        if walk.sections == 0 {
+            return Err(CmdError::Failed(format!("{}: no OneNote section (.one) could be read", root.display())));
+        }
+        let folder = root.file_name().map(|n| notecraft_doc::clean_name(&n.to_string_lossy())).filter(|n| !n.is_empty());
+        let name = folder.unwrap_or_else(|| "OneNote Notebook".into());
+        let mut nb = notecraft_doc::Notebook::new(self.new_id(), &name, SectionColor::default());
+        nb.children = children;
+        nb.normalize();
+        let id = nb.id;
+        self.add_notebook(nb);
+        let report = walk.report;
+        self.notice(format!("{name}: a copy in memory (export it to keep it); {}", report.summary()));
+        Ok(json!({
+            "notebook": id.to_string(),
+            "sections": walk.sections,
+            "imported": report.kept,
+            "notImported": report.lost,
+            "damaged": report.warnings.len(),
+        }))
+    }
 }
 
 /// `base`, or `base 2`, `base 3`… when the notebook already has a section of that name.
@@ -133,5 +294,87 @@ mod tests {
         }
         assert!(s.run("file.openSection", json!({})).is_err());
         assert_eq!(s.notebook().unwrap().sections().len(), before);
+    }
+
+    /// A OneNote notebook folder on disk: two sections, a section group, the recycle bin, a
+    /// damaged file and the `.onetoc2`.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn onenote_folder(tag: &str) -> std::path::PathBuf {
+        let root = std::env::temp_dir().join(format!("notecraft-onenote-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let one = fixture();
+        for dir in ["Work", "OneNote_RecycleBin", "Empty"] {
+            std::fs::create_dir_all(root.join(dir)).unwrap();
+        }
+        std::fs::write(root.join("Open Notebook.onetoc2"), b"not read: its PropertyIDs are not public").unwrap();
+        std::fs::write(root.join("travel.one"), &one).unwrap();
+        std::fs::write(root.join("Ideas.one"), &one).unwrap();
+        std::fs::write(root.join("Broken.one"), &one[..1500]).unwrap();
+        std::fs::write(root.join("Work").join("Projects.one"), &one).unwrap();
+        std::fs::write(root.join("OneNote_RecycleBin").join("Deleted.one"), &one).unwrap();
+        root
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn listing(root: &std::path::Path) -> Vec<std::path::PathBuf> {
+        let mut out = Vec::new();
+        for e in std::fs::read_dir(root).unwrap().flatten() {
+            if e.file_type().unwrap().is_dir() {
+                out.extend(listing(&e.path()));
+            }
+            out.push(e.path());
+        }
+        out.sort();
+        out
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn a_onenote_folder_opens_as_an_in_memory_copy() {
+        let root = onenote_folder("open");
+        let before = listing(&root);
+        let mut s = sample();
+        let r = run(&mut s, "file.openNotebook", json!({"path": root.to_str().unwrap()}));
+        assert_eq!(r["sections"], 3, "FMT.Onetoc2.Read");
+        assert_eq!(r["imported"]["pages"], 6);
+        assert_eq!(r["damaged"], 1, "Broken.one is reported, not fatal");
+        assert_eq!(r["notImported"]["section order and colours (.onetoc2 is not in the public spec)"], 1);
+        let nb = s.notebook().unwrap();
+        assert_eq!(nb.name, format!("notecraft-onenote-open-{}", std::process::id()));
+        // Sections by file name, groups for subfolders; the recycle bin and empty folders are skipped.
+        let top: Vec<String> = nb
+            .children
+            .iter()
+            .map(|n| match n {
+                notecraft_doc::NavNode::Section(sec) => sec.name.clone(),
+                notecraft_doc::NavNode::Group(g) => format!("{}/{}", g.name, g.children.len()),
+            })
+            .collect();
+        assert_eq!(top, vec!["Ideas", "travel", "Work/1"]);
+        assert_eq!(nb.sections().len(), 3);
+        // The folder is only read: nothing is written into it, now or on save.
+        assert!(!s.stores.contains_key(&nb.id));
+        assert!(s.save_dirty().is_empty());
+        assert_eq!(listing(&root), before);
+        // The .onetoc2 itself opens the same notebook.
+        let toc = root.join("Open Notebook.onetoc2");
+        let r = run(&mut s, "file.openNotebook", json!({"path": toc.to_str().unwrap()}));
+        assert_eq!(r["sections"], 3);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    #[cfg(not(target_arch = "wasm32"))]
+    fn a_onenote_folder_without_readable_sections_fails_cleanly() {
+        let root = onenote_folder("none");
+        for f in ["travel.one", "Ideas.one", "Work/Projects.one"] {
+            std::fs::remove_file(root.join(f)).unwrap();
+        }
+        let mut s = sample();
+        let notebooks = s.ws.notebooks.len();
+        let e = s.run("file.openNotebook", json!({"path": root.to_str().unwrap()})).unwrap_err();
+        assert!(matches!(e, crate::CmdError::Failed(_)), "{e}");
+        assert_eq!(s.ws.notebooks.len(), notebooks);
+        let _ = std::fs::remove_dir_all(&root);
     }
 }
