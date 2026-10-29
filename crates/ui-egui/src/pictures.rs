@@ -341,10 +341,11 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 app.run(ctx, cmd, json!({"path": path}));
             }
         }
-        // NC.File.Import: a Markdown, text or HTML file becomes a new page.
+        // NC.File.Import: a Markdown, text or HTML file becomes a new page, an Evernote export a
+        // new section.
         "file.import" => {
-            let exts = ["md", "markdown", "txt", "html", "htm"];
-            if let Some(path) = app.host.pick_file("Import File", &[("Markdown, text and web pages", &exts)]) {
+            let exts = ["md", "markdown", "txt", "html", "htm", "enex"];
+            if let Some(path) = app.host.pick_file("Import File", &[("Markdown, text, web pages and Evernote exports", &exts)]) {
                 app.run(ctx, cmd, json!({"path": path}));
             }
         }

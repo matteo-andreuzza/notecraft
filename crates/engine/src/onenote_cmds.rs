@@ -328,7 +328,7 @@ mod notebook_import {
 }
 
 /// `base`, or `base 2`, `base 3`… when the notebook already has a section of that name.
-fn unique_name(nb: &notecraft_doc::Notebook, base: &str) -> String {
+pub(crate) fn unique_name(nb: &notecraft_doc::Notebook, base: &str) -> String {
     let names: Vec<String> = nb.sections().iter().map(|s| s.name.to_lowercase()).collect();
     if !names.contains(&base.to_lowercase()) {
         return base.to_string();

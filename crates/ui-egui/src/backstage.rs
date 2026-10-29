@@ -225,7 +225,7 @@ fn open(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
     let has_section = app.session.section().is_some();
     let button = ui
         .add_enabled(has_section, egui::Button::new("Import File…"))
-        .on_hover_text("Add a Markdown, text or HTML file to this section as a new page")
+        .on_hover_text("Add a Markdown, text or HTML file to this section as a new page, or an Evernote export (.enex) as a new section")
         .on_disabled_hover_text("Open a section first");
     if button.clicked() {
         crate::pictures::host_action(app, ctx, "file.import");

@@ -716,3 +716,16 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Catalog: NC.File.Import (new), FMT.Import.Markdown, FMT.Import.Text, FMT.Import.Html wired.
   Numbers: wiring 688/1329 (51.8%), behaviour 176/1329 (13.2%), 342 commands.
 - Next: Evernote .enex (a section with a page per note) on the same path.
+
+## 2026-10-30 — M3: Import Evernote exports (.enex)
+
+- `import-export::enex`: Evernote's public export format with a small pull XML reader
+  (elements, CDATA, the five entities and numeric references; no DTD), MD5 from RFC 1321
+  (its test suite in the tests) to match `<en-media hash>` to resources, ENML → the HTML
+  reader (`en-todo` → ☐/☑, `en-media` pictures through `nc-res:` references, `en-crypt`
+  dropped and counted), other resources as files. Caps: 10,000 notes, 1,000 resources each;
+  truncated or junk input ends the read, never a panic.
+- Engine: `file.import` on a `.enex` makes a section named after the file (unique in the
+  notebook) with a page per note (title, created/updated dates, content in fresh containers,
+  To Do tags, attachments), opens the first, one undo step. UI picker offers `.enex`.
+- Catalog: FMT.Import.Enex wired. Numbers: wiring 689/1329 (51.8%), behaviour 176/1329 (13.2%), 342 commands.

@@ -1470,7 +1470,7 @@ Interop constructs. Per-construct preserved/degraded/dropped numbers for `.one` 
 | FMT.Import.Markdown | Import Markdown | Files/Import | format |  | file.import | P1 | wired | CommonMark | CommonMark + GFM (tables, strikethrough, task items → To Do tags) through pulldown-cmark and the HTML reader; a leading # heading is the title; pictures by relative path from the file's folder only; web pictures dropped |
 | FMT.Import.Html | Import HTML | Files/Import | format |  | file.import | P2 | wired | HTML | read as a rich paste (BEH.Paste.HTML); a leading h1 is the title; scripts, styles and web pictures dropped |
 | FMT.Import.Text | Import plain text | Files/Import | format |  | file.import | P1 | wired | — | a paragraph per line, leading tabs as indent levels; UTF-8 (BOM dropped) else Latin-1; the file name is the title |
-| FMT.Import.Enex | Import Evernote .enex | Files/Import | format |  |  | P2 | missing | ENEX (public DTD) |  |
+| FMT.Import.Enex | Import Evernote .enex | Files/Import | format |  | file.import | P2 | wired | ENEX (public DTD) | a section named after the file, a page per note (title, created/updated, ENML content as a rich paste, en-media pictures matched by MD5, en-todo → To Do tags, other resources as attached files); en-crypt left out and counted; own small XML reader (no DTD) |
 | FMT.Import.Pdf | Import PDF as printout | Files/Import | format |  |  | P2 | wired | ISO 32000 | as a file printout (attachment plus one picture per page; no text layer yet) |
 | FMT.Import.Images | Import images | Files/Import | format |  |  | P1 | missing | PNG/JPEG/… |  |
 | FMT.Native.Ncraft | Native notebook: folder of .ncraft section files + notebook.ncraft-toc, atomic saves | Files/Native | format |  |  | P0 | verified | NoteCraft (docs/architecture.md) |  |
@@ -1506,7 +1506,7 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 | NC.Templates.SetDefault | Choose Default Template | Window/Panes/Templates/Choose default template | button |  | template.setDefault | P2 | wired | NoteCraft (decision D10) | The template new pages of a section start from (stored with the section), or none. |
 | NC.Templates.Save | Save Current Page as a Template | Window/Panes/Templates/Save current page as a template | button |  | template.save | P2 | wired | NoteCraft (decision D10) | Keeps the page's text, tables, ink and page setup under a name in the preferences (pictures and attachments are left out); optionally the section's default. |
 | NC.Templates.Delete | Delete Template | Window/Panes/Templates/My Templates/Delete | button |  | template.delete | P2 | wired | NoteCraft (decision D10) | Deletes one of the user's own templates. |
-| NC.File.Import | Import a file (Markdown, plain text, HTML) as a new page | File/Open/Import File | button |  | file.import | P1 | wired | NoteCraft | FMT.Import.Markdown, FMT.Import.Text, FMT.Import.Html; Evernote (.enex) follows |
+| NC.File.Import | Import a file (Markdown, plain text, HTML as a page; Evernote .enex as a section) | File/Open/Import File | button |  | file.import | P1 | wired | NoteCraft | FMT.Import.Markdown, FMT.Import.Text, FMT.Import.Html, FMT.Import.Enex |
 
 ## Revision history
 
