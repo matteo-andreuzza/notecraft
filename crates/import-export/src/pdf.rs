@@ -73,6 +73,8 @@ pub struct PdfOptions {
     pub author: String,
     /// The time zone of the date lines, minutes east of UTC.
     pub utc_offset_min: i32,
+    /// One sheet per page, as large as its content (for page pictures): no paper, no scaling.
+    pub fit_content: bool,
 }
 
 /// What a PDF export did.
@@ -751,18 +753,25 @@ pub fn write(pages: &[&Page], fonts: &notecraft_fonts::PageFonts, opts: &PdfOpti
         p.d.bottom = f32::MIN;
         p.page(page, opts);
         let d = p.d;
-        let paper = page.setup.paper;
-        let (pw, ph) = paper.map_or(LETTER, |s| (finite(s.width).clamp(72.0, 14_400.0), finite(s.height).clamp(72.0, 14_400.0)));
-        let [mt, mr, mb, ml] = paper.map_or(MARGINS, |s| s.margins.map(|m| finite(m).clamp(0.0, 720.0)));
-        let (pw_in, ph_in) = ((pw - ml - mr).max(36.0), (ph - mt - mb).max(36.0));
         // An empty page still has its paper.
         let (left, top, right, bottom) = if d.left <= d.right {
             (d.left.min(TITLE_AT.0), d.top.min(TITLE_AT.1), d.right, d.bottom)
         } else {
             (TITLE_AT.0, TITLE_AT.1, TITLE_AT.0, TITLE_AT.1)
         };
+        let paper = page.setup.paper;
+        let ((pw, ph), [mt, mr, mb, ml]) = if opts.fit_content {
+            let m = 18.0;
+            (((right - left).clamp(36.0, 14_000.0) + 2.0 * m, (bottom - top).clamp(36.0, 14_000.0) + 2.0 * m), [m; 4])
+        } else {
+            (
+                paper.map_or(LETTER, |s| (finite(s.width).clamp(72.0, 14_400.0), finite(s.height).clamp(72.0, 14_400.0))),
+                paper.map_or(MARGINS, |s| s.margins.map(|m| finite(m).clamp(0.0, 720.0))),
+            )
+        };
+        let (pw_in, ph_in) = ((pw - ml - mr).max(36.0), (ph - mt - mb).max(36.0));
         let k = (pw_in / (right - left).max(1.0)).min(1.0);
-        let starts = sheet_breaks(top, bottom, ph_in / k, ph_in / k, &d.bands);
+        let starts = if opts.fit_content { vec![top] } else { sheet_breaks(top, bottom, ph_in / k, ph_in / k, &d.bands) };
         report.pages += 1;
         for (n, &start) in starts.iter().enumerate() {
             if report.sheets >= MAX_SHEETS {

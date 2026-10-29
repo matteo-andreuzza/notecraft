@@ -25,7 +25,7 @@ fn outline(g: &mut IdGen, x: f32, y: f32, texts: &[&str]) -> PageObject {
 }
 
 fn opts() -> PdfOptions {
-    PdfOptions { title: "Trip".into(), author: "Tester".into(), utc_offset_min: 0 }
+    PdfOptions { title: "Trip".into(), author: "Tester".into(), utc_offset_min: 0, fit_content: false }
 }
 
 /// Dark pixels in the rectangle (fractions of the sheet) of a rendered sheet.
@@ -166,4 +166,20 @@ fn without_fonts_the_export_says_so() {
     let Some(f) = fonts() else { return };
     assert!(write(&[], &f, &opts()).is_err(), "no pages");
     let _ = Id::NIL;
+}
+
+#[test]
+fn fit_content_is_one_sheet_the_size_of_the_page() {
+    let Some(f) = fonts() else { return };
+    let mut g = IdGen::new(5);
+    let mut p = page(&mut g, "Wide");
+    let lines: Vec<String> = (0..80).map(|i| format!("Line {i}")).collect();
+    let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+    p.objects.push(outline(&mut g, 36.0, 100.0, &refs));
+    p.objects.push(outline(&mut g, 900.0, 100.0, &["far right"]));
+    let o = PdfOptions { fit_content: true, ..opts() };
+    let (bytes, report) = write(&[&p], &f, &o).unwrap();
+    assert_eq!(report.sheets, 1);
+    let sizes = page_sizes(&bytes, &PdfLimits::PRINTOUT).unwrap();
+    assert!(sizes[0].0 > 900.0 && sizes[0].1 > 1000.0, "{sizes:?}");
 }

@@ -338,6 +338,7 @@ fn export_formats(scope: &str) -> &'static [ExportFormat] {
             ("XPS (*.xps)", "xps", None),
             ("Single File Web Page (*.mht)", "mht", Some("file.exportPage")),
             ("Web Page (*.html)", "html", Some("file.exportPage")),
+            ("PNG Picture (*.png)", "png", Some("file.exportPage")),
             ("Markdown (*.md)", "md", Some("file.exportPage")),
         ],
     }

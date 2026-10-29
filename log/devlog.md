@@ -729,3 +729,12 @@ were certain landed, behaviour unchanged (every test green after each commit).
   notebook) with a page per note (title, created/updated dates, content in fresh containers,
   To Do tags, attachments), opens the first, one undo step. UI picker offers `.enex`.
 - Catalog: FMT.Import.Enex wired. Numbers: wiring 689/1329 (51.8%), behaviour 176/1329 (13.2%), 342 commands.
+
+## 2026-10-30 — M3: Export a page as a PNG picture
+
+- `pdf::PdfOptions::fit_content`: one sheet as large as the page's content (18 pt margin, no
+  scaling). Engine `format: "png"` on `file.exportPage` renders that sheet with the codecs'
+  PDF renderer at 144 dpi (capped at 16,000 px a side, 64 Mpx) and writes a PNG; a section is
+  refused (one page per picture). UI: PNG Picture in File › Export for pages.
+- Catalog: FMT.Export.Images wired (PNG; SVG not yet). Numbers: wiring 690/1329 (51.9%),
+  behaviour 176/1329 (13.2%), 342 commands.

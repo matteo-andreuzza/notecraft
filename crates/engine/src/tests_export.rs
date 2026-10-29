@@ -60,6 +60,12 @@ fn a_page_exports_as_web_page_html_and_markdown() {
         let r = run(&mut s, "file.exportPage", json!({"path": pdf.to_str().unwrap()}));
         assert_eq!((r["sheets"].as_u64(), r["inkLost"].as_u64()), (Some(1), Some(0)), "{r}");
         assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF-"));
+        // A picture of the page (FMT.Export.Images).
+        let png = d.join("Trip.png");
+        let r = run(&mut s, "file.exportPage", json!({"path": png.to_str().unwrap()}));
+        assert!(r["width"].as_u64().unwrap() > 100, "{r}");
+        assert!(std::fs::read(&png).unwrap().starts_with(b"\x89PNG"));
+        assert!(s.run("file.exportSection", json!({"path": d.join("s.png").to_str().unwrap()})).is_err(), "one page per picture");
         let nb = d.join("Notebook.pdf");
         let r = run(&mut s, "file.exportNotebook", json!({"path": nb.to_str().unwrap()}));
         assert!(r["pages"].as_u64().unwrap() >= 3, "every page of the notebook: {r}");
