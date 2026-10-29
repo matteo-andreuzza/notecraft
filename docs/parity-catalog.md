@@ -540,8 +540,8 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Share.WithNetwork | Share: Share on Network (shared folder) | File/Share/Share on Network | page |  | notebook.moveToFolder | P2 | missing | FLUENT19:ShareWithNetwork |  |
 | BS.Share.WithMeeting | Share: Share with Meeting | File/Share/Share with Meeting | page |  |  | P3 | out-of-scope | FLUENT19:ShareWithMeeting |  |
 | BS.Share.MoveNotebook | Share: Move Notebook | File/Share/Move Notebook | page |  | notebook.moveToFolder | P2 | missing | FLUENT19:MoveNotebook |  |
-| BS.Export.Page | Export: Page | File/Export/Page | choice |  | file.exportPage | P1 | missing | FLUENT19:PageSaveAs |  |
-| BS.Export.Section | Export: Section | File/Export/Section | choice |  | file.exportSection | P1 | missing | FLUENT19:SectionSaveAs |  |
+| BS.Export.Page | Export: Page | File/Export/Page | choice |  | file.exportPage | P1 | wired | FLUENT19:PageSaveAs | the current page as Single File Web Page, HTML or Markdown (FMT.Export.Html, FMT.Export.Markdown); .one, .docx, .doc, .pdf, .xps listed disabled until they exist |
+| BS.Export.Section | Export: Section | File/Export/Section | choice |  | file.exportSection | P1 | wired | FLUENT19:SectionSaveAs | every page of the section in page-list order, same formats; .one, .pdf, .xps listed disabled |
 | BS.Export.Notebook | Export: Notebook | File/Export/Notebook | choice |  | file.exportNotebook | P1 | wired | FLUENT19:NotebookSaveAsBackstage |  |
 | BS.Export.FormatOne | Export format: OneNote 2010-2016 Section (*.one) | File/Export/OneNote Section (.one) | choice |  | file.exportOne | P1 | missing | GK: Export page of the backstage | unverified |
 | BS.Export.FormatOnepkg | Export format: OneNote Package (*.onepkg) | File/Export/OneNote Package (.onepkg) | choice |  | file.exportOnepkg | P1 | missing | GK | unverified |
@@ -549,7 +549,7 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Export.FormatDoc | Export format: Word 97-2003 Document (*.doc) | File/Export/Word 97-2003 Document (.doc) | choice |  | file.exportDoc | P3 | missing | GK | unverified |
 | BS.Export.FormatPdf | Export format: PDF (*.pdf) | File/Export/PDF (.pdf) | choice |  | file.exportPdf | P1 | missing | GK | unverified |
 | BS.Export.FormatXps | Export format: XPS (*.xps) | File/Export/XPS (.xps) | choice |  | file.exportXps | P3 | missing | GK | unverified |
-| BS.Export.FormatMht | Export format: Single File Web Page (*.mht) | File/Export/Single File Web Page (.mht) | choice |  | file.exportMht | P2 | missing | GK | unverified |
+| BS.Export.FormatMht | Export format: Single File Web Page (*.mht) | File/Export/Single File Web Page (.mht) | choice |  | file.exportMht | P2 | wired | GK | unverified: RFC 2557 multipart/related, the HTML part then one base64 part per picture or attached file; file.exportPage/file.exportSection with format mht do the same |
 | BS.Send.Email | Send: Email Page | File/Send/Email Page | button | `Mod+Shift+E` | share.emailPage | P2 | missing | FLUENT19:SendNotesViaEmail |  |
 | BS.Send.Attachment | Send: Send as Attachment | File/Send/Send as Attachment | button |  | share.sendAttachment | P2 | missing | FLUENT19:SendNotesAsAttachment |  |
 | BS.Send.Pdf | Send: Send as PDF | File/Send/Send as PDF | button |  | share.sendPdf | P2 | missing | FLUENT19:SendPdf |  |
@@ -844,7 +844,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.SectionGroup.SectionInsert | New Section | Context/Section Group/New Section | button | `Mod+T` | section.new | P0 | wired | FLUENT19:ContextMenuSectionGroup/SectionInsert |  |
 | CM.SectionGroup.SectionGroupInsert | New Section Group | Context/Section Group/New Section Group | button |  | sectionGroup.new | P0 | wired | FLUENT19:ContextMenuSectionGroup/SectionGroupInsert |  |
 | CM.Section.SectionRenameOneNote | Rename | Context/Section/Rename | button |  | section.rename | P0 | wired | FLUENT19:ContextMenuSection/SectionRenameOneNote |  |
-| CM.Section.FileSaveAsContextualItem | Export… | Context/Section/Export… | button |  | file.exportSection | P1 | missing | FLUENT19:ContextMenuSection/FileSaveAsContextualItem |  |
+| CM.Section.FileSaveAsContextualItem | Export… | Context/Section/Export… | button |  | file.exportSection | P1 | wired | FLUENT19:ContextMenuSection/FileSaveAsContextualItem | opens File › Export with this section selected and Section chosen |
 | CM.Section.NotebookDelete | Delete | Context/Section/Delete | button |  | section.delete | P0 | wired | FLUENT19:ContextMenuSection/NotebookDelete |  |
 | CM.Section.EmptyTrash | Empty Deleted Pages | Context/Section/Empty Deleted Pages | button |  | history.emptyRecycleBin | P2 | missing | FLUENT19:ContextMenuSection/EmptyTrash |  |
 | CM.Section.SectionMove | Move or Copy… | Context/Section/Move or Copy… | button |  | section.moveOrCopy | P0 | verified | FLUENT19:ContextMenuSection/SectionMove |  |
@@ -1463,8 +1463,8 @@ Interop constructs. Per-construct preserved/degraded/dropped numbers for `.one` 
 | FMT.One2007 | Read OneNote 2007 sections | Files/One2007 | format |  |  | P3 | missing | no public specification | gap: undocumented format |
 | FMT.Export.Pdf | Export page/section/notebook to PDF | Files/Export | format |  |  | P1 | missing | ISO 32000 |  |
 | FMT.Export.Docx | Export to Word (.docx) | Files/Export | format |  |  | P1 | missing | ECMA-376 (reuse WordCraft crates where possible) |  |
-| FMT.Export.Html | Export to HTML / single-file web page (.mht) | Files/Export | format |  |  | P2 | missing | HTML; RFC 2557 (MHTML) |  |
-| FMT.Export.Markdown | Export to Markdown | Files/Export | format |  |  | P1 | missing | CommonMark |  |
+| FMT.Export.Html | Export to HTML / single-file web page (.mht) | Files/Export | format |  | file.exportPage | P2 | wired | HTML; RFC 2557 (MHTML) | objects in reading order (top to bottom, then left to right); title and date line per page; pictures with their page size (inline data: URIs in .html, parts in .mht); attachments as links; ink left out and reported (inkLost) |
+| FMT.Export.Markdown | Export to Markdown | Files/Export | format |  | file.exportPage | P1 | wired | CommonMark | CommonMark + GFM tables, strikethrough, task items for to-do tags; pictures and attachments in a <name>_files folder beside the file; fonts, colours, highlight, alignment, other tags and the indent of non-list paragraphs are not carried (no Markdown form); ink left out and reported |
 | FMT.Export.Images | Export a page to PNG/SVG | Files/Export | format |  |  | P2 | missing | PNG; SVG |  |
 | FMT.Export.Archive | Export a whole notebook archive | Files/Export | format |  |  | P1 | missing | NoteCraft (.ncraft folder in a zip) |  |
 | FMT.Import.Markdown | Import Markdown | Files/Import | format |  |  | P1 | missing | CommonMark |  |

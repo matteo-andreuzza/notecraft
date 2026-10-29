@@ -185,6 +185,12 @@ pub struct UiState {
     /// Notebook folders opened recently, most recent first (`BS.Open.RecentNotebooks`); the
     /// desktop app persists this (`apps/notecraft/src/settings.rs`), empty on the web build.
     pub recent_notebooks: Vec<String>,
+    /// File › Export, step 1: what to export (`page`, `section` or `notebook`).
+    #[serde(default)]
+    pub export_scope: String,
+    /// File › Export, step 2: the format, as its file extension (`mht`, `md`…).
+    #[serde(default)]
+    pub export_format: String,
 }
 
 /// Most paths kept in [`UiState::recent_notebooks`].
@@ -210,6 +216,8 @@ impl Default for UiState {
             tags_scope: "all".into(),
             paste_shown_at: None,
             recent_notebooks: Vec::new(),
+            export_scope: "page".into(),
+            export_format: "mht".into(),
         }
     }
 }

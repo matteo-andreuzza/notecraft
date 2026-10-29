@@ -291,6 +291,7 @@ pub fn encode_png(img: &Rgba8, limits: &Limits) -> Result<Vec<u8>> {
     })
 }
 
+pub mod b64;
 pub mod pdf;
 
 #[cfg(test)]

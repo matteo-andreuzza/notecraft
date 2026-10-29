@@ -24,6 +24,10 @@ const PATH_PARAMS: &[(&str, &str, Access)] = &[
     ("file.openNotebook", "path", Access::ReadWrite),
     ("file.newNotebook", "path", Access::Write),
     ("file.exportNotebook", "path", Access::Write),
+    // Markdown also writes a `<name>_files` folder beside `path` (never through a link).
+    ("file.exportPage", "path", Access::Write),
+    ("file.exportSection", "path", Access::Write),
+    ("file.exportMht", "path", Access::Write),
     ("file.backupNow", "folder", Access::Write),
     ("file.openBackups", "folder", Access::Read),
 ];

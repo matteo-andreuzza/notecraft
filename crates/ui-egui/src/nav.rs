@@ -325,7 +325,13 @@ fn section_menu(app: &mut NoteApp, resp: &egui::Response, sid: Id, name: &str) {
             app.ui.rename = Some(Rename::Section(sid, name.clone()));
             ui.close();
         }
+        // CM.Section.FileSaveAsContextualItem: File › Export with this section chosen.
         if ui.button("Export…").clicked() {
+            let ctx = ui.ctx().clone();
+            if app.session.sel.section != Some(sid) {
+                app.run(&ctx, "nav.goto", json!({"section": s}));
+            }
+            app.ui.export_scope = "section".into();
             app.ui.backstage = Some(crate::Backstage::Export);
             ui.close();
         }

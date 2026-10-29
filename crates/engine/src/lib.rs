@@ -12,7 +12,8 @@
 //! autosave) and is the seam every front end (L6) uses; it never draws anything.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
-pub mod b64;
+/// Base64 for binary command parameters (moved to `notecraft-codecs`, which export also uses).
+pub use notecraft_codecs::b64;
 pub mod catalog;
 pub mod commands;
 pub mod sample;
@@ -22,6 +23,7 @@ pub mod session;
 mod caret_cmds;
 mod draw_cmds;
 mod edit_cmds;
+mod export_cmds;
 mod file_cmds;
 mod format_cmds;
 mod math_cmds;
@@ -47,6 +49,8 @@ mod tests;
 mod tests_cmds;
 #[cfg(test)]
 mod tests_draw;
+#[cfg(test)]
+mod tests_export;
 #[cfg(test)]
 mod tests_picture;
 #[cfg(test)]

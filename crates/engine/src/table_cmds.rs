@@ -641,22 +641,7 @@ fn column_width(s: &mut Session, v: &Value) -> CmdResult {
 /// The cells of a rectangle of `t` as paragraph lists with its merged cells (clipped to the
 /// rectangle), for the HTML clipboard.
 pub(crate) fn cells_of(t: &Table, rows: (usize, usize), cols: (usize, usize)) -> notecraft_import_export::html::TableBlock {
-    use notecraft_import_export::html::{Span, TableBlock};
-    let (n_rows, n_cols) = (rows.1.saturating_sub(rows.0) + 1, cols.1.saturating_sub(cols.0) + 1);
-    let mut block = TableBlock::default();
-    for (r, row) in t.rows.iter().enumerate().skip(rows.0).take(n_rows) {
-        let mut cells = Vec::new();
-        for (c, cell) in row.cells.iter().enumerate().skip(cols.0).take(n_cols) {
-            cells.push(cell.paragraphs.clone());
-            let (rs, cs) = cell.span();
-            if (rs, cs) != (1, 1) {
-                let (r, c) = (r - rows.0, c - cols.0);
-                block.spans.push(Span { row: r, col: c, rows: rs.min(n_rows - r), cols: cs.min(n_cols - c) });
-            }
-        }
-        block.cells.push(cells);
-    }
-    block
+    notecraft_import_export::html::TableBlock::from_table(t, rows, cols)
 }
 
 /// A new table at `pos` holding `block` (rows of cells of paragraphs and merged cells, from

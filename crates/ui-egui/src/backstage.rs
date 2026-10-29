@@ -223,25 +223,110 @@ fn open(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
     ui.label(RichText::new("OneNote packages (.onepkg) and notebooks (.onetoc2): coming later in M3.").size(12.0).color(t.page_meta));
 }
 
+/// One format of the Export page: label, file extension, and the command that writes it
+/// (`None`: not available yet).
+type ExportFormat = (&'static str, &'static str, Option<&'static str>);
+
+/// The formats offered for each scope: the reference's list (BS.Export.Format*), then
+/// NoteCraft's own (HTML, Markdown, the notebook archive).
+fn export_formats(scope: &str) -> &'static [ExportFormat] {
+    match scope {
+        "section" => &[
+            ("OneNote Section (*.one)", "one", None),
+            ("PDF (*.pdf)", "pdf", None),
+            ("XPS (*.xps)", "xps", None),
+            ("Single File Web Page (*.mht)", "mht", Some("file.exportSection")),
+            ("Web Page (*.html)", "html", Some("file.exportSection")),
+            ("Markdown (*.md)", "md", Some("file.exportSection")),
+        ],
+        "notebook" => &[
+            ("OneNote Package (*.onepkg)", "onepkg", None),
+            ("PDF (*.pdf)", "pdf", None),
+            ("XPS (*.xps)", "xps", None),
+            ("NoteCraft Archive (*.ncraft-archive)", "ncraft-archive", Some("file.exportNotebook")),
+        ],
+        _ => &[
+            ("OneNote 2010-2016 Section (*.one)", "one", None),
+            ("Word Document (*.docx)", "docx", None),
+            ("Word 97-2003 Document (*.doc)", "doc", None),
+            ("PDF (*.pdf)", "pdf", None),
+            ("XPS (*.xps)", "xps", None),
+            ("Single File Web Page (*.mht)", "mht", Some("file.exportPage")),
+            ("Web Page (*.html)", "html", Some("file.exportPage")),
+            ("Markdown (*.md)", "md", Some("file.exportPage")),
+        ],
+    }
+}
+
+/// File › Export: 1. Export Current (Page, Section, Notebook), 2. Select Format, Export.
 fn export(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context) {
     heading(ui, "Export");
-    ui.label("Export the current notebook as a single NoteCraft archive (.ncraft-archive).");
-    if ui.button("Export Notebook…").clicked() {
-        let name = app.session.notebook().map(|n| format!("{}.ncraft-archive", n.name)).unwrap_or_else(|| "notebook.ncraft-archive".into());
-        if let Some(path) = app.host.save_file("Export notebook", &name) {
-            app.run(ctx, "file.exportNotebook", json!({"path": path}));
-        }
+    let t = app.tokens();
+    let has = [
+        ("page", "Page", app.session.page().is_some()),
+        ("section", "Section", app.session.section().is_some()),
+        ("notebook", "Notebook", app.session.notebook().is_some()),
+    ];
+    if !has.iter().any(|(k, _, ok)| *k == app.ui.export_scope && *ok) {
+        app.ui.export_scope = has.iter().find(|h| h.2).map(|h| h.0).unwrap_or("page").to_string();
     }
-    ui.add_space(16.0);
-    for (fmt, when) in [
-        ("OneNote Section (.one)", "M3"),
-        ("OneNote Package (.onepkg)", "M3"),
-        ("Word Document (.docx)", "M3"),
-        ("PDF (.pdf)", "M3"),
-        ("Single File Web Page (.mht)", "M3"),
-    ] {
-        ui.add_enabled(false, egui::Button::new(fmt)).on_disabled_hover_text(format!("Arrives with {when}"));
+    let formats = export_formats(&app.ui.export_scope);
+    if !formats.iter().any(|f| f.1 == app.ui.export_format && f.2.is_some()) {
+        app.ui.export_format = formats.iter().find(|f| f.2.is_some()).map(|f| f.1).unwrap_or_default().to_string();
     }
+    ui.horizontal_top(|ui| {
+        ui.vertical(|ui| {
+            ui.set_width(200.0);
+            ui.label(RichText::new("1. Export Current:").strong());
+            ui.add_space(4.0);
+            // BS.Export.Page, BS.Export.Section, BS.Export.Notebook.
+            for (key, label, ok) in has {
+                let r = ui.add_enabled(ok, egui::Button::selectable(app.ui.export_scope == key, label));
+                if r.clicked() {
+                    app.ui.export_scope = key.to_string();
+                }
+            }
+        });
+        ui.add_space(24.0);
+        ui.vertical(|ui| {
+            ui.label(RichText::new("2. Select Format:").strong());
+            ui.add_space(4.0);
+            // BS.Export.Format*: the ones not written yet are shown disabled.
+            for (label, ext, cmd) in formats {
+                let r = ui
+                    .add_enabled(cmd.is_some(), egui::Button::selectable(app.ui.export_format == *ext, *label))
+                    .on_disabled_hover_text("Not available yet: arrives later in M3");
+                if r.clicked() {
+                    app.ui.export_format = (*ext).to_string();
+                }
+            }
+            ui.add_space(12.0);
+            let chosen = formats.iter().find(|f| f.1 == app.ui.export_format).and_then(|f| f.2.map(|c| (f.1, c)));
+            if ui.add_enabled(chosen.is_some(), egui::Button::new("Export…")).clicked()
+                && let Some((ext, cmd)) = chosen
+            {
+                let name = match app.ui.export_scope.as_str() {
+                    "section" => app.session.section().map(|s| s.name.clone()),
+                    "notebook" => app.session.notebook().map(|n| n.name.clone()),
+                    _ => app.session.page().map(|p| p.display_title()),
+                }
+                .unwrap_or_else(|| "export".into());
+                let name = format!("{}.{ext}", name.replace(['/', '\\'], "_"));
+                if let Some(path) = app.host.save_file("Export", &name) {
+                    let params = if cmd == "file.exportNotebook" { json!({"path": path}) } else { json!({"path": path, "format": ext}) };
+                    if let Some(r) = app.run(ctx, cmd, params) {
+                        if r.get("inkLost").and_then(serde_json::Value::as_u64).is_some_and(|n| n > 0) {
+                            app.ui.status = Some(("Exported. Ink drawings are not included in this format.".into(), ctx.input(|i| i.time)));
+                        }
+                        app.ui.backstage = None;
+                    }
+                }
+            }
+            if app.ui.export_format == "md" {
+                ui.label(RichText::new("Pictures and attached files are saved in a folder next to the Markdown file.").size(12.0).color(t.page_meta));
+            }
+        });
+    });
 }
 
 /// The Office Theme choices, one selectable label each (File › Account and File › Options).

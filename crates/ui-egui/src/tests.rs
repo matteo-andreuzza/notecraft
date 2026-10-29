@@ -677,3 +677,42 @@ fn options_page_has_the_office_theme_too() {
     h.run();
     assert_eq!(h.state().ui.theme, crate::ThemeKind::Black, "OPT.General.OfficeTheme: picked from the Options page too");
 }
+
+/// A host whose save dialog answers with a fixed path.
+struct SaveHost(String);
+
+impl crate::Host for SaveHost {
+    fn clock(&self) -> notecraft_engine::Clock {
+        notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 }
+    }
+    fn save_file(&mut self, _title: &str, _default_name: &str) -> Option<String> {
+        Some(self.0.clone())
+    }
+}
+
+#[test]
+fn the_export_page_exports_the_section_as_markdown() {
+    let dir = std::env::temp_dir().join(format!("notecraft-ui-export-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("section.md");
+    let mut s = notecraft_engine::Session::with_sample(notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 });
+    s.prefs.author = "Tester".into();
+    let first = s.section().unwrap().pages.first().unwrap().display_title();
+    let mut a = NoteApp::new(s, Box::new(SaveHost(path.to_string_lossy().into_owned())));
+    a.ui.backstage = Some(crate::Backstage::Export);
+    let mut h = harness(a);
+    h.run();
+    // Formats not written yet are listed, disabled (BS.Export.FormatPdf).
+    assert!(h.query_by_label("PDF (*.pdf)").is_some());
+    h.get_by_label("Section").click();
+    h.run();
+    assert_eq!(h.state().ui.export_scope, "section", "BS.Export.Section");
+    h.get_by_label("Markdown (*.md)").click();
+    h.run();
+    h.get_by_label("Export…").click();
+    h.run();
+    let text = std::fs::read_to_string(&path).unwrap_or_default();
+    assert!(text.starts_with(&format!("# {first}")), "{text}");
+    assert_eq!(h.state().ui.backstage, None, "the backstage closes after exporting");
+    let _ = std::fs::remove_dir_all(&dir);
+}

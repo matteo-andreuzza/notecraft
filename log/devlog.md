@@ -617,3 +617,28 @@ were certain landed, behaviour unchanged (every test green after each commit).
   (13.3%), 336 commands.
 - Open: the fidelity table in `parity.md` after the user's real-file measurements
   (`notecraft-cli onenote PATH`); then the M3 exports/imports (PDF/DOCX/HTML/Markdown, ENEX…).
+
+## 2026-10-29 — M3: Export page and section (web page, HTML, Markdown)
+
+- `import-export::export`: `collect` turns pages into a format-neutral export (objects in
+  reading order: top to bottom, then left to right; title and date line per page; pictures and
+  attachments as resources, each blob once, names made safe and unique; ink counted as lost);
+  `html_document` (inline `data:` URIs or relative links), `mht` (RFC 2557 multipart/related,
+  base64 parts with `Content-Location`, RFC 2047 subject). `import-export::markdown`:
+  CommonMark + GFM tables, strikethrough, task items for to-do tags; escapes what would start
+  a block; fenced code; nested lists. `TableBlock::from_table` moved here from the engine;
+  `b64` moved from the engine to `codecs` (re-exported as `notecraft_engine::b64`).
+- Engine `export_cmds`: `file.exportPage`, `file.exportSection` (`format` mht/html/md or the
+  path's extension), `file.exportMht` (`scope` page/section). Markdown writes pictures and
+  files into `<name>_files` beside it, never through a link; `.one/.docx/.pdf/.xps` refused as
+  "not available yet". Automation roots cover the three commands (write).
+- UI: File › Export is the reference's two steps (1. Export Current: Page/Section/Notebook,
+  2. Select Format, Export…); formats not written yet are listed disabled. The section menu's
+  Export… opens it with that section chosen.
+- Catalog: BS.Export.Page, BS.Export.Section, BS.Export.FormatMht,
+  CM.Section.FileSaveAsContextualItem, FMT.Export.Html, FMT.Export.Markdown wired. Numbers:
+  wiring 677/1328 (51.0%), behaviour 176/1328 (13.3%), 339 commands.
+- Dev machine: the disk was full (target/ 27 GB); stale test binaries, incremental and
+  examples removed; builds use `CARGO_INCREMENTAL=0` for now.
+- Open: PDF (FMT.Export.Pdf, needs a page renderer to vectors), DOCX (WordCraft crates?),
+  Markdown/text import, ENEX; the `.one` fidelity table still waits for real-file runs.

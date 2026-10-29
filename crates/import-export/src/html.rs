@@ -16,7 +16,7 @@
 //! Paragraph ids are [`Id::NIL`]: the caller assigns fresh ones.
 
 use notecraft_doc::color::Rgba;
-use notecraft_doc::table::{MAX_CELLS, MAX_COLS, MAX_ROWS};
+use notecraft_doc::table::{MAX_CELLS, MAX_COLS, MAX_ROWS, Table};
 use notecraft_doc::text::MAX_LEVEL;
 use notecraft_doc::{Bullet, CharFormat, Id, ListFormat, Numbering, ParaStyle, Paragraph, Run, Script};
 
@@ -60,6 +60,31 @@ impl TableBlock {
     /// A table without merged cells.
     pub fn plain(cells: Cells) -> TableBlock {
         TableBlock { cells, spans: Vec::new() }
+    }
+
+    /// The cells of the rectangle `rows` × `cols` (inclusive index ranges) of `t`, with its
+    /// merged cells clipped to the rectangle.
+    pub fn from_table(t: &Table, rows: (usize, usize), cols: (usize, usize)) -> TableBlock {
+        let (n_rows, n_cols) = (rows.1.saturating_sub(rows.0) + 1, cols.1.saturating_sub(cols.0) + 1);
+        let mut block = TableBlock::default();
+        for (r, row) in t.rows.iter().enumerate().skip(rows.0).take(n_rows) {
+            let mut cells = Vec::new();
+            for (c, cell) in row.cells.iter().enumerate().skip(cols.0).take(n_cols) {
+                cells.push(cell.paragraphs.clone());
+                let (rs, cs) = cell.span();
+                if (rs, cs) != (1, 1) {
+                    let (r, c) = (r - rows.0, c - cols.0);
+                    block.spans.push(Span { row: r, col: c, rows: rs.min(n_rows - r), cols: cs.min(n_cols - c) });
+                }
+            }
+            block.cells.push(cells);
+        }
+        block
+    }
+
+    /// The whole of `t`.
+    pub fn of_table(t: &Table) -> TableBlock {
+        TableBlock::from_table(t, (0, t.n_rows().saturating_sub(1)), (0, t.n_cols().saturating_sub(1)))
     }
 
     /// Row by row, whether a merged cell covers the place (it is not written).
@@ -776,7 +801,7 @@ pub fn parse(html: &str) -> Vec<Block> {
     r.out
 }
 
-fn escape(s: &str) -> String {
+pub(crate) fn escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
         match c {
@@ -791,7 +816,7 @@ fn escape(s: &str) -> String {
     out
 }
 
-fn write_runs(p: &Paragraph, out: &mut String) {
+pub(crate) fn write_runs(p: &Paragraph, out: &mut String) {
     for r in &p.runs {
         let f = &r.fmt;
         let mut open = String::new();

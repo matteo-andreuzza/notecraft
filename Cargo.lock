@@ -2394,6 +2394,7 @@ dependencies = [
 name = "notecraft-import-export"
 version = "0.1.0"
 dependencies = [
+ "notecraft-codecs",
  "notecraft-doc",
  "proptest",
 ]
