@@ -63,7 +63,7 @@ fn collect_reads_top_to_bottom_and_reports_ink() {
         .iter()
         .map(|i| match i {
             Item::Paragraphs(_) => "text",
-            Item::Table(_) => "table",
+            Item::Table { .. } => "table",
             Item::Picture { .. } => "picture",
             Item::File { .. } => "file",
         })

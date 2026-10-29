@@ -247,7 +247,7 @@ fn export_formats(scope: &str) -> &'static [ExportFormat] {
         ],
         _ => &[
             ("OneNote 2010-2016 Section (*.one)", "one", None),
-            ("Word Document (*.docx)", "docx", None),
+            ("Word Document (*.docx)", "docx", Some("file.exportPage")),
             ("Word 97-2003 Document (*.doc)", "doc", None),
             ("PDF (*.pdf)", "pdf", None),
             ("XPS (*.xps)", "xps", None),

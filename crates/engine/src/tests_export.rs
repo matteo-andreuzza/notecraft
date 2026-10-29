@@ -48,6 +48,12 @@ fn a_page_exports_as_web_page_html_and_markdown() {
     assert!(text.contains("![](trip%20notes_files/image001.png)"), "{text}");
     assert!(d.join("trip notes_files/image001.png").is_file());
     assert_eq!(r["written"].as_array().map(Vec::len), Some(2));
+    // A Word document (BS.Export.FormatDocx): a zip package holding the page.
+    let docx = d.join("Trip.docx");
+    let r = run(&mut s, "file.exportPage", json!({"path": docx.to_str().unwrap()}));
+    assert_eq!(r["pictures"].as_u64(), Some(1), "{r}");
+    let bytes = std::fs::read(&docx).unwrap();
+    assert!(bytes.starts_with(b"PK\x03\x04"), "FMT.Export.Docx");
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -81,7 +87,7 @@ fn unavailable_formats_and_bad_params_are_refused_cleanly() {
     let p = |n: &str| d.join(n).to_string_lossy().into_owned();
     for (v, want) in [
         (json!({"path": p("a.pdf")}), "not available yet"),
-        (json!({"path": p("a.x"), "format": "docx"}), "not available yet"),
+        (json!({"path": p("a.x"), "format": "doc"}), "not available yet"),
         (json!({"path": p("a.x"), "format": "rtf"}), "unknown export format"),
         (json!({"path": p("a.md"), "page": "not-an-id"}), ""),
     ] {

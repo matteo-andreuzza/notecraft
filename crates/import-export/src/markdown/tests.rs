@@ -73,7 +73,7 @@ fn nested_lists_and_todo_tags() {
 fn tables_pictures_and_files() {
     let cells = vec![vec![vec![para("H|1")], vec![para("H2")]], vec![vec![para("a"), para("b")]]];
     let mut e = doc(vec![
-        Item::Table(TableBlock::plain(cells)),
+        Item::Table { cells: TableBlock::plain(cells), widths: vec![72.0; 2], borders: true, shading: Vec::new() },
         Item::Picture { res: 0, alt: "map [1]".into(), width: 10.0, height: 10.0 },
         Item::File { res: 1, name: "plan.pdf".into() },
     ]);

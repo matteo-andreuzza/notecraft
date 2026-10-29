@@ -2397,6 +2397,7 @@ dependencies = [
  "notecraft-codecs",
  "notecraft-doc",
  "proptest",
+ "zip",
 ]
 
 [[package]]

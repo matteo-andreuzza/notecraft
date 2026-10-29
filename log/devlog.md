@@ -642,3 +642,22 @@ were certain landed, behaviour unchanged (every test green after each commit).
   examples removed; builds use `CARGO_INCREMENTAL=0` for now.
 - Open: PDF (FMT.Export.Pdf, needs a page renderer to vectors), DOCX (WordCraft crates?),
   Markdown/text import, ENEX; the `.one` fidelity table still waits for real-file runs.
+
+## 2026-10-29 — M3: Export to Word (.docx)
+
+- `import-export::docx`: own WordprocessingML writer from ECMA-376 Part 1 (no WordCraft
+  dependency needed): content types, relationships, core properties, styles built from
+  `ParaStyle::def` (built-in ids/names for Heading1–6, Title, Quote; Citation and Code custom;
+  Hyperlink character style), numbering (an abstract list per bullet glyph and per number
+  format, one instance per run of numbered paragraphs, `restart` as `startOverride`), runs with
+  every character format in schema order, hyperlinks as external relationships, tabs and soft
+  breaks, to-do tags as ☐/☒, tables (fixed grid from the column widths, borders or `nil`,
+  shading, `gridSpan`/`vMerge`), inline pictures scaled to the 468 pt text width (WebP/BMP
+  re-encoded as PNG, a picture used twice stored once), page breaks between pages.
+  Attachments become "Attached file: name" (reported). Export items now carry table widths,
+  borders and shading.
+- Engine: `format: "docx"` (or `.docx`) on `file.exportPage`/`file.exportSection`; UI: Word
+  Document enabled for pages. Checked by hand: LibreOffice headless opens the sample section
+  and a page with a link, a 3×3 table and a picture (text and PDF conversion look right).
+- Catalog: BS.Export.FormatDocx, FMT.Export.Docx wired. Numbers: wiring 679/1328 (51.1%),
+  behaviour 176/1328 (13.3%), 339 commands.

@@ -16,6 +16,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use notecraft_codecs::b64;
+use notecraft_doc::color::Rgba;
 use notecraft_doc::{Page, PageObject, Paragraph};
 
 use crate::html::{self, Block, TableBlock, escape};
@@ -41,7 +42,16 @@ pub enum Item {
     /// A note container's paragraphs.
     Paragraphs(Vec<Paragraph>),
     /// A table.
-    Table(TableBlock),
+    Table {
+        /// The cells and merged cells.
+        cells: TableBlock,
+        /// Column widths, points.
+        widths: Vec<f32>,
+        /// Whether borders are drawn.
+        borders: bool,
+        /// Each cell's shading, row by row (`None`: none).
+        shading: Vec<Vec<Option<Rgba>>>,
+    },
     /// A picture: the [`Resource`] index, alt text and size on the page in points.
     Picture {
         /// Index into [`Export::resources`].
@@ -166,7 +176,12 @@ pub fn collect(pages: &[&Page], utc_offset_min: i32) -> Export {
                 PageObject::Outline(ol) => items.push(Item::Paragraphs(ol.paragraphs.clone())),
                 PageObject::Table(t) => {
                     report.tables += 1;
-                    items.push(Item::Table(TableBlock::of_table(t)));
+                    items.push(Item::Table {
+                        cells: TableBlock::of_table(t),
+                        widths: t.columns.clone(),
+                        borders: t.borders,
+                        shading: t.rows.iter().map(|r| r.cells.iter().map(|c| c.shading).collect()).collect(),
+                    });
                 }
                 PageObject::Image(im) => {
                     if im.blob.bytes.is_empty() {
@@ -257,7 +272,7 @@ pub fn html_document(e: &Export, title: &str, links: Links) -> String {
                     let blocks: Vec<Block> = ps.iter().cloned().map(Block::Para).collect();
                     out.push_str(html::write(&blocks).trim_start_matches("<meta charset=\"utf-8\">"));
                 }
-                Item::Table(t) => out.push_str(html::write(&[Block::Table(t.clone())]).trim_start_matches("<meta charset=\"utf-8\">")),
+                Item::Table { cells, .. } => out.push_str(html::write(&[Block::Table(cells.clone())]).trim_start_matches("<meta charset=\"utf-8\">")),
                 Item::Picture { res, alt, width, height } => {
                     let Some(r) = e.resources.get(*res) else { continue };
                     out.push_str(&format!(

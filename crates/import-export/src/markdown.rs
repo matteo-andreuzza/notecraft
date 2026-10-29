@@ -269,7 +269,7 @@ pub fn write(e: &Export, files_dir: &str) -> String {
             let mut block = String::new();
             match it {
                 Item::Paragraphs(ps) => paragraphs(ps, &mut block),
-                Item::Table(t) => table(t, &mut block),
+                Item::Table { cells, .. } => table(cells, &mut block),
                 Item::Picture { res, alt, .. } => {
                     if let Some(r) = e.resources.get(*res) {
                         block.push_str(&format!("![{}]({})\n", escape(alt, false), target(&link(r, Links::Relative(Some(files_dir))))));
