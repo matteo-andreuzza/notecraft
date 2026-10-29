@@ -17,6 +17,7 @@ notecraft-codecs = { workspace = true }
 notecraft-text = { workspace = true }
 notecraft-fonts = { workspace = true }
 zip = { workspace = true }
+pulldown-cmark = { workspace = true }
 krilla = { workspace = true }
 skrifa = { workspace = true }
 

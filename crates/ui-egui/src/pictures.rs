@@ -341,6 +341,13 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 app.run(ctx, cmd, json!({"path": path}));
             }
         }
+        // NC.File.Import: a Markdown, text or HTML file becomes a new page.
+        "file.import" => {
+            let exts = ["md", "markdown", "txt", "html", "htm"];
+            if let Some(path) = app.host.pick_file("Import File", &[("Markdown, text and web pages", &exts)]) {
+                app.run(ctx, cmd, json!({"path": path}));
+            }
+        }
         // BS.Print.Print (Ctrl+P): File › Print, where the printer and copies are chosen.
         "file.print" => {
             app.ui.printers = None;

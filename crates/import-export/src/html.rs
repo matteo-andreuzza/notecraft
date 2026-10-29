@@ -28,6 +28,8 @@ pub const MAX_DEPTH: usize = 256;
 pub const MAX_PARAGRAPHS: usize = 50_000;
 /// Most inline pictures produced.
 pub const MAX_IMAGES: usize = 256;
+/// The scheme of a picture reference kept by [`parse_refs`].
+pub(crate) const REF: &str = "nc-res:";
 
 /// A table as rows of cells, each cell a list of paragraphs. Rows may be ragged; a place a
 /// merged cell covers holds no paragraphs.
@@ -197,6 +199,8 @@ struct Reader {
     table_depth: usize,
     paras: usize,
     images: usize,
+    /// Keep `nc-res:N` picture references (file import: the bytes stay outside the HTML).
+    refs: bool,
 }
 
 fn decode_entity(name: &str) -> Option<char> {
@@ -370,6 +374,7 @@ impl Reader {
             table_depth: 0,
             paras: 0,
             images: 0,
+            refs: false,
         }
     }
 
@@ -463,6 +468,12 @@ impl Reader {
             return;
         }
         let Some(src) = attr(attrs, "src") else { return };
+        if self.refs && src.starts_with(REF) {
+            self.flush();
+            self.images += 1;
+            self.out.push(Block::Image { src, alt: attr(attrs, "alt").unwrap_or_default() });
+            return;
+        }
         // `data:image/<type>;base64,<payload>`, any case; passed on with a lower-case header.
         let Some((head, payload)) = src.trim().split_once(',').filter(|(h, _)| h.len() <= 64) else { return };
         let head = head.to_ascii_lowercase();
@@ -740,12 +751,22 @@ impl Reader {
 
 /// Read an HTML fragment (see the module docs). Never fails: what can't be read is skipped.
 pub fn parse(html: &str) -> Vec<Block> {
+    parse_inner(html, false)
+}
+
+/// [`parse`], keeping pictures given as `nc-res:N` references (file import, [`crate::import`]).
+pub(crate) fn parse_refs(html: &str) -> Vec<Block> {
+    parse_inner(html, true)
+}
+
+fn parse_inner(html: &str, refs: bool) -> Vec<Block> {
     let mut end = html.len().min(MAX_HTML_BYTES);
     while !html.is_char_boundary(end) {
         end -= 1;
     }
     let src = html.get(..end).unwrap_or("");
     let mut r = Reader::new();
+    r.refs = refs;
     let mut rest = src;
     while !rest.is_empty() {
         let Some(lt) = rest.find('<') else {

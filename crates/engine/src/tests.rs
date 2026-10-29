@@ -252,6 +252,7 @@ fn panic_hunt() {
                     | "file.exportSection"
                     | "file.exportMht"
                     | "file.print"
+                    | "file.import"
                     | "file.printPreview"
                     | "file.backupNow"
                     | "file.openBackups"

@@ -26,6 +26,7 @@ mod edit_cmds;
 mod export_cmds;
 mod file_cmds;
 mod format_cmds;
+mod import_cmds;
 mod math_cmds;
 mod nav_cmds;
 mod onenote_cmds;

@@ -220,7 +220,17 @@ fn open(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
         crate::pictures::host_action(app, ctx, "file.openSection");
         app.ui.backstage = None;
     }
-    ui.label(RichText::new("OneNote packages (.onepkg) and notebooks (.onetoc2): coming later in M3.").size(12.0).color(t.page_meta));
+    ui.add_space(8.0);
+    // NC.File.Import: Markdown, text or HTML as a new page of the current section.
+    let has_section = app.session.section().is_some();
+    let button = ui
+        .add_enabled(has_section, egui::Button::new("Import File…"))
+        .on_hover_text("Add a Markdown, text or HTML file to this section as a new page")
+        .on_disabled_hover_text("Open a section first");
+    if button.clicked() {
+        crate::pictures::host_action(app, ctx, "file.import");
+        app.ui.backstage = None;
+    }
 }
 
 /// File › Print (BS.Print.Print, BS.Print.Preview): printer, copies, what to print; Print

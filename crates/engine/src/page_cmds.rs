@@ -230,7 +230,7 @@ pub(crate) fn insert_and_open(s: &mut Session, section: Id, index: usize, page: 
     Ok(json!({"page": pid.to_string()}))
 }
 
-fn new_page(s: &mut Session, v: &Value) -> CmdResult {
+pub(crate) fn new_page(s: &mut Session, v: &Value) -> CmdResult {
     let section = match p::id(v, "section")? {
         Some(id) => id,
         None => s.sel.section.ok_or_else(|| CmdError::Disabled("open a section first".into()))?,

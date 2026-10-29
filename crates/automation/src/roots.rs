@@ -29,6 +29,8 @@ const PATH_PARAMS: &[(&str, &str, Access)] = &[
     ("file.exportSection", "path", Access::Write),
     ("file.exportMht", "path", Access::Write),
     ("file.print", "dir", Access::Write),
+    // Pictures a Markdown file names are read only from its own folder and below.
+    ("file.import", "path", Access::Read),
     ("file.printPreview", "dir", Access::Write),
     ("file.backupNow", "folder", Access::Write),
     ("file.openBackups", "folder", Access::Read),

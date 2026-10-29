@@ -48,6 +48,8 @@ log = "0.4"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std", "wasmbind"] }
 proptest = "1"
 unicode-segmentation = "1"
+# Markdown import (crates/import-export only): the CommonMark reference parser for Rust (MIT).
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 zip = { version = "9", default-features = false, features = ["deflate"] }
 # MSZIP blocks of .onepkg cabinets (crates/onestore only): raw RFC 1951 with a kept history.
 miniz_oxide = "0.9"

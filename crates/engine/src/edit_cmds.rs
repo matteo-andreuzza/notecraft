@@ -269,7 +269,7 @@ fn cut(s: &mut Session, _: &Value) -> CmdResult {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-enum Mode {
+pub(crate) enum Mode {
     Keep,
     Merge,
     Text,
@@ -352,7 +352,7 @@ fn do_paste(s: &mut Session, v: &Value, mode: Mode) -> CmdResult {
         if let Some(h) = p::str(v, "html").filter(|h| !h.trim().is_empty()) {
             let blocks = html::parse(h);
             if !blocks.is_empty() {
-                return paste_blocks(s, v, blocks, mode);
+                return paste_blocks(s, v, blocks, mode, false);
             }
         }
         if let Some(img) = p::str(v, "image")
@@ -425,7 +425,7 @@ fn below(s: &Session, anchor: Option<notecraft_doc::Id>, v: &Value) -> Result<no
 /// BEH.Paste.HTML from another application: the leading paragraphs join the caret's text as a
 /// plain paste would; each table becomes a table object, and paragraphs after a table a new
 /// container, stacked below in reading order.
-fn paste_blocks(s: &mut Session, v: &Value, blocks: Vec<html::Block>, mode: Mode) -> CmdResult {
+pub(crate) fn paste_blocks(s: &mut Session, v: &Value, blocks: Vec<html::Block>, mode: Mode, fresh: bool) -> CmdResult {
     enum Seg {
         Paras(Vec<Paragraph>),
         Table(html::TableBlock),
@@ -451,7 +451,8 @@ fn paste_blocks(s: &mut Session, v: &Value, blocks: Vec<html::Block>, mode: Mode
             Seg::Paras(ps) => {
                 let paras = fresh_paras(s, adapt(ps, mode));
                 last_table = None;
-                if i == 0 {
+                // `fresh` (file import): every block gets its own container, the first too.
+                if i == 0 && !fresh {
                     let caret = ensure_caret(s)?;
                     let pos = paste_paragraphs(s, caret, paras, mode)?;
                     s.set_caret(pos);

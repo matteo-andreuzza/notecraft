@@ -699,3 +699,20 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Catalog: BS.Print.Print, BS.Print.Preview, KB.Pages.Print wired (QAT.FilePrint stays until
   the QAT can be customised). Numbers: wiring 684/1328 (51.5%), behaviour 176/1328 (13.3%), 341 commands.
 - Dev machine: `cargo clean` (25 GB of stale artifacts); builds keep `CARGO_INCREMENTAL=0`.
+
+## 2026-10-30 — M3: Import Markdown, text and HTML files
+
+- `import-export::import`: Markdown through `pulldown-cmark` 0.13 (MIT; tables,
+  strikethrough, task lists) into HTML and then the clipboard's HTML reader, so a file keeps
+  what a paste keeps; local pictures go through `nc-res:N` references (`html::parse_refs`,
+  never accepted from plain HTML) so they skip the HTML size cap; task items become ☐/☑
+  markers; plain text (a paragraph per line, tabs → levels; UTF-8 else Latin-1); HTML files
+  as a paste. A leading first-level heading is the title.
+- Engine `file.import` (new row NC.File.Import): a new page in the current section (its
+  default template applies), content placed in fresh containers (`paste_blocks` gains
+  `fresh`), ☐/☑ → To Do tags, pictures read only from the Markdown file's folder and below
+  (canonicalised, size-capped), one undo step. Automation roots: read.
+- UI: File › Open › Import File… (the stale ".onepkg coming later" line is gone).
+- Catalog: NC.File.Import (new), FMT.Import.Markdown, FMT.Import.Text, FMT.Import.Html wired.
+  Numbers: wiring 688/1329 (51.8%), behaviour 176/1329 (13.2%), 342 commands.
+- Next: Evernote .enex (a section with a page per note) on the same path.

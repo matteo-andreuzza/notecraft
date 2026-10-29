@@ -1467,9 +1467,9 @@ Interop constructs. Per-construct preserved/degraded/dropped numbers for `.one` 
 | FMT.Export.Markdown | Export to Markdown | Files/Export | format |  | file.exportPage | P1 | wired | CommonMark | CommonMark + GFM tables, strikethrough, task items for to-do tags; pictures and attachments in a <name>_files folder beside the file; fonts, colours, highlight, alignment, other tags and the indent of non-list paragraphs are not carried (no Markdown form); ink left out and reported |
 | FMT.Export.Images | Export a page to PNG/SVG | Files/Export | format |  |  | P2 | missing | PNG; SVG |  |
 | FMT.Export.Archive | Export a whole notebook archive | Files/Export | format |  |  | P1 | missing | NoteCraft (.ncraft folder in a zip) |  |
-| FMT.Import.Markdown | Import Markdown | Files/Import | format |  |  | P1 | missing | CommonMark |  |
-| FMT.Import.Html | Import HTML | Files/Import | format |  |  | P2 | missing | HTML |  |
-| FMT.Import.Text | Import plain text | Files/Import | format |  |  | P1 | missing | — |  |
+| FMT.Import.Markdown | Import Markdown | Files/Import | format |  | file.import | P1 | wired | CommonMark | CommonMark + GFM (tables, strikethrough, task items → To Do tags) through pulldown-cmark and the HTML reader; a leading # heading is the title; pictures by relative path from the file's folder only; web pictures dropped |
+| FMT.Import.Html | Import HTML | Files/Import | format |  | file.import | P2 | wired | HTML | read as a rich paste (BEH.Paste.HTML); a leading h1 is the title; scripts, styles and web pictures dropped |
+| FMT.Import.Text | Import plain text | Files/Import | format |  | file.import | P1 | wired | — | a paragraph per line, leading tabs as indent levels; UTF-8 (BOM dropped) else Latin-1; the file name is the title |
 | FMT.Import.Enex | Import Evernote .enex | Files/Import | format |  |  | P2 | missing | ENEX (public DTD) |  |
 | FMT.Import.Pdf | Import PDF as printout | Files/Import | format |  |  | P2 | wired | ISO 32000 | as a file printout (attachment plus one picture per page; no text layer yet) |
 | FMT.Import.Images | Import images | Files/Import | format |  |  | P1 | missing | PNG/JPEG/… |  |
@@ -1506,6 +1506,7 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 | NC.Templates.SetDefault | Choose Default Template | Window/Panes/Templates/Choose default template | button |  | template.setDefault | P2 | wired | NoteCraft (decision D10) | The template new pages of a section start from (stored with the section), or none. |
 | NC.Templates.Save | Save Current Page as a Template | Window/Panes/Templates/Save current page as a template | button |  | template.save | P2 | wired | NoteCraft (decision D10) | Keeps the page's text, tables, ink and page setup under a name in the preferences (pictures and attachments are left out); optionally the section's default. |
 | NC.Templates.Delete | Delete Template | Window/Panes/Templates/My Templates/Delete | button |  | template.delete | P2 | wired | NoteCraft (decision D10) | Deletes one of the user's own templates. |
+| NC.File.Import | Import a file (Markdown, plain text, HTML) as a new page | File/Open/Import File | button |  | file.import | P1 | wired | NoteCraft | FMT.Import.Markdown, FMT.Import.Text, FMT.Import.Html; Evernote (.enex) follows |
 
 ## Revision history
 

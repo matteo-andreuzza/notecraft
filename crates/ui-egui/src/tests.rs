@@ -759,3 +759,34 @@ fn ctrl_p_opens_print_and_print_sends_the_pdf() {
     assert!(h.state().ui.status.as_ref().is_some_and(|(m, _)| m.contains("Desk-1")));
     let _ = std::fs::remove_file(&jobs[0].0);
 }
+
+/// A host whose file picker answers with a fixed path.
+struct ImportHost(String);
+
+impl crate::Host for ImportHost {
+    fn clock(&self) -> notecraft_engine::Clock {
+        notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 }
+    }
+    fn pick_file(&mut self, _title: &str, filters: &[(&str, &[&str])]) -> Option<String> {
+        assert!(filters.first().is_some_and(|f| f.1.contains(&"md")));
+        Some(self.0.clone())
+    }
+}
+
+#[test]
+fn import_file_in_the_open_page_adds_a_page() {
+    let dir = std::env::temp_dir().join(format!("notecraft-ui-import-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("Ideas.md");
+    std::fs::write(&path, "# Ideas\n\n- one\n- two\n").unwrap();
+    let s = notecraft_engine::Session::with_sample(notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 });
+    let mut a = NoteApp::new(s, Box::new(ImportHost(path.to_string_lossy().into_owned())));
+    a.ui.backstage = Some(crate::Backstage::Open);
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Import File…").click();
+    h.run();
+    assert_eq!(h.state().session.page().unwrap().title.text(), "Ideas", "NC.File.Import");
+    assert_eq!(h.state().ui.backstage, None);
+    let _ = std::fs::remove_dir_all(&dir);
+}
