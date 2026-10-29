@@ -84,87 +84,7 @@ const UI_FAMILIES: &[[&[&str]; 3]] = &[
     ],
 ];
 
-/// Page candidate files per role, most preferred first (Linux and BSD paths; macOS and Windows
-/// paths follow).
-const REGULAR: &[&str] = &[
-    "/usr/share/fonts/crosextra/Carlito-Regular.ttf",
-    "/usr/share/fonts/truetype/crosextra/Carlito-Regular.ttf",
-    "/usr/share/fonts/noto/NotoSans-Regular.ttf",
-    "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
-    "/usr/share/fonts/google-noto/NotoSans-Regular.ttf",
-    "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-    "/usr/share/fonts/TTF/DejaVuSans.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/System/Library/Fonts/Supplemental/Arial.ttf",
-    "C:\\Windows\\Fonts\\segoeui.ttf",
-];
-const BOLD: &[&str] = &[
-    "/usr/share/fonts/crosextra/Carlito-Bold.ttf",
-    "/usr/share/fonts/truetype/crosextra/Carlito-Bold.ttf",
-    "/usr/share/fonts/noto/NotoSans-Bold.ttf",
-    "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
-    "/usr/share/fonts/google-noto/NotoSans-Bold.ttf",
-    "/usr/share/fonts/liberation/LiberationSans-Bold.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-    "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-    "C:\\Windows\\Fonts\\segoeuib.ttf",
-];
-const MONO: &[&str] = &[
-    "/usr/share/fonts/noto/NotoSansMono-Regular.ttf",
-    "/usr/share/fonts/truetype/noto/NotoSansMono-Regular.ttf",
-    "/usr/share/fonts/liberation/LiberationMono-Regular.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
-    "/usr/share/fonts/TTF/DejaVuSansMono.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
-    "/System/Library/Fonts/Supplemental/Courier New.ttf",
-    "C:\\Windows\\Fonts\\consola.ttf",
-];
-const MONO_BOLD: &[&str] = &[
-    "/usr/share/fonts/noto/NotoSansMono-Bold.ttf",
-    "/usr/share/fonts/truetype/noto/NotoSansMono-Bold.ttf",
-    "/usr/share/fonts/liberation/LiberationMono-Bold.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf",
-    "/usr/share/fonts/TTF/DejaVuSansMono-Bold.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
-    "C:\\Windows\\Fonts\\consolab.ttf",
-];
-
-/// Symbol and math fallbacks (arrows, geometric shapes, math operators) appended to every family,
-/// so glyphs the main face lacks still render.
-const SYMBOLS: &[&[&str]] = &[
-    &["/usr/share/fonts/noto/NotoSansSymbols2-Regular.ttf", "/usr/share/fonts/truetype/noto/NotoSansSymbols2-Regular.ttf"],
-    &["/usr/share/fonts/noto/NotoSansSymbols-Regular.ttf", "/usr/share/fonts/truetype/noto/NotoSansSymbols-Regular.ttf"],
-    &["/usr/share/fonts/noto/NotoSansMath-Regular.ttf", "/usr/share/fonts/truetype/noto/NotoSansMath-Regular.ttf"],
-    &["/usr/share/fonts/TTF/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"],
-];
-
-/// Largest font file accepted (hostile or broken files are skipped).
-#[cfg(not(target_arch = "wasm32"))]
-const MAX_FONT_BYTES: u64 = 64 << 20;
-
-#[cfg(not(target_arch = "wasm32"))]
-fn load_first(paths: &[&str]) -> Option<Vec<u8>> {
-    for p in paths {
-        let Ok(meta) = std::fs::metadata(p) else { continue };
-        if meta.len() > MAX_FONT_BYTES {
-            continue;
-        }
-        let Ok(bytes) = std::fs::read(p) else { continue };
-        if skrifa::FontRef::new(&bytes).is_ok() {
-            return Some(bytes);
-        }
-        log::warn!("font {p} could not be parsed; skipped");
-    }
-    None
-}
-
-#[cfg(target_arch = "wasm32")]
-fn load_first(_: &[&str]) -> Option<Vec<u8>> {
-    None
-}
+use notecraft_fonts::load_first;
 
 /// Inter's three weights from a craft-fonts checkout: `CRAFT_FONTS_DIR` at run time, else the
 /// one baked in at build time. The checkout may keep the files at its root or under `inter/`.
@@ -226,28 +146,27 @@ pub fn install(ctx: &egui::Context) {
     defs.families.insert(FontFamily::Proportional, family(ui_names[0], &fallback_prop));
     defs.families.insert(FontFamily::Name("medium".into()), family(ui_names[1], &fallback_prop));
     defs.families.insert(FontFamily::Name("semibold".into()), family(ui_names[2], &fallback_prop));
-    // Page.
-    let page = load_first(REGULAR).map(|b| add(&mut defs, "nc-page", b)).map(|_| "nc-page");
+    // Page: the faces the PDF export embeds too (`notecraft-fonts`).
+    let pf = notecraft_fonts::page_fonts();
+    let page = pf.regular.as_ref().map(|b| add(&mut defs, "nc-page", b.to_vec())).map(|_| "nc-page");
     defs.families.insert(FontFamily::Name("page".into()), family(page, &fallback_prop));
-    if let Some(b) = load_first(BOLD) {
-        add(&mut defs, "nc-bold", b);
+    if let Some(b) = &pf.bold {
+        add(&mut defs, "nc-bold", b.to_vec());
         defs.families.insert(FontFamily::Name("bold".into()), family(Some("nc-bold"), &fallback_prop));
     }
-    if let Some(b) = load_first(MONO) {
-        add(&mut defs, "nc-mono", b);
+    if let Some(b) = &pf.mono {
+        add(&mut defs, "nc-mono", b.to_vec());
         defs.families.insert(FontFamily::Monospace, family(Some("nc-mono"), &fallback_mono));
     }
-    if let Some(b) = load_first(MONO_BOLD) {
-        add(&mut defs, "nc-mono-bold", b);
+    if let Some(b) = &pf.mono_bold {
+        add(&mut defs, "nc-mono-bold", b.to_vec());
         defs.families.insert(FontFamily::Name("mono-bold".into()), family(Some("nc-mono-bold"), &fallback_mono));
     }
     let mut symbols = Vec::new();
-    for (i, paths) in SYMBOLS.iter().enumerate() {
-        if let Some(b) = load_first(paths) {
-            let name = format!("nc-symbols-{i}");
-            add(&mut defs, &name, b);
-            symbols.push(name);
-        }
+    for (i, b) in pf.symbols.iter().enumerate() {
+        let name = format!("nc-symbols-{i}");
+        add(&mut defs, &name, b.to_vec());
+        symbols.push(name);
     }
     for fam in defs.families.values_mut() {
         fam.extend(symbols.iter().cloned());

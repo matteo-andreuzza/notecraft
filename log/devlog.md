@@ -661,3 +661,26 @@ were certain landed, behaviour unchanged (every test green after each commit).
   and a page with a link, a 3×3 table and a picture (text and PDF conversion look right).
 - Catalog: BS.Export.FormatDocx, FMT.Export.Docx wired. Numbers: wiring 679/1328 (51.1%),
   behaviour 176/1328 (13.3%), 339 commands.
+
+## 2026-10-29 — M3: Export to PDF (decision D13), crate `fonts`
+
+- Decision D13 (plan §4.18, §6): flow formats share `export::collect`; PDF is drawn like the
+  canvas with `krilla` 0.8 (MIT/Apache; features `raster-images` only — `simple-text` would
+  pull the unmaintained `rustybuzz`/`ttf-parser`, and glyphs are measured here anyway).
+- New L0 crate `notecraft-fonts`: the page font candidates (Carlito, Noto, Liberation,
+  DejaVu; mono; symbol/math fallbacks), size-capped and validated with skrifa, looked up once
+  per process. The canvas now takes its page faces from it (same bytes the PDF embeds).
+- `import-export::pdf`: `text` lays paragraphs out with skrifa metrics (greedy breaks at
+  spaces, hard breaks, tab stops every 36 pt, super/subscript rise, "at least" line spacing,
+  glyph fallback across faces); the page becomes a display list (title + underline + date,
+  containers with the canvas's indent/list/tag columns, bullets drawn as shapes, tables with
+  merged cells, shading and borders, pictures with turns and flips, attachment cards, ink with
+  round caps, highlighter opacity), then sheets: paper from the page setup else Letter with
+  36 pt margins, scaled to the width, breaks between line and row bands. Real text with
+  subsetted fonts, link annotations, metadata, attachments embedded as PDF files.
+- Engine: `format: "pdf"` on `file.exportPage`/`file.exportSection`, and
+  `file.exportNotebook` with `format: "pdf"` or a `.pdf` path. UI: PDF enabled for all three.
+- Checked by hand: sample pages rendered with pdftoppm look like the canvas; `pdffonts`
+  shows embedded, subsetted CID TrueType faces with Unicode maps.
+- Catalog: BS.Export.FormatPdf, FMT.Export.Pdf wired. Numbers: 681/1328 (51.3%), behavioural coverage 176/1328 (13.3%), 339 commands.
+- Disk: still tight (1.5 GB free after the gate); prune `target/debug/deps` between gates.

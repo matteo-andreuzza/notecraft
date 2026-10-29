@@ -54,6 +54,16 @@ fn a_page_exports_as_web_page_html_and_markdown() {
     assert_eq!(r["pictures"].as_u64(), Some(1), "{r}");
     let bytes = std::fs::read(&docx).unwrap();
     assert!(bytes.starts_with(b"PK\x03\x04"), "FMT.Export.Docx");
+    // PDF (BS.Export.FormatPdf), when the machine has a page font.
+    if notecraft_fonts::page_fonts().regular.is_some() {
+        let pdf = d.join("Trip.pdf");
+        let r = run(&mut s, "file.exportPage", json!({"path": pdf.to_str().unwrap()}));
+        assert_eq!((r["sheets"].as_u64(), r["inkLost"].as_u64()), (Some(1), Some(0)), "{r}");
+        assert!(std::fs::read(&pdf).unwrap().starts_with(b"%PDF-"));
+        let nb = d.join("Notebook.pdf");
+        let r = run(&mut s, "file.exportNotebook", json!({"path": nb.to_str().unwrap()}));
+        assert!(r["pages"].as_u64().unwrap() >= 3, "every page of the notebook: {r}");
+    }
     let _ = std::fs::remove_dir_all(&d);
 }
 
@@ -86,7 +96,7 @@ fn unavailable_formats_and_bad_params_are_refused_cleanly() {
     let mut s = sample();
     let p = |n: &str| d.join(n).to_string_lossy().into_owned();
     for (v, want) in [
-        (json!({"path": p("a.pdf")}), "not available yet"),
+        (json!({"path": p("a.xps")}), "not available yet"),
         (json!({"path": p("a.x"), "format": "doc"}), "not available yet"),
         (json!({"path": p("a.x"), "format": "rtf"}), "unknown export format"),
         (json!({"path": p("a.md"), "page": "not-an-id"}), ""),

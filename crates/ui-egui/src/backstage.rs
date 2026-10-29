@@ -233,7 +233,7 @@ fn export_formats(scope: &str) -> &'static [ExportFormat] {
     match scope {
         "section" => &[
             ("OneNote Section (*.one)", "one", None),
-            ("PDF (*.pdf)", "pdf", None),
+            ("PDF (*.pdf)", "pdf", Some("file.exportSection")),
             ("XPS (*.xps)", "xps", None),
             ("Single File Web Page (*.mht)", "mht", Some("file.exportSection")),
             ("Web Page (*.html)", "html", Some("file.exportSection")),
@@ -241,7 +241,7 @@ fn export_formats(scope: &str) -> &'static [ExportFormat] {
         ],
         "notebook" => &[
             ("OneNote Package (*.onepkg)", "onepkg", None),
-            ("PDF (*.pdf)", "pdf", None),
+            ("PDF (*.pdf)", "pdf", Some("file.exportNotebook")),
             ("XPS (*.xps)", "xps", None),
             ("NoteCraft Archive (*.ncraft-archive)", "ncraft-archive", Some("file.exportNotebook")),
         ],
@@ -249,7 +249,7 @@ fn export_formats(scope: &str) -> &'static [ExportFormat] {
             ("OneNote 2010-2016 Section (*.one)", "one", None),
             ("Word Document (*.docx)", "docx", Some("file.exportPage")),
             ("Word 97-2003 Document (*.doc)", "doc", None),
-            ("PDF (*.pdf)", "pdf", None),
+            ("PDF (*.pdf)", "pdf", Some("file.exportPage")),
             ("XPS (*.xps)", "xps", None),
             ("Single File Web Page (*.mht)", "mht", Some("file.exportPage")),
             ("Web Page (*.html)", "html", Some("file.exportPage")),
@@ -313,7 +313,7 @@ fn export(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context) {
                 .unwrap_or_else(|| "export".into());
                 let name = format!("{}.{ext}", name.replace(['/', '\\'], "_"));
                 if let Some(path) = app.host.save_file("Export", &name) {
-                    let params = if cmd == "file.exportNotebook" { json!({"path": path}) } else { json!({"path": path, "format": ext}) };
+                    let params = if ext == "ncraft-archive" { json!({"path": path}) } else { json!({"path": path, "format": ext}) };
                     if let Some(r) = app.run(ctx, cmd, params) {
                         if r.get("inkLost").and_then(serde_json::Value::as_u64).is_some_and(|n| n > 0) {
                             app.ui.status = Some(("Exported. Ink drawings are not included in this format.".into(), ctx.input(|i| i.time)));

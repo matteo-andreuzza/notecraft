@@ -702,8 +702,8 @@ fn the_export_page_exports_the_section_as_markdown() {
     a.ui.backstage = Some(crate::Backstage::Export);
     let mut h = harness(a);
     h.run();
-    // Formats not written yet are listed, disabled (BS.Export.FormatPdf).
-    assert!(h.query_by_label("PDF (*.pdf)").is_some());
+    // Formats not written yet are listed, disabled (BS.Export.FormatXps).
+    assert!(h.query_by_label("XPS (*.xps)").is_some());
     h.get_by_label("Section").click();
     h.run();
     assert_eq!(h.state().ui.export_scope, "section", "BS.Export.Section");

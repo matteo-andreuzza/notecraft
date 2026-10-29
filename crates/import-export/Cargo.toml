@@ -14,7 +14,11 @@ workspace = true
 [dependencies]
 notecraft-doc = { workspace = true }
 notecraft-codecs = { workspace = true }
+notecraft-text = { workspace = true }
+notecraft-fonts = { workspace = true }
 zip = { workspace = true }
+krilla = { workspace = true }
+skrifa = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

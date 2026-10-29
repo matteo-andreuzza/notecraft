@@ -529,6 +529,25 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
   (stored and MSZIP; LZX/Quantum refused) unpacks into the same notebook import. Password-protected sections are refused with a clear
   message (M4).
 
+### 4.18 Export (decision D13, 2026-10-29)
+
+- **Format-neutral first.** `import-export::export::collect` turns pages into a flow (objects
+  read top to bottom, then left to right; title and date per page; pictures and attachments as
+  resources, each blob once) for the flow formats: Single File Web Page (`.mht`, RFC 2557),
+  HTML, Markdown (CommonMark + GFM) and Word (`.docx`, our own WordprocessingML writer from
+  ECMA-376). Ink has no form there and is reported.
+- **PDF is drawn, not flowed** (`import-export::pdf`, `krilla`): each page laid out like the
+  canvas (same indents, list and tag columns, table layout, title area), on the page setup's
+  paper or US Letter, scaled to fit the width; a tall page continues on more sheets, breaking
+  between text lines and table rows. Ink is drawn. Text is real text with the page fonts
+  embedded and subsetted.
+- **Fonts come from `notecraft-fonts` (L0)**, which both the canvas and the PDF use, so the
+  two measure the same faces. NoteCraft still bundles none; without any (the web build), PDF
+  export says so.
+- Commands: `file.exportPage`, `file.exportSection` (`format` or the path's extension),
+  `file.exportMht`, and `file.exportNotebook` with `format: "pdf"`. `.one`, `.doc` and `.xps`
+  are listed in File › Export and refused until they exist.
+
 ## 5. Risks
 
 | Risk | Impact | Mitigation |
@@ -551,6 +570,7 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | D4 | 2026-10-20 | Ink strokes are page objects, one stroke per object (`PageObject::Ink`, points relative to the object's position with per-point pressure, colour, width, pen or highlighter); `.ncraft` version 4; geometry in `ink-geom` (L0), stroke operations in `ink` (L2); tools are session state (§4.10). | — (the plan named the crates; the object shape was open) | Every object command (select, lasso, delete, clipboard, order, rotate, move, undo) works on ink unchanged; [MS-ONE] ink nodes map stroke by stroke, losing only their grouping. |
 | D5 | 2026-10-21 | Tags on ink: a stroke carries `tags` like a paragraph (optional field, format 4 unchanged); the tag commands treat the selected strokes as one drawing, putting a new tag on its leftmost stroke and removing or checking it on all (§4.11). | — | Strokes are separate objects (D4), so tagging each would list one drawing many times in Find Tags; one anchor stroke keeps one entry per tag and maps to [MS-ONE]'s tag on the ink node. |
 | D6 | 2026-10-21 | Tab after a paragraph's text makes it a one-row, two-column table that takes the paragraph's place (the container splits around it); no session state, later Tabs and Enters use the table's own keys (§4.8). | — | Tables are separate objects (D2), so the paragraph must leave its container; the one-row table's existing Tab/Enter behaviour already covers "keep creating". |
+| D13 | 2026-10-29 | Export: a format-neutral page flow for .mht/HTML/Markdown/.docx (own writers from RFC 2557, CommonMark, ECMA-376); PDF drawn like the canvas with `krilla` (MIT/Apache, as WordCraft) and page fonts found by a new L0 crate `notecraft-fonts` shared with the canvas (§4.18). | The plan named WordCraft crates for DOCX and a renderer for PDF | WordCraft's docx crate brings its own model and crypto stack for what is ~600 lines here; the canvas lays out with egui, which can't run in the engine, so the PDF mirrors its layout rules on shared font files. |
 | D12 | 2026-10-27 | OneNote's `.one` files are read by a new crate `onestore` (L4) from the public [MS-ONESTORE]/[MS-ONE] specifications, read-only, and imported as a copy into the current notebook (File › Open › Open Section); synthetic fixtures from its own test writer; a per-construct report of what was kept (§4.17). | The plan listed `.one` export "where the specs allow" in M3 | The user approved the proposal on 2026-10-27: read-only first, real-file fidelity measured locally by the user (never committed), copy rather than open in place. |
 | D11 | 2026-10-24 | Equations are paragraphs of UnicodeMath linear text (`Paragraph::math`), laid out built up by a new pure crate `math` with line-drawn large signs; edited as linear text while the caret is in them (§4.16). | The plan named a `math` crate; inline math was open | The user asked for equations in M2; whole-paragraph equations reuse every text command and need no inline objects in egui's text layout. |
 | D10 | 2026-10-24 | Page templates: NoteCraft's own built-in set (five categories, built in code), the user's own saved in the preferences without pictures, a default template per section (`Section.default_template`), the Templates pane (§4.15). | The plan waited for reference screenshots | The user chose NoteCraft's own templates over waiting; the reference's templates are its content, so a clean-room set is needed anyway. |

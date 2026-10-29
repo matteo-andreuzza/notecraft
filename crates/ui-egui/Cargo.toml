@@ -23,7 +23,7 @@ serde_json = { workspace = true }
 log = { workspace = true }
 # Font parser egui's epaint uses; system font files are validated with it before they reach
 # egui (which can't handle a file it fails to parse). Same version as epaint's: no second copy.
-skrifa = { version = "0.44", default-features = false, features = ["std"] }
+notecraft-fonts = { workspace = true }
 
 [dev-dependencies]
 notecraft-onestore = { workspace = true, features = ["fixtures"] }

@@ -51,7 +51,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .pure(),
         // BS.Export.Notebook — a single-file archive of the notebook.
         CommandSpec::new("file.exportNotebook", "BS.Export.Notebook", "Export Notebook", "File/Export/Notebook", export_notebook)
-            .params(r#"{"path": file, "notebook"?: id}"#)
+            .params(r#"{"path": file, "format"?: "archive"|"pdf", "notebook"?: id}"#)
             .pure()
             .when(need_notebook),
         // OPT.SaveBackup.BackupAllNow — back up every open notebook now (BEH.Save.Backups).
@@ -283,6 +283,16 @@ fn export_notebook(s: &mut Session, v: &Value) -> CmdResult {
         Some(id) => s.ws.notebook(id).ok_or_else(|| CmdError::Params("no such notebook".into()))?,
         None => s.notebook().ok_or_else(no_page)?,
     };
+    // BS.Export.FormatPdf: every page of every section, in navigation order.
+    let pdf = match p::str(v, "format") {
+        Some(f) => f.eq_ignore_ascii_case("pdf"),
+        None => path.to_ascii_lowercase().ends_with(".pdf"),
+    };
+    if pdf {
+        let nb = nb.clone();
+        let pages: Vec<&notecraft_doc::Page> = nb.sections().iter().flat_map(|sec| sec.pages.iter().map(|p| p.as_ref())).collect();
+        return crate::export_cmds::write_pdf(s, path, &nb.name, &pages);
+    }
     let bytes = notecraft_format::encode_archive(nb).map_err(|e| CmdError::Failed(e.to_string()))?;
     write_file(path, &bytes)?;
     Ok(json!({"bytes": bytes.len()}))

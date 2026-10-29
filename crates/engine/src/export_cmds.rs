@@ -3,14 +3,15 @@
 //! `FMT.Export.Markdown`). The notebook archive is `file.exportNotebook` in `file_cmds`.
 //!
 //! The format comes from `format` or, without it, from the file's extension: Single File Web
-//! Page (`.mht`, the reference's web format), Word Document (`.docx`), HTML (`.html`,
+//! Page (`.mht`, the reference's web format), Word Document (`.docx`), PDF (`.pdf`, decision
+//! D13), HTML (`.html`,
 //! pictures inline) or Markdown (`.md`, pictures and attachments written to a `<name>_files`
 //! folder beside it). The other formats of the reference's Export page (`.one`, `.doc`, `.pdf`,
 //! `.xps`) are refused with a clear message until they exist. The result reports what was written and what was left out
 //! (ink has no form in these formats).
 
 use notecraft_doc::Page;
-use notecraft_import_export::{docx, export, markdown};
+use notecraft_import_export::{docx, export, markdown, pdf};
 use serde_json::{Value, json};
 
 use crate::ops::{need_page, need_section, no_page};
@@ -20,13 +21,13 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
         // BS.Export.Page — the current page (or `page`).
         CommandSpec::new("file.exportPage", "BS.Export.Page", "Export Page", "File/Export/Page", export_page)
-            .params(r#"{"path": file, "format"?: "mht"|"docx"|"html"|"md", "page"?: id}"#)
+            .params(r#"{"path": file, "format"?: "mht"|"docx"|"pdf"|"html"|"md", "page"?: id}"#)
             .pure()
             .when(need_page),
         // BS.Export.Section and CM.Section.FileSaveAsContextualItem — every page of the
         // current section (or `section`), in page-list order.
         CommandSpec::new("file.exportSection", "BS.Export.Section", "Export Section", "File/Export/Section", export_section)
-            .params(r#"{"path": file, "format"?: "mht"|"docx"|"html"|"md", "section"?: id}"#)
+            .params(r#"{"path": file, "format"?: "mht"|"docx"|"pdf"|"html"|"md", "section"?: id}"#)
             .pure()
             .when(need_section),
         // BS.Export.FormatMht — Single File Web Page, of the page (default) or the section.
@@ -48,6 +49,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
 enum Format {
     Mht,
     Docx,
+    Pdf,
     Html,
     Markdown,
 }
@@ -61,12 +63,13 @@ fn format(v: &Value, path: &str) -> Result<Format, CmdError> {
     match name.as_str() {
         "mht" | "mhtml" => Ok(Format::Mht),
         "docx" => Ok(Format::Docx),
+        "pdf" => Ok(Format::Pdf),
         "html" | "htm" => Ok(Format::Html),
         "md" | "markdown" => Ok(Format::Markdown),
-        "one" | "onepkg" | "doc" | "pdf" | "xps" => {
-            Err(CmdError::Disabled(format!("export to .{name} is not available yet (M3: web page, Word and Markdown first)")))
+        "one" | "onepkg" | "doc" | "xps" => {
+            Err(CmdError::Disabled(format!("export to .{name} is not available yet (M3: web page, Word, PDF and Markdown first)")))
         }
-        other => Err(CmdError::Params(format!("unknown export format `{other}` (mht, docx, html or md)"))),
+        other => Err(CmdError::Params(format!("unknown export format `{other}` (mht, docx, pdf, html or md)"))),
     }
 }
 
@@ -117,6 +120,7 @@ fn write(s: &Session, path: &str, fmt: Format, title: &str, pages: &[&Page]) -> 
     let mut written = vec![path.to_string()];
     let mut dropped = docx::DocxReport::default();
     let bytes = match fmt {
+        Format::Pdf => return write_pdf(s, path, title, pages),
         Format::Mht => export::mht(&e, title),
         Format::Docx => {
             let (bytes, r) = docx::write(&e, title).map_err(CmdError::Failed)?;
@@ -143,6 +147,24 @@ fn write(s: &Session, path: &str, fmt: Format, title: &str, pages: &[&Page]) -> 
         "inkLost": r.ink_lost,
         "filesLost": r.files_lost + dropped.files_dropped + dropped.pictures_dropped,
         "written": written,
+    }))
+}
+
+/// The pages as PDF (decision D13), with the system's page fonts.
+pub(crate) fn write_pdf(s: &Session, path: &str, title: &str, pages: &[&Page]) -> CmdResult {
+    let opts = pdf::PdfOptions { title: title.to_string(), author: s.prefs.author.clone(), utc_offset_min: s.clock.utc_offset_min };
+    let (bytes, r) = pdf::write(pages, notecraft_fonts::page_fonts(), &opts).map_err(CmdError::Failed)?;
+    write_file(path, &bytes)?;
+    Ok(json!({
+        "bytes": bytes.len(),
+        "pages": r.pages,
+        "sheets": r.sheets,
+        "files": r.files,
+        "filesLost": r.pictures_lost,
+        // Ink is drawn.
+        "inkLost": 0,
+        "equationsAsText": r.equations,
+        "written": [path],
     }))
 }
 

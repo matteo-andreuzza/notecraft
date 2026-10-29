@@ -18,6 +18,7 @@ notecraft-search = { workspace = true }
 notecraft-format = { workspace = true }
 notecraft-codecs = { workspace = true }
 notecraft-import-export = { workspace = true }
+notecraft-fonts = { workspace = true }
 notecraft-ink = { workspace = true }
 notecraft-ink-geom = { workspace = true }
 notecraft-math = { workspace = true }

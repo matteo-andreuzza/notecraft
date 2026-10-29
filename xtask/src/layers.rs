@@ -43,6 +43,7 @@ pub const TABLE: &[(&str, Class)] = &[
     ("geom", Class::Layer(0)),
     ("color", Class::Layer(0)),
     ("ink-geom", Class::Layer(0)),
+    ("fonts", Class::Layer(0)),
     ("codecs", Class::Standalone),
     // L1 document model
     ("doc", Class::Layer(1)),
