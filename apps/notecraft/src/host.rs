@@ -1,5 +1,6 @@
 //! The desktop's platform services for the UI: the system clock, the system file dialogs, opening
-//! a file with the desktop's handler, the backups folder and the desktop's light/dark preference.
+//! a file with the desktop's handler, printing (`craft-print`), the backups folder and the
+//! desktop's light/dark preference.
 
 use notecraft_engine::Clock;
 use notecraft_ui_egui::{Host, RichClip};
@@ -62,6 +63,16 @@ impl Host for DesktopHost {
             d = d.add_filter(*name, exts);
         }
         d.pick_file().map(|p| p.display().to_string())
+    }
+
+    fn printers(&mut self) -> Vec<(String, bool)> {
+        craft_print::printers().into_iter().map(|p| (p.name, p.default)).collect()
+    }
+
+    fn print_pdf(&mut self, path: &str, printer: Option<&str>, copies: u32, title: &str) -> Result<String, String> {
+        let pdf = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
+        let job = craft_print::Job { printer: printer.map(str::to_string), copies: copies.max(1), title: title.to_string(), ..Default::default() };
+        craft_print::submit(&pdf, &job).map_err(|e| format!("Printing failed: {e}"))
     }
 
     fn open_path(&mut self, path: &str) -> Result<(), String> {

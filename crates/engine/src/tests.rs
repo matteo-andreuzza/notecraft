@@ -251,6 +251,8 @@ fn panic_hunt() {
                     | "file.exportPage"
                     | "file.exportSection"
                     | "file.exportMht"
+                    | "file.print"
+                    | "file.printPreview"
                     | "file.backupNow"
                     | "file.openBackups"
                     | "object.saveAs"

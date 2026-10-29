@@ -35,6 +35,8 @@ notecraft-fonts = { path = "crates/fonts" }
 # shared Craft libraries, pinned by immutable revision (structure-audit.md › Repository hygiene)
 craft-atomic = { git = "https://github.com/storytold/craft-libs", rev = "457a078809690994b22debdffb703ff36d3129df" }
 craft-settings = { git = "https://github.com/storytold/craft-libs", rev = "457a078809690994b22debdffb703ff36d3129df" }
+# The system print spooler (CUPS; native on Windows), shared by the Craft apps.
+craft-print = { git = "https://github.com/storytold/craft-libs", rev = "457a078809690994b22debdffb703ff36d3129df" }
 
 # foundation
 thiserror = "2"

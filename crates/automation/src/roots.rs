@@ -28,6 +28,8 @@ const PATH_PARAMS: &[(&str, &str, Access)] = &[
     ("file.exportPage", "path", Access::Write),
     ("file.exportSection", "path", Access::Write),
     ("file.exportMht", "path", Access::Write),
+    ("file.print", "dir", Access::Write),
+    ("file.printPreview", "dir", Access::Write),
     ("file.backupNow", "folder", Access::Write),
     ("file.openBackups", "folder", Access::Read),
 ];

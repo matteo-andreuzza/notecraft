@@ -341,6 +341,11 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 app.run(ctx, cmd, json!({"path": path}));
             }
         }
+        // BS.Print.Print (Ctrl+P): File › Print, where the printer and copies are chosen.
+        "file.print" => {
+            app.ui.printers = None;
+            app.ui.backstage = Some(crate::Backstage::Print);
+        }
         "insert.file" => {
             if let Some(path) = app.host.pick_file("Insert File", &[]) {
                 app.run(ctx, cmd, json!({"path": path}));

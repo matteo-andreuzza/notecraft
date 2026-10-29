@@ -97,6 +97,17 @@ pub trait Host {
     fn take_screen_clip(&mut self) -> Option<Result<Vec<u8>, String>> {
         None
     }
+    /// The printers the system offers: (name, whether it is the default). Empty when printing
+    /// isn't available (the web build, tests). Asked when File › Print opens, not every frame.
+    fn printers(&mut self) -> Vec<(String, bool)> {
+        Vec::new()
+    }
+    /// Send the print-ready PDF at `path` to `printer` (`None`: the default), `copies` times.
+    /// Returns the spooler's message, or why it failed.
+    fn print_pdf(&mut self, path: &str, printer: Option<&str>, copies: u32, title: &str) -> Result<String, String> {
+        let _ = (path, printer, copies, title);
+        Err("Printing isn't available here: export a PDF instead".into())
+    }
     /// Where backups go (`None` = backups unavailable on this platform).
     fn backup_folder(&self) -> Option<String> {
         None
@@ -129,6 +140,8 @@ pub enum Backstage {
     Open,
     /// Export.
     Export,
+    /// Print and Print Preview.
+    Print,
     /// Account (theme, about).
     Account,
     /// Options.
@@ -191,6 +204,18 @@ pub struct UiState {
     /// File › Export, step 2: the format, as its file extension (`mht`, `md`…).
     #[serde(default)]
     pub export_format: String,
+    /// File › Print: what to print (`page` or `section`).
+    #[serde(default)]
+    pub print_scope: String,
+    /// File › Print: the chosen printer (`None`: the system default).
+    #[serde(default)]
+    pub print_printer: Option<String>,
+    /// File › Print: copies.
+    #[serde(default)]
+    pub print_copies: u32,
+    /// The printers the host listed when File › Print opened (`None`: not asked yet).
+    #[serde(skip)]
+    pub printers: Option<Vec<(String, bool)>>,
 }
 
 /// Most paths kept in [`UiState::recent_notebooks`].
@@ -218,6 +243,10 @@ impl Default for UiState {
             recent_notebooks: Vec::new(),
             export_scope: "page".into(),
             export_format: "mht".into(),
+            print_scope: "page".into(),
+            print_printer: None,
+            print_copies: 1,
+            printers: None,
         }
     }
 }

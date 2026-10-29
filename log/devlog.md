@@ -684,3 +684,18 @@ were certain landed, behaviour unchanged (every test green after each commit).
   shows embedded, subsetted CID TrueType faces with Unicode maps.
 - Catalog: BS.Export.FormatPdf, FMT.Export.Pdf wired. Numbers: 681/1328 (51.3%), behavioural coverage 176/1328 (13.3%), 339 commands.
 - Disk: still tight (1.5 GB free after the gate); prune `target/debug/deps` between gates.
+
+## 2026-10-30 — M3: Print (File › Print, Ctrl+P)
+
+- Engine: `file.print` (BS.Print.Print, Ctrl+P) and `file.printPreview` (BS.Print.Preview)
+  write the print-ready PDF of the current page or section (`scope`) into `dir` (default: a
+  `notecraft-print` temp folder) through the PDF export, and return its path and title.
+  Automation roots cover `dir`.
+- UI: a File › Print backstage page (printer list from the host with the default chosen,
+  copies, current page or whole section; Print and Print Preview); Ctrl+P opens it. Host gains
+  `printers()` and `print_pdf()`; the desktop host uses `craft-print` (craft-libs, same pinned
+  revision; CUPS `lp`/`lpstat`, native Windows printing), Print Preview opens the PDF in the
+  system viewer. deny.toml allows storytold's winprint fork (craft-print's Windows backend).
+- Catalog: BS.Print.Print, BS.Print.Preview, KB.Pages.Print wired (QAT.FilePrint stays until
+  the QAT can be customised). Numbers: wiring 684/1328 (51.5%), behaviour 176/1328 (13.3%), 341 commands.
+- Dev machine: `cargo clean` (25 GB of stale artifacts); builds keep `CARGO_INCREMENTAL=0`.

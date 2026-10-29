@@ -33,6 +33,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 (Backstage::Info, "Info"),
                 (Backstage::New, "New"),
                 (Backstage::Open, "Open"),
+                (Backstage::Print, "Print"),
                 (Backstage::Export, "Export"),
                 (Backstage::Account, "Account"),
                 (Backstage::Options, "Options"),
@@ -56,11 +57,9 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                     app.ui.backstage = Some(p);
                 }
             }
-            for (label, why) in [
-                ("Print", "Printing comes with M3 (PDF export first)"),
-                ("Share", "Sharing needs a Microsoft account; NoteCraft syncs folders instead"),
-                ("Send", "Email integration is not available yet"),
-            ] {
+            for (label, why) in
+                [("Share", "Sharing needs a Microsoft account; NoteCraft syncs folders instead"), ("Send", "Email integration is not available yet")]
+            {
                 let (r, resp) = ui.allocate_exact_size(vec2(190.0, 38.0), Sense::hover());
                 ui.painter().text(
                     r.left_center() + vec2(26.0, 0.0),
@@ -89,6 +88,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             Backstage::New => new_notebook(app, ui, &ctx, t),
             Backstage::Open => open(app, ui, &ctx, t),
             Backstage::Export => export(app, ui, &ctx),
+            Backstage::Print => print(app, ui, &ctx),
             Backstage::Account => account(app, ui, t),
             Backstage::Options => options(app, ui, &ctx, t),
         }
@@ -221,6 +221,81 @@ fn open(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
         app.ui.backstage = None;
     }
     ui.label(RichText::new("OneNote packages (.onepkg) and notebooks (.onetoc2): coming later in M3.").size(12.0).color(t.page_meta));
+}
+
+/// File › Print (BS.Print.Print, BS.Print.Preview): printer, copies, what to print; Print
+/// sends the print-ready PDF (`file.print`) to the system's spooler, Print Preview opens it in
+/// the system's PDF viewer.
+fn print(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context) {
+    heading(ui, "Print");
+    let t = app.tokens();
+    if app.ui.printers.is_none() {
+        let list = app.host.printers();
+        if app.ui.print_printer.as_ref().is_none_or(|p| !list.iter().any(|(n, _)| n == p)) {
+            app.ui.print_printer = list.iter().find(|(_, d)| *d).or(list.first()).map(|(n, _)| n.clone());
+        }
+        app.ui.printers = Some(list);
+    }
+    let printers = app.ui.printers.clone().unwrap_or_default();
+    let has_section = app.session.section().is_some();
+    if app.ui.print_scope != "section" || !has_section {
+        app.ui.print_scope = "page".into();
+    }
+    egui::Grid::new("print_form").num_columns(2).spacing(vec2(16.0, 10.0)).show(ui, |ui| {
+        ui.label("Printer");
+        if printers.is_empty() {
+            ui.label(RichText::new("No printer found (Print Preview still works)").color(t.page_meta));
+        } else {
+            let shown = app.ui.print_printer.clone().unwrap_or_else(|| "Default printer".into());
+            egui::ComboBox::from_id_salt("print_printer").selected_text(shown).width(260.0).show_ui(ui, |ui| {
+                for (name, default) in &printers {
+                    let label = if *default { format!("{name} (default)") } else { name.clone() };
+                    ui.selectable_value(&mut app.ui.print_printer, Some(name.clone()), label);
+                }
+            });
+        }
+        ui.end_row();
+        ui.label("Copies");
+        ui.add(egui::DragValue::new(&mut app.ui.print_copies).range(1..=99));
+        ui.end_row();
+        ui.label("Print");
+        ui.horizontal(|ui| {
+            ui.selectable_value(&mut app.ui.print_scope, "page".to_string(), "Current page");
+            if ui.add_enabled(has_section, egui::Button::selectable(app.ui.print_scope == "section", "Whole section")).clicked() {
+                app.ui.print_scope = "section".into();
+            }
+        });
+        ui.end_row();
+    });
+    ui.add_space(16.0);
+    let scope = app.ui.print_scope.clone();
+    ui.horizontal(|ui| {
+        let can_print = !printers.is_empty();
+        let print = ui.add_enabled(can_print, egui::Button::new("Print  (Ctrl+P)")).on_disabled_hover_text("No printer found");
+        if print.clicked()
+            && let Some(r) = app.run(ctx, "file.print", json!({"scope": scope}))
+        {
+            let path = r.get("path").and_then(serde_json::Value::as_str).unwrap_or_default().to_string();
+            let title = r.get("title").and_then(serde_json::Value::as_str).unwrap_or("NoteCraft").to_string();
+            let copies = app.ui.print_copies.clamp(1, 99);
+            let msg = match app.host.print_pdf(&path, app.ui.print_printer.as_deref(), copies, &title) {
+                Ok(m) => format!("Sent to the printer. {m}"),
+                Err(e) => e,
+            };
+            app.ui.status = Some((msg, ctx.input(|i| i.time)));
+            app.ui.backstage = None;
+        }
+        if ui.button("Print Preview").clicked()
+            && let Some(r) = app.run(ctx, "file.printPreview", json!({"scope": scope}))
+        {
+            let path = r.get("path").and_then(serde_json::Value::as_str).unwrap_or_default().to_string();
+            if let Err(e) = app.host.open_path(&path) {
+                app.ui.status = Some((e, ctx.input(|i| i.time)));
+            }
+        }
+    });
+    ui.add_space(8.0);
+    ui.label(RichText::new("Pages print on their Paper Size (else Letter), scaled down to fit the width.").size(12.0).color(t.page_meta));
 }
 
 /// One format of the Export page: label, file extension, and the command that writes it

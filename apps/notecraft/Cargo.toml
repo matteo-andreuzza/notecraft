@@ -27,6 +27,7 @@ serde_json = { workspace = true }
 log = { workspace = true }
 chrono = { workspace = true }
 craft-atomic = { workspace = true }
+craft-print = { workspace = true }
 rfd = { workspace = true }
 # The rich system clipboard (HTML and pictures; plain text goes through egui).
 arboard = { workspace = true, features = ["image-data"] }

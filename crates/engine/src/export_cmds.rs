@@ -41,7 +41,60 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         .params(r#"{"path": file, "scope"?: "page"|"section"}"#)
         .pure()
         .when(need_page),
+        // BS.Print.Print — Ctrl+P (KB.Pages.Print, QAT.FilePrint): the print-ready PDF of the
+        // current page (or section); the UI hands it to the system's print spooler.
+        CommandSpec::new("file.print", "BS.Print.Print", "Print", "File/Print/Print", print)
+            .key("Mod+P")
+            .params(r#"{"scope"?: "page"|"section", "dir"?: folder}"#)
+            .pure()
+            .when(need_page),
+        // BS.Print.Preview — the same PDF, which the UI opens in the system's viewer.
+        CommandSpec::new("file.printPreview", "BS.Print.Preview", "Print Preview", "File/Print/Print Preview", print)
+            .params(r#"{"scope"?: "page"|"section", "dir"?: folder}"#)
+            .pure()
+            .when(need_page),
     ]
+}
+
+/// The print-ready PDF of the page or section in `dir` (default: a `notecraft-print` folder in
+/// the temporary directory), named after it.
+fn print(s: &mut Session, v: &Value) -> CmdResult {
+    let section = match p::str(v, "scope").unwrap_or("page") {
+        "page" => false,
+        "section" => true,
+        other => return Err(CmdError::Params(format!("unknown scope `{other}` (page or section)"))),
+    };
+    let (title, pages): (String, Vec<std::sync::Arc<Page>>) = if section {
+        let sec = s.section().ok_or_else(|| CmdError::Disabled("open a section first".into()))?;
+        (sec.name.clone(), sec.pages.clone())
+    } else {
+        let page = s.page().ok_or_else(no_page)?;
+        (page.display_title(), vec![page.clone()])
+    };
+    let dir = match p::str(v, "dir").filter(|d| !d.is_empty()) {
+        Some(d) => std::path::PathBuf::from(d),
+        None => std::env::temp_dir().join("notecraft-print"),
+    };
+    print_dir(&dir)?;
+    let path = dir.join(format!("{}.pdf", notecraft_doc::media::safe_file_name(&title)));
+    let path = path.to_string_lossy().into_owned();
+    let refs: Vec<&Page> = pages.iter().map(|p| p.as_ref()).collect();
+    let mut r = write_pdf(s, &path, &title, &refs)?;
+    if let Some(o) = r.as_object_mut() {
+        o.insert("path".into(), json!(path));
+        o.insert("title".into(), json!(title));
+    }
+    Ok(r)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn print_dir(dir: &std::path::Path) -> Result<(), CmdError> {
+    std::fs::create_dir_all(dir).map_err(|e| CmdError::Failed(format!("{}: {e}", dir.display())))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn print_dir(_: &std::path::Path) -> Result<(), CmdError> {
+    Err(CmdError::Disabled("the web version prints from the browser".into()))
 }
 
 /// An export format of this module.

@@ -716,3 +716,46 @@ fn the_export_page_exports_the_section_as_markdown() {
     assert_eq!(h.state().ui.backstage, None, "the backstage closes after exporting");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// A host with two printers that records what it was asked to print.
+struct PrintHost(std::rc::Rc<std::cell::RefCell<Vec<(String, Option<String>, u32)>>>);
+
+impl crate::Host for PrintHost {
+    fn clock(&self) -> notecraft_engine::Clock {
+        notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 }
+    }
+    fn printers(&mut self) -> Vec<(String, bool)> {
+        vec![("Office".into(), false), ("Desk".into(), true)]
+    }
+    fn print_pdf(&mut self, path: &str, printer: Option<&str>, copies: u32, _title: &str) -> Result<String, String> {
+        assert!(std::fs::read(path).unwrap().starts_with(b"%PDF-"), "a print-ready PDF");
+        self.0.borrow_mut().push((path.to_string(), printer.map(str::to_string), copies));
+        Ok("request id is Desk-1".into())
+    }
+}
+
+#[test]
+fn ctrl_p_opens_print_and_print_sends_the_pdf() {
+    if notecraft_fonts::page_fonts().regular.is_none() {
+        return;
+    }
+    let jobs = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let mut s = notecraft_engine::Session::with_sample(notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 });
+    s.prefs.author = "Tester".into();
+    let a = NoteApp::new(s, Box::new(PrintHost(jobs.clone())));
+    let mut h = harness(a);
+    h.run();
+    // KB.Pages.Print: Ctrl+P opens File › Print.
+    h.event(egui::Event::Key { key: egui::Key::P, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::COMMAND });
+    h.run();
+    assert_eq!(h.state().ui.backstage, Some(crate::Backstage::Print), "BS.Print.Print");
+    assert_eq!(h.state().ui.print_printer.as_deref(), Some("Desk"), "the default printer is chosen");
+    h.state_mut().ui.print_copies = 2;
+    h.get_by_label("Print  (Ctrl+P)").click();
+    h.run();
+    let jobs = jobs.borrow();
+    assert_eq!(jobs.len(), 1);
+    assert_eq!((jobs[0].1.as_deref(), jobs[0].2), (Some("Desk"), 2));
+    assert!(h.state().ui.status.as_ref().is_some_and(|(m, _)| m.contains("Desk-1")));
+    let _ = std::fs::remove_file(&jobs[0].0);
+}

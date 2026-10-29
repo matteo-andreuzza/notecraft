@@ -119,3 +119,21 @@ fn unavailable_formats_and_bad_params_are_refused_cleanly() {
     assert_eq!(std::fs::read_dir(&d).unwrap().filter(|e| e.as_ref().is_ok_and(|e| e.path().is_file())).count(), 0, "nothing half-written");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn print_writes_the_print_ready_pdf() {
+    if notecraft_fonts::page_fonts().regular.is_none() {
+        return;
+    }
+    let d = dir("print");
+    let mut s = sample();
+    let title = s.page().unwrap().display_title();
+    let r = run(&mut s, "file.print", json!({"dir": d.to_str().unwrap()}));
+    let path = std::path::PathBuf::from(r["path"].as_str().unwrap());
+    assert_eq!(path, d.join(format!("{title}.pdf")), "BS.Print.Print");
+    assert!(std::fs::read(&path).unwrap().starts_with(b"%PDF-"));
+    let r = run(&mut s, "file.printPreview", json!({"dir": d.to_str().unwrap(), "scope": "section"}));
+    assert_eq!(r["pages"].as_u64(), Some(s.section().unwrap().pages.len() as u64), "BS.Print.Preview");
+    assert!(s.run("file.print", json!({"scope": "notebook"})).is_err());
+    let _ = std::fs::remove_dir_all(&d);
+}

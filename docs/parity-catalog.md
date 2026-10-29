@@ -533,8 +533,8 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Open.RecentNotebooks | Open: Recent Notebooks | File/Open/Recent Notebooks | list |  | file.openRecent | P0 | verified | FLUENT19:GroupRecentDocuments |  |
 | BS.Open.SharedWithMe | Open: Shared with Me | File/Open/Shared with Me | list |  |  | P3 | out-of-scope | FLUENT19:GroupSharedWithMeDocuments |  |
 | BS.Open.OpenSection | Open: Open Section (.one file) | File/Open/Open Section | button | `Mod+Alt+Shift+O` | file.openSection | P1 | wired | FLUENT19:JotOpenFile; KBD365 | imports a copy of the .one as a new section (decision D12); the reference opens the file in place — unverified |
-| BS.Print.Print | Print: Print | File/Print/Print | button | `Mod+P` | file.print | P1 | missing | FLUENT19:FilePrint |  |
-| BS.Print.Preview | Print: Print Preview (range, paper, header/footer) | File/Print/Print Preview | dialog |  | file.printPreview | P2 | missing | FLUENT19:FilePrintPreview |  |
+| BS.Print.Print | Print: Print | File/Print/Print | button | `Mod+P` | file.print | P1 | wired | FLUENT19:FilePrint | File › Print: printer (the system's, default chosen), copies, current page or whole section; the print-ready PDF (FMT.Export.Pdf) goes to the system spooler through craft-print (CUPS; native on Windows); printer driver options not offered yet |
+| BS.Print.Preview | Print: Print Preview (range, paper, header/footer) | File/Print/Print Preview | dialog |  | file.printPreview | P2 | wired | FLUENT19:FilePrintPreview | unverified: the print-ready PDF opens in the system's PDF viewer (the reference has its own preview dialog with range, paper and header/footer) |
 | BS.Share.WithPeople | Share: Share with People | File/Share/Share with People | page |  |  | P3 | out-of-scope | FLUENT19:ShareWithPeople |  |
 | BS.Share.GetLink | Share: Get a Sharing Link | File/Share/Get a Sharing Link | page |  |  | P3 | out-of-scope | FLUENT19:GetLinks |  |
 | BS.Share.WithNetwork | Share: Share on Network (shared folder) | File/Share/Share on Network | page |  | notebook.moveToFolder | P2 | missing | FLUENT19:ShareWithNetwork |  |
@@ -1211,7 +1211,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Language.RTL | Set writing direction right to left | Keyboard/Language/Set writing direction right to left | shortcut | `Mod+RightShift` | para.rtl | P2 | missing | KBD365 | needs side-specific modifiers |
 | KB.Pages.FullPage | Enable or disable full-page view | Keyboard/Pages/Enable or disable full-page view | shortcut | `F11` | view.fullPage | P0 | wired | KBD365 |  |
 | KB.Pages.ToggleGroup | Expand or collapse a page group in the page list | Keyboard/Pages/Expand or collapse a page group in the page list | shortcut | `Mod+Shift+*` | page.toggleSubpages | P1 | verified | KBD365 |  |
-| KB.Pages.Print | Print the current page | Keyboard/Pages/Print the current page | shortcut | `Mod+P` | file.print | P1 | missing | KBD365 |  |
+| KB.Pages.Print | Print the current page | Keyboard/Pages/Print the current page | shortcut | `Mod+P` | file.print | P1 | wired | KBD365 | opens File › Print |
 | KB.Pages.NewPage | Add a new page at the end of the section | Keyboard/Pages/Add a new page at the end of the section | shortcut | `Mod+N` | page.new | P0 | verified | KBD365 |  |
 | KB.Pages.WidenList | Increase the width of the page list | Keyboard/Pages/Increase the width of the page list | shortcut | `Mod+Shift+[` | ui.pageListWider | P2 | wired | KBD365 |  |
 | KB.Pages.NarrowList | Decrease the width of the page list | Keyboard/Pages/Decrease the width of the page list | shortcut | `Mod+Shift+]` | ui.pageListNarrower | P2 | wired | KBD365 |  |
