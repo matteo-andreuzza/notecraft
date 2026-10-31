@@ -3,7 +3,8 @@
 //! its first-level heading (else the file name) is the title, its content is placed the way a
 //! rich paste places it, task items become To Do tags. An Evernote export becomes a new
 //! section of the current notebook with a page per note (title, dates, content, attached
-//! files). One undo step.
+//! files). A picture (`FMT.Import.Images`) becomes a page holding it, a PDF
+//! (`FMT.Import.Pdf`) a page holding its file printout; the file name is the title. One undo step.
 //!
 //! Pictures a Markdown file names by a relative path are read only from the file's own folder
 //! and below (never through `..` or a link out of it), each within the picture size limit.
@@ -28,7 +29,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
         // NC.File.Import — Markdown, plain text or HTML into a new page.
         CommandSpec::new("file.import", "NC.File.Import", "Import File", "File/Open/Import File", import)
-            .params(r#"{"path": file, "format"?: "md"|"txt"|"html"|"enex"}"#)
+            .params(r#"{"path": file, "format"?: "md"|"txt"|"html"|"enex"|"picture"|"pdf"}"#)
             .when(need_section),
     ]
 }
@@ -40,7 +41,14 @@ enum Format {
     Text,
     Html,
     Enex,
+    /// PNG, JPEG, GIF, BMP or WebP.
+    Picture,
+    /// A PDF, as a file printout.
+    Pdf,
 }
+
+/// File extensions [`Format::Picture`] reads.
+pub const PICTURE_EXTENSIONS: [&str; 7] = ["png", "jpg", "jpeg", "gif", "bmp", "webp", "jfif"];
 
 fn format(v: &Value, path: &str) -> Result<Format, CmdError> {
     let name = match p::str(v, "format") {
@@ -52,7 +60,10 @@ fn format(v: &Value, path: &str) -> Result<Format, CmdError> {
         "txt" | "text" => Ok(Format::Text),
         "html" | "htm" | "xhtml" => Ok(Format::Html),
         "enex" => Ok(Format::Enex),
-        other => Err(CmdError::Params(format!("unknown import format `{other}` (md, txt, html or enex)"))),
+        "pdf" => Ok(Format::Pdf),
+        "picture" | "image" => Ok(Format::Picture),
+        e if PICTURE_EXTENSIONS.contains(&e) => Ok(Format::Picture),
+        other => Err(CmdError::Params(format!("unknown import format `{other}` (md, txt, html, enex, a picture or pdf)"))),
     }
 }
 
@@ -112,11 +123,19 @@ fn import(s: &mut Session, v: &Value) -> CmdResult {
     let path = p::req_str(v, "path")?;
     let fmt = format(v, path)?;
     let meta = std::fs::metadata(path).map_err(|e| CmdError::Failed(format!("{path}: {e}")))?;
-    let cap = if fmt == Format::Enex { MAX_ENEX_BYTES } else { MAX_FILE_BYTES };
+    let cap = match fmt {
+        Format::Enex => MAX_ENEX_BYTES,
+        Format::Picture => notecraft_doc::media::MAX_PICTURE_BYTES as u64,
+        Format::Pdf => notecraft_doc::media::MAX_ATTACHMENT_BYTES as u64,
+        _ => MAX_FILE_BYTES,
+    };
     if meta.len() > cap {
         return Err(CmdError::Failed(format!("{path}: larger than {} MiB", cap >> 20)));
     }
     let bytes = std::fs::read(path).map_err(|e| CmdError::Failed(format!("{path}: {e}")))?;
+    if matches!(fmt, Format::Picture | Format::Pdf) {
+        return import_file_page(s, path, fmt, bytes);
+    }
     let text = import::decode_text(&bytes);
     let Imported { title, mut blocks, pictures_lost } = match fmt {
         Format::Markdown => {
@@ -128,6 +147,7 @@ fn import(s: &mut Session, v: &Value) -> CmdResult {
         Format::Text => import::plain_text(&text),
         Format::Html => import::html_document(&text),
         Format::Enex => return import_enex(s, path, &bytes),
+        Format::Picture | Format::Pdf => return Err(CmdError::Params("not a document".into())),
     };
     let title = title.unwrap_or_else(|| Path::new(path).file_stem().and_then(|n| n.to_str()).unwrap_or("Imported").to_string());
     todo_tags(s, &mut blocks);
@@ -136,6 +156,32 @@ fn import(s: &mut Session, v: &Value) -> CmdResult {
     s.pending_outline = None;
     crate::edit_cmds::paste_blocks(s, &json!({}), blocks, crate::edit_cmds::Mode::Keep, true)?;
     Ok(json!({"page": r["page"], "title": title, "picturesLost": pictures_lost}))
+}
+
+/// The title a file gives its page: its name without the extension.
+fn stem_title(path: &str) -> String {
+    Path::new(path).file_stem().and_then(|n| n.to_str()).map(str::to_string).filter(|n| !n.is_empty()).unwrap_or_else(|| "Imported".into())
+}
+
+/// A picture or a PDF as a new page holding it. The file is checked before the page is made,
+/// so a file that can't be read leaves the section untouched.
+fn import_file_page(s: &mut Session, path: &str, fmt: Format, bytes: Vec<u8>) -> CmdResult {
+    let title = stem_title(path);
+    if fmt == Format::Picture {
+        let pixels = crate::picture_cmds::probe(&bytes)?;
+        let r = crate::page_cmds::new_page(s, &json!({"title": title}))?;
+        s.sel.on_page = PageSel::None;
+        let id = crate::picture_cmds::add_picture(s, &json!({}), bytes, pixels)?;
+        return Ok(json!({"page": r["page"], "title": title, "picture": id.to_string(), "pixels": [pixels.0, pixels.1]}));
+    }
+    if !notecraft_codecs::pdf::is_pdf(&bytes) {
+        return Err(CmdError::Failed(format!("{path}: not a PDF file")));
+    }
+    let r = crate::page_cmds::new_page(s, &json!({"title": title}))?;
+    s.sel.on_page = PageSel::None;
+    let name = Path::new(path).file_name().and_then(|n| n.to_str()).unwrap_or("Printout.pdf").to_string();
+    let printed = crate::printout_cmds::printout(s, &json!({}), name, bytes)?;
+    Ok(json!({"page": r["page"], "title": title, "attachment": printed["attachment"], "pages": printed["pages"], "total": printed["total"]}))
 }
 
 /// An Evernote export as a new section of the current notebook, a page per note.
@@ -258,6 +304,39 @@ mod tests {
         std::fs::write(d.join("bad.enex"), "<html/>").unwrap();
         assert!(s.run("file.import", json!({"path": d.join("bad.enex").to_str().unwrap()})).is_err());
         assert!(s.run("file.import", json!({"path": d.join("missing.md").to_str().unwrap()})).is_err());
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn pictures_and_pdfs_become_pages_named_after_the_file() {
+        let d = dir("files");
+        let png =
+            notecraft_codecs::encode_png(&notecraft_codecs::Rgba8::new(32, 16, vec![200; 32 * 16 * 4]).unwrap(), &notecraft_codecs::Limits::PICTURE)
+                .unwrap();
+        std::fs::write(d.join("Whiteboard.png"), &png).unwrap();
+        let pdf = notecraft_codecs::pdf::sample_pdf(&[(200.0, 100.0, [255, 0, 0]), (100.0, 300.0, [0, 0, 255])]);
+        std::fs::write(d.join("Q3 report.pdf"), &pdf).unwrap();
+        std::fs::write(d.join("fake.jpg"), b"not a picture").unwrap();
+        let mut s = sample();
+        let pages = s.section().unwrap().pages.len();
+        let undo = s.undo_labels().len();
+        let r = run(&mut s, "file.import", json!({"path": d.join("Whiteboard.png").to_str().unwrap()}));
+        assert_eq!(r["title"], "Whiteboard", "FMT.Import.Images");
+        assert_eq!(r["pixels"], json!([32, 16]));
+        assert_eq!(s.undo_labels().len(), undo + 1, "one undo step");
+        let page = s.page().unwrap();
+        assert_eq!(page.title.text(), "Whiteboard");
+        assert_eq!(page.objects.iter().filter(|o| matches!(o, notecraft_doc::PageObject::Image(_))).count(), 1);
+        let r = run(&mut s, "file.import", json!({"path": d.join("Q3 report.pdf").to_str().unwrap()}));
+        assert_eq!((r["title"].as_str(), r["total"].as_u64()), (Some("Q3 report"), Some(2)), "FMT.Import.Pdf");
+        let page = s.page().unwrap();
+        assert!(page.objects.iter().any(|o| matches!(o, notecraft_doc::PageObject::Attachment(a) if a.name == "Q3 report.pdf")));
+        assert_eq!(page.objects.iter().filter(|o| matches!(o, notecraft_doc::PageObject::Image(_))).count(), 2, "a picture per PDF page");
+        assert_eq!(s.section().unwrap().pages.len(), pages + 2);
+        // A broken picture or a PDF that isn't one makes no page.
+        assert!(s.run("file.import", json!({"path": d.join("fake.jpg").to_str().unwrap()})).is_err());
+        assert!(s.run("file.import", json!({"path": d.join("fake.jpg").to_str().unwrap(), "format": "pdf"})).is_err());
+        assert_eq!(s.section().unwrap().pages.len(), pages + 2);
         let _ = std::fs::remove_dir_all(&d);
     }
 

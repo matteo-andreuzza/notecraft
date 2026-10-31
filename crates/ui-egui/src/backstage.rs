@@ -196,6 +196,17 @@ fn open(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
     {
         app.ui.backstage = None;
     }
+    // BS.Open.OpenNotebook on a file: a OneNote package or a NoteCraft archive, opened as a
+    // copy in memory.
+    if ui
+        .button("Open a Package or Archive…")
+        .on_hover_text("Open a OneNote package (.onepkg) or a NoteCraft archive (.ncraft-archive) as a copy in memory")
+        .clicked()
+        && let Some(path) = app.host.pick_file("Open Notebook", &[("OneNote packages and NoteCraft archives", &["onepkg", "ncraft-archive"])])
+        && app.run(ctx, "file.openNotebook", json!({"path": path})).is_some()
+    {
+        app.ui.backstage = None;
+    }
     ui.add_space(14.0);
     // BS.Open.RecentNotebooks.
     ui.label(RichText::new("Recent Notebooks").strong());

@@ -738,3 +738,20 @@ were certain landed, behaviour unchanged (every test green after each commit).
   refused (one page per picture). UI: PNG Picture in File › Export for pages.
 - Catalog: FMT.Export.Images wired (PNG; SVG not yet). Numbers: wiring 690/1329 (51.9%),
   behaviour 176/1329 (13.2%), 342 commands.
+
+## 2026-10-31 — M3: import pictures and PDFs, reopen archives, Change Location
+
+- `file.import` reads pictures (PNG/JPEG/GIF/BMP/WebP: a page titled with the file name
+  holding the picture) and PDFs (a page holding its file printout, `printout_cmds::printout`
+  now takes bytes). The file is checked before the page is made. The picker offers all of them.
+- `file.openNotebook` on a `.ncraft-archive` opens a copy in memory; when the same notebook is
+  already open the copy gets fresh notebook/group/section/page ids. Backstage Open gains
+  "Open a Package or Archive…" (`.onepkg`, `.ncraft-archive`), which a folder picker could not reach.
+- New `notebook.changeLocation` (row UI.Dialogs.NotebookProperties.ChangeLocation): writes
+  the whole notebook into a new or empty folder and keeps saving there. This lets an imported
+  OneNote notebook (folder, `.onepkg`) or an archive become a notebook on disk; until now an
+  import could only be exported. The old folder is never deleted (the reference moves it:
+  unverified). Notebook Properties shows the location and a Change Location… button.
+- Catalog: FMT.Import.Images, FMT.Export.Archive, the new row wired. Numbers: wiring
+  693/1330 (52.1%), behaviour 176/1330 (13.2%), 343 commands.
+- A second session (notecraft-61) took the Paper Size pane and SVG export on `m3/paper-size`.

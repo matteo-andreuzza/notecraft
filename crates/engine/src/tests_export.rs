@@ -143,3 +143,42 @@ fn print_writes_the_print_ready_pdf() {
     assert!(s.run("file.print", json!({"scope": "notebook"})).is_err());
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn a_notebook_archive_reopens_and_change_location_stores_it_in_a_folder() {
+    let d = dir("archive");
+    let mut s = sample();
+    trip(&mut s);
+    let nb = s.notebook().unwrap().clone();
+    let file = d.join("Sample.ncraft-archive");
+    run(&mut s, "file.exportNotebook", json!({"path": file.to_str().unwrap()}));
+    // FMT.Export.Archive: the archive opens again; the notebook is still open, so the copy
+    // gets new ids and both sit side by side.
+    let r = run(&mut s, "file.openNotebook", json!({"path": file.to_str().unwrap()}));
+    assert_eq!(r["archive"], true, "FMT.Export.Archive");
+    let copy = s.notebook().unwrap().clone();
+    assert_ne!(copy.id, nb.id);
+    assert_eq!(copy.name, nb.name);
+    let titles = |n: &notecraft_doc::Notebook| -> Vec<String> { n.sections().iter().flat_map(|x| x.pages.iter().map(|p| p.title.text())).collect() };
+    assert_eq!(titles(&copy), titles(&nb));
+    assert!(copy.sections().iter().all(|x| nb.section(x.id).is_none()), "fresh section ids");
+    assert_eq!(s.notebook_path(copy.id), None, "in memory");
+    // UI.Dialogs.NotebookProperties.ChangeLocation: the copy is written to a new folder and
+    // reopens from there.
+    let folder = d.join("Kept");
+    let r = run(&mut s, "notebook.changeLocation", json!({"path": folder.to_str().unwrap()}));
+    assert_eq!(r["previous"], serde_json::Value::Null);
+    assert_eq!(s.notebook_path(copy.id).as_deref(), Some(folder.as_path()), "UI.Dialogs.NotebookProperties.ChangeLocation");
+    run(&mut s, "page.rename", json!({"title": "Kept page"}));
+    assert!(s.save_dirty().is_empty());
+    let mut fresh = crate::Session::new(crate::tests::clock());
+    run(&mut fresh, "file.openNotebook", json!({"path": folder.to_str().unwrap()}));
+    assert!(titles(fresh.notebook().unwrap()).contains(&"Kept page".to_string()), "later edits are saved there");
+    // A folder that isn't empty is refused and the notebook stays where it was.
+    assert!(s.run("notebook.changeLocation", json!({"path": d.to_str().unwrap()})).is_err());
+    assert_eq!(s.notebook_path(copy.id).as_deref(), Some(folder.as_path()));
+    // Junk is an error, not a crash.
+    std::fs::write(d.join("junk.ncraft-archive"), b"PK\x03\x04 not really").unwrap();
+    assert!(s.run("file.openNotebook", json!({"path": d.join("junk.ncraft-archive").to_str().unwrap()})).is_err());
+    let _ = std::fs::remove_dir_all(&d);
+}

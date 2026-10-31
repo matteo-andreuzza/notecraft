@@ -248,6 +248,7 @@ fn panic_hunt() {
                     | "file.openNotebook"
                     | "file.openRecent"
                     | "file.exportNotebook"
+                    | "notebook.changeLocation"
                     | "file.exportPage"
                     | "file.exportSection"
                     | "file.exportMht"

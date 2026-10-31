@@ -54,6 +54,18 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .params(r#"{"path": file, "format"?: "archive"|"pdf", "notebook"?: id}"#)
             .pure()
             .when(need_notebook),
+        // UI.Dialogs.NotebookProperties.ChangeLocation — store the notebook in a new, empty
+        // folder (an imported copy becomes a NoteCraft notebook on disk).
+        CommandSpec::new(
+            "notebook.changeLocation",
+            "UI.Dialogs.NotebookProperties.ChangeLocation",
+            "Change Location",
+            "Window/Dialogs/Notebook Properties/Change Location",
+            change_location,
+        )
+        .params(r#"{"path": new empty folder, "notebook"?: id}"#)
+        .pure()
+        .when(need_notebook),
         // OPT.SaveBackup.BackupAllNow — back up every open notebook now (BEH.Save.Backups).
         CommandSpec::new(
             "file.backupNow",
@@ -134,6 +146,63 @@ fn attach_new(_: &mut Session, _: &Notebook, _: &str) -> Result<(), CmdError> {
     Err(CmdError::Disabled("the web version keeps notebooks in the browser; folders are not available".into()))
 }
 
+/// Largest notebook archive opened (pictures and attachments are inside it).
+#[cfg(not(target_arch = "wasm32"))]
+const MAX_ARCHIVE_BYTES: usize = 2 << 30;
+
+/// New ids for every group, section and page under `nodes` (an archive opened twice).
+/// Depth is bounded like the notebook model's own nesting.
+#[cfg(not(target_arch = "wasm32"))]
+fn fresh_ids(s: &mut Session, nodes: &mut [NavNode], depth: usize) {
+    if depth > notecraft_doc::notebook::MAX_GROUP_DEPTH {
+        return;
+    }
+    for n in nodes {
+        match n {
+            NavNode::Group(g) => {
+                g.id = s.new_id();
+                fresh_ids(s, &mut g.children, depth + 1);
+            }
+            NavNode::Section(sec) => {
+                let sec = Arc::make_mut(sec);
+                sec.id = s.new_id();
+                for pg in &mut sec.pages {
+                    Arc::make_mut(pg).id = s.new_id();
+                }
+            }
+        }
+    }
+}
+
+/// UI.Dialogs.NotebookProperties.ChangeLocation: write the whole notebook into `path` (new or
+/// empty) and keep saving there. The previous folder, if any, is left as it was (the
+/// reference moves the notebook; NoteCraft never deletes a folder of notes — unverified).
+#[cfg(not(target_arch = "wasm32"))]
+fn change_location(s: &mut Session, v: &Value) -> CmdResult {
+    let path = p::req_str(v, "path")?;
+    let id = match p::id(v, "notebook")? {
+        Some(id) => id,
+        None => s.notebook().map(|n| n.id).ok_or_else(no_page)?,
+    };
+    let nb = s.ws.notebook(id).ok_or_else(|| CmdError::Params("no such notebook".into()))?.clone();
+    let root = std::path::Path::new(path);
+    if let Some(old) = s.stores.get(&id).map(|st| st.root.clone())
+        && std::fs::canonicalize(&old).ok().zip(std::fs::canonicalize(root).ok()).is_some_and(|(a, b)| a == b)
+    {
+        return Ok(json!({"notebook": id.to_string(), "path": path, "unchanged": true}));
+    }
+    let store = notecraft_format::store::NotebookStore::create(root, &nb).map_err(|e| CmdError::Failed(e.to_string()))?;
+    let previous = s.stores.insert(id, store).map(|st| st.root.display().to_string());
+    s.dirty.remove(&id);
+    s.notice(format!("{} is now saved in {path}", nb.name));
+    Ok(json!({"notebook": id.to_string(), "path": path, "previous": previous}))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn change_location(_: &mut Session, _: &Value) -> CmdResult {
+    Err(CmdError::Disabled("the web version keeps notebooks in the browser; folders are not available".into()))
+}
+
 fn open_notebook(s: &mut Session, v: &Value) -> CmdResult {
     let path = p::req_str(v, "path")?;
     s.open_path(path)
@@ -149,6 +218,7 @@ impl Session {
         let folder = match crate::onenote_cmds::extension(root).as_deref() {
             Some("onetoc2") => root.parent().unwrap_or(root),
             Some("onepkg") => return self.import_onepkg(root),
+            Some("ncraft-archive") => return self.open_archive(root),
             _ => root,
         };
         if crate::onenote_cmds::is_onenote_folder(folder) {
@@ -179,6 +249,26 @@ impl Session {
             self.dirty.entry(id).or_default().recycle = true;
         }
         Ok(json!({"notebook": id.to_string()}))
+    }
+
+    /// Open a notebook archive (`FMT.Export.Archive`) as an in-memory notebook; Change
+    /// Location stores it in a folder. An archive of a notebook that is already open gets new
+    /// notebook, group, section and page ids, so both can be open side by side.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn open_archive(&mut self, path: &std::path::Path) -> CmdResult {
+        let file = path.to_str().ok_or_else(|| CmdError::Failed(format!("{}: the file name is not valid Unicode", path.display())))?;
+        let (bytes, _) = crate::picture_cmds::read_path(file, MAX_ARCHIVE_BYTES)?;
+        let mut nb = notecraft_format::decode_archive(&bytes).map_err(|e| CmdError::Failed(format!("{file}: {e}")))?;
+        drop(bytes);
+        if self.ws.notebook(nb.id).is_some() {
+            nb.id = self.new_id();
+            fresh_ids(self, &mut nb.children, 0);
+        }
+        let id = nb.id;
+        let name = nb.name.clone();
+        self.add_notebook(nb);
+        self.notice(format!("{name}: opened from an archive, in memory (File › Info › Properties › Change Location keeps it in a folder)"));
+        Ok(json!({"notebook": id.to_string(), "archive": true}))
     }
 
     /// Opening folders is not available on the web build.
@@ -239,6 +329,12 @@ impl Session {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn notebook_path(&self, id: notecraft_doc::Id) -> Option<std::path::PathBuf> {
         self.stores.get(&id).map(|s| s.root.clone())
+    }
+
+    /// The web build stores no notebook in a folder.
+    #[cfg(target_arch = "wasm32")]
+    pub fn notebook_path(&self, _id: notecraft_doc::Id) -> Option<std::path::PathBuf> {
+        None
     }
 }
 

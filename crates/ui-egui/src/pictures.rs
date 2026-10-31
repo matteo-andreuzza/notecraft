@@ -341,11 +341,20 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 app.run(ctx, cmd, json!({"path": path}));
             }
         }
-        // NC.File.Import: a Markdown, text or HTML file becomes a new page, an Evernote export a
-        // new section.
+        // NC.File.Import: a Markdown, text, HTML, picture or PDF file becomes a new page, an
+        // Evernote export a new section.
         "file.import" => {
-            let exts = ["md", "markdown", "txt", "html", "htm", "enex"];
-            if let Some(path) = app.host.pick_file("Import File", &[("Markdown, text, web pages and Evernote exports", &exts)]) {
+            let docs = ["md", "markdown", "txt", "html", "htm", "enex"];
+            let mut all: Vec<&str> = docs.to_vec();
+            all.extend(notecraft_engine::IMPORT_PICTURE_EXTENSIONS);
+            all.push("pdf");
+            let filters: [(&str, &[&str]); 4] = [
+                ("Documents, pictures and PDFs", &all),
+                ("Markdown, text, web pages and Evernote exports", &docs),
+                ("Pictures", &notecraft_engine::IMPORT_PICTURE_EXTENSIONS),
+                ("PDF files", &["pdf"]),
+            ];
+            if let Some(path) = app.host.pick_file("Import File", &filters) {
                 app.run(ctx, cmd, json!({"path": path}));
             }
         }

@@ -413,6 +413,18 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                         }
                     }
                 });
+                // UI.Dialogs.NotebookProperties.ChangeLocation: a folder named after the
+                // notebook inside the folder picked.
+                let place = app.session.notebook_path(nid).map(|p| p.display().to_string());
+                ui.label("Location:");
+                ui.label(RichText::new(place.as_deref().unwrap_or("In memory only (not saved to disk)")).size(12.0).color(t.page_meta));
+                if ui.button("Change Location…").on_hover_text("Save this notebook in a new folder and keep saving there").clicked()
+                    && let Some(dir) = app.host.pick_folder("Choose where to keep the notebook")
+                {
+                    let path = std::path::Path::new(&dir).join(notecraft_engine::doc::clean_name(name));
+                    app.run(ctx, "notebook.changeLocation", json!({"notebook": nid.to_string(), "path": path.to_string_lossy()}));
+                }
+                ui.add_space(6.0);
                 ui.horizontal(|ui| {
                     if crate::chrome::primary_button(ui, "OK", &t).clicked() {
                         app.run(ctx, "notebook.properties", json!({"notebook": nid.to_string(), "name": name}));

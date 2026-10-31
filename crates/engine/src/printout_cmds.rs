@@ -150,13 +150,18 @@ fn place_pages(s: &mut Session, att: Id, pages: Vec<PrintedPage>, total: usize) 
 }
 
 fn insert_printout(s: &mut Session, v: &Value) -> CmdResult {
+    let (bytes, from_path) = crate::picture_cmds::read_input(v, MAX_ATTACHMENT_BYTES)?;
+    let name = crate::p::str(v, "name").map(str::to_string).or(from_path).unwrap_or_else(|| "Printout.pdf".into());
+    printout(s, v, name, bytes)
+}
+
+/// Attach `bytes` as `name` where `v` says (see `ops::insert_pos`) with its printed pages below.
+pub(crate) fn printout(s: &mut Session, v: &Value, name: String, bytes: Vec<u8>) -> CmdResult {
     if s.page().is_some_and(|p| p.objects.len() + 2 > MAX_PAGE_OBJECTS) {
         return Err(CmdError::Failed(format!("a page holds at most {MAX_PAGE_OBJECTS} objects")));
     }
-    let (bytes, from_path) = crate::picture_cmds::read_input(v, MAX_ATTACHMENT_BYTES)?;
     // Render first: a file that can't be printed leaves the page untouched.
     let (pages, total) = print(&bytes)?;
-    let name = crate::p::str(v, "name").map(str::to_string).or(from_path).unwrap_or_else(|| "Printout.pdf".into());
     let id = crate::picture_cmds::push_attachment(s, v, name, bytes)?;
     let ids = place_pages(s, id, pages, total)?;
     s.sel.on_page = PageSel::Objects { ids: vec![id] };

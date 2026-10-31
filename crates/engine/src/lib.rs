@@ -60,6 +60,7 @@ mod tests_table;
 use serde_json::Value;
 
 pub use draw_cmds::{DrawState, DrawTool, EraserKind, MAX_PATH as MAX_DRAW_PATH, PenStyle};
+pub use import_cmds::PICTURE_EXTENSIONS as IMPORT_PICTURE_EXTENSIONS;
 pub use math_cmds::{EQUATIONS, STRUCTURES as EQUATION_STRUCTURES, SYMBOLS as EQUATION_SYMBOLS};
 pub use notecraft_doc as doc;
 pub use notecraft_search as search;

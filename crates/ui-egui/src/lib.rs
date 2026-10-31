@@ -317,7 +317,7 @@ impl NoteApp {
         let sel_before = self.session.sel.clone();
         // BS.Open.RecentNotebooks: captured before `params` moves into `session.run`, remembered
         // after it succeeds.
-        let opened_path = matches!(id, "file.openNotebook" | "file.newNotebook" | "file.openRecent")
+        let opened_path = matches!(id, "file.openNotebook" | "file.newNotebook" | "file.openRecent" | "notebook.changeLocation")
             .then(|| params.get("path").and_then(Value::as_str).map(str::to_string))
             .flatten();
         let v = self.session.run(id, params).map_err(|e| match e {
