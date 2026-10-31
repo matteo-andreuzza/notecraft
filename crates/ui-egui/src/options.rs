@@ -298,6 +298,23 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             ui.checkbox(&mut d.create_table_on_tab, "Create a table when Tab is pressed after text");
             ui.checkbox(&mut d.wiki_links, "Enable wiki linking ([[Page]])");
             ui.checkbox(&mut d.show_paste_options, "Show Paste Options button when content is pasted");
+            // OPT.Advanced.MeasurementUnits.
+            ui.horizontal(|ui| {
+                use notecraft_engine::doc::geom::Unit;
+                ui.label("Measurement units:");
+                let name = |u: Unit| match u {
+                    Unit::Inches => "Inches",
+                    Unit::Centimeters => "Centimeters",
+                    Unit::Millimeters => "Millimeters",
+                    Unit::Points => "Points",
+                    Unit::Picas => "Picas",
+                };
+                egui::ComboBox::from_id_salt("opt-units").selected_text(name(d.unit)).show_ui(ui, |ui| {
+                    for u in [Unit::Inches, Unit::Centimeters, Unit::Millimeters, Unit::Points, Unit::Picas] {
+                        ui.selectable_value(&mut d.unit, u, name(u));
+                    }
+                });
+            });
             section(ui, "Passwords");
             // OPT.Advanced.LockAfterIdle, OPT.Advanced.LockOnLeave.
             ui.horizontal(|ui| {

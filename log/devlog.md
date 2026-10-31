@@ -1117,3 +1117,9 @@ were certain landed, behaviour unchanged (every test green after each commit).
   notebook change: saved, undoable); `versions_cmds::snapshot` keeps no versions while it is on.
   Ribbon rows (Page Versions and Recycle Bin menus) show it checked; the version menu has it.
 - Catalog: the three Disable History rows wired (unverified, D14).
+
+## 2026-10-31 — M3/P2: measurement units
+
+- `Prefs.unit` (`geom::Unit`, inches by default): Options › Advanced › Measurement units; the
+  Paper Size pane's width, height and margins show and take that unit (`panes::length_field`
+  converts through `Unit::from_points/to_points`). OPT.Advanced.MeasurementUnits wired.

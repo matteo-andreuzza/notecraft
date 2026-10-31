@@ -189,7 +189,8 @@ pub fn templates_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
 }
 
 /// The Paper Size pane (View › Paper Size): the page's paper, orientation, size and print
-/// margins (`page.paperSize`), and Save current page as a template. Lengths show in inches.
+/// margins (`page.paperSize`), and Save current page as a template. Lengths show in the unit
+/// of Options › Advanced › Measurement units.
 pub fn paper_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let ctx = ui.ctx().clone();
     pane_panel("paper_pane", 260.0, &t).show(ui, |ui| {
@@ -244,7 +245,7 @@ pub fn paper_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 let ps = paper.unwrap_or(notecraft_engine::doc::PaperSize { width: 0.0, height: 0.0, margins: [0.0; 4] });
                 for (label, key, v) in [("Width:", "width", ps.width), ("Height:", "height", ps.height)] {
                     ui.label(label);
-                    if let Some(pt) = length_field(ui, key, v, 1.0..=200.0, paper.is_some()) {
+                    if let Some(pt) = length_field(ui, key, v, 1.0..=200.0, paper.is_some(), app.session.prefs.unit) {
                         change = Some(json!({ key: pt }));
                     }
                     ui.end_row();
@@ -256,7 +257,7 @@ pub fn paper_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 for (label, key, i) in [("Top:", "top", 0), ("Bottom:", "bottom", 2), ("Left:", "left", 3), ("Right:", "right", 1)] {
                     ui.label(label);
                     let v = paper.and_then(|ps| ps.margins.get(i).copied()).unwrap_or(0.0);
-                    if let Some(pt) = length_field(ui, key, v, 0.0..=10.0, paper.is_some()) {
+                    if let Some(pt) = length_field(ui, key, v, 0.0..=10.0, paper.is_some(), app.session.prefs.unit) {
                         change = Some(json!({ key: pt }));
                     }
                     ui.end_row();
@@ -281,21 +282,34 @@ pub fn paper_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
 /// A length in inches for a value kept in points. While the user drags or types, the number
 /// lives in egui's memory and nothing runs; the new value (points) comes back once, when the
 /// drag ends or the field loses focus, so an edit is one undo step.
-fn length_field(ui: &mut Ui, key: &str, pt: f32, range: std::ops::RangeInclusive<f32>, enabled: bool) -> Option<f32> {
+fn length_field(
+    ui: &mut Ui,
+    key: &str,
+    pt: f32,
+    range_in: std::ops::RangeInclusive<f32>,
+    enabled: bool,
+    unit: notecraft_engine::doc::geom::Unit,
+) -> Option<f32> {
+    // The range is given in inches; the field shows the user's unit (OPT.Advanced.MeasurementUnits).
+    let range = unit.from_points(*range_in.start() * 72.0)..=unit.from_points(*range_in.end() * 72.0);
     let id = egui::Id::new(("paper_field", key));
     let held: Option<f32> = ui.data(|d| d.get_temp(id));
-    let mut inches = held.unwrap_or(pt / 72.0);
-    let r = ui.add_enabled(enabled, egui::DragValue::new(&mut inches).speed(0.01).range(range).fixed_decimals(2).suffix("\""));
+    let mut value = held.unwrap_or_else(|| unit.from_points(pt));
+    let (speed, decimals) = match unit {
+        notecraft_engine::doc::geom::Unit::Points | notecraft_engine::doc::geom::Unit::Millimeters => (0.5, 1),
+        _ => (0.01, 2),
+    };
+    let r = ui.add_enabled(enabled, egui::DragValue::new(&mut value).speed(speed).range(range).fixed_decimals(decimals).suffix(unit.suffix()));
     if r.dragged() || r.has_focus() {
         if r.changed() || held.is_some() {
-            ui.data_mut(|d| d.insert_temp(id, inches));
+            ui.data_mut(|d| d.insert_temp(id, value));
         }
         return None;
     }
     if held.is_some() {
         ui.data_mut(|d| d.remove::<f32>(id));
     }
-    let new = inches * 72.0;
+    let new = unit.to_points(value);
     ((r.changed() || held.is_some()) && enabled && (new - pt).abs() > 0.01).then_some(new)
 }
 
