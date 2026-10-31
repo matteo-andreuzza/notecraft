@@ -448,7 +448,7 @@ The Help tab of the Microsoft 365 app (not in the 2019 control list).
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| R.Help.Help.Help | Help | Help/Help/Help | button | `F1` | help.help | P1 | missing | GK (Microsoft 365 Help tab); KBD (F1) | unverified group names |
+| R.Help.Help.Help | Help | Help/Help/Help | button | `F1` | help.help | P1 | wired | GK (Microsoft 365 Help tab); KBD (F1) | unverified group names; NoteCraft's help is local: a pane searching every command by name, ribbon path and shortcut (NC.Help.Search); a click runs it |
 | R.Help.Help.ContactSupport | Contact Support | Help/Help/Contact Support | button |  |  | P3 | out-of-scope | GK (Microsoft 365 Help tab) |  |
 | R.Help.Help.Feedback | Feedback | Help/Help/Feedback | button |  | help.feedback | P3 | missing | GK (Microsoft 365 Help tab) |  |
 | R.Help.Help.ShowTraining | Show Training | Help/Help/Show Training | button |  | help.training | P3 | missing | GK (Microsoft 365 Help tab) |  |
@@ -570,7 +570,7 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Account.Identity | Account: User Information (name used as author) | File/Account/User Information | page |  | file.options | P2 | missing | FLUENT19:GroupBackstageIdentity |  |
 | BS.Account.Theme | Account: Office Theme / Background | File/Account/Theme | combo |  | view.theme | P1 | missing | FLUENT19:Theming |  |
 | BS.Account.SignIn | Account: Sign in / Connected Services | File/Account/Connected Services | page |  |  | P3 | out-of-scope | FLUENT19:GroupBackstageSignIn |  |
-| BS.Account.About | Account: About (version) | File/Account/About | button |  | help.about | P1 | missing | FLUENT19:GroupAboutOfficeProducts |  |
+| BS.Account.About | Account: About (version) | File/Account/About | button |  | help.about | P1 | wired | FLUENT19:GroupAboutOfficeProducts | About NoteCraft: version, licence, local-first note, trademark notice |
 | BS.Account.WhatsNew | Account: What's New | File/Account/What's New | button |  | help.whatsNew | P3 | missing | FLUENT19:GroupWhatsNewInOfficeProducts |  |
 | BS.Account.Updates | Account: Update Options | File/Account/Update Options | menu |  |  | P3 | out-of-scope | FLUENT19:GroupClickToRunUpdateStatus | updates come from the Craft launcher |
 | BS.Account.Insider | Account: Office Insider | File/Account/Insider | menu |  |  | P3 | out-of-scope | FLUENT19:GroupOfficeInsider |  |
@@ -1026,7 +1026,7 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.NextPageOneNote | Next Page | Quick Access Toolbar/Commands Not in the Ribbon/Next Page | button | `Mod+PageDown` | nav.nextPage | P0 | wired | FLUENT19:NextPageOneNote |  |
 | QAT.NR.Undo | Undo (history list) | Quick Access Toolbar/Commands Not in the Ribbon/Undo (history list) | gallery |  | edit.undoTo | P1 | wired | FLUENT19:Undo |  |
 | QAT.NR.Redo | Redo (history list) | Quick Access Toolbar/Commands Not in the Ribbon/Redo (history list) | gallery |  | edit.redoTo | P1 | wired | FLUENT19:Redo |  |
-| QAT.NR.Help | Help | Quick Access Toolbar/Commands Not in the Ribbon/Help | button | `F1` | help.help | P1 | missing | FLUENT19:Help |  |
+| QAT.NR.Help | Help | Quick Access Toolbar/Commands Not in the Ribbon/Help | button | `F1` | help.help | P1 | wired | FLUENT19:Help |  |
 | QAT.NR.PasteSourceFormatting | Paste: Keep Source Formatting | Quick Access Toolbar/Commands Not in the Ribbon/Paste: Keep Source Formatting | button |  | edit.pasteKeepSource | P0 | missing | FLUENT19:PasteSourceFormatting |  |
 | QAT.NR.PasteMergeFormatting | Paste: Merge Formatting | Quick Access Toolbar/Commands Not in the Ribbon/Paste: Merge Formatting | button |  | edit.pasteMerge | P1 | missing | FLUENT19:PasteMergeFormatting |  |
 | QAT.NR.PasteTextOnly | Paste: Keep Text Only | Quick Access Toolbar/Commands Not in the Ribbon/Paste: Keep Text Only | button | `Mod+Shift+V` | edit.pasteTextOnly | P0 | missing | FLUENT19:PasteTextOnly |  |
@@ -1040,14 +1040,14 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.FavoriteHighlighter3 | Favorite Highlighter 3 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Highlighter 3 | toggle |  | draw.favoriteHighlighter3 | P2 | missing | FLUENT19:FavoriteHighlighter3 |  |
 | QAT.NR.FavoriteHighlighter4 | Favorite Highlighter 4 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Highlighter 4 | toggle |  | draw.favoriteHighlighter4 | P2 | missing | FLUENT19:FavoriteHighlighter4 |  |
 | QAT.NR.PlaybackTipPlay | Play (playback tip) | Quick Access Toolbar/Commands Not in the Ribbon/Play (playback tip) | button |  | media.play | P3 | missing | FLUENT19:PlaybackTipPlay |  |
-| QAT.NR.About | About NoteCraft | Quick Access Toolbar/Commands Not in the Ribbon/About NoteCraft | button |  | help.about | P1 | missing | FLUENT19:About |  |
+| QAT.NR.About | About NoteCraft | Quick Access Toolbar/Commands Not in the Ribbon/About NoteCraft | button |  | help.about | P1 | wired | FLUENT19:About |  |
 | QAT.NR.MarkPageAsUnread | Mark as Unread | Quick Access Toolbar/Commands Not in the Ribbon/Mark as Unread | button | `Mod+Q` | history.markUnread | P2 | missing | FLUENT19:MarkPageAsUnread |  |
 | QAT.NR.MoveOrCopyPage | Move or Copy Page | Quick Access Toolbar/Commands Not in the Ribbon/Move or Copy Page | button | `Mod+Alt+M` | page.moveOrCopy | P0 | verified | FLUENT19:MoveOrCopyPage |  |
 | QAT.NR.NewPageAfterCurrentGroup | New Page After Current Group | Quick Access Toolbar/Commands Not in the Ribbon/New Page After Current Group | button |  | page.newAfterGroup | P1 | wired | FLUENT19:NewPageAfterCurrentGroup |  |
 | QAT.NR.FontSizeIncrease1Point | Increase Font Size | Quick Access Toolbar/Commands Not in the Ribbon/Increase Font Size | button | `Mod+Shift+>` | format.growFont | P0 | wired | FLUENT19:FontSizeIncrease1Point |  |
 | QAT.NR.FontSizeDecrease1Point | Decrease Font Size | Quick Access Toolbar/Commands Not in the Ribbon/Decrease Font Size | button | `Mod+Shift+<` | format.shrinkFont | P0 | wired | FLUENT19:FontSizeDecrease1Point |  |
 | QAT.NR.MinimizeRibbon | Collapse the Ribbon | Quick Access Toolbar/Commands Not in the Ribbon/Collapse the Ribbon | toggle | `Mod+F1` | ui.collapseRibbon | P0 | wired | FLUENT19:MinimizeRibbon |  |
-| QAT.NR.HelpKeyboardShortcuts | Keyboard Shortcuts | Quick Access Toolbar/Commands Not in the Ribbon/Keyboard Shortcuts | button |  | help.keyboardShortcuts | P2 | missing | FLUENT19:HelpKeyboardShortcuts |  |
+| QAT.NR.HelpKeyboardShortcuts | Keyboard Shortcuts | Quick Access Toolbar/Commands Not in the Ribbon/Keyboard Shortcuts | button |  | help.keyboardShortcuts | P2 | wired | FLUENT19:HelpKeyboardShortcuts | The Help pane listing only commands with a shortcut |
 | QAT.NR.OutlookTaskToday | Outlook Task: Today | Quick Access Toolbar/Commands Not in the Ribbon/Outlook Task: Today | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskToday |  |
 | QAT.NR.OutlookTaskTomorrow | Outlook Task: Tomorrow | Quick Access Toolbar/Commands Not in the Ribbon/Outlook Task: Tomorrow | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskTomorrow |  |
 | QAT.NR.OutlookTaskThisWeek | Outlook Task: This Week | Quick Access Toolbar/Commands Not in the Ribbon/Outlook Task: This Week | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskThisWeek |  |
@@ -1286,7 +1286,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Share.SyncAll | Synchronize changes in all shared notebooks | Keyboard/Share/Synchronize changes in all shared notebooks | shortcut | `F9` | notebook.syncAll | P2 | missing | KBD365 |  |
 | KB.Share.MarkUnread | Mark the current page as unread | Keyboard/Share/Mark the current page as unread | shortcut | `Mod+Q` | history.markUnread | P2 | missing | KBD365 |  |
 | KB.Protect.LockAll | Lock all password-protected sections | Keyboard/Protect/Lock all password-protected sections | shortcut | `Mod+Alt+L` | protect.lockAll | P1 | wired | KBD365 |  |
-| KB.App.Help | Help | Keyboard/Application/Help | shortcut | `F1` | help.help | P1 | missing | KBD365 | standard Office key |
+| KB.App.Help | Help | Keyboard/Application/Help | shortcut | `F1` | help.help | P1 | wired | KBD365 | standard Office key |
 | KB.App.Ribbon | Collapse or expand the ribbon | Keyboard/Application/Collapse or expand the ribbon | shortcut | `Mod+F1` | ui.collapseRibbon | P1 | wired | KBD365 | standard Office key; unverified for OneNote |
 | KB.App.Keytips | Show keytips | Keyboard/Application/Show keytips | shortcut | `F10` | ui.keytips | P2 | missing | KBD365 | Alt alone too |
 
@@ -1524,6 +1524,7 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 | NC.Versions.Open | Open a page version (read-only, in place of the page) | Window/Panes/Page Versions/Open a version | button |  | history.openVersion | P1 | wired | NoteCraft (decision D14) | The version is drawn as a picture of the page under a bar with Restore Version, Delete Version and Close; nothing on it can be edited. |
 | NC.Recycle.Preview | Open a deleted page from the Notebook Recycle Bin (read-only) | Window/Panes/Recycle Bin/Open a deleted page | button |  | history.previewDeleted | P1 | wired | NoteCraft | As NC.Versions.Open, with Restore and Close. |
 | NC.Versions.ClosePreview | Close a version or deleted page shown read-only | Window/Panes/Page Versions/Close the version | button |  | history.closePreview | P1 | wired | NoteCraft (decision D14) |  |
+| NC.Help.Search | Search the Help pane: every command by name, ribbon path and shortcut | Window/Panes/Help/Search | button |  | help.search | P1 | wired | NoteCraft | Local help (no network): results come from the command registry, so they are never out of date. |
 
 ## Revision history
 

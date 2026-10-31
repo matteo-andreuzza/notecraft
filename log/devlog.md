@@ -944,3 +944,14 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Catalog: 17 rows wired (UI.Panes.PageVersions, the Page Versions ribbon and context rows,
   BEH.Versions.Snapshots), new NC.Versions.Open, NC.Recycle.Preview, NC.Versions.ClosePreview.
   Not yet: Move or Copy of a version, Disable History for This Notebook, versions from .one files.
+
+## 2026-10-31 — M3/P1: Help (F1), Keyboard Shortcuts and About
+
+- Engine `help_cmds.rs`: `help.help` (F1) opens the Help pane, `help.keyboardShortcuts` opens
+  it on shortcuts only, `help.search` searches every command (label, ribbon path, id, shortcut;
+  every word must match; label matches first; queries cut at 200 characters), `help.about`
+  (name, version, licence). Local only: the registry is the help, so it is never out of date.
+- UI `help_ui.rs`: the pane (search box, results with path and shortcut, a click runs the
+  command) and the About window (from File › Account and the QAT row). Snapshot `help-pane`.
+- Catalog: R.Help.Help.Help, KB.App.Help, QAT.NR.Help, QAT.NR.HelpKeyboardShortcuts,
+  BS.Account.About, QAT.NR.About wired; new NC.Help.Search.

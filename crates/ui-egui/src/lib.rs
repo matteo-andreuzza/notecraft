@@ -16,6 +16,7 @@ pub(crate) mod clipboard;
 pub mod context_menu;
 pub mod dialogs;
 pub mod fonts;
+pub mod help_ui;
 pub mod icons;
 pub mod icons_set;
 pub mod ink;
@@ -513,6 +514,7 @@ impl NoteApp {
         if self.ui.backstage.is_some() {
             backstage::show(self, ui, t);
             dialogs::show(self, &ctx, t);
+            help_ui::about(self, &ctx, t);
             return;
         }
         chrome::title_bar(self, ui, t);
@@ -540,6 +542,9 @@ impl NoteApp {
             if self.session.view.recent_edits.is_some() {
                 panes::recent_pane(self, ui, t);
             }
+            if self.session.view.help_pane {
+                help_ui::pane(self, ui, t);
+            }
             if self.ui.search_pane {
                 panes::search_pane(self, ui, t);
             }
@@ -566,6 +571,7 @@ impl NoteApp {
         self.toast(&ctx, t);
         nav::search_dropdown(self, &ctx, t);
         dialogs::show(self, &ctx, t);
+        help_ui::about(self, &ctx, t);
     }
 
     /// The expand / restore button at the page's top right (catalog `UI.Canvas.ExpandButton`,

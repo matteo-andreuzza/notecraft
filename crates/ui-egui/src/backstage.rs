@@ -450,6 +450,10 @@ fn account(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     ui.add_space(20.0);
     ui.label(RichText::new("About NoteCraft").strong());
     ui.label(format!("NoteCraft {} — an open-source, local-first notebook. MIT OR Apache-2.0.", env!("CARGO_PKG_VERSION")));
+    if ui.button("About NoteCraft").clicked() {
+        let ctx = ui.ctx().clone();
+        app.run(&ctx, "help.about", serde_json::json!({}));
+    }
     ui.label(
         RichText::new("Not affiliated with Microsoft. OneNote is a trademark of Microsoft Corporation, named only to describe compatibility.")
             .size(12.0)

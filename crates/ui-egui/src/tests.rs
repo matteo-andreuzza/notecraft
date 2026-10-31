@@ -784,6 +784,42 @@ fn a_deleted_page_opens_read_only_from_the_recycle_bin() {
 }
 
 #[test]
+fn f1_opens_help_which_finds_and_runs_commands() {
+    // parity: R.Help.Help.Help, KB.App.Help, NC.Help.Search
+    let mut h = harness(app());
+    h.run();
+    h.key_press(egui::Key::F1);
+    h.run();
+    assert!(h.state().session.view.help_pane, "F1 opens Help");
+    // The box is labelled by the text above it (the query skips the label itself).
+    h.get_by_label("Search commands and shortcuts").click();
+    h.run();
+    h.get_by_label("Search commands and shortcuts").type_text("full page view");
+    h.run();
+    assert!(h.query_by_label("F11").is_some(), "the command is listed with its shortcut");
+    // The ribbon has a Full Page View button too; the pane is drawn after it.
+    h.get_all_by_label("Full Page View").last().unwrap().click();
+    h.run();
+    assert!(h.state().session.view.full_page, "a click runs it");
+}
+
+#[test]
+fn about_shows_the_version_from_the_account_page() {
+    // parity: BS.Account.About
+    let mut a = app();
+    a.ui.backstage = Some(crate::Backstage::Account);
+    let mut h = harness(a);
+    h.run();
+    h.get_by_role_and_label(egui::accesskit::Role::Button, "About NoteCraft").click();
+    h.run();
+    assert!(h.state().session.view.about);
+    assert!(h.query_by_label_contains(&format!("Version {}", env!("CARGO_PKG_VERSION"))).is_some());
+    h.get_by_label("OK").click();
+    h.run();
+    assert!(!h.state().session.view.about);
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();

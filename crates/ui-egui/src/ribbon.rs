@@ -121,6 +121,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "insert.pageTemplates" => s.view.templates_pane,
         "view.paperSize" => s.view.paper_pane,
         "history.pageVersions" => s.view.page_versions,
+        "help.help" => s.view.help_pane,
         "draw.snapToGrid" => s.draw.snap_to_grid,
         "draw.inkToShape" => s.draw.ink_to_shape,
         "review.password" => s.view.password_pane,
