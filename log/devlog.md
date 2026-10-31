@@ -765,3 +765,18 @@ were certain landed, behaviour unchanged (every test green after each commit).
   paste like dropped files: pictures as pictures, PDFs through the Insert File dialog, the rest
   as attachments, at the caret. Their paths no longer get typed in as text. `RichClip.files`,
   `pictures::insert_files` shared with drops, `MAX_PASTED_FILES` = 50.
+
+## 2026-10-31 — M2 leftover: Ink to Shape
+
+- `notecraft_ink::recognize`: one stroke recognised as a line, triangle, rectangle/square,
+  diamond, other four-sided shape, pentagon, hexagon, ellipse or circle. It compares the
+  stroke's corner polygon (RDP at 8% of its size, weak corners merged) with the ellipse in its
+  box and keeps the closer one within 6% of the size. Rectangles, squares, diamonds and circles
+  are straightened; other polygons keep the corners drawn. Strokes under 8 pt, scribbles and
+  writing stay as drawn; input over 20,000 samples is never examined.
+- Engine: `draw.inkToShape` toggle (`DrawState.ink_to_shape`, no undo step); `draw.stroke`
+  replaces a recognised stroke with the neat shape in the same pen and reports `shape`
+  (`free: true` skips it, as for the ruler). The ribbon's Ink to Shape button is live and
+  shows its state. The source is Microsoft's public "Convert ink to shapes in Office" page;
+  the thresholds are unverified.
+- Numbers: wiring 694/1330 (52.2%), behaviour 176/1330 (13.2%), 344 commands.

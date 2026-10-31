@@ -124,6 +124,10 @@ pub struct DrawState {
     /// Draw with Touch: a finger draws with the drawing tools; off, a finger moves the page
     /// (decision D8; a missing field means on, like [`DrawState::default`]).
     pub with_touch: bool,
+    /// Ink to Shape: a pen stroke drawn as a shape becomes that shape, neatly
+    /// (`notecraft_ink::recognize`).
+    #[serde(default)]
+    pub ink_to_shape: bool,
 }
 
 impl Default for DrawState {
@@ -141,6 +145,7 @@ impl Default for DrawState {
             ruler: None,
             snap_to_grid: false,
             with_touch: true,
+            ink_to_shape: false,
         }
     }
 }
@@ -219,7 +224,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         .params(r##"{"index"?: pen (default: the selected one), "tool"?: "pen" | "highlighter", "color"?: "#rrggbb", "width"?: pt}"##)
         .pure(),
         CommandSpec::new("draw.stroke", "NC.Draw.Stroke", "Ink", "Mouse/Canvas/Draw", stroke)
-            .params(r##"{"points": [[x, y, pressure?], …] page points, "pen"?: index, "tool"?: "pen" | "highlighter", "color"?: "#rrggbb", "width"?: pt}"##)
+            .params(r##"{"points": [[x, y, pressure?], …] page points, "pen"?: index, "tool"?: "pen" | "highlighter", "color"?: "#rrggbb", "width"?: pt, "free"?: bool (no ruler, no Ink to Shape)}"##)
             .when(need_page),
         CommandSpec::new("draw.shapes", "R.Draw.Shapes.InkShapeGallery", "Shapes", "Draw/Shapes", choose_shape)
             .params(r#"{"kind"?: "line" | "arrow" | "double arrow" | "rectangle" | "oval" | "triangle" | "right triangle" | "diamond" | "parallelogram"}"#)
@@ -228,6 +233,13 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             s.draw.lock_shapes = !s.draw.lock_shapes;
             Ok(json!({"locked": s.draw.lock_shapes}))
         })
+        .pure(),
+        // R.Draw.Convert.InkToShape — strokes drawn from now on that look like shapes become them.
+        CommandSpec::new("draw.inkToShape", "R.Draw.Convert.InkToShape", "Ink to Shape", "Draw/Convert/Ink to Shape", |s, v| {
+            s.draw.ink_to_shape = p::bool(v, "on").unwrap_or(!s.draw.ink_to_shape);
+            Ok(json!({"inkToShape": s.draw.ink_to_shape}))
+        })
+        .params(r#"{"on"?: bool}"#)
         .pure(),
         CommandSpec::new("draw.snapToGrid", "R.Draw.Shapes.GridSnapTo", "Snap to Grid", "Draw/Shapes/Snap to Grid", |s, v| {
             s.draw.snap_to_grid = p::bool(v, "on").unwrap_or(!s.draw.snap_to_grid);
@@ -367,6 +379,17 @@ fn stroke(s: &mut Session, v: &Value) -> CmdResult {
         && let Some(along) = r.snap(&samples, stroke_pen(s, v)?.width / 2.0)
     {
         samples = along;
+    } else if s.draw.ink_to_shape && p::bool(v, "free") != Some(true) {
+        // R.Draw.Convert.InkToShape: the shape replaces the stroke, in the same pen.
+        let points: Vec<Point> = samples.iter().map(|(p, _)| *p).collect();
+        if let Some(shape) = notecraft_ink::recognize::recognize(&points) {
+            let samples: Vec<(Point, f32)> = shape.points.into_iter().map(|p| (p, notecraft_doc::ink::DEFAULT_PRESSURE)).collect();
+            let mut r = push_ink(s, v, &samples)?;
+            if let Some(o) = r.as_object_mut() {
+                o.insert("shape".into(), json!(shape.kind));
+            }
+            return Ok(r);
+        }
     }
     push_ink(s, v, &samples)
 }

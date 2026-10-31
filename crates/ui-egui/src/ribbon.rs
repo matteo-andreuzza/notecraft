@@ -113,6 +113,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "draw.ruler" => s.draw.ruler.is_some(),
         "insert.pageTemplates" => s.view.templates_pane,
         "draw.snapToGrid" => s.draw.snap_to_grid,
+        "draw.inkToShape" => s.draw.ink_to_shape,
         "draw.withTouch" => s.draw.with_touch,
         "draw.lasso" => s.draw.tool == notecraft_engine::DrawTool::Lasso,
         "draw.pan" => s.draw.tool == notecraft_engine::DrawTool::Pan,

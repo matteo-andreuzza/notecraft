@@ -379,3 +379,44 @@ fn a_selection_without_text_or_ink_cant_be_tagged() {
     run(&mut s, "object.select", json!({"ids": [a.to_string()], "add": true}));
     assert_eq!(enabled(&s, "tag.toggle"), None, "ink in the selection is enough");
 }
+
+#[test]
+fn ink_to_shape_turns_a_drawn_box_into_a_rectangle_in_the_same_pen() {
+    // parity: R.Draw.Convert.InkToShape
+    let mut s = sample();
+    blank_page(&mut s);
+    // A wobbly box, started halfway along its top side.
+    let mut pts = Vec::new();
+    let corners = [(100.0f32, 100.0f32), (300.0, 100.0), (300.0, 200.0), (100.0, 200.0)];
+    for k in 0..=4usize {
+        let (a, b) = (corners[k % 4], corners[(k + 1) % 4]);
+        let (from, to) = if k == 0 {
+            (10, 20)
+        } else if k == 4 {
+            (0, 10)
+        } else {
+            (0, 20)
+        };
+        for i in from..to {
+            let t = i as f32 / 20.0;
+            let j = pts.len() as f32;
+            pts.push(json!([a.0 + (b.0 - a.0) * t + (j * 0.7).sin(), a.1 + (b.1 - a.1) * t + (j * 1.3).cos()]));
+        }
+    }
+    let r = run(&mut s, "draw.stroke", json!({"points": pts, "color": "#E81123"}));
+    assert!(r.get("shape").is_none(), "off: the stroke stays as drawn");
+    let undo = s.undo_labels().len();
+    assert_eq!(run(&mut s, "draw.inkToShape", json!({}))["inkToShape"], true);
+    assert_eq!(s.undo_labels().len(), undo, "the toggle is not an undo step");
+    let r = run(&mut s, "draw.stroke", json!({"points": pts, "color": "#E81123"}));
+    assert_eq!(r["shape"], "rectangle");
+    let ink = strokes(&s).pop().unwrap();
+    assert_eq!(ink.points.len(), 5, "four corners, closed");
+    assert_eq!(ink.color, notecraft_doc::color::Rgba::rgb(0xE8, 0x11, 0x23), "the pen's colour");
+    // A free stroke and scribbles stay as drawn.
+    let r = run(&mut s, "draw.stroke", json!({"points": pts, "free": true}));
+    assert!(r.get("shape").is_none());
+    let r = run(&mut s, "draw.stroke", json!({"points": [[10, 10], [14, 30], [18, 12], [22, 28], [26, 9]]}));
+    assert!(r.get("shape").is_none(), "writing is not a shape");
+    assert_eq!(run(&mut s, "draw.inkToShape", json!({"on": false}))["inkToShape"], false);
+}
