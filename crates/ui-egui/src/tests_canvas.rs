@@ -663,3 +663,20 @@ fn right_click_on_a_tag_icon_opens_the_tag_menu_for_that_tag() {
     assert_eq!(left.len(), 1, "CM.Tag.TagsRemove removes the tag that was clicked");
     assert!(!left.contains(&key));
 }
+
+#[test]
+fn right_click_on_a_misspelled_word_offers_its_corrections() {
+    // parity: CM.MisspelledWord.NoSpellingSuggestions
+    let (mut a, o) = page_for_context_menu("the cta sat");
+    a.session.set_dictionary("en_US", crate::tests::test_dictionary());
+    let mut h = harness(a);
+    h.run();
+    let pl = h.state().canvas.para(Block::Outline(o), 0).unwrap().clone();
+    right_click(&mut h, pl.caret_rect(5).center());
+    assert!(h.query_by_label("cat").is_some(), "CM.Text.NoSpellingSuggestions: the suggestion is in the menu");
+    assert!(h.query_by_label("Add to Dictionary").is_some());
+    h.get_by_label("cat").click();
+    h.run();
+    let text = h.state().session.page().unwrap().outline(o).unwrap().paragraphs[0].text();
+    assert_eq!(text, "the cat sat", "CM.MisspelledWord.NoSpellingSuggestions");
+}

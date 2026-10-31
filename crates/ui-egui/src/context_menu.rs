@@ -416,6 +416,12 @@ fn render_item(app: &mut NoteApp, ui: &mut Ui, id: &'static str, t: Tokens) {
         paste_row(app, ui, id, t);
         return;
     }
+    // Spelling suggestions for the misspelled word under the pointer, each replacing it;
+    // nothing when the word is spelled right.
+    if id.ends_with(".NoSpellingSuggestions") {
+        spelling_rows(app, ui, t);
+        return;
+    }
     if ribbon::special_menu(id) {
         let on = ribbon::enabled(app, id);
         ui.add_enabled_ui(on, |ui| {
@@ -546,6 +552,32 @@ fn detect(app: &NoteApp, p: Pos2) -> Option<ContextTarget> {
     Some(ContextTarget::Text(pl.block, pl.para, offset))
 }
 
+/// The misspelled word's suggestions, then Ignore All and Add to Dictionary.
+fn spelling_rows(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    let Some(st) = app.session.view.spelling.clone() else { return };
+    let ctx = ui.ctx().clone();
+    if st.suggestions.is_empty() {
+        ui.add_enabled(false, egui::Button::new(egui::RichText::new("(no spelling suggestions)").color(t.text_disabled)).frame(false));
+    }
+    for s in &st.suggestions {
+        if ui.add(egui::Button::new(egui::RichText::new(s).strong()).frame(false).min_size(egui::vec2(170.0, 22.0))).clicked() {
+            app.run(&ctx, "review.spellingSuggestion", json!({"word": s}));
+            ui.close();
+        }
+    }
+    if ui.add(egui::Button::new(crate::i18n::tr("Ignore All")).frame(false).min_size(egui::vec2(170.0, 22.0))).clicked() {
+        app.run(&ctx, "review.ignoreAll", json!({"word": st.word}));
+        app.session.view.spelling = None;
+        ui.close();
+    }
+    if ui.add(egui::Button::new(crate::i18n::tr("Add to Dictionary")).frame(false).min_size(egui::vec2(170.0, 22.0))).clicked() {
+        app.run(&ctx, "review.addToDictionary", json!({"word": st.word}));
+        app.session.view.spelling = None;
+        ui.close();
+    }
+    ui.separator();
+}
+
 /// Whether `(block, para, offset)` falls inside the current text selection, so a right click
 /// there keeps it (for Cut/Copy of a deliberate selection) instead of collapsing the caret.
 fn inside_selection(app: &NoteApp, block: Block, para: usize, offset: usize) -> bool {
@@ -597,7 +629,19 @@ fn place_for(app: &mut NoteApp, ctx: &egui::Context, target: ContextTarget) {
             app.run(ctx, "caret.set", json!({"block": block_param(block), "para": para, "offset": len, "extend": true}));
         }
         ContextTarget::Text(block, para, offset) => {
-            if !inside_selection(app, block, para, offset) {
+            // A misspelled word under the pointer is selected, so its suggestions replace it
+            // (CM.MisspelledWord.NoSpellingSuggestions).
+            let text =
+                app.session.page().and_then(|p| notecraft_engine::Session::block_paras(p, block).and_then(|ps| ps.get(para))).map(|p| p.text());
+            app.session.view.spelling = None;
+            if let Some(text) = text
+                && let Some((r, suggestions)) = app.session.misspelled_at(&text, offset)
+            {
+                app.run(ctx, "caret.set", json!({"block": block_param(block), "para": para, "offset": r.start}));
+                app.run(ctx, "caret.set", json!({"block": block_param(block), "para": para, "offset": r.end, "extend": true}));
+                let word = text.get(r).unwrap_or_default().to_string();
+                app.session.set_spelling_word(&word, suggestions);
+            } else if !inside_selection(app, block, para, offset) {
                 app.run(ctx, "caret.set", json!({"block": block_param(block), "para": para, "offset": offset}));
             }
         }

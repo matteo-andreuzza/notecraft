@@ -1089,3 +1089,11 @@ were certain landed, behaviour unchanged (every test green after each commit).
   `section.moveOrCopy`, with an accent line where it would land. A page dragged from the page
   list onto a section in the tree moves there (`page.moveOrCopy`). UI test drags all three.
 - Catalog: UI.Window.DragDrop note extended (not yet: dropped text, notebooks dragged).
+
+## 2026-10-31 — Spelling suggestions in the context menu
+
+- A right click on a misspelled word selects it and the Text menu begins with its
+  suggestions, then Ignore All and Add to Dictionary (`context_menu::spelling_rows`,
+  `Session::misspelled_at`, `Session::set_spelling_word`). CM.Text.NoSpellingSuggestions and
+  CM.MisspelledWord.NoSpellingSuggestions wired.
+- docs/parity.md gains the OneNote import fidelity table, construct by construct.

@@ -235,6 +235,22 @@ impl Session {
             .collect()
     }
 
+    /// The misspelled word of `text` that byte `offset` falls in, with its range and
+    /// corrections (the context menu's suggestions, `CM.MisspelledWord.*`); `None` when the
+    /// word there is spelled right or spelling is off.
+    pub fn misspelled_at(&mut self, text: &str, offset: usize) -> Option<(Range<usize>, Vec<String>)> {
+        let r = self.misspelled(text).into_iter().find(|r| r.start <= offset && offset <= r.end)?;
+        let dict = self.dictionary()?;
+        let suggestions = dict.suggest(text.get(r.clone())?);
+        Some((r, suggestions))
+    }
+
+    /// Remember `word` as the one being corrected, with its suggestions (what the Spelling
+    /// pane and the context menu show).
+    pub fn set_spelling_word(&mut self, word: &str, suggestions: Vec<String>) {
+        self.view.spelling = Some(crate::session::SpellingState { word: word.to_string(), suggestions });
+    }
+
     /// The selected text, when the selection is in one paragraph.
     pub(crate) fn selected_text(&self) -> Option<String> {
         let r = self.text_range()?;
