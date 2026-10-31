@@ -358,6 +358,17 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 app.run(ctx, cmd, json!({"path": path}));
             }
         }
+        // Commands that open a backstage page (from the Quick Access Toolbar).
+        "file.printPreview" => {
+            app.ui.printers = None;
+            app.ui.backstage = Some(crate::Backstage::Print);
+        }
+        "file.options" => app.ui.backstage = Some(crate::Backstage::Options),
+        "file.exportNotebook" => {
+            app.ui.export_scope = "notebook".into();
+            app.ui.backstage = Some(crate::Backstage::Export);
+        }
+        "file.openBackups" => app.ui.backstage = Some(crate::Backstage::Info),
         // BS.Print.Print (Ctrl+P): File › Print, where the printer and copies are chosen.
         "file.print" => {
             app.ui.printers = None;

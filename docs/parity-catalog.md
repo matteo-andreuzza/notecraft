@@ -109,7 +109,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Dialogs.Symbol | Symbol dialog | Window/Dialogs/Symbol | surface |  |  | P2 | verified | FLUENT19:SymbolsDialog |  |
 | UI.Dialogs.Options | OneNote Options dialog with its categories | Window/Dialogs/Options | surface |  |  | P0 | verified | FLUENT19:ApplicationOptionsDialog |  |
 | UI.Dialogs.CustomizeRibbon | Customize the Ribbon page (tabs, groups, commands, reset, import/export) | Window/Dialogs/Customize Ribbon | surface |  |  | P2 | missing | GK (Options) |  |
-| UI.Dialogs.CustomizeQAT | Quick Access Toolbar customization page (and the QAT drop-down) | Window/Dialogs/Customize QAT | surface |  |  | P1 | missing | GK (Options) |  |
+| UI.Dialogs.CustomizeQAT | Quick Access Toolbar customization page (and the QAT drop-down) | Window/Dialogs/Customize QAT | surface |  |  | P1 | wired | GK (Options) | the ▾ menu (common commands on/off, More Commands…) and Options › Quick Access Toolbar (add, remove, move up/down, reset); unverified: changes apply at once |
 | UI.Window.FullPage | Full Page View: ribbon and navigation hidden, a single button to return | Window/Full Page View | surface |  |  | P0 | wired | FLUENT19:FullPageView |  |
 | UI.Window.Docked | Docked window: OneNote docked to the side of the desktop with the compact ribbon | Window/Docked | surface |  |  | P2 | missing | FLUENT19:CurrentWindowDock; TabHomeNarrow… |  |
 | UI.Window.QuickNote | Quick Note window: a small borderless page saved to Quick Notes | Window/Quick Note | surface |  |  | P1 | missing | FLUENT19:NewSideNote; KBD365 |  |
@@ -132,8 +132,8 @@ Controls that can sit in the Quick Access Toolbar by default or from its customi
 | QAT.ViewGoForward | Forward | Quick Access Toolbar/Forward | button | `Alt+Right` | nav.forward | P1 | wired | FLUENT19:ViewGoForward |  |
 | QAT.UndoButton | Undo | Quick Access Toolbar/Undo | button | `Mod+Z` | edit.undo | P0 | wired | FLUENT19:UndoButton |  |
 | QAT.RedoButton | Redo | Quick Access Toolbar/Redo | button | `Mod+Y` | edit.redo | P0 | wired | FLUENT19:RedoButton |  |
-| QAT.FilePrint | Print | Quick Access Toolbar/Print | button | `Mod+P` | file.print | P1 | missing | FLUENT19:FilePrint |  |
-| QAT.FilePrintPreview | Print Preview | Quick Access Toolbar/Print Preview | button |  | file.printPreview | P2 | missing | FLUENT19:FilePrintPreview |  |
+| QAT.FilePrint | Print | Quick Access Toolbar/Print | button | `Mod+P` | file.print | P1 | wired | FLUENT19:FilePrint |  |
+| QAT.FilePrintPreview | Print Preview | Quick Access Toolbar/Print Preview | button |  | file.printPreview | P2 | wired | FLUENT19:FilePrintPreview |  |
 | QAT.FavoritePen1 | Favorite Pen 1 | Quick Access Toolbar/Favorite Pen 1 | toggle |  | draw.favoritePen1 | P2 | missing | FLUENT19:FavoritePen1 |  |
 | QAT.FavoritePen2 | Favorite Pen 2 | Quick Access Toolbar/Favorite Pen 2 | toggle |  | draw.favoritePen2 | P2 | missing | FLUENT19:FavoritePen2 |  |
 | QAT.FavoritePen3 | Favorite Pen 3 | Quick Access Toolbar/Favorite Pen 3 | toggle |  | draw.favoritePen3 | P2 | missing | FLUENT19:FavoritePen3 |  |
@@ -1027,9 +1027,9 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.Undo | Undo (history list) | Quick Access Toolbar/Commands Not in the Ribbon/Undo (history list) | gallery |  | edit.undoTo | P1 | wired | FLUENT19:Undo |  |
 | QAT.NR.Redo | Redo (history list) | Quick Access Toolbar/Commands Not in the Ribbon/Redo (history list) | gallery |  | edit.redoTo | P1 | wired | FLUENT19:Redo |  |
 | QAT.NR.Help | Help | Quick Access Toolbar/Commands Not in the Ribbon/Help | button | `F1` | help.help | P1 | wired | FLUENT19:Help |  |
-| QAT.NR.PasteSourceFormatting | Paste: Keep Source Formatting | Quick Access Toolbar/Commands Not in the Ribbon/Paste: Keep Source Formatting | button |  | edit.pasteKeepSource | P0 | missing | FLUENT19:PasteSourceFormatting |  |
-| QAT.NR.PasteMergeFormatting | Paste: Merge Formatting | Quick Access Toolbar/Commands Not in the Ribbon/Paste: Merge Formatting | button |  | edit.pasteMerge | P1 | missing | FLUENT19:PasteMergeFormatting |  |
-| QAT.NR.PasteTextOnly | Paste: Keep Text Only | Quick Access Toolbar/Commands Not in the Ribbon/Paste: Keep Text Only | button | `Mod+Shift+V` | edit.pasteTextOnly | P0 | missing | FLUENT19:PasteTextOnly |  |
+| QAT.NR.PasteSourceFormatting | Paste: Keep Source Formatting | Quick Access Toolbar/Commands Not in the Ribbon/Paste: Keep Source Formatting | button |  | edit.pasteKeepSource | P0 | wired | FLUENT19:PasteSourceFormatting |  |
+| QAT.NR.PasteMergeFormatting | Paste: Merge Formatting | Quick Access Toolbar/Commands Not in the Ribbon/Paste: Merge Formatting | button |  | edit.pasteMerge | P1 | wired | FLUENT19:PasteMergeFormatting |  |
+| QAT.NR.PasteTextOnly | Paste: Keep Text Only | Quick Access Toolbar/Commands Not in the Ribbon/Paste: Keep Text Only | button | `Mod+Shift+V` | edit.pasteTextOnly | P0 | wired | FLUENT19:PasteTextOnly |  |
 | QAT.NR.PasteAsPicture | Paste: Picture | Quick Access Toolbar/Commands Not in the Ribbon/Paste: Picture | button |  | edit.pastePicture | P2 | wired | FLUENT19:PasteAsPicture | Same command as R.Home.Clipboard.PastePicture |
 | QAT.NR.PasteInk | Paste Ink | Quick Access Toolbar/Commands Not in the Ribbon/Paste Ink | button |  | edit.pasteInk | P3 | missing | FLUENT19:PasteInk |  |
 | QAT.NR.FavoritePen5 | Favorite Pen 5 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 5 | toggle |  | draw.favoritePen5 | P2 | missing | FLUENT19:FavoritePen5 |  |
@@ -1054,8 +1054,8 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.OutlookTaskNextWeek | Outlook Task: Next Week | Quick Access Toolbar/Commands Not in the Ribbon/Outlook Task: Next Week | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskNextWeek |  |
 | QAT.NR.OutlookTaskLater | Outlook Task: No Date | Quick Access Toolbar/Commands Not in the Ribbon/Outlook Task: No Date | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskLater |  |
 | QAT.NR.OutlookTaskCustomDate | Outlook Task: Custom | Quick Access Toolbar/Commands Not in the Ribbon/Outlook Task: Custom | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskCustomDate |  |
-| QAT.NR.OpenBackup | Open Backups | Quick Access Toolbar/Commands Not in the Ribbon/Open Backups | button |  | file.openBackups | P1 | missing | FLUENT19:OpenBackup |  |
-| QAT.NR.JotOpenFile | Open File (section) | Quick Access Toolbar/Commands Not in the Ribbon/Open File (section) | button | `Mod+Alt+Shift+O` | file.openSection | P1 | missing | FLUENT19:JotOpenFile |  |
+| QAT.NR.OpenBackup | Open Backups | Quick Access Toolbar/Commands Not in the Ribbon/Open Backups | button |  | file.openBackups | P1 | wired | FLUENT19:OpenBackup |  |
+| QAT.NR.JotOpenFile | Open File (section) | Quick Access Toolbar/Commands Not in the Ribbon/Open File (section) | button | `Mod+Alt+Shift+O` | file.openSection | P1 | wired | FLUENT19:JotOpenFile |  |
 | QAT.NR.NewPageInSeries | New Page in Series | Quick Access Toolbar/Commands Not in the Ribbon/New Page in Series | button |  | page.newInSeries | P2 | missing | FLUENT19:NewPageInSeries |  |
 | QAT.NR.AttachNotesToMeeting | Attach Notes to Meeting | Quick Access Toolbar/Commands Not in the Ribbon/Attach Notes to Meeting | button |  |  | P3 | out-of-scope | FLUENT19:AttachNotesToMeeting |  |
 | QAT.NR.PenMode | Pen Mode | Quick Access Toolbar/Commands Not in the Ribbon/Pen Mode | toggle |  | draw.penMode | P2 | missing | FLUENT19:PenMode |  |
@@ -1068,10 +1068,10 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.Spelling | Spelling | Quick Access Toolbar/Commands Not in the Ribbon/Spelling | button | `F7` | review.spelling | P1 | wired | FLUENT19:Spelling |  |
 | QAT.NR.OutlookTaskRemoveCtxItem | Delete Outlook Task | Quick Access Toolbar/Commands Not in the Ribbon/Delete Outlook Task | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskRemoveCtxItem |  |
 | QAT.NR.NotebookRename | Rename Notebook | Quick Access Toolbar/Commands Not in the Ribbon/Rename Notebook | button |  | notebook.rename | P1 | wired | FLUENT19:NotebookRename |  |
-| QAT.NR.NotebookSaveAs | Save Notebook As | Quick Access Toolbar/Commands Not in the Ribbon/Save Notebook As | button |  | file.exportNotebook | P1 | missing | FLUENT19:NotebookSaveAs |  |
+| QAT.NR.NotebookSaveAs | Save Notebook As | Quick Access Toolbar/Commands Not in the Ribbon/Save Notebook As | button |  | file.exportNotebook | P1 | wired | FLUENT19:NotebookSaveAs |  |
 | QAT.NR.SendPdf | Send as PDF | Quick Access Toolbar/Commands Not in the Ribbon/Send as PDF | button |  | share.sendPdf | P2 | missing | FLUENT19:SendPdf |  |
 | QAT.NR.SendNotesToBlog | Send to Blog | Quick Access Toolbar/Commands Not in the Ribbon/Send to Blog | button |  |  | P3 | out-of-scope | FLUENT19:SendNotesToBlog |  |
-| QAT.NR.ApplicationOptionsDialog | Options | Quick Access Toolbar/Commands Not in the Ribbon/Options | button |  | file.options | P0 | missing | FLUENT19:ApplicationOptionsDialog |  |
+| QAT.NR.ApplicationOptionsDialog | Options | Quick Access Toolbar/Commands Not in the Ribbon/Options | button |  | file.options | P0 | wired | FLUENT19:ApplicationOptionsDialog |  |
 | QAT.NR.SendNotesAsAttachment | Send as Attachment | Quick Access Toolbar/Commands Not in the Ribbon/Send as Attachment | button |  | share.sendAttachment | P2 | missing | FLUENT19:SendNotesAsAttachment |  |
 | QAT.NR.FileExit | Exit | Quick Access Toolbar/Commands Not in the Ribbon/Exit | button |  | file.exit | P0 | verified | FLUENT19:FileExit | Saves every notebook first; when one can't be saved the window stays open and the error says why (closing would lose the change). |
 | QAT.NR.OfficeFeedback | Feedback | Quick Access Toolbar/Commands Not in the Ribbon/Feedback | button |  | help.feedback | P3 | missing | FLUENT19:OfficeFeedback |  |
@@ -1347,7 +1347,7 @@ The OneNote Options dialog, category by category. Setting names are functional d
 | OPT.Language.EditingLanguages | Choose editing languages | File/Options/Language/Choose editing languages | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Language.DisplayLanguage | Choose display language (interface) | File/Options/Language/Choose display language (interface) | option |  |  | P1 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.CustomizeRibbon.CustomizeRibbon | Customize the Ribbon (tabs, groups, commands; reset; import/export) | File/Options/Customize Ribbon/Customize the Ribbon (tabs, groups, commands; reset; import/export) | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.QuickAccessToolbar.CustomizeQAT | Customize the Quick Access Toolbar (commands, order, below the ribbon) | File/Options/Quick Access Toolbar/Customize the Quick Access Toolbar (commands, order, below the ribbon) | option |  |  | P1 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.QuickAccessToolbar.CustomizeQAT | Customize the Quick Access Toolbar (commands, order, below the ribbon) | File/Options/Quick Access Toolbar/Customize the Quick Access Toolbar (commands, order, below the ribbon) | option |  |  | P1 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.PasteLinkToSource | Include link to source when pasting from the Internet | File/Options/Advanced/Include link to source when pasting from the Internet | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.ShowPasteOptions | Show Paste Options button when content is pasted | File/Options/Advanced/Show Paste Options button when content is pasted | option |  |  | P1 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.AutoNumbering | Apply auto-numbering to lists | File/Options/Advanced/Apply auto-numbering to lists | option |  |  | P0 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |

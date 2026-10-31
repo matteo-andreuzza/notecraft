@@ -100,35 +100,9 @@ pub fn title_bar(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         });
 }
 
-/// Back, Undo and the ▾ customize menu (the reference shows Back and Undo by default; Redo is
-/// in the menu).
+/// The Quick Access Toolbar (`qat`): Back and Undo by default, and the ▾ customize menu.
 fn quick_access(app: &mut NoteApp, ui: &mut Ui, t: &Tokens) {
-    let ctx = ui.ctx().clone();
-    for (id, catalog, tip) in [("nav.back", "QAT.ViewGoBack", "Back (Alt+Left)"), ("edit.undo", "QAT.UndoButton", "Undo (Ctrl+Z)")] {
-        let enabled = app.disabled_reason(id).is_none();
-        let (resp, rect, color) = icon_button(ui, size::BUTTON, tip, enabled, t);
-        let glyph = Rect::from_center_size(rect.center(), vec2(size::ICON + 2.0, size::ICON + 2.0));
-        if id == "nav.back" {
-            icons::back(ui.painter(), glyph, color);
-        } else {
-            icons::undo(ui.painter(), glyph, false, color);
-        }
-        if resp.on_hover_text(format!("{tip}\n{catalog}")).clicked() && enabled {
-            app.run(&ctx, id, json!({}));
-        }
-    }
-    let (rect, resp) = ui.allocate_exact_size(vec2(16.0, size::BUTTON), Sense::click());
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Customize Quick Access Toolbar"));
-    if resp.hovered() {
-        ui.painter().rect_filled(rect, radius::CONTROL, t.hover);
-    }
-    icons::chevron(ui.painter(), Rect::from_center_size(rect.center(), vec2(12.0, 12.0)), Dir::Down, t.icon);
-    let resp = resp.on_hover_text("Customize Quick Access Toolbar");
-    egui::Popup::menu(&resp).show(|ui| {
-        crate::nav::cmd_item(app, ui, "Redo (Ctrl+Y)", "edit.redo", json!({}));
-        ui.separator();
-        ui.add_enabled(false, egui::Button::new("More Commands…")).on_disabled_hover_text("Customizing the toolbar is not implemented yet");
-    });
+    crate::qat::toolbar(app, ui, t);
 }
 
 /// The account circle: the author's initials. Signing in needs a Microsoft account, so it is

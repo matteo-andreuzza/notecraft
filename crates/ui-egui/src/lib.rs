@@ -30,6 +30,7 @@ pub mod password_ui;
 pub mod paste_options;
 pub mod pictures;
 pub mod preview;
+pub mod qat;
 pub mod ribbon;
 pub mod ribbon_layout;
 pub mod ribbon_simplified;
@@ -232,6 +233,9 @@ pub struct UiState {
     /// File › Options: the settings being edited, applied with OK (`None`: not open).
     #[serde(default)]
     pub options_draft: Option<notecraft_engine::Prefs>,
+    /// The Quick Access Toolbar's buttons, as catalog ids (`qat`; the desktop app remembers it).
+    #[serde(default)]
+    pub qat: Vec<String>,
     /// Passwords being typed in the Password pane or the unlock prompt (never serialized).
     #[serde(skip)]
     pub password: password_ui::PasswordInput,
@@ -273,6 +277,7 @@ impl Default for UiState {
             options_page: options::OptionsPage::General,
             options_draft: None,
             password: password_ui::PasswordInput::default(),
+            qat: qat::DEFAULT.iter().map(|s| s.to_string()).collect(),
             last_input_ms: 0,
         }
     }

@@ -129,6 +129,8 @@ pub struct Appearance {
     pub ribbon: notecraft_engine::RibbonMode,
     /// Ribbon collapsed to its tabs (Ctrl+F1, Show tabs only).
     pub ribbon_collapsed: bool,
+    /// The Quick Access Toolbar's buttons (catalog ids; empty: the default).
+    pub qat: Vec<String>,
 }
 
 /// Open notebooks, as OneNote reopens them.
@@ -277,7 +279,12 @@ pub fn capture(app: &NoteApp, previous: &DesktopSettings) -> DesktopSettings {
         _ => previous.notebooks.last_page.clone(),
     };
     DesktopSettings {
-        appearance: Appearance { theme: app.ui.theme, ribbon: s.view.ribbon_mode, ribbon_collapsed: s.view.ribbon_collapsed },
+        appearance: Appearance {
+            theme: app.ui.theme,
+            ribbon: s.view.ribbon_mode,
+            ribbon_collapsed: s.view.ribbon_collapsed,
+            qat: app.ui.qat.clone(),
+        },
         editing: s.prefs.clone(),
         notebooks: Notebooks { open, last_page, recent: app.ui.recent_notebooks.clone() },
         layout: Layout {
@@ -297,6 +304,12 @@ pub fn apply(app: &mut NoteApp, s: &DesktopSettings) {
     app.ui.theme = s.appearance.theme;
     app.session.view.ribbon_mode = s.appearance.ribbon;
     app.session.view.ribbon_collapsed = s.appearance.ribbon_collapsed;
+    // A settings file is hostile input: unknown or repeated buttons are dropped.
+    if !s.appearance.qat.is_empty() {
+        let mut qat = s.appearance.qat.clone();
+        notecraft_ui_egui::qat::normalize(&mut qat);
+        app.ui.qat = qat;
+    }
     app.session.prefs = s.editing.clone();
     // Options › General › User name starts as the account's name, as in OneNote.
     if app.session.prefs.author.trim().is_empty() {

@@ -357,8 +357,9 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             not_yet(ui, t, "The ribbon can't be customized yet. Switch between the simplified and classic ribbon with the ribbon's own button.");
         }
         OptionsPage::QuickAccessToolbar => {
+            // OPT.QuickAccessToolbar.CustomizeQAT, UI.Dialogs.CustomizeQAT.
             section(ui, "Customize the Quick Access Toolbar");
-            not_yet(ui, t, "The Quick Access Toolbar can't be customized yet.");
+            crate::qat::options_page(app, ui, t);
         }
         OptionsPage::AddIns => {
             section(ui, "Add-ins");

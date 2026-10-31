@@ -1049,6 +1049,60 @@ fn the_paragraph_alignment_menu_aligns_the_paragraph() {
     assert_eq!(p.align, notecraft_engine::doc::Align::Center, "R.Home.BasicText.ParagraphAlignmentMenu");
 }
 
+#[test]
+fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
+    // parity: UI.Dialogs.CustomizeQAT
+    let mut h = harness(app());
+    h.run();
+    assert!(h.query_by_label("Redo").is_none(), "Redo is not on the toolbar by default");
+    h.get_by_label("Customize Quick Access Toolbar").click();
+    h.run();
+    h.get_by_label("Redo").click();
+    h.run();
+    assert!(h.state().ui.qat.contains(&"QAT.RedoButton".to_string()), "QAT.RedoButton: switched on from the menu");
+    // More Commands… opens the Options page, where any QAT command can be added.
+    if h.query_by_label("More Commands…").is_none() {
+        h.get_by_label("Customize Quick Access Toolbar").click();
+        h.run();
+    }
+    h.get_by_label("More Commands…").click();
+    h.run();
+    assert_eq!(h.state().ui.options_page, crate::options::OptionsPage::QuickAccessToolbar, "OPT.QuickAccessToolbar.CustomizeQAT");
+    for id in [
+        "QAT.FilePrint",
+        "QAT.FilePrintPreview",
+        "QAT.NR.PasteSourceFormatting",
+        "QAT.NR.PasteMergeFormatting",
+        "QAT.NR.PasteTextOnly",
+        "QAT.NR.OpenBackup",
+        "QAT.NR.JotOpenFile",
+        "QAT.NR.NotebookSaveAs",
+        "QAT.NR.ApplicationOptionsDialog",
+    ] {
+        assert!(crate::qat::available().iter().any(|a| a == id), "{id} can be added");
+    }
+    h.get_by_label("Print Preview").click();
+    h.run();
+    h.get_by_label("Add >>").click();
+    h.run();
+    assert!(h.state().ui.qat.contains(&"QAT.FilePrintPreview".to_string()), "QAT.FilePrintPreview: added from the Options page");
+    // A remembered list is cleaned: unknown and repeated ids go.
+    let mut list = vec!["QAT.UndoButton".to_string(), "nope".into(), "QAT.UndoButton".into()];
+    crate::qat::normalize(&mut list);
+    assert_eq!(list, ["QAT.UndoButton"]);
+}
+
+#[test]
+fn quick_access_buttons_run_their_commands() {
+    let mut a = app();
+    a.ui.qat = vec!["QAT.NR.ApplicationOptionsDialog".into(), "QAT.RedoButton".into()];
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Options").click();
+    h.run();
+    assert_eq!(h.state().ui.backstage, Some(crate::Backstage::Options), "QAT.NR.ApplicationOptionsDialog");
+}
+
 /// A host whose save dialog answers with a fixed path.
 struct SaveHost(String);
 

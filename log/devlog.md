@@ -955,3 +955,15 @@ were certain landed, behaviour unchanged (every test green after each commit).
   command) and the About window (from File › Account and the QAT row). Snapshot `help-pane`.
 - Catalog: R.Help.Help.Help, KB.App.Help, QAT.NR.Help, QAT.NR.HelpKeyboardShortcuts,
   BS.Account.About, QAT.NR.About wired; new NC.Help.Search.
+
+## 2026-10-31 — M4: the Quick Access Toolbar can be customized
+
+- `ui-egui/src/qat.rs`: the toolbar is a list of QAT catalog ids (`UiState.qat`, default
+  Back and Undo, remembered by the desktop app and cleaned on load). Buttons run their
+  row's command the way the ribbon does (`ribbon::fire`: dialogs and file pickers
+  included). The ▾ menu switches the common commands on and off and opens More Commands….
+  Options › Quick Access Toolbar adds any QAT command NoteCraft has, and removes, reorders
+  and resets.
+- `pictures::host_action` opens the right backstage page for file.options,
+  file.printPreview, file.exportNotebook and file.openBackups.
+- Catalog: 11 QAT/OPT/UI rows wired.
