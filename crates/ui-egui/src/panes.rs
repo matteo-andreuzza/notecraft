@@ -1,5 +1,6 @@
-//! Task panes: the Tags Summary (Find Tags), the Templates pane, the pinned search results, and
-//! the find-on-page bar (catalog `UI.Panes.FindTags`, `UI.Panes.Templates`,
+//! Task panes: the Tags Summary (Find Tags), the Templates pane, the Paper Size pane, the pinned
+//! search results, and the find-on-page bar (catalog `UI.Panes.FindTags`, `UI.Panes.Templates`,
+//! `UI.Panes.PaperSize`,
 //! `UI.Nav.SearchResultsPane`, `UI.Nav.FindOnPage`). In the 2024
 //! look (`docs/ui-parity.md` §3 rows 15–16) the panes are cards at the right of the page with a
 //! title and ✕, and the find bar is a card floating over the page's top right corner.
@@ -185,6 +186,117 @@ pub fn templates_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             }
         });
     });
+}
+
+/// The Paper Size pane (View › Paper Size): the page's paper, orientation, size and print
+/// margins (`page.paperSize`), and Save current page as a template. Lengths show in inches.
+pub fn paper_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    pane_panel("paper_pane", 260.0, &t).show(ui, |ui| {
+        card_frame(&t).show(ui, |ui| {
+            ui.set_min_size(ui.available_size());
+            if card_header(ui, "Paper Size", &t) {
+                app.session.view.paper_pane = false;
+            }
+            ui.add_space(4.0);
+            let Some(page) = app.session.page() else {
+                ui.label(RichText::new("Open a page to set its paper size.").color(t.text_disabled));
+                return;
+            };
+            let paper = page.setup.paper;
+            let mut change: Option<serde_json::Value> = None;
+            let size_name = match paper {
+                None => "Auto",
+                Some(ps) => notecraft_engine::paper_preset(&ps).map_or("Custom", |p| p.name),
+            };
+            egui::Grid::new("paper_grid").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+                ui.label("Size:");
+                egui::ComboBox::from_id_salt("paper_size").width(150.0).selected_text(size_name).show_ui(ui, |ui| {
+                    if ui.selectable_label(paper.is_none(), "Auto").clicked() {
+                        change = Some(json!({"size": "auto"}));
+                    }
+                    for pr in notecraft_engine::PAPER_SIZES {
+                        if ui.selectable_label(size_name == pr.name, pr.name).clicked() {
+                            change = Some(json!({"size": pr.slug}));
+                        }
+                    }
+                    if ui.selectable_label(size_name == "Custom", "Custom").clicked() && paper.is_none() {
+                        change = Some(json!({"size": "custom"}));
+                    }
+                });
+                ui.end_row();
+                let landscape = paper.is_some_and(|ps| notecraft_engine::is_landscape(&ps));
+                ui.label("Orientation:");
+                ui.add_enabled_ui(paper.is_some(), |ui| {
+                    egui::ComboBox::from_id_salt("paper_orientation")
+                        .width(150.0)
+                        .selected_text(if landscape { "Landscape" } else { "Portrait" })
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_label(!landscape, "Portrait").clicked() {
+                                change = Some(json!({"orientation": "portrait"}));
+                            }
+                            if ui.selectable_label(landscape, "Landscape").clicked() {
+                                change = Some(json!({"orientation": "landscape"}));
+                            }
+                        });
+                });
+                ui.end_row();
+                let ps = paper.unwrap_or(notecraft_engine::doc::PaperSize { width: 0.0, height: 0.0, margins: [0.0; 4] });
+                for (label, key, v) in [("Width:", "width", ps.width), ("Height:", "height", ps.height)] {
+                    ui.label(label);
+                    if let Some(pt) = length_field(ui, key, v, 1.0..=200.0, paper.is_some()) {
+                        change = Some(json!({ key: pt }));
+                    }
+                    ui.end_row();
+                }
+            });
+            ui.add_space(8.0);
+            ui.label(RichText::new("Print Margins").strong().color(t.text));
+            egui::Grid::new("paper_margins").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+                for (label, key, i) in [("Top:", "top", 0), ("Bottom:", "bottom", 2), ("Left:", "left", 3), ("Right:", "right", 1)] {
+                    ui.label(label);
+                    let v = paper.and_then(|ps| ps.margins.get(i).copied()).unwrap_or(0.0);
+                    if let Some(pt) = length_field(ui, key, v, 0.0..=10.0, paper.is_some()) {
+                        change = Some(json!({ key: pt }));
+                    }
+                    ui.end_row();
+                }
+            });
+            if paper.is_none() {
+                ui.label(RichText::new("Auto: the page grows as you add notes. Pick a size to print on fixed paper.").size(12.0).color(t.text_dim));
+            }
+            if let Some(v) = change {
+                app.run(&ctx, "page.paperSize", v);
+            }
+            ui.add_space(8.0);
+            ui.label(RichText::new("Create new template").strong().color(t.text));
+            if ui.link("Save current page as a template").clicked() && app.session.page().is_some() {
+                let name = app.session.page().map(|p| p.display_title()).unwrap_or_default();
+                app.ui.dialog = Some(crate::dialogs::Dialog::SaveTemplate { name, default: false });
+            }
+        });
+    });
+}
+
+/// A length in inches for a value kept in points. While the user drags or types, the number
+/// lives in egui's memory and nothing runs; the new value (points) comes back once, when the
+/// drag ends or the field loses focus, so an edit is one undo step.
+fn length_field(ui: &mut Ui, key: &str, pt: f32, range: std::ops::RangeInclusive<f32>, enabled: bool) -> Option<f32> {
+    let id = egui::Id::new(("paper_field", key));
+    let held: Option<f32> = ui.data(|d| d.get_temp(id));
+    let mut inches = held.unwrap_or(pt / 72.0);
+    let r = ui.add_enabled(enabled, egui::DragValue::new(&mut inches).speed(0.01).range(range).fixed_decimals(2).suffix("\""));
+    if r.dragged() || r.has_focus() {
+        if r.changed() || held.is_some() {
+            ui.data_mut(|d| d.insert_temp(id, inches));
+        }
+        return None;
+    }
+    if held.is_some() {
+        ui.data_mut(|d| d.remove::<f32>(id));
+    }
+    let new = inches * 72.0;
+    ((r.changed() || held.is_some()) && enabled && (new - pt).abs() > 0.01).then_some(new)
 }
 
 /// One template in the pane: a click adds a page from it; the user's own have Delete on a right

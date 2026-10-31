@@ -316,6 +316,12 @@ fn main() {
         a.session.run("insert.pageTemplates", json!({"on": true})).unwrap();
         a.ui.tab = "Insert".into();
     });
+    // View › Paper Size: the pane beside a page on A6 landscape, its sheet edges dashed.
+    shot("paper-pane", &out, 1.0, |a| {
+        a.session.run("page.paperSize", json!({"size": "a6", "orientation": "landscape"})).unwrap();
+        a.session.run("view.paperSize", json!({"on": true})).unwrap();
+        a.ui.tab = "View".into();
+    });
     // Merged cells (decision D9): the header across all three columns, a cell over two rows.
     shot("table-merged", &out, 1.0, |a| {
         table_page(a);
