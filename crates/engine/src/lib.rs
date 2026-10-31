@@ -33,6 +33,7 @@ mod onenote_cmds;
 mod ops;
 mod outline_cmds;
 mod page_cmds;
+mod paper_cmds;
 mod para_cmds;
 mod picture_cmds;
 mod printout_cmds;
@@ -65,6 +66,9 @@ pub use math_cmds::{EQUATIONS, STRUCTURES as EQUATION_STRUCTURES, SYMBOLS as EQU
 pub use notecraft_doc as doc;
 pub use notecraft_search as search;
 pub use notecraft_text as text;
+pub use paper_cmds::{
+    DEFAULT_MARGINS as DEFAULT_PAPER_MARGINS, PAPER_SIZES, PaperPreset, describe as describe_paper, is_landscape, preset_of as paper_preset,
+};
 pub use selection::{Block, Pos, Selection, TextRange};
 pub use session::{Clock, FindState, NbDirty, Prefs, RibbonMode, ScopeKind, ScrollRequest, Session, ViewState};
 pub use template_cmds::{BUILT_IN as BUILT_IN_TEMPLATES, BuiltIn, MY_TEMPLATES, SavedTemplate};

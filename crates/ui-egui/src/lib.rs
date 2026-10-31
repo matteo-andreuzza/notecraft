@@ -475,6 +475,9 @@ impl NoteApp {
             if self.session.view.templates_pane {
                 panes::templates_pane(self, ui, t);
             }
+            if self.session.view.paper_pane {
+                panes::paper_pane(self, ui, t);
+            }
             if self.ui.search_pane {
                 panes::search_pane(self, ui, t);
             }

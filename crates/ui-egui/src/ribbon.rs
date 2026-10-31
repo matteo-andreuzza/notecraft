@@ -112,6 +112,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "draw.lockDrawingMode" => s.draw.lock_shapes,
         "draw.ruler" => s.draw.ruler.is_some(),
         "insert.pageTemplates" => s.view.templates_pane,
+        "view.paperSize" => s.view.paper_pane,
         "draw.snapToGrid" => s.draw.snap_to_grid,
         "draw.inkToShape" => s.draw.ink_to_shape,
         "draw.withTouch" => s.draw.with_touch,

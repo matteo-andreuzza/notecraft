@@ -444,6 +444,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         let painter = ui.painter_at(rect.union(app.canvas.viewport));
         painter.rect_filled(rect, 0.0, page_bg);
         rule_lines(&painter, &page, rect, app.canvas.origin, zoom, t);
+        paper_marks(&painter, &page, rect, app.canvas.origin, zoom, t);
         // Background pictures sit under everything, the title included.
         crate::pictures::draw(app, &painter, &page, &media, crate::pictures::Layer::Background, t);
         title_area(app, &painter, &page, zoom, t, page_text, &paras);
@@ -924,6 +925,31 @@ fn draw_table(painter: &egui::Painter, tb: &Table, tl: &TableLayout, sel: &PageS
         for cl in tl.cells.iter().filter(|c| c.row >= rows.0 && c.row <= rows.1 && c.col >= cols.0 && c.col <= cols.1) {
             painter.rect_filled(cl.rect.shrink(0.5), 0.0, t.selection);
         }
+    }
+}
+
+/// Where the printed sheets of a page with a paper size end (View › Paper Size): a dashed line
+/// at the printable width and one under each sheet's printable height, measured from the page
+/// origin as the PDF export lays content out (unverified: the reference's on-screen marks).
+fn paper_marks(painter: &egui::Painter, page: &Page, rect: Rect, origin: Pos2, zoom: f32, t: Tokens) {
+    let Some(ps) = page.setup.paper else { return };
+    let [mt, mr, mb, ml] = ps.margins;
+    let (w, h) = ((ps.width - ml - mr).max(36.0) * PT * zoom, (ps.height - mt - mb).max(36.0) * PT * zoom);
+    if !(w.is_finite() && h.is_finite()) || h < 8.0 {
+        return;
+    }
+    let stroke = Stroke::new(1.0, t.page_meta);
+    let x = origin.x + w;
+    if x < rect.max.x {
+        painter.extend(egui::Shape::dashed_line(&[pos2(x, rect.min.y), pos2(x, rect.max.y)], stroke, 6.0, 4.0));
+    }
+    let mut y = origin.y + h;
+    // Bounded: a tall page at a small paper still draws a few hundred lines at most.
+    let mut n = 0;
+    while y < rect.max.y && n < 2_000 {
+        painter.extend(egui::Shape::dashed_line(&[pos2(rect.min.x, y), pos2(x.min(rect.max.x), y)], stroke, 6.0, 4.0));
+        y += h;
+        n += 1;
     }
 }
 

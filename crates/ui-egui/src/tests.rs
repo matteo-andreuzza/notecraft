@@ -572,6 +572,39 @@ fn the_templates_pane_adds_pages_and_saves_the_current_one() {
 }
 
 #[test]
+fn the_paper_size_pane_sets_the_page_paper() {
+    // parity: UI.Panes.PaperSize, UI.Panes.PaperSize.SaveTemplate
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    a.ui.tab = "View".into();
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Paper Size").click();
+    h.run();
+    assert!(h.state().session.view.paper_pane, "View › Paper Size opens the pane");
+    assert!(h.state().session.page().unwrap().setup.paper.is_none());
+    let combo = |h: &Harness<'static, NoteApp>, value: &str| {
+        h.query_all_by_role(egui::accesskit::Role::ComboBox).find(|n| n.value().as_deref() == Some(value)).expect(value).click();
+    };
+    combo(&h, "Auto");
+    h.run();
+    h.get_by_label("A4").click();
+    h.run();
+    let ps = h.state().session.page().unwrap().setup.paper.expect("A4 sets a paper size");
+    assert!((ps.width - 595.3).abs() < 0.2, "{ps:?}");
+    combo(&h, "Portrait");
+    h.run();
+    h.get_by_label("Landscape").click();
+    h.run();
+    let ps = h.state().session.page().unwrap().setup.paper.unwrap();
+    assert!(ps.width > ps.height, "Landscape turns the paper: {ps:?}");
+    h.get_by_label("Save current page as a template").click();
+    h.run();
+    assert!(matches!(h.state().ui.dialog, Some(Dialog::SaveTemplate { .. })));
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();

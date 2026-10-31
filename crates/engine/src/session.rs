@@ -153,6 +153,8 @@ pub struct ViewState {
     pub tags_pane: bool,
     /// Templates pane open (Insert › Page Templates).
     pub templates_pane: bool,
+    /// Paper Size pane open (View › Paper Size).
+    pub paper_pane: bool,
     /// The recycle bin of this notebook is being viewed.
     pub recycle_view: Option<Id>,
 }
@@ -171,6 +173,7 @@ impl Default for ViewState {
             page_list_width: 200.0,
             tags_pane: false,
             templates_pane: false,
+            paper_pane: false,
             recycle_view: None,
         }
     }

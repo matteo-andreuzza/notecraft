@@ -780,3 +780,21 @@ were certain landed, behaviour unchanged (every test green after each commit).
   shows its state. The source is Microsoft's public "Convert ink to shapes in Office" page;
   the thresholds are unverified.
 - Numbers: wiring 694/1330 (52.2%), behaviour 176/1330 (13.2%), 344 commands.
+## 2026-10-31 — M3: the Paper Size pane
+
+- Engine `paper_cmds.rs` (new): `view.paperSize` opens and closes the pane
+  (`ViewState.paper_pane`); `page.paperSize` sets the page's `PageSetup.paper` — Auto (none),
+  a named paper (`PAPER_SIZES`: Statement, Letter, Tabloid, Legal, A3–A6, B4–B6 JIS, Japanese
+  Postcard, Index Card, Billfold), Custom width/height, Portrait/Landscape (the margins turn
+  with the paper) and the four print margins; values clamped to the PDF export's limits; no
+  params reports the paper. One undo step per change.
+- UI: `panes::paper_pane` (Size, Orientation, Width, Height in inches, Print Margins, Save
+  current page as a template); a drag or a typed number runs one command when it ends. The
+  canvas dashes where a page's printed sheets end (`canvas::paper_marks`, unverified).
+  Snapshot `paper-pane`.
+- Catalog: R.View.PageSetup.PaperSize, UI.Panes.PaperSize wired; new rows
+  UI.Panes.PaperSize.{Size, Orientation, Dimensions, Margins, SaveTemplate}. Numbers: wiring
+  700/1335 (52.4%), behaviour 176/1335 (13.2%), 345 commands.
+- Parallel sessions: a worktree must use its own `CARGO_TARGET_DIR` — two checkouts sharing
+  one target dir get the same artifact hashes and run each other's binaries.
+- Next here: SVG page export (FMT.Export.Images).
