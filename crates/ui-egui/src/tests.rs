@@ -296,6 +296,7 @@ fn highlighted_text_stays_readable_in_the_dark_theme() {
 
 #[test]
 fn the_office_theme_is_picked_in_the_account_page_and_follows_the_system() {
+    // parity: BS.Account.Theme
     // UI.Window.DarkMode: File › Account › Office Theme lists Colorful, Dark Gray, Black, White
     // and "Use system setting"; picking one restyles the window at once.
     let mut h = harness(app());
@@ -1007,6 +1008,33 @@ fn down_in_the_search_box_previews_results() {
     h.key_press(egui::Key::Space);
     h.run();
     assert!(h.query_by_label("This Section Group").is_some(), "the scope choices");
+}
+
+#[test]
+fn the_info_page_settings_menu_and_the_page_menu_move_or_copy() {
+    // parity: BS.Info.Settings, CM.Page.CopyOrMoveToSection
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.ui.backstage = Some(crate::Backstage::Info);
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Settings ▾").click();
+    h.run();
+    for l in ["Properties…", "Sync This Notebook Now", "Close"] {
+        assert!(h.query_by_label(l).is_some(), "{l}");
+    }
+    h.get_by_label("Properties…").click();
+    h.run();
+    assert!(matches!(h.state().ui.dialog, Some(Dialog::NotebookProperties(..))));
+    // The page menu's Move or Copy… opens the dialog for that page.
+    let mut h = harness(app());
+    h.run();
+    let page = h.state().session.page().unwrap().clone();
+    h.get_by_label(&page.display_title()).click_secondary();
+    h.run();
+    h.get_by_label("Move or Copy…").click();
+    h.run();
+    assert!(matches!(h.state().ui.dialog, Some(Dialog::MovePage(id, _)) if id == page.id));
 }
 
 #[test]

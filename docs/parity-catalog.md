@@ -536,7 +536,7 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | BS.Info.NotebookInformation | Info: Notebook Information (settings for each open notebook) | File/Info/Notebook Information | page |  | notebook.properties | P1 | wired | FLUENT19:TabInfo |  |
-| BS.Info.Settings | Info: Settings (Properties, Sync, Close, Open Backups) | File/Info/Settings | menu |  | notebook.properties | P1 | missing | FLUENT19:TabInfo |  |
+| BS.Info.Settings | Info: Settings (Properties, Sync, Close, Open Backups) | File/Info/Settings | menu |  | notebook.properties | P1 | wired | FLUENT19:TabInfo | Settings ▾ beside each notebook: Properties…, Sync This Notebook Now, Close, Open Backups (when a backup folder exists) |
 | BS.Info.ViewSyncStatus | Info: View Sync Status | File/Info/View Sync Status | button |  | notebook.syncStatus | P2 | missing | FLUENT19:GroupSyncStatus |  |
 | BS.Info.OpenBackups | Info: Open Backups | File/Info/Open Backups | button |  | file.openBackups | P1 | wired | FLUENT19:OpenBackup |  |
 | BS.New.NewNotebook | New: New Notebook (location, name) | File/New/New Notebook | page |  | file.newNotebook | P0 | wired | FLUENT19:TabNew |  |
@@ -568,7 +568,7 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Send.Word | Send: Send to Word | File/Send/Send to Word | button |  | share.sendToWord | P2 | missing | FLUENT19:SendNotesToWord |  |
 | BS.Send.Blog | Send: Send to Blog | File/Send/Send to Blog | button |  |  | P3 | out-of-scope | FLUENT19:SendNotesToBlog |  |
 | BS.Account.Identity | Account: User Information (name used as author) | File/Account/User Information | page |  | file.options | P2 | missing | FLUENT19:GroupBackstageIdentity |  |
-| BS.Account.Theme | Account: Office Theme / Background | File/Account/Theme | combo |  | view.theme | P1 | missing | FLUENT19:Theming |  |
+| BS.Account.Theme | Account: Office Theme / Background | File/Account/Theme | combo |  | | P1 | wired | FLUENT19:Theming | The Office Theme list (Colorful, Dark Gray, Black, White, Use system setting); a UI preference, so no engine command |
 | BS.Account.SignIn | Account: Sign in / Connected Services | File/Account/Connected Services | page |  |  | P3 | out-of-scope | FLUENT19:GroupBackstageSignIn |  |
 | BS.Account.About | Account: About (version) | File/Account/About | button |  | help.about | P1 | wired | FLUENT19:GroupAboutOfficeProducts | About NoteCraft: version, licence, local-first note, trademark notice |
 | BS.Account.WhatsNew | Account: What's New | File/Account/What's New | button |  | help.whatsNew | P3 | missing | FLUENT19:GroupWhatsNewInOfficeProducts |  |
@@ -893,7 +893,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Page.Paste | Paste | Context/Page/Paste | button | `Mod+V` | edit.paste | P0 | wired | FLUENT19:ContextMenuPage/Paste |  |
 | CM.Page.PageLinkCreate | Copy Link to Page | Context/Page/Copy Link to Page | button |  | page.copyLink | P0 | wired | FLUENT19:ContextMenuPage/PageLinkCreate |  |
 | CM.Page.MoveOrCopyPageContextual | Move or Copy… | Context/Page/Move or Copy… | button | `Mod+Alt+M` | page.moveOrCopy | P0 | wired | FLUENT19:ContextMenuPage/MoveOrCopyPageContextual |  |
-| CM.Page.CopyOrMoveToSection | Move or Copy to Section | Context/Page/Move or Copy to Section | button |  | page.moveOrCopy | P1 | missing | FLUENT19:ContextMenuPage/CopyOrMoveToSection |  |
+| CM.Page.CopyOrMoveToSection | Move or Copy to Section | Context/Page/Move or Copy to Section | button |  | page.moveOrCopy | P1 | wired | FLUENT19:ContextMenuPage/CopyOrMoveToSection | The page menu's Move or Copy… opens the Move or Copy Pages dialog for that page |
 | CM.Page.NewPageCtxItem | New Page | Context/Page/New Page | button |  | page.new | P0 | wired | FLUENT19:ContextMenuPage/NewPageCtxItem |  |
 | CM.Page.PagesDemote | Make Subpage | Context/Page/Make Subpage | button | `Mod+Alt+]` | page.demote | P0 | wired | FLUENT19:ContextMenuPage/PagesDemote |  |
 | CM.Page.PagesPromote | Promote Subpage | Context/Page/Promote Subpage | button | `Mod+Alt+[` | page.promote | P0 | wired | FLUENT19:ContextMenuPage/PagesPromote |  |
@@ -913,7 +913,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.ConflictPage.ConflictPageCollapse | Collapse Conflict Pages | Context/Conflict Page/Collapse Conflict Pages | button |  | sync.collapseConflicts | P2 | missing | FLUENT19:ContextMenuConflictPage/ConflictPageCollapse |  |
 | CM.PageVersion.PageVersionRestore | Restore Version | Context/Page Version/Restore Version | button |  | history.restoreVersion | P1 | wired | FLUENT19:ContextMenuVersionPage/PageVersionRestore | unverified: versions follow NoteCraft's own policy (decision D14) |
 | CM.PageVersion.PageVersionDelete | Delete Version | Context/Page Version/Delete Version | button |  | history.deleteVersion | P1 | wired | FLUENT19:ContextMenuVersionPage/PageVersionDelete | unverified: versions follow NoteCraft's own policy (decision D14) |
-| CM.PageVersion.CopyOrMoveToSection | Move or Copy to Section | Context/Page Version/Move or Copy to Section | button |  | page.moveOrCopy | P1 | missing | FLUENT19:ContextMenuVersionPage/CopyOrMoveToSection |  |
+| CM.PageVersion.CopyOrMoveToSection | Move or Copy to Section | Context/Page Version/Move or Copy to Section | button |  | page.moveOrCopy | P1 | wired | FLUENT19:ContextMenuVersionPage/CopyOrMoveToSection | unverified: a submenu of the notebook's sections; the version becomes a new page there (a copy; the page keeps its versions) |
 | CM.PageVersion.DeleteAllPageVersionsInSection | Delete All Versions in Section | Context/Page Version/Delete All Versions in Section | button |  | history.deleteVersionsSection | P2 | wired | FLUENT19:ContextMenuVersionPage/DeleteAllPageVersionsInSection | unverified: versions follow NoteCraft's own policy (decision D14) |
 | CM.PageVersion.DeleteAllPageVersionsInFolder | Delete All Versions in Section Group | Context/Page Version/Delete All Versions in Section Group | button |  | history.deleteVersionsGroup | P2 | wired | FLUENT19:ContextMenuVersionPage/DeleteAllPageVersionsInFolder | unverified: versions follow NoteCraft's own policy (decision D14) |
 | CM.PageVersion.DeleteAllPageVersionsInNotebook | Delete All Versions in Notebook | Context/Page Version/Delete All Versions in Notebook | button |  | history.deleteVersionsNotebook | P2 | wired | FLUENT19:ContextMenuVersionPage/DeleteAllPageVersionsInNotebook | unverified: versions follow NoteCraft's own policy (decision D14) |
