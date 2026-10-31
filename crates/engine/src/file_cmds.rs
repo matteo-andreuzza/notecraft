@@ -450,9 +450,16 @@ impl Session {
     /// Whether an automatic backup is due (`OPT.SaveBackup.AutoBackup`): the interval of the
     /// Options has passed since the last one and some notebook lives in a folder. The host
     /// asks this from its loop and runs `file.backupChanged`.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn backup_due(&self) -> bool {
         let every = i64::from(self.prefs.auto_backup_minutes).saturating_mul(60_000);
         every > 0 && !self.stores.is_empty() && self.clock.now_ms.saturating_sub(self.prefs.last_backup_ms) >= every
+    }
+
+    /// The web build has no folders to back up.
+    #[cfg(target_arch = "wasm32")]
+    pub fn backup_due(&self) -> bool {
+        false
     }
 }
 
