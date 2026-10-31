@@ -570,7 +570,7 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Account.Insider | Account: Office Insider | File/Account/Insider | menu |  |  | P3 | out-of-scope | FLUENT19:GroupOfficeInsider |  |
 | BS.Feedback | Feedback | File/Feedback | page |  | help.feedback | P3 | missing | FLUENT19:TabOfficeFeedback |  |
 | BS.Options | Options | File/Options | dialog |  | file.options | P0 | wired | FLUENT19:ApplicationOptionsDialog |  |
-| BS.Exit | Exit | File/Exit | button |  | file.exit | P0 | missing | FLUENT19:FileExit |  |
+| BS.Exit | Exit | File/Exit | button |  | file.exit | P0 | wired | FLUENT19:FileExit | Saves every notebook first; when one can't be saved the window stays open and the error says why (closing would lose the change). |
 
 ## Context menus
 
@@ -1067,7 +1067,7 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.SendNotesToBlog | Send to Blog | Quick Access Toolbar/Commands Not in the Ribbon/Send to Blog | button |  |  | P3 | out-of-scope | FLUENT19:SendNotesToBlog |  |
 | QAT.NR.ApplicationOptionsDialog | Options | Quick Access Toolbar/Commands Not in the Ribbon/Options | button |  | file.options | P0 | missing | FLUENT19:ApplicationOptionsDialog |  |
 | QAT.NR.SendNotesAsAttachment | Send as Attachment | Quick Access Toolbar/Commands Not in the Ribbon/Send as Attachment | button |  | share.sendAttachment | P2 | missing | FLUENT19:SendNotesAsAttachment |  |
-| QAT.NR.FileExit | Exit | Quick Access Toolbar/Commands Not in the Ribbon/Exit | button |  | file.exit | P0 | missing | FLUENT19:FileExit |  |
+| QAT.NR.FileExit | Exit | Quick Access Toolbar/Commands Not in the Ribbon/Exit | button |  | file.exit | P0 | wired | FLUENT19:FileExit | Saves every notebook first; when one can't be saved the window stays open and the error says why (closing would lose the change). |
 | QAT.NR.OfficeFeedback | Feedback | Quick Access Toolbar/Commands Not in the Ribbon/Feedback | button |  | help.feedback | P3 | missing | FLUENT19:OfficeFeedback |  |
 | QAT.NR.ShapeColorAndThickness | Shape Color & Thickness | Quick Access Toolbar/Commands Not in the Ribbon/Shape Color & Thickness | toggle |  | draw.shapeColorThickness | P2 | missing | FLUENT19:ShapeColorAndThickness |  |
 | QAT.NR.NewSharedNotebookCreate | New Shared Notebook | Quick Access Toolbar/Commands Not in the Ribbon/New Shared Notebook | button |  |  | P3 | out-of-scope | FLUENT19:NewSharedNotebookCreate |  |

@@ -833,3 +833,11 @@ were certain landed, behaviour unchanged (every test green after each commit).
   Restoring opens the item, which leaves the bin. Snapshot `recycle-bin`; UI test.
 - Catalog: UI.Panes.RecycleBin wired (P0). Not yet: a read-only preview of a deleted page, the
   60-day purge (BEH.Recycle.DeletedPages).
+
+## 2026-10-31 — M3/P0: File › Exit is a command
+
+- New `file.exit` (BS.Exit, QAT.NR.FileExit): saves every notebook, then sets
+  `Session.quit_request`, which `NoteApp::logic` turns into the shell's close. When a notebook
+  can't be saved it refuses ("not closing: …") and the window stays open; the backstage Exit
+  used to save, ignore errors and close. Agents and the control channel can run it too.
+- Catalog: BS.Exit, QAT.NR.FileExit wired.

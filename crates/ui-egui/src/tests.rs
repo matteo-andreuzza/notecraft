@@ -656,6 +656,21 @@ fn the_recycle_bin_lists_deleted_items_and_restores_them() {
 }
 
 #[test]
+fn file_exit_saves_and_asks_to_close() {
+    // parity: BS.Exit
+    let mut a = app();
+    a.ui.backstage = Some(crate::Backstage::Info);
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Exit").click();
+    h.run();
+    assert!(h.state().session.quit_request, "file.exit ran");
+    let ctx = h.ctx.clone();
+    h.state_mut().logic(&ctx);
+    assert!(h.state().quit_requested, "the shell is told to close");
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();
