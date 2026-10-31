@@ -665,20 +665,20 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Text.HyperlinkOpen | Open Link | Context/Text/Open Link | button | `Enter` | link.open | P0 | wired | FLUENT19:ContextMenuText/HyperlinkOpen |  |
 | CM.Text.LinkEdit | Edit Link… | Context/Text/Edit Link… | button |  | link.edit | P0 | verified | FLUENT19:ContextMenuText/LinkEdit |  |
 | CM.Text.HyperlinkCreate | Link… | Context/Text/Link… | button | `Mod+K` | insert.link | P0 | wired | FLUENT19:ContextMenuText/HyperlinkCreate |  |
-| CM.Text.ToPageLink | Link to Page (wiki link) | Context/Text/Link to Page (wiki link) | button |  | link.toPage | P1 | missing | FLUENT19:ContextMenuText/ToPageLink |  |
+| CM.Text.ToPageLink | Link to Page (wiki link) | Context/Text/Link to Page (wiki link) | button |  | link.toPage | P1 | wired | FLUENT19:ContextMenuText/ToPageLink |  |
 | CM.Text.LinkCopyOneNote | Copy Link | Context/Text/Copy Link | button |  | link.copy | P0 | verified | FLUENT19:ContextMenuText/LinkCopyOneNote |  |
 | CM.Text.LinkSelect | Select Link | Context/Text/Select Link | button |  | link.select | P1 | verified | FLUENT19:ContextMenuText/LinkSelect |  |
 | CM.Text.LinkRemove | Remove Link | Context/Text/Remove Link | button |  | link.remove | P0 | verified | FLUENT19:ContextMenuText/LinkRemove |  |
 | CM.Text.CopyTextFromPicture | Copy Text from Picture | Context/Text/Copy Text from Picture | button |  | object.copyTextFromPicture | P2 | missing | FLUENT19:ContextMenuText/CopyTextFromPicture |  |
 | CM.Text.PrintoutPageTextCopy | Copy Text from This Page of the Printout | Context/Text/Copy Text from This Page of the Printout | button |  | printout.copyPageText | P2 | missing | FLUENT19:ContextMenuText/PrintoutPageTextCopy |  |
 | CM.Text.CopyTextFromPrintoutPages | Copy Text from All Pages of the Printout | Context/Text/Copy Text from All Pages of the Printout | button |  | printout.copyAllText | P2 | missing | FLUENT19:ContextMenuText/CopyTextFromPrintoutPages |  |
-| CM.Text.RotateInkMenu | Rotate | Context/Text/Rotate | menu |  |  | P1 | missing | FLUENT19:ContextMenuText/RotateInkMenu |  |
+| CM.Text.RotateInkMenu | Rotate | Context/Text/Rotate | menu |  |  | P1 | wired | FLUENT19:ContextMenuText/RotateInkMenu |  |
 | CM.Text.RotateRight45OneNote | Rotate Right 45° | Context/Text/Rotate/Rotate Right 45° | button |  | object.rotateRight45 | P2 | missing | FLUENT19:ContextMenuText/RotateRight45OneNote |  |
 | CM.Text.RotateLeft45OneNote | Rotate Left 45° | Context/Text/Rotate/Rotate Left 45° | button |  | object.rotateLeft45 | P2 | missing | FLUENT19:ContextMenuText/RotateLeft45OneNote |  |
-| CM.Text.ObjectRotateRight90 | Rotate Right 90° | Context/Text/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | missing | FLUENT19:ContextMenuText/ObjectRotateRight90 |  |
-| CM.Text.ObjectRotateLeft90 | Rotate Left 90° | Context/Text/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | missing | FLUENT19:ContextMenuText/ObjectRotateLeft90 |  |
-| CM.Text.ObjectFlipHorizontal | Flip Horizontal | Context/Text/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | missing | FLUENT19:ContextMenuText/ObjectFlipHorizontal |  |
-| CM.Text.ObjectFlipVertical | Flip Vertical | Context/Text/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | missing | FLUENT19:ContextMenuText/ObjectFlipVertical |  |
+| CM.Text.ObjectRotateRight90 | Rotate Right 90° | Context/Text/Rotate/Rotate Right 90° | button |  | object.rotateRight90 | P1 | wired | FLUENT19:ContextMenuText/ObjectRotateRight90 |  |
+| CM.Text.ObjectRotateLeft90 | Rotate Left 90° | Context/Text/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | wired | FLUENT19:ContextMenuText/ObjectRotateLeft90 |  |
+| CM.Text.ObjectFlipHorizontal | Flip Horizontal | Context/Text/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | wired | FLUENT19:ContextMenuText/ObjectFlipHorizontal |  |
+| CM.Text.ObjectFlipVertical | Flip Vertical | Context/Text/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | wired | FLUENT19:ContextMenuText/ObjectFlipVertical |  |
 | CM.Text.TreatInkAsMenu | Treat Selected Ink As | Context/Text/Treat Selected Ink As | menu |  |  | P2 | missing | FLUENT19:ContextMenuText/TreatInkAsMenu |  |
 | CM.Text.TreatInkAsHandwriting | Handwriting | Context/Text/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | missing | FLUENT19:ContextMenuText/TreatInkAsHandwriting |  |
 | CM.Text.TreatInkAsDrawing | Drawing | Context/Text/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | missing | FLUENT19:ContextMenuText/TreatInkAsDrawing |  |
@@ -687,11 +687,11 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Text.SelectionToMathConvert | Ink to Math | Context/Text/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuText/SelectionToMathConvert |  |
 | CM.Text.LookUp | Smart Lookup | Context/Text/Smart Lookup | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuText/LookUp |  |
 | CM.Text.Translate | Translate | Context/Text/Translate | button |  | review.translateSelection | P3 | missing | FLUENT19:ContextMenuText/Translate |  |
-| CM.Text.PictureAsBackground | Set Picture as Background | Context/Text/Set Picture as Background | toggle |  | object.setAsBackground | P1 | missing | FLUENT19:ContextMenuText/PictureAsBackground |  |
-| CM.Text.AlternativeText | Alt Text | Context/Text/Alt Text | button |  | object.altText | P1 | missing | FLUENT19:ContextMenuText/AlternativeText |  |
+| CM.Text.PictureAsBackground | Set Picture as Background | Context/Text/Set Picture as Background | toggle |  | object.setAsBackground | P1 | wired | FLUENT19:ContextMenuText/PictureAsBackground |  |
+| CM.Text.AlternativeText | Alt Text | Context/Text/Alt Text | button |  | object.altText | P1 | wired | FLUENT19:ContextMenuText/AlternativeText |  |
 | CM.Text.OCRLanguageListMenu | Make Text in Image Searchable | Context/Text/Make Text in Image Searchable | menu |  | object.ocrLanguage | P2 | missing | FLUENT19:ContextMenuText/OCRLanguageListMenu |  |
-| CM.Text.TableMenu | Table | Context/Text/Table | menu |  |  | P1 | missing | FLUENT19:ContextMenuText/TableMenu |  |
-| CM.Text.TableInsert | Insert Table | Context/Text/Table/Insert Table | button |  | insert.tableDialog | P1 | missing | FLUENT19:ContextMenuText/TableInsert |  |
+| CM.Text.TableMenu | Table | Context/Text/Table | menu |  |  | P1 | wired | FLUENT19:ContextMenuText/TableMenu |  |
+| CM.Text.TableInsert | Insert Table | Context/Text/Table/Insert Table | button |  | insert.tableDialog | P1 | wired | FLUENT19:ContextMenuText/TableInsert |  |
 | CM.Text.TableInsertColumnsLeft | Insert Left | Context/Text/Table/Insert Left | button | `Mod+Alt+E` | table.insertLeft | P1 | wired | FLUENT19:ContextMenuText/TableInsertColumnsLeft |  |
 | CM.Text.TableInsertColumnsRight | Insert Right | Context/Text/Table/Insert Right | button | `Mod+Alt+R` | table.insertRight | P1 | wired | FLUENT19:ContextMenuText/TableInsertColumnsRight |  |
 | CM.Text.TableInsertRowsAbove | Insert Above | Context/Text/Table/Insert Above | button |  | table.insertAbove | P1 | wired | FLUENT19:ContextMenuText/TableInsertRowsAbove |  |
@@ -1400,13 +1400,13 @@ Documented (or, where marked, plausible and unverified) behaviour. A behaviour r
 | BEH.Text.FontSizeSteps | Increase/Decrease Font Size step through 8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 24, 28, 36, 48, 72 | Behaviour/Text | behaviour |  |  | P1 | wired | GK (Office font size list) | unverified list for OneNote |
 | BEH.Text.DefaultFont | New text uses the default font (Calibri 11 by default, configurable) | Behaviour/Text | behaviour |  |  | P0 | wired | GK (Options › Advanced › Default font) | Calibri is proprietary: metric-compatible substitute (Carlito) when available |
 | BEH.Text.Styles | Paragraph styles are paragraph-level: applying one replaces character formatting with the style's | Behaviour/Text | behaviour |  |  | P0 | wired | GK | unverified |
-| BEH.Text.HeadingSizes | Built-in styles: Heading 1 16pt blue, Heading 2 14pt blue bold, Heading 3 12pt blue bold, Heading 4 12pt blue bold italic, Heading 5 11pt blue bold, Heading 6 11pt blue italic, Page Title 20pt, Citation 9pt grey, Quote 11pt italic grey, Code Consolas 10pt, Normal 11pt | Behaviour/Text | behaviour |  |  | P1 | missing | GK (user-visible defaults) | unverified exact values |
+| BEH.Text.HeadingSizes | Built-in styles: Heading 1 16pt blue, Heading 2 14pt blue bold, Heading 3 12pt blue bold, Heading 4 12pt blue bold italic, Heading 5 11pt blue bold, Heading 6 11pt blue italic, Page Title 20pt, Citation 9pt grey, Quote 11pt italic grey, Code Consolas 10pt, Normal 11pt | Behaviour/Text | behaviour |  |  | P1 | wired | GK (user-visible defaults) | unverified exact values |
 | BEH.Text.ClearFormatting | Clear All Formatting returns the selection to the Normal style | Behaviour/Text | behaviour |  |  | P0 | verified | KBD365 ("Apply the Normal style") |  |
 | BEH.Text.HyperlinkAuto | Typing a URL followed by space or Enter turns it into a link | Behaviour/Text | behaviour |  |  | P1 | verified | GK |  |
 | BEH.Text.MathCalc | Typing an expression followed by "=" and Space/Enter inserts the result (e.g. 12*3= → 36) | Behaviour/Text | behaviour |  |  | P1 | wired | GK (Options › Advanced: calculate mathematical expressions) | notecraft_math::calc from Microsoft's public pages: + - * x / ^ % ! mod, ABS…TAN, PMT(;;), PI/PHI, degrees for the angle functions, $ and thousands separators kept in the answer; Space or Enter after "=" types the answer; the expression is the longest end of the line that starts a word. Unverified: rounding to 15 significant digits |
 | BEH.Links.Wiki | Typing [[Page Name]] creates a link to that page, creating the page in the section if it does not exist | Behaviour/Links | behaviour |  |  | P1 | verified | GK (wiki linking) |  |
 | BEH.Links.CopyLink | Copy Link to Page/Section/Paragraph produces a link that navigates there (onenote: URI in the reference; notecraft: URI here) | Behaviour/Links | behaviour |  |  | P0 | verified | FLUENT19:PageLinkCreate |  |
-| BEH.Links.PageRenameTracking | Links to pages keep working after the page is renamed or moved | Behaviour/Links | behaviour |  |  | P1 | missing | GK | id-based links |
+| BEH.Links.PageRenameTracking | Links to pages keep working after the page is renamed or moved | Behaviour/Links | behaviour |  |  | P1 | wired | GK | id-based links |
 | BEH.Tags.Toggle | Applying a tag already on a paragraph removes it; To Do toggles checked → unchecked → removed via Ctrl+1 sequence | Behaviour/Tags | behaviour |  |  | P0 | wired | KBD365 ("Apply, select, or clear the To Do tag") | unverified exact cycle |
 | BEH.Tags.CheckboxClick | Clicking a To Do checkbox checks/unchecks it | Behaviour/Tags | behaviour |  |  | P0 | verified | GK |  |
 | BEH.Tags.MultipleTags | A paragraph can carry several tags; their icons stack left of the paragraph | Behaviour/Tags | behaviour |  |  | P0 | wired | GK |  |
@@ -1437,8 +1437,8 @@ Documented (or, where marked, plausible and unverified) behaviour. A behaviour r
 | BEH.Search.LockedExcluded | Locked password-protected sections are not searched | Behaviour/Search | behaviour |  |  | P1 | wired | GK (MS Support: password-protect sections) |  |
 | BEH.Password.Lock | A password-protected section shows a lock; its pages are hidden until unlocked; it relocks after the idle time | Behaviour/Password | behaviour |  |  | P1 | wired | FLUENT19:PasswordProtectSection; KBD365 (Ctrl+Alt+L) |  |
 | BEH.Password.NoRecovery | A forgotten section password cannot be recovered | Behaviour/Password | behaviour |  |  | P1 | wired | GK (MS Support) |  |
-| BEH.View.RuleLines | Rule lines: Narrow, College, Standard, Wide ruled; Small, Medium, Large, Very Large grid; None; colour; optional margin line | Behaviour/View | behaviour |  |  | P1 | missing | FLUENT19:RuleLinesMenu | unverified spacings |
-| BEH.View.PageColor | Page colour: a palette of 16 light colours plus No Color | Behaviour/View | behaviour |  |  | P1 | missing | FLUENT19:PageColorGallery | unverified palette |
+| BEH.View.RuleLines | Rule lines: Narrow, College, Standard, Wide ruled; Small, Medium, Large, Very Large grid; None; colour; optional margin line | Behaviour/View | behaviour |  |  | P1 | wired | FLUENT19:RuleLinesMenu | unverified spacings |
+| BEH.View.PageColor | Page colour: a palette of 16 light colours plus No Color | Behaviour/View | behaviour |  |  | P1 | wired | FLUENT19:PageColorGallery | unverified palette |
 | BEH.View.Zoom | Zoom from 10% to 400%; Zoom In/Out step through fixed stops | Behaviour/View | behaviour |  |  | P0 | wired | FLUENT19:ZoomClassic | unverified stops |
 | BEH.Paste.HTML | Pasting rich text keeps formatting (Keep Source Formatting is the default paste) | Behaviour/Paste | behaviour |  |  | P0 | wired | FLUENT19:PasteSourceFormatting | unverified default. HTML from other applications keeps paragraphs, headings, basic formatting, links, colour, lists (as levels) and tables (as table objects, merged cells from `colspan`/`rowspan`); a bounded, tolerant reader (notecraft-import-export); inline pictures (`data:image/…;base64` sources) become pictures between the paragraphs around them, pictures from the web are dropped (no network by default) |
 | BEH.Paste.Images | Pasting an image creates a picture on the page at the caret | Behaviour/Paste | behaviour |  |  | P1 | wired | GK | a picture on the system clipboard (no text) is pasted as a picture where a new object goes; Ctrl+V with only a picture is caught on the key release (egui-winit drops the press) |

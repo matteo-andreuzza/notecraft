@@ -1015,3 +1015,13 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Catalog: BEH.Pages.NewPageInsertion wired (unverified details).
 - Also: UI.Ribbon.Tooltips wired with a UI test (name and shortcut, or the reason a control
   is disabled; no description line yet).
+
+## 2026-10-31 — Context menu and behaviour rows
+
+- New command `link.toPage` (CM.Text.ToPageLink): the selected words link to the page of
+  that title, created in the section if missing (the same rule as `[[wiki links]]`).
+- A test pins the Text menu's object rows (Rotate submenu, Set Picture as Background, Alt
+  Text) and its Table submenu as working commands in the right state.
+- Tests pin BEH.Text.HeadingSizes, BEH.View.RuleLines, BEH.View.PageColor and
+  BEH.Links.PageRenameTracking.
+- Desktop: a test pins the portal file dialogs (UI.Window.FileDialogs).

@@ -598,3 +598,44 @@ fn open_link_is_enabled_only_on_a_link() {
     // A click on a link still opens it: the command itself takes the url.
     assert!(a.session.run("link.open", json!({"url": "https://example.org"})).is_ok());
 }
+
+#[test]
+fn the_text_menu_rows_reach_working_commands_in_the_right_state() {
+    // Each row sits in the Text menu and runs its command when the state calls for it.
+    let ids = |list: &[crate::context_menu::Entry]| -> Vec<&'static str> { list.iter().flat_map(crate::context_menu::ids).collect() };
+    let in_menu = ids(crate::context_menu::TEXT_MENU);
+    let check = |a: &NoteApp, row: &str| {
+        assert!(in_menu.contains(&row), "{row} is in the Text menu");
+        let cmd = crate::ribbon::command(row).unwrap_or_else(|| panic!("{row} has a command"));
+        assert_eq!(a.disabled_reason(cmd), None, "{row} → {cmd} is enabled");
+    };
+    // A picture selected: the Rotate submenu, background and alt text.
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    let data = notecraft_engine::b64::encode(&crate::tests_pictures::png(16, 8));
+    a.session.run("insert.picture", json!({"data": data})).unwrap();
+    for row in [
+        "CM.Text.RotateInkMenu",
+        "CM.Text.ObjectRotateRight90",
+        "CM.Text.ObjectRotateLeft90",
+        "CM.Text.ObjectFlipHorizontal",
+        "CM.Text.ObjectFlipVertical",
+        "CM.Text.PictureAsBackground",
+        "CM.Text.AlternativeText",
+    ] {
+        if row == "CM.Text.RotateInkMenu" {
+            assert!(in_menu.contains(&row), "CM.Text.RotateInkMenu");
+            continue;
+        }
+        check(&a, row);
+    }
+    // The caret in a table: the Table submenu.
+    let (a, _) = page_with_table();
+    assert!(in_menu.contains(&"CM.Text.TableMenu"), "CM.Text.TableMenu");
+    check(&a, "CM.Text.TableInsert");
+    // Words selected: Link to Page.
+    let (mut a, o) = page_with("Garden");
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 0})).unwrap();
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 6, "extend": true})).unwrap();
+    check(&a, "CM.Text.ToPageLink");
+}

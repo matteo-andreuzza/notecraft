@@ -327,3 +327,81 @@ fn backups_use_the_folder_interval_and_copies_of_the_options() {
     assert!(!s.backup_due());
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn selected_words_link_to_the_page_of_that_title() {
+    let mut s = sample();
+    blank_page(&mut s);
+    run(&mut s, "text.insert", json!({"text": "see Garden plans soon"}));
+    let o = outline(&s);
+    run(&mut s, "caret.set", json!({"block": o.to_string(), "para": 0, "offset": 4}));
+    run(&mut s, "caret.set", json!({"block": o.to_string(), "para": 0, "offset": 16, "extend": true}));
+    let pages = s.section().unwrap().pages.len();
+    let r = run(&mut s, "link.toPage", json!({}));
+    assert_eq!(s.section().unwrap().pages.len(), pages + 1, "CM.Text.ToPageLink: a new page");
+    let target = notecraft_doc::Id::parse(r["page"].as_str().unwrap()).unwrap();
+    assert_eq!(s.ws.page(target).unwrap().title.text(), "Garden plans");
+    assert_eq!(paras(&s)[0].fmt_at(6).link.as_deref(), Some(r["link"].as_str().unwrap()), "CM.Text.ToPageLink");
+    // Again on the same words: the existing page, no new one.
+    run(&mut s, "caret.set", json!({"block": o.to_string(), "para": 0, "offset": 4}));
+    run(&mut s, "caret.set", json!({"block": o.to_string(), "para": 0, "offset": 16, "extend": true}));
+    run(&mut s, "link.toPage", json!({}));
+    assert_eq!(s.section().unwrap().pages.len(), pages + 1);
+}
+
+#[test]
+fn built_in_styles_have_their_documented_sizes() {
+    use notecraft_doc::ParaStyle;
+    let size = |n: &str| ParaStyle::from_name(n).unwrap().def().char.size;
+    let font = |n: &str| ParaStyle::from_name(n).unwrap().def().char.font;
+    for (name, pt) in [
+        ("Heading 1", 16.0),
+        ("Heading 2", 14.0),
+        ("Heading 3", 12.0),
+        ("Heading 4", 12.0),
+        ("Heading 5", 11.0),
+        ("Heading 6", 11.0),
+        ("Page Title", 20.0),
+        ("Citation", 9.0),
+        ("Quote", 11.0),
+        ("Code", 10.0),
+        ("Normal", 11.0),
+    ] {
+        assert_eq!(size(name), Some(pt), "BEH.Text.HeadingSizes: {name}");
+    }
+    assert_eq!(font("Code").as_deref(), Some("Consolas"), "BEH.Text.HeadingSizes");
+    assert_eq!(ParaStyle::from_name("Quote").unwrap().def().char.italic, Some(true), "BEH.Text.HeadingSizes");
+}
+
+#[test]
+fn rule_lines_and_page_colours() {
+    let mut s = sample();
+    blank_page(&mut s);
+    for kind in ["narrow", "college", "standard", "wide", "gridSmall", "gridMedium", "gridLarge", "gridVeryLarge", "none"] {
+        run(&mut s, "view.ruleLines", json!({"kind": kind}));
+    }
+    assert_eq!(s.page().unwrap().setup.rule_lines, notecraft_doc::RuleLines::None, "BEH.View.RuleLines");
+    run(&mut s, "view.ruleLines", json!({"kind": "college"}));
+    assert_eq!(s.page().unwrap().setup.rule_lines, notecraft_doc::RuleLines::College, "BEH.View.RuleLines");
+    assert_eq!(notecraft_doc::color::PAGE_COLORS.len(), 16, "BEH.View.PageColor: sixteen colours");
+    let hex = notecraft_doc::color::PAGE_COLORS[3].color.to_hex();
+    run(&mut s, "view.pageColor", json!({"color": hex}));
+    assert_eq!(s.page().unwrap().setup.color.map(|c| c.to_hex()), Some(hex), "BEH.View.PageColor");
+    run(&mut s, "view.pageColor", json!({"color": null}));
+    assert_eq!(s.page().unwrap().setup.color, None, "BEH.View.PageColor: No Color");
+}
+
+#[test]
+fn page_links_survive_renames_and_moves() {
+    let mut s = sample();
+    let target = s.page().unwrap().id;
+    let link = run(&mut s, "page.copyLink", json!({}))["link"].as_str().unwrap().to_string();
+    run(&mut s, "page.rename", json!({"title": "A brand new title"}));
+    let from = s.section().unwrap().id;
+    let to = s.notebook().unwrap().sections().iter().map(|x| x.id).find(|&x| x != from).unwrap();
+    run(&mut s, "page.move", json!({"page": target.to_string(), "section": to.to_string(), "index": 0}));
+    blank_page(&mut s);
+    run(&mut s, "link.open", json!({"url": link}));
+    assert_eq!(s.page().unwrap().id, target, "BEH.Links.PageRenameTracking");
+    assert_eq!(s.page().unwrap().title.text(), "A brand new title");
+}

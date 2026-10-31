@@ -221,6 +221,10 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("link.remove", "CM.Text.LinkRemove", "Remove Link", "Context/Text/Remove Link", remove_link).when(need_link),
         CommandSpec::new("link.copy", "CM.Text.LinkCopyOneNote", "Copy Link", "Context/Text/Copy Link", copy_link).pure().when(need_link),
         CommandSpec::new("link.select", "CM.Text.LinkSelect", "Select Link", "Context/Text/Select Link", select_link).pure().when(need_link),
+        // CM.Text.ToPageLink — the selected words become a link to the page of that title,
+        // created in this section when there is none (as a [[wiki link]] would).
+        CommandSpec::new("link.toPage", "CM.Text.ToPageLink", "Link to Page", "Context/Text/Link to Page (wiki link)", link_to_page)
+            .when(|s| if s.selected_text().is_some_and(|t| !t.trim().is_empty()) { None } else { Some("Select the words to link first") }),
         // BEH.Links.CopyLink — Copy Link to Paragraph (paragraph context menu).
         CommandSpec::new("para.copyLink", "BEH.Links.CopyLink", "Copy Link to Paragraph", "Behaviour/Links", copy_para_link).pure().when(need_text),
     ]
@@ -352,6 +356,23 @@ fn validate_url(url: &str) -> Result<String, CmdError> {
         return Err(CmdError::Params("`url` must be 1–4096 characters without control characters".into()));
     }
     Ok(u.to_string())
+}
+
+fn link_to_page(s: &mut Session, _: &Value) -> CmdResult {
+    let name = s.selected_text().map(|t| t.trim().to_string()).unwrap_or_default();
+    if name.is_empty() || name.chars().count() > 255 || name.contains('\n') {
+        return Err(CmdError::Params("select a short piece of text on one line".into()));
+    }
+    let target = crate::page_cmds::page_by_title_or_create(s, &name)?;
+    let url = format!("notecraft:page/{target}");
+    let segs = ops::segments(s);
+    let page = s.page_mut().ok_or_else(no_page)?;
+    for (b, i, r) in segs {
+        if let Some(p) = Session::para_mut(page, b, i) {
+            t::apply_format(p, r, &|f| f.link = Some(url.clone()));
+        }
+    }
+    Ok(json!({"page": target.to_string(), "link": url}))
 }
 
 fn insert_link(s: &mut Session, v: &Value) -> CmdResult {
