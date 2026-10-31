@@ -471,6 +471,19 @@ fn paste_row(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) {
 /// A header row of the attachment menu: the file's name (strong) and its size, read from the
 /// attachment the menu is open on (`CM.FileAttachment.FileAttachmentName/Size`).
 fn header(app: &NoteApp, id: &str) -> Option<(String, bool)> {
+    // CM.Text.LastModifiedBy / CM.ParagraphHandle.LastModifiedBy: who last changed the
+    // paragraph, and when (wording unverified).
+    if id.ends_with(".LastModifiedBy") {
+        let (block, para) = match app.canvas.context_target? {
+            ContextTarget::Handle(b, p) | ContextTarget::Text(b, p, _) => (b, p),
+            _ => return None,
+        };
+        let p = notecraft_engine::Session::block_paras(app.session.page()?, block)?.get(para)?;
+        let off = app.session.clock.utc_offset_min;
+        let when = format!("{} {}", p.modified.short_date(off), p.modified.short_time(off));
+        let who = if p.author.is_empty() { String::new() } else { format!(" by {}", p.author) };
+        return Some((format!("Last modified{who}, {when}"), false));
+    }
     let name = id.ends_with(".FileAttachmentName");
     if !name && !id.ends_with(".FileAttachmentSize") {
         return None;

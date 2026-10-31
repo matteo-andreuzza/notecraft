@@ -680,3 +680,16 @@ fn right_click_on_a_misspelled_word_offers_its_corrections() {
     let text = h.state().session.page().unwrap().outline(o).unwrap().paragraphs[0].text();
     assert_eq!(text, "the cat sat", "CM.MisspelledWord.NoSpellingSuggestions");
 }
+
+#[test]
+fn the_handle_menu_says_who_last_changed_the_paragraph() {
+    let (mut a, o) = page_for_context_menu("Alpha");
+    a.session.prefs.author = "Ada".into();
+    a.session.run("text.insert", json!({"text": "!"})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    let handle = h.state().canvas.para(Block::Outline(o), 0).unwrap().handle.center();
+    right_click(&mut h, handle);
+    assert!(h.query_by_label_contains("Last modified by Ada").is_some(), "CM.ParagraphHandle.LastModifiedBy");
+    let _ = "CM.Text.LastModifiedBy";
+}

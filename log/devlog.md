@@ -1121,3 +1121,9 @@ were certain landed, behaviour unchanged (every test green after each commit).
   page's tokens from the White theme).
 - Catalog: 15 rows wired (the Unread group and its menu, QAT and keyboard rows,
   BEH.History.Unread, WindowKeepOnTop, SwitchBackground).
+
+## 2026-10-31 — Last modified by
+
+- The paragraph handle and text menus end with "Last modified by <author>, <date> <time>"
+  for the paragraph under the pointer (`context_menu::header`). CM.ParagraphHandle and
+  CM.Text LastModifiedBy wired (an information line, no command).
