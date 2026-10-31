@@ -111,7 +111,29 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             |s, _| delete_all(s, Scope::Notebook),
         )
         .when(need_section),
+        CommandSpec::new(
+            "history.disable",
+            "R.History.History.DisableVersionHistory",
+            "Disable History for This Notebook",
+            "History/Page Versions/Disable History for This Notebook",
+            disable_history,
+        )
+        .params(r#"{"on"?: bool, "notebook"?: id} (default: switch)"#)
+        .when(crate::ops::need_notebook),
     ]
+}
+
+/// Turn page versions off (or back on) for a notebook. Existing versions stay until deleted.
+fn disable_history(s: &mut Session, v: &Value) -> CmdResult {
+    let id = match p::id(v, "notebook")? {
+        Some(id) => id,
+        None => s.sel.notebook.ok_or_else(no_page)?,
+    };
+    let cur = s.ws.notebook(id).ok_or_else(|| CmdError::Params("no such notebook".into()))?.history_disabled;
+    let on = p::bool(v, "on").unwrap_or(!cur);
+    let nb = s.ws.notebook_mut(id).ok_or_else(no_page)?;
+    nb.history_disabled = on;
+    Ok(json!({"disabled": on}))
 }
 
 fn need_section(s: &Session) -> Option<&'static str> {
@@ -122,6 +144,10 @@ fn need_section(s: &Session) -> Option<&'static str> {
 /// docs). Runs inside the command's undo step.
 pub(crate) fn snapshot(s: &mut Session, before: &Workspace, before_sel: &Selection) {
     let now = s.clock.now_ms;
+    // History › Disable History for This Notebook.
+    if s.notebook().is_some_and(|nb| nb.history_disabled) {
+        return;
+    }
     let author = s.prefs.author.clone();
     let mut ids: Vec<Id> = [before_sel.page, s.sel.page].into_iter().flatten().collect();
     ids.dedup();
@@ -394,6 +420,23 @@ mod tests {
         assert_eq!(versions(&s), 0);
         assert!(matches!(s.run("history.openVersion", json!({"at": at})), Err(CmdError::Params(_))));
         assert!(matches!(s.run("history.deleteVersion", json!({})), Err(CmdError::Params(_))));
+    }
+
+    #[test]
+    fn disabled_history_keeps_no_new_versions() {
+        // parity: R.History.History.DisableVersionHistory, R.History.History.DisableVersionHistory2, CM.PageVersion.DisableVersionHistory
+        let mut s = sample();
+        assert_eq!(run(&mut s, "history.disable", json!({}))["disabled"], true);
+        edit_later(&mut s, 60, "x");
+        assert_eq!(versions(&s), 0, "no version while history is off");
+        run(&mut s, "history.disable", json!({"on": false}));
+        run(&mut s, "view.zoom100", json!({}));
+        edit_later(&mut s, 60, "y");
+        assert_eq!(versions(&s), 1);
+        // It is a notebook change, so it saves and undoes like one.
+        run(&mut s, "edit.undo", json!({}));
+        run(&mut s, "edit.undo", json!({}));
+        assert!(s.notebook().unwrap().history_disabled, "undone back to disabled");
     }
 
     #[test]

@@ -910,7 +910,8 @@ fn structure_key(nb: &Notebook) -> Vec<(usize, u8, Id, String, Option<u8>)> {
             }
         }
     }
-    let mut out = vec![(0, 2, nb.id, nb.name.clone(), nb.color.0)];
+    // The kind 3 marks a notebook with history disabled, so turning it on saves the TOC.
+    let mut out = vec![(0, if nb.history_disabled { 3 } else { 2 }, nb.id, nb.name.clone(), nb.color.0)];
     walk(&nb.children, 1, &mut out);
     out
 }

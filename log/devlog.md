@@ -1109,3 +1109,11 @@ were certain landed, behaviour unchanged (every test green after each commit).
   page's tokens from the White theme).
 - Catalog: 15 rows wired (the Unread group and its menu, QAT and keyboard rows,
   BEH.History.Unread, WindowKeepOnTop, SwitchBackground).
+
+## 2026-10-31 — M3/P2: Disable History for This Notebook
+
+- `Notebook.history_disabled`, saved as `Toc.history_disabled` in the notebook's table of
+  contents (serde default; older tables read as enabled). `history.disable` switches it (a
+  notebook change: saved, undoable); `versions_cmds::snapshot` keeps no versions while it is on.
+  Ribbon rows (Page Versions and Recycle Bin menus) show it checked; the version menu has it.
+- Catalog: the three Disable History rows wired (unverified, D14).
