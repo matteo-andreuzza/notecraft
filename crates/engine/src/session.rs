@@ -194,6 +194,9 @@ pub struct ViewState {
     pub templates_pane: bool,
     /// Paper Size pane open (View › Paper Size).
     pub paper_pane: bool,
+    /// The Recent Edits pane's period (`history_cmds::RECENT_RANGES`), `None` = closed.
+    #[serde(default)]
+    pub recent_edits: Option<String>,
     /// The recycle bin of this notebook is being viewed.
     pub recycle_view: Option<Id>,
 }
@@ -213,6 +216,7 @@ impl Default for ViewState {
             tags_pane: false,
             templates_pane: false,
             paper_pane: false,
+            recent_edits: None,
             recycle_view: None,
         }
     }

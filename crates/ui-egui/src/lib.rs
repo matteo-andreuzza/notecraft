@@ -507,6 +507,9 @@ impl NoteApp {
             if self.session.view.paper_pane {
                 panes::paper_pane(self, ui, t);
             }
+            if self.session.view.recent_edits.is_some() {
+                panes::recent_pane(self, ui, t);
+            }
             if self.ui.search_pane {
                 panes::search_pane(self, ui, t);
             }
