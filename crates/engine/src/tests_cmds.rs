@@ -293,7 +293,7 @@ fn tag_summary_page_and_custom_tags() {
     assert!(s.tag_defs().iter().any(|d| d.name == "Recipe idea"));
     run(&mut s, "tag.customize", json!({"action": "remove", "key": key}));
     assert!(!s.tag_defs().iter().any(|d| d.name == "Recipe idea"));
-    assert!(s.run("tag.customize", json!({"action": "modify", "key": "todo"})).is_err(), "built-ins can't be modified");
+    assert!(s.run("tag.customize", json!({"action": "modify", "key": "no-such-tag"})).is_err(), "unknown tags are an error");
 }
 
 #[test]

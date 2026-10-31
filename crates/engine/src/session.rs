@@ -73,6 +73,10 @@ pub struct Prefs {
     pub new_pages_rule_lines: Option<RuleLines>,
     /// Custom tags (Customize Tags).
     pub custom_tags: Vec<TagDef>,
+    /// The whole tag list in order once Customize Tags has reordered, modified or removed a
+    /// tag (built-ins and custom tags together); `None` = the built-ins, then `custom_tags`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tag_list: Option<Vec<TagDef>>,
     /// Default search scope (Set This Scope as Default).
     pub default_scope: ScopeKind,
     /// Backups to keep per notebook.
@@ -132,6 +136,7 @@ impl Default for Prefs {
             calculate_math: true,
             new_pages_rule_lines: None,
             custom_tags: Vec::new(),
+            tag_list: None,
             default_scope: ScopeKind::AllNotebooks,
             backup_copies: 2,
             backup_folder: String::new(),
@@ -597,6 +602,9 @@ impl Session {
 
     /// All tag definitions: built-ins, then custom tags.
     pub fn tag_defs(&self) -> Vec<TagDef> {
+        if let Some(list) = &self.prefs.tag_list {
+            return list.clone();
+        }
         let mut v = builtin_tags();
         v.extend(self.prefs.custom_tags.iter().cloned());
         v

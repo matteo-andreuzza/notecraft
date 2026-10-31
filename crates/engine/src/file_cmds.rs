@@ -554,6 +554,9 @@ fn options(s: &mut Session, v: &Value) -> CmdResult {
         prefs.auto_backup_minutes = prefs.auto_backup_minutes.min(8 * 7 * 24 * 60);
         prefs.initials = prefs.initials.chars().take(9).collect();
         prefs.custom_tags.truncate(notecraft_doc::tags::MAX_CUSTOM_TAGS);
+        if let Some(list) = &mut prefs.tag_list {
+            list.truncate(notecraft_doc::tags::MAX_CUSTOM_TAGS + notecraft_doc::builtin_tags().len());
+        }
         s.prefs = prefs;
     }
     serde_json::to_value(&s.prefs).map_err(|e| CmdError::Failed(e.to_string()))

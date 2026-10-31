@@ -910,7 +910,25 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
     };
     let row_h = (inner.height() / visible.max(1) as f32).floor();
     let defs = app.session.tag_defs();
-    for (i, item) in items.iter().take(visible).enumerate() {
+    if is_tags {
+        // The tags in the list's order (Customize Tags can rename, reorder, add and remove).
+        let on = app.disabled_reason("tag.toggle").is_none();
+        for (i, def) in defs.iter().take(visible).enumerate() {
+            let r = Rect::from_min_size(pos2(inner.min.x, inner.min.y + i as f32 * row_h), vec2(inner.width() - 16.0, row_h));
+            let resp = ui.interact(r, ui.id().with((id, i)), Sense::click());
+            resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, &def.name));
+            if resp.hovered() && on {
+                ui.painter().rect_filled(r, 1.0, t.hover);
+            }
+            let color = if on { t.text } else { t.text_disabled };
+            icons::tag(ui.painter(), Rect::from_min_size(r.min + vec2(3.0, (row_h - 13.0) / 2.0), vec2(13.0, 13.0)), def.symbol, false, color);
+            ui.painter().text(r.left_center() + vec2(21.0, 0.0), egui::Align2::LEFT_CENTER, &def.name, egui::FontId::proportional(11.5), color);
+            if resp.clicked() && on {
+                app.run(&ctx, "tag.toggle", json!({"key": def.key}));
+            }
+        }
+    }
+    for (i, item) in items.iter().take(if is_tags { 0 } else { visible }).enumerate() {
         let r = Rect::from_min_size(pos2(inner.min.x, inner.min.y + i as f32 * row_h), vec2(inner.width() - 16.0, row_h));
         let resp = ui.interact(r, ui.id().with((id, i)), Sense::click());
         let enabled_item = command(item).map(|c| app.disabled_reason(c).is_none()).unwrap_or(on);
@@ -961,7 +979,27 @@ pub(crate) fn gallery_menu(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&s
     let defs = app.session.tag_defs();
     ui.set_min_width(220.0);
     egui::ScrollArea::vertical().max_height(420.0).show(ui, |ui| {
-        for item in items {
+        if is_tags {
+            let on = app.disabled_reason("tag.toggle").is_none();
+            for def in &defs {
+                // A built-in keeps its shortcut (Ctrl+1…9) wherever it moved.
+                let shortcut = tag_item(&def.key).and_then(row).map(|r| r.shortcut.replace("Mod", "Ctrl")).unwrap_or_default();
+                let resp = ui.horizontal(|ui| {
+                    let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
+                    icons::tag(ui.painter(), r, def.symbol, false, t.text);
+                    ui.add_enabled(
+                        on,
+                        egui::Button::new(format!("{}{}", def.name, if shortcut.is_empty() { String::new() } else { format!("    {shortcut}") }))
+                            .frame(false),
+                    )
+                });
+                if resp.inner.clicked() {
+                    app.run(&ctx, "tag.toggle", json!({"key": def.key}));
+                    ui.close();
+                }
+            }
+        }
+        for item in items.iter().filter(|_| !is_tags) {
             let lab = label(item);
             let enabled_item = command(item).map(|c| app.disabled_reason(c).is_none()).unwrap_or(on);
             let resp = ui.horizontal(|ui| {
@@ -987,6 +1025,11 @@ pub(crate) fn gallery_menu(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&s
             }
         }
     });
+}
+
+/// The ribbon row of the built-in tag `key` (the Tags gallery's items follow the built-ins).
+fn tag_item(key: &str) -> Option<&'static str> {
+    notecraft_engine::doc::builtin_tags().iter().position(|d| d.key == key).and_then(|i| crate::ribbon_layout::TAG_ITEMS.get(i).copied())
 }
 
 pub(crate) fn gallery_pick(app: &mut NoteApp, ctx: &egui::Context, gallery_id: &str, item: &str) {

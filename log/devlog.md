@@ -979,3 +979,17 @@ were certain landed, behaviour unchanged (every test green after each commit).
   `quick-note`. unverified: the reference opens a separate window.
 - Catalog: UI.Window.QuickNote, R.View.Window.NewSideNote, KB.General.QuickNote,
   BEH.Notebooks.QuickNotes wired.
+
+## 2026-10-31 — M3/P1: Customize Tags for every tag; the Tags gallery follows it
+
+- Engine: `Prefs.tag_list` (the whole ordered list once customized; `None` = built-ins then
+  `custom_tags`, which stays in step). `tag.customize` now modifies or removes any tag
+  (built-ins too; `null` clears a colour), moves tags up and down, adds new tags at the top
+  (unverified) and resets the built-ins (`reset`). Notes keep the tags they carry.
+- UI: the Customize Tags dialog lists every tag with its symbol: Move Up/Down, Remove Tag,
+  Modify Tag (name, symbol, font and highlight colour or none), New Tag, Reset Tags. The Tags
+  gallery (inline rows and drop-down, both ribbons) draws `tag_defs` in order, so renamed,
+  reordered and custom tags show there, with the built-ins' Ctrl+1…9 shortcuts.
+- Tests: every one of the 29 gallery rows applies its tag (the 20 "Tag: …" P1 rows were missing
+  only for lack of a test). Help and page-version rows say "unverified" (our own designs).
+- Catalog: UI.Panes.CustomizeTags + 20 R.Home.Tags.* rows wired.
