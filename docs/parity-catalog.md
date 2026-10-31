@@ -173,7 +173,7 @@ The Home tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Home.BasicText.TextHighlightColorPicker | Text Highlight Color | Home/Basic Text/Text Highlight Color | gallery | `Mod+Alt+H` | format.highlight | P0 | wired | FLUENT19:TextHighlightColorPicker |  |
 | R.Home.BasicText.HighlightColorNone | No Color (highlight) | Home/Basic Text/Text Highlight Color/No Color (highlight) | button |  | format.highlightNone | P0 | wired | FLUENT19:HighlightColorNone |  |
 | R.Home.BasicText.FontColorPicker | Font Color | Home/Basic Text/Font Color | gallery |  | format.color | P0 | wired | FLUENT19:FontColorPicker |  |
-| R.Home.BasicText.ParagraphAlignmentMenu | Paragraph Alignment | Home/Basic Text/Paragraph Alignment | menu |  |  | P0 | missing | FLUENT19:ParagraphAlignmentMenu |  |
+| R.Home.BasicText.ParagraphAlignmentMenu | Paragraph Alignment | Home/Basic Text/Paragraph Alignment | menu |  |  | P0 | wired | FLUENT19:ParagraphAlignmentMenu |  |
 | R.Home.BasicText.AlignLeft | Align Left | Home/Basic Text/Paragraph Alignment/Align Left | toggle | `Mod+L` | para.alignLeft | P0 | verified | FLUENT19:AlignLeft |  |
 | R.Home.BasicText.AlignCenter | Center | Home/Basic Text/Paragraph Alignment/Center | toggle |  | para.alignCenter | P0 | verified | FLUENT19:AlignCenter |  |
 | R.Home.BasicText.AlignRight | Align Right | Home/Basic Text/Paragraph Alignment/Align Right | toggle | `Mod+R` | para.alignRight | P0 | verified | FLUENT19:AlignRight |  |

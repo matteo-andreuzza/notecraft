@@ -992,6 +992,27 @@ fn the_spelling_pane_shows_the_word_and_fixes_it_with_a_suggestion() {
     assert_eq!(o, "the cat sat");
 }
 
+#[test]
+fn the_paragraph_alignment_menu_aligns_the_paragraph() {
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 60.0, "y": 120.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "centre me"})).unwrap();
+    a.canvas.focused = true;
+    let mut h = harness(a);
+    h.run();
+    let menu = h.get_by_label_contains("Paragraph Alignment");
+    menu.click();
+    h.run();
+    for item in ["Align Left", "Center", "Align Right"] {
+        assert!(h.query_by_label_contains(item).is_some(), "R.Home.BasicText.ParagraphAlignmentMenu: {item}");
+    }
+    h.get_by_label_contains("Center").click();
+    h.run();
+    let p = h.state().session.page().unwrap().objects[0].as_outline().unwrap().paragraphs[0].clone();
+    assert_eq!(p.align, notecraft_engine::doc::Align::Center, "R.Home.BasicText.ParagraphAlignmentMenu");
+}
+
 /// A host whose save dialog answers with a fixed path.
 struct SaveHost(String);
 
