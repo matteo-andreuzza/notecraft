@@ -1038,6 +1038,40 @@ fn the_info_page_settings_menu_and_the_page_menu_move_or_copy() {
 }
 
 #[test]
+fn sections_and_pages_drag_in_the_navigation() {
+    // parity: UI.Window.DragDrop, BEH.Pages.DragReorder
+    use crate::tests_canvas::drag;
+    let mut h = harness(app());
+    h.run();
+    let names = |h: &Harness<'static, NoteApp>| -> Vec<String> {
+        h.state().session.notebook().unwrap().children.iter().map(|n| n.name().to_string()).collect()
+    };
+    assert_eq!(names(&h), ["Getting Started", "Meetings", "Projects", "Quick Notes"]);
+    // Quick Notes dropped on Meetings goes before it.
+    let from = h.get_by_label("Quick Notes").rect().center();
+    let to = h.get_by_label("Meetings").rect().center();
+    drag(&mut h, from, to);
+    assert_eq!(names(&h), ["Getting Started", "Quick Notes", "Meetings", "Projects"]);
+    // Getting Started dropped on the Projects group goes into it.
+    let from = h.get_by_label("Getting Started").rect().center();
+    let to = h.get_by_label("Projects").rect().center();
+    drag(&mut h, from, to);
+    assert_eq!(names(&h), ["Quick Notes", "Meetings", "Projects"]);
+    let in_group = h.state().session.notebook().unwrap().sections().iter().any(|s| s.name == "Getting Started");
+    assert!(in_group, "still in the notebook, inside the group");
+    // A page dragged onto a section in the tree moves there.
+    let first_meeting = h.state().session.notebook().unwrap().sections().iter().find(|s| s.name == "Meetings").unwrap().pages[0].id.to_string();
+    h.state_mut().session.run("nav.goto", json!({"page": first_meeting})).unwrap();
+    h.run();
+    let page = h.state().session.page().unwrap().clone();
+    let from = h.get_by_label(&page.display_title()).rect().center();
+    let to = h.get_by_label("Quick Notes").rect().center();
+    drag(&mut h, from, to);
+    let sec = h.state().session.notebook().unwrap().sections().into_iter().find(|s| s.name == "Quick Notes").unwrap().clone();
+    assert!(sec.pages.iter().any(|p| p.id == page.id), "the page moved to Quick Notes");
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();
