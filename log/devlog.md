@@ -955,3 +955,16 @@ were certain landed, behaviour unchanged (every test green after each commit).
   command) and the About window (from File › Account and the QAT row). Snapshot `help-pane`.
 - Catalog: R.Help.Help.Help, KB.App.Help, QAT.NR.Help, QAT.NR.HelpKeyboardShortcuts,
   BS.Account.About, QAT.NR.About wired; new NC.Help.Search.
+
+## 2026-10-31 — M3/P1: New Quick Note (Ctrl+Shift+M)
+
+- Engine `window_cmds.rs`: `window.quickNote` adds a page at the end of the Quick Notes
+  section of the default notebook (`section_cmds::quick_notes`, now shared, makes the section
+  when missing), opens it and sets `ViewState.quick_note`; `view.normal` clears it. One undo
+  step.
+- UI: in a Quick Note the window shrinks to 460×400 with only the title bar and the page
+  (`NoteApp::quick_note_window` keeps the old size and restores it); the expand button reads
+  "Open in the full window". The desktop shell doesn't remember the small size. Snapshot
+  `quick-note`. unverified: the reference opens a separate window.
+- Catalog: UI.Window.QuickNote, R.View.Window.NewSideNote, KB.General.QuickNote,
+  BEH.Notebooks.QuickNotes wired.

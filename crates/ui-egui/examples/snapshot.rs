@@ -364,6 +364,11 @@ fn main() {
     shot("help-pane", &out, 1.0, |a| {
         a.session.run("help.help", json!({"on": true})).unwrap();
     });
+    // View › New Quick Note (Ctrl+Shift+M): the small note window.
+    shot_sized("quick-note", &out, 1.0, egui::vec2(460.0, 400.0), |a| {
+        a.session.run("window.quickNote", json!({})).unwrap();
+        a.session.run("text.insert", json!({"text": "Call the plumber"})).unwrap();
+    });
     // Merged cells (decision D9): the header across all three columns, a cell over two rows.
     shot("table-merged", &out, 1.0, |a| {
         table_page(a);

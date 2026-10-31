@@ -181,7 +181,7 @@ fn parent_path(s: &Session, nb: &notecraft_doc::Notebook, group: Option<Id>) -> 
 /// The name of the Quick Notes section.
 pub(crate) const QUICK_NOTES: &str = "Quick Notes";
 
-fn quick_notes(s: &mut Session, _v: &Value) -> CmdResult {
+pub(crate) fn quick_notes(s: &mut Session, _v: &Value) -> CmdResult {
     // OPT.SaveBackup.QuickNotesSection: the notebook named in the Options, else the first.
     let wanted = s.prefs.quick_notes_notebook.trim().to_lowercase();
     let nb =

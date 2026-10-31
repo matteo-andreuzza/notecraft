@@ -203,7 +203,10 @@ impl Desktop {
 impl eframe::App for Desktop {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.app.logic(ctx);
-        self.window = ctx.input(|i| settings::Window::observe(self.window, i.viewport()));
+        // A Quick Note window's small size is not the window to reopen next time.
+        if !self.app.session.view.quick_note {
+            self.window = ctx.input(|i| settings::Window::observe(self.window, i.viewport()));
+        }
         if let Some(c) = &mut self.control {
             c.drain(&mut self.app, ctx);
         }

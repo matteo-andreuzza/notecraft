@@ -249,6 +249,8 @@ pub struct ViewState {
     pub page_versions: bool,
     /// Help pane open (F1).
     pub help_pane: bool,
+    /// The window is a small Quick Note window showing only the page (View › New Quick Note).
+    pub quick_note: bool,
     /// The Help pane lists keyboard shortcuts only.
     pub help_shortcuts: bool,
     /// About NoteCraft shown.
@@ -281,6 +283,7 @@ impl Default for ViewState {
             recent_edits: None,
             page_versions: false,
             help_pane: false,
+            quick_note: false,
             help_shortcuts: false,
             about: false,
             preview: None,

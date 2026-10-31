@@ -182,6 +182,10 @@ pub struct UiState {
     pub search_open: bool,
     /// The search results pane is docked.
     pub search_pane: bool,
+    /// The window size before it became a Quick Note window (restored after).
+    pub quick_note_restore: Option<[f32; 2]>,
+    /// Whether the window is currently sized as a Quick Note window.
+    pub quick_note_shown: bool,
     /// The find-on-page box text.
     pub find: String,
     /// In-place rename.
@@ -252,6 +256,8 @@ impl Default for UiState {
             search: String::new(),
             search_open: false,
             search_pane: false,
+            quick_note_restore: None,
+            quick_note_shown: false,
             find: String::new(),
             rename: None,
             dialog: None,
@@ -518,7 +524,8 @@ impl NoteApp {
             return;
         }
         chrome::title_bar(self, ui, t);
-        if !self.session.view.full_page {
+        self.quick_note_window(&ctx);
+        if !self.session.view.full_page && !self.session.view.quick_note {
             chrome::tab_row(self, ui, t);
             ribbon::show(self, ui, t);
             nav::nav_row(self, ui, t);
@@ -576,8 +583,37 @@ impl NoteApp {
 
     /// The expand / restore button at the page's top right (catalog `UI.Canvas.ExpandButton`,
     /// `UI.Window.FullPage`): Full Page View hides the ribbon and the navigation.
+    /// Size the window for a Quick Note and back (View › New Quick Note), once per change.
+    fn quick_note_window(&mut self, ctx: &egui::Context) {
+        let want = self.session.view.quick_note;
+        if want == self.ui.quick_note_shown {
+            return;
+        }
+        if want {
+            // The window's size, else what egui draws in (a window that never reported its rect).
+            let r = ctx.input(|i| i.viewport().inner_rect).unwrap_or_else(|| ctx.content_rect());
+            self.ui.quick_note_restore = Some([r.width(), r.height()]);
+            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(460.0, 400.0)));
+        } else if let Some(size) = self.ui.quick_note_restore.take() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(size[0], size[1])));
+        }
+        self.ui.quick_note_shown = want;
+    }
+
     fn expand_button(&mut self, ui: &mut Ui, area: egui::Rect, t: Tokens) {
         let ctx = ui.ctx().clone();
+        if self.session.view.quick_note {
+            // The Quick Note window opens the full window again.
+            let r = egui::Rect::from_min_size(egui::pos2(area.max.x - 40.0, area.min.y + 8.0), egui::vec2(28.0, 28.0));
+            ui.scope_builder(egui::UiBuilder::new().max_rect(r), |ui| {
+                let (resp, rect, color) = chrome::icon_button(ui, 28.0, "Open in the full window", true, &t);
+                icons::expand(ui.painter(), rect.shrink(6.0), false, color);
+                if resp.on_hover_text("Open in the full window").clicked() {
+                    self.run(&ctx, "view.normal", json!({}));
+                }
+            });
+            return;
+        }
         let full = self.session.view.full_page;
         let label = if full { "Normal View" } else { "Full Page View" };
         let r = egui::Rect::from_min_size(egui::pos2(area.max.x - 40.0, area.min.y + 8.0), egui::vec2(28.0, 28.0));
