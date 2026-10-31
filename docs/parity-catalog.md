@@ -118,7 +118,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Window.HiDPI | HiDPI and fractional scaling (Linux Wayland/X11) | Window/HiDPI | surface |  |  | P0 | wired | brief §4 | Rendered at 1.25×, 1.5× and 2× in tests. |
 | UI.Window.IME | IME composition for CJK and other input methods | Window/IME | surface |  |  | P0 | wired | brief §4 | Commit inserts the composed text; the preedit is not drawn in place yet (unverified). |
 | UI.Window.Clipboard | System clipboard: text, rich text (HTML), images | Window/Clipboard | surface |  |  | P0 | wired | brief §4 | desktop: copy puts text with HTML (tables as tables) or the copied picture on the system clipboard; paste reads HTML and pictures (arboard through the host); the web build stays plain text |
-| UI.Window.DragDrop | Drag & drop of files, images and text onto the page; pages/sections in the navigation | Window/Drag and Drop | surface |  |  | P1 | missing | brief §4; GK |  |
+| UI.Window.DragDrop | Drag & drop of files, images and text onto the page; pages/sections in the navigation | Window/Drag and Drop | surface |  |  | P1 | wired | brief §4; GK | files and pictures dropped on the page (BEH.Paste.Files), pages dragged in the page list (BEH.Pages.DragReorder); not yet: dropped text, sections dragged in the tree |
 | UI.Window.FileDialogs | Native file dialogs through the XDG desktop portal | Window/File Dialogs | surface |  |  | P0 | wired | brief §4 | rfd 0.17 with its default xdg-portal backend: Open/Save/folder pickers through org.freedesktop.portal.FileChooser (no GTK); unverified on every desktop environment |
 | UI.Window.Accessibility | Screen reader support (AccessKit) for panes, page list and canvas | Window/Accessibility | surface |  |  | P1 | wired | brief §6 M4 | Controls expose labels through AccessKit (the UI tests query them); not yet tried with a screen reader (unverified). |
 
@@ -825,8 +825,8 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Tag.NoteTagCheck | Check Tag | Context/Tag/Check Tag | button |  | tag.check | P0 | wired | FLUENT19:ContextMenuTag/NoteTagCheck |  |
 | CM.Tag.NoteTagUncheck | Uncheck Tag | Context/Tag/Uncheck Tag | button |  | tag.uncheck | P0 | wired | FLUENT19:ContextMenuTag/NoteTagUncheck |  |
 | CM.Tag.TagsRemove | Remove Tag | Context/Tag/Remove Tag | button |  | tag.remove | P0 | wired | FLUENT19:ContextMenuTag/TagsRemove |  |
-| CM.Tag.FindTaggedNotes | Find Tags | Context/Tag/Find Tags | toggle |  | tag.findTags | P0 | missing | FLUENT19:ContextMenuTag/FindTaggedNotes |  |
-| CM.Tag.TagsCustomize | Customize Tags | Context/Tag/Customize Tags | button |  | tag.customize | P1 | missing | FLUENT19:ContextMenuTag/TagsCustomize |  |
+| CM.Tag.FindTaggedNotes | Find Tags | Context/Tag/Find Tags | toggle |  | tag.findTags | P0 | wired | FLUENT19:ContextMenuTag/FindTaggedNotes |  |
+| CM.Tag.TagsCustomize | Customize Tags | Context/Tag/Customize Tags | button |  | tag.customize | P1 | wired | FLUENT19:ContextMenuTag/TagsCustomize |  |
 | CM.Tag.JotAddToCustomNoteFlag | Add to Custom Tags | Context/Tag/Add to Custom Tags | button |  | tag.addToCustom | P2 | missing | FLUENT19:ContextMenuTag/JotAddToCustomNoteFlag |  |
 | CM.OutlookTask.OutlookTaskTodayContextual | Outlook Task: Today | Context/Outlook Task/Outlook Task: Today | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuOutlookTask/OutlookTaskTodayContextual |  |
 | CM.OutlookTask.OutlookTaskTomorrowContextual | Outlook Task: Tomorrow | Context/Outlook Task/Outlook Task: Tomorrow | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuOutlookTask/OutlookTaskTomorrowContextual |  |

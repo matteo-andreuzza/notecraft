@@ -639,3 +639,27 @@ fn the_text_menu_rows_reach_working_commands_in_the_right_state() {
     a.session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 6, "extend": true})).unwrap();
     check(&a, "CM.Text.ToPageLink");
 }
+
+#[test]
+fn right_click_on_a_tag_icon_opens_the_tag_menu_for_that_tag() {
+    // parity: CM.Tag.TagsRemove
+    let (mut a, o) = page_for_context_menu("call the plumber");
+    a.session.run("tag.todo", json!({})).unwrap();
+    a.session.run("tag.important", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    let pl = h.state().canvas.para(Block::Outline(o), 0).unwrap().clone();
+    assert_eq!(pl.tag_icons.len(), 2);
+    let (r, k) = pl.tag_icons[1];
+    right_click(&mut h, r.center());
+    for item in ["Check Tag", "Remove Tag", "Find Tags", "Customize Tags"] {
+        assert!(h.query_by_label(item).is_some(), "CM.Tag.FindTaggedNotes / CM.Tag.TagsCustomize: {item}");
+    }
+    let key = h.state().session.page().unwrap().outline(o).unwrap().paragraphs[0].tags[k].key.clone();
+    assert_eq!(h.state().session.view.context_tag.as_deref(), Some(key.as_str()));
+    h.get_by_label("Remove Tag").click();
+    h.run();
+    let left: Vec<String> = h.state().session.page().unwrap().outline(o).unwrap().paragraphs[0].tags.iter().map(|t| t.key.clone()).collect();
+    assert_eq!(left.len(), 1, "CM.Tag.TagsRemove removes the tag that was clicked");
+    assert!(!left.contains(&key));
+}

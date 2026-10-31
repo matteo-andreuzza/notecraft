@@ -1044,3 +1044,12 @@ were certain landed, behaviour unchanged (every test green after each commit).
   second, with partial strokes. A bar over the page has Play/Pause, Rewind, the progress
   and Close. Real drawing times aren't stored, so the pace is steady (unverified against
   the reference).
+
+## 2026-10-31 — The Tag menu
+
+- A right click on a note tag's icon opens the Tag menu (`context_menu::TAG_MENU`: Check,
+  Uncheck, Remove, Find Tags, Customize Tags, Add to Custom Tags) for that tag.
+  `ParaLayout.tag_icons` holds the icon areas, `ContextTarget::Tag` the target, and
+  `ViewState.context_tag` the clicked tag's key. tag.check, tag.uncheck and tag.remove use
+  that key when given none (tag.checkAll ignores it).
+- UI.Window.DragDrop wired, with notes (dropped text and dragged sections are still to do).

@@ -64,7 +64,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("tag.removeAll", "R.Home.Tags.TagsRemoveAll", "Remove Tag", "Home/Tags/Remove Tag", remove_all).key("Mod+0").when(need_tagged),
         CommandSpec::new("tag.check", "CM.Tag.NoteTagCheck", "Check Tag", "Context/Tag/Check Tag", |s, v| set_checked(s, v, true)).params(r#"{"key"?: tag key}"#).when(need_tagged),
         CommandSpec::new("tag.uncheck", "CM.Tag.NoteTagUncheck", "Uncheck Tag", "Context/Tag/Uncheck Tag", |s, v| set_checked(s, v, false)).params(r#"{"key"?: tag key}"#).when(need_tagged),
-        CommandSpec::new("tag.remove", "CM.Tag.TagsRemove", "Remove Tag", "Context/Tag/Remove Tag", remove_one).params(r#"{"key": tag key}"#).when(need_tagged),
+        CommandSpec::new("tag.remove", "CM.Tag.TagsRemove", "Remove Tag", "Context/Tag/Remove Tag", remove_one).params(r#"{"key"?: tag key (default: the tag the menu was opened on)}"#).when(need_tagged),
         // CM.InkDrawing.TagsMarkAll / TagsClearAll — check or clear every to-do on the selection.
         CommandSpec::new("tag.checkAll", "CM.InkDrawing.TagsMarkAll", "Check All Tags", "Context/Ink Drawing/Check All Tags", |s, _| check_all(s, true)).when(need_tagged),
         CommandSpec::new("tag.clearAll", "CM.InkDrawing.TagsClearAll", "Clear All Checkmarks", "Context/Ink Drawing/Clear All Checkmarks", |s, _| check_all(s, false)).when(need_tagged),
@@ -236,12 +236,21 @@ fn remove_all(s: &mut Session, _: &Value) -> CmdResult {
 }
 
 fn remove_one(s: &mut Session, v: &Value) -> CmdResult {
-    let key = p::req_str(v, "key")?.to_string();
+    // CM.Tag.TagsRemove: the tag the menu was opened on when no key is given.
+    let key = match p::str(v, "key") {
+        Some(k) => k.to_string(),
+        None => s.view.context_tag.clone().ok_or_else(|| CmdError::Params("`key` (the tag to remove) is required".into()))?,
+    };
     each_target(s, |tags| tags.retain(|t| t.key != key))
 }
 
 fn set_checked(s: &mut Session, v: &Value, on: bool) -> CmdResult {
-    let key = p::str(v, "key").map(str::to_string);
+    // CM.Tag.NoteTagCheck / Uncheck: the tag the menu was opened on when no key is given.
+    let key = p::str(v, "key").map(str::to_string).or_else(|| s.view.context_tag.clone());
+    check_keyed(s, key, on)
+}
+
+fn check_keyed(s: &mut Session, key: Option<String>, on: bool) -> CmdResult {
     each_target(s, |tags| {
         for t in tags.iter_mut().filter(|t| t.symbol.is_checkbox() && key.as_ref().is_none_or(|k| *k == t.key)) {
             t.checked = on;
@@ -250,7 +259,7 @@ fn set_checked(s: &mut Session, v: &Value, on: bool) -> CmdResult {
 }
 
 fn check_all(s: &mut Session, on: bool) -> CmdResult {
-    set_checked(s, &Value::Null, on)
+    check_keyed(s, None, on)
 }
 
 fn click(s: &mut Session, v: &Value) -> CmdResult {

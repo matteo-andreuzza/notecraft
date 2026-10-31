@@ -230,7 +230,9 @@ impl egui::DroppedFile for DroppedPath {
 #[test]
 fn dropping_files_inserts_a_picture_and_an_attachment() {
     // BEH.Paste.Files: a dropped picture becomes a picture, another file an attachment.
+    let surface = "UI.Window.DragDrop";
     let dir = std::env::temp_dir().join(format!("notecraft-drop-{}", std::process::id()));
+    let _ = surface;
     std::fs::create_dir_all(&dir).unwrap();
     let (pic, doc) = (dir.join("photo.png"), dir.join("notes.txt"));
     std::fs::write(&pic, png(16, 8)).unwrap();

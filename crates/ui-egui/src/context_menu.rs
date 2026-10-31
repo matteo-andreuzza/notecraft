@@ -36,6 +36,16 @@ pub enum Entry {
     Submenu(&'static str, &'static [Entry]),
 }
 
+/// Right-click menu on a note tag's icon (catalog `CM.Tag.*`): it acts on that tag.
+pub const TAG_MENU: &[Entry] = &[
+    Entry::Item("CM.Tag.NoteTagCheck"),
+    Entry::Item("CM.Tag.NoteTagUncheck"),
+    Entry::Item("CM.Tag.TagsRemove"),
+    Entry::Item("CM.Tag.FindTaggedNotes"),
+    Entry::Item("CM.Tag.TagsCustomize"),
+    Entry::Item("CM.Tag.JotAddToCustomNoteFlag"),
+];
+
 /// Right-click menu on page text (and table cells; catalog `CM.Text.*`).
 pub const TEXT_MENU: &[Entry] = &[
     Entry::Item("CM.Text.NoSpellingSuggestions"),
@@ -525,6 +535,9 @@ fn detect(app: &NoteApp, p: Pos2) -> Option<ContextTarget> {
     if let Some(o) = app.canvas.outlines.iter().find(|o| o.bar.contains(p)) {
         return Some(ContextTarget::Container(o.id));
     }
+    if let Some((pl, k)) = app.canvas.paras.iter().find_map(|pl| pl.tag_icons.iter().find(|(r, _)| r.contains(p)).map(|(_, k)| (pl, *k))) {
+        return Some(ContextTarget::Tag(pl.block, pl.para, k));
+    }
     if let Some(pl) = app.canvas.paras.iter().find(|pl| matches!(pl.block, Block::Outline(_)) && pl.handle.contains(p)) {
         return Some(ContextTarget::Handle(pl.block, pl.para));
     }
@@ -554,7 +567,18 @@ fn block_param(b: Block) -> String {
 /// Place the caret or selection a right click's target implies, as a left click would — unless
 /// the pointer landed inside an existing text selection, which a right click leaves alone.
 fn place_for(app: &mut NoteApp, ctx: &egui::Context, target: ContextTarget) {
+    app.session.view.context_tag = None;
     match target {
+        // The tag's paragraph gets the caret; the Tag menu's commands act on that tag.
+        ContextTarget::Tag(block, para, k) => {
+            app.run(ctx, "caret.set", json!({"block": block_param(block), "para": para, "offset": 0}));
+            let key = app
+                .session
+                .page()
+                .and_then(|p| notecraft_engine::Session::block_paras(p, block).and_then(|ps| ps.get(para)))
+                .and_then(|p| p.tags.get(k).map(|t| t.key.clone()));
+            app.session.view.context_tag = key;
+        }
         ContextTarget::Container(id) | ContextTarget::Picture(id) | ContextTarget::Attachment(id) | ContextTarget::Ink(id) => {
             app.run(ctx, "object.select", json!({"ids": [id.to_string()]}));
         }
@@ -607,6 +631,7 @@ pub fn show(app: &mut NoteApp, ui: &Ui, resp: &egui::Response, t: Tokens) {
             ContextTarget::Attachment(_) => render(app, ui, ATTACHMENT_MENU, t),
             ContextTarget::Ink(_) => render(app, ui, INK_MENU, t),
             ContextTarget::Lasso(_) => render(app, ui, LASSO_MENU, t),
+            ContextTarget::Tag(..) => render(app, ui, TAG_MENU, t),
         }
     });
 }

@@ -248,6 +248,10 @@ pub struct ViewState {
     /// Password Protection pane open (Review › Password).
     #[serde(default)]
     pub password_pane: bool,
+    /// The tag whose icon was right-clicked (its key): the Tag menu's commands act on it when
+    /// they get no `key` (`CM.Tag.*`).
+    #[serde(default)]
+    pub context_tag: Option<String>,
     /// Ink Replay is playing the page's strokes back (Draw › Ink Replay; the UI animates it).
     #[serde(default)]
     pub ink_replay: bool,
@@ -295,6 +299,7 @@ impl Default for ViewState {
             password_pane: false,
             spelling_pane: false,
             ink_replay: false,
+            context_tag: None,
             spelling: None,
             recent_edits: None,
             page_versions: false,

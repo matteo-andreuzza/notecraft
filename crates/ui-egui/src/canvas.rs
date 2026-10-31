@@ -55,6 +55,8 @@ pub struct ParaLayout {
     pub text: String,
     /// Checkbox tag hit areas: (rect, index among checkbox tags).
     pub checkboxes: Vec<(Rect, usize)>,
+    /// Every tag icon's area, by the tag's index in the paragraph (the Tag menu, `CM.Tag.*`).
+    pub tag_icons: Vec<(Rect, usize)>,
     /// The paragraph handle area (left of the text).
     pub handle: Rect,
     /// An equation shown built up (decision D11): drawn instead of the galley, which still
@@ -206,6 +208,8 @@ pub(crate) enum ContextTarget {
     Attachment(Id),
     /// An ink stroke (`CM.InkDrawing.*`).
     Ink(Id),
+    /// A note tag's icon: the paragraph and the tag's index in it (`CM.Tag.*`).
+    Tag(Block, usize, usize),
     /// A stroke of a multi-object (lasso) selection (`CM.LassoSelection.*`).
     Lasso(Id),
 }
@@ -732,6 +736,7 @@ fn layout_page(
             pos,
             text: page.title.text(),
             checkboxes: Vec::new(),
+            tag_icons: Vec::new(),
             handle: Rect::from_min_size(pos - vec2(14.0, 0.0), vec2(12.0, 12.0)),
             math: None,
         });
@@ -775,20 +780,23 @@ fn layout_page(
                 None => (g.size().x, g.size().y),
             };
             let mut checkboxes = Vec::new();
+            let mut tag_icons = Vec::new();
             let mut n_cb = 0;
             for (k, tag) in para.tags.iter().enumerate() {
+                let sz = (14.0 * zoom).clamp(8.0, 40.0);
+                let x = tx - (if has_list { LIST_W } else { 0.0 } + TAG_W * (para.tags.len() - k) as f32) * z;
+                let first_row_h = g.rows.first().map(|r| r.height()).unwrap_or(14.0);
+                let r = Rect::from_min_size(pos2(x, y + (first_row_h - sz) / 2.0), vec2(sz, sz));
+                tag_icons.push((r, k));
                 if tag.symbol.is_checkbox() {
-                    let sz = (14.0 * zoom).clamp(8.0, 40.0);
-                    let x = tx - (if has_list { LIST_W } else { 0.0 } + TAG_W * (para.tags.len() - k) as f32) * z;
-                    let first_row_h = g.rows.first().map(|r| r.height()).unwrap_or(14.0);
-                    checkboxes.push((Rect::from_min_size(pos2(x, y + (first_row_h - sz) / 2.0), vec2(sz, sz)), n_cb));
+                    checkboxes.push((r, n_cb));
                     n_cb += 1;
                 }
             }
             let handle_x = x0 + para.level as f32 * INDENT * z - 14.0 * zoom;
             let handle = Rect::from_min_size(pos2(handle_x, y), vec2(12.0 * zoom.max(0.6), g.rows.first().map(|r| r.height()).unwrap_or(14.0)));
             right = right.max(tx + w);
-            paras.push(ParaLayout { block: Block::Outline(ol.id), para: i, galley: g, pos, text: para.text(), checkboxes, handle, math });
+            paras.push(ParaLayout { block: Block::Outline(ol.id), para: i, galley: g, pos, text: para.text(), checkboxes, tag_icons, handle, math });
             y += h + para.space_after * z;
         }
         let width_px = match ol.width {
@@ -901,6 +909,7 @@ fn layout_table<'a>(
                 pos: pos2(cx0 + pad + lead, top + oy),
                 text,
                 checkboxes: Vec::new(),
+                tag_icons: Vec::new(),
                 handle: Rect::NOTHING,
                 math,
             });
