@@ -1080,3 +1080,12 @@ were certain landed, behaviour unchanged (every test green after each commit).
   (CM.Page.CopyOrMoveToSection).
 - `page.moveOrCopy {version}` copies a page version as a new page into a section; the version
   menu has Move or Copy to Section › a section (CM.PageVersion.CopyOrMoveToSection). 4 rows wired.
+
+## 2026-10-31 — M3: drag and drop in the navigation
+
+- The notebook tree records its rows each frame (`nav::NavDrop`: section, section group,
+  notebook). A section dragged in the tree goes before the section it is dropped on, into a
+  section group, or to the end of a notebook (another notebook too), through
+  `section.moveOrCopy`, with an accent line where it would land. A page dragged from the page
+  list onto a section in the tree moves there (`page.moveOrCopy`). UI test drags all three.
+- Catalog: UI.Window.DragDrop note extended (not yet: dropped text, notebooks dragged).

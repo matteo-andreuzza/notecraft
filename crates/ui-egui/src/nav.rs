@@ -103,6 +103,7 @@ pub fn notebook_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             ui.scope_builder(egui::UiBuilder::new().max_rect(tree), |ui| {
                 egui::ScrollArea::vertical().id_salt("nb_scroll").auto_shrink([false, false]).show(ui, |ui| {
                     ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+                    ui.ctx().data_mut(|d| d.insert_temp(egui::Id::new(DROP_ROWS), Vec::<(Rect, NavDrop)>::new()));
                     let notebooks: Vec<_> = app.session.ws.notebooks.clone();
                     for (i, nb) in notebooks.iter().enumerate() {
                         if i > 0 {
@@ -112,10 +113,11 @@ pub fn notebook_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                         }
                         notebook_row(app, ui, nb, t);
                         if !is_collapsed(app, nb.id) {
-                            nodes(app, ui, &nb.children, 1, t);
+                            nodes(app, ui, &nb.children, 1, t, nb.id, None);
                             new_section_row(app, ui, nb.id, t);
                         }
                     }
+                    drop_section(app, ui);
                 });
             });
             area.context_menu(|ui| {
@@ -170,6 +172,7 @@ fn notebook_row(app: &mut NoteApp, ui: &mut Ui, nb: &notecraft_engine::doc::Note
     let ctx = ui.ctx().clone();
     let selected = app.session.sel.notebook == Some(nb.id);
     let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), size::TREE_ROW), Sense::click());
+    drop_row(ui, rect, NavDrop::Notebook { id: nb.id });
     resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, &nb.name));
     row_bg(ui, rect, false, resp.hovered(), &t);
     let collapsed = is_collapsed(app, nb.id);
@@ -235,18 +238,24 @@ fn new_section_row(app: &mut NoteApp, ui: &mut Ui, nb: Id, t: Tokens) {
     }
 }
 
-fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: Tokens) {
+#[allow(clippy::too_many_arguments)]
+fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: Tokens, notebook: Id, group: Option<Id>) {
     if depth > notecraft_engine::doc::notebook::MAX_GROUP_DEPTH {
         return;
     }
     let ctx = ui.ctx().clone();
     let font = TypeRung::Body.font(&ctx, Weight::Regular);
     let indent = (depth.saturating_sub(1)) as f32 * size::INDENT;
-    for n in children {
+    for (index, n) in children.iter().enumerate() {
         match n {
             NavNode::Section(s) => {
                 let selected = app.session.sel.section == Some(s.id);
-                let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), size::TREE_ROW), Sense::click());
+                // Sections drag to another place in the tree (UI.Window.DragDrop).
+                let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), size::TREE_ROW), Sense::click_and_drag());
+                drop_row(ui, rect, NavDrop::Section { id: s.id, notebook, group, index });
+                if resp.drag_started() {
+                    ui.ctx().data_mut(|d| d.insert_temp(egui::Id::new(DRAGGED_SECTION), s.id));
+                }
                 resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, selected, &s.name));
                 row_bg(ui, rect, selected, resp.hovered(), &t);
                 // Ctrl+Shift+G (KB.Notebooks.FocusSectionTab) puts the keyboard focus here.
@@ -280,6 +289,7 @@ fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: 
             NavNode::Group(g) => {
                 let open = !is_collapsed(app, g.id);
                 let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), size::TREE_ROW), Sense::click());
+                drop_row(ui, rect, NavDrop::Group { id: g.id, notebook });
                 resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, &g.name));
                 row_bg(ui, rect, false, resp.hovered(), &t);
                 let x = rect.min.x + 20.0 + indent;
@@ -315,7 +325,7 @@ fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: 
                     cmd_item(app, ui, "Delete", "sectionGroup.delete", json!({"group": gid}));
                 });
                 if open {
-                    nodes(app, ui, &g.children, depth + 1, t);
+                    nodes(app, ui, &g.children, depth + 1, t, notebook, Some(g.id));
                 }
             }
         }
@@ -611,7 +621,15 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                     page_menu(app, &resp, page.id, has_kids, page.collapsed);
                     // Drag a page onto another position (BEH.Pages.DragReorder); rows are
                     // uniform only while versions are hidden.
+                    // Dropped on a section in the notebook tree, the page moves there.
                     if resp.drag_stopped()
+                        && let Some(pos) = ui.ctx().pointer_interact_pos()
+                        && let Some(NavDrop::Section { id: to, .. }) = drop_at(ui.ctx(), pos)
+                    {
+                        if Some(to) != app.session.sel.section {
+                            app.run(&ctx, "page.moveOrCopy", json!({"page": page.id.to_string(), "section": to.to_string()}));
+                        }
+                    } else if resp.drag_stopped()
                         && !app.session.view.page_versions
                         && let Some(pos) = ui.ctx().pointer_interact_pos()
                     {
@@ -774,6 +792,68 @@ fn insertion_point(app: &mut NoteApp, ui: &mut Ui, row: Rect, pid: Id, i: usize,
         let ctx = ui.ctx().clone();
         app.run(&ctx, "page.new", json!({"after": pid.to_string()}));
     }
+}
+
+/// A place in the notebook tree something can be dropped on (UI.Window.DragDrop): a section
+/// (dropped sections go before it), a section group (into it) or a notebook (at its end).
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum NavDrop {
+    Section { id: Id, notebook: Id, group: Option<Id>, index: usize },
+    Group { id: Id, notebook: Id },
+    Notebook { id: Id },
+}
+
+/// The tree's rows of this frame, for drops (egui's frame data).
+const DROP_ROWS: &str = "nav_drop_rows";
+/// The section being dragged in the tree.
+const DRAGGED_SECTION: &str = "nav_dragged_section";
+
+fn drop_row(ui: &Ui, rect: Rect, what: NavDrop) {
+    ui.ctx().data_mut(|d| d.get_temp_mut_or_default::<Vec<(Rect, NavDrop)>>(egui::Id::new(DROP_ROWS)).push((rect, what)));
+}
+
+/// The tree row under `pos` (rows of the last frame that drew the tree).
+fn drop_at(ctx: &egui::Context, pos: egui::Pos2) -> Option<NavDrop> {
+    let rows: Vec<(Rect, NavDrop)> = ctx.data(|d| d.get_temp(egui::Id::new(DROP_ROWS))).unwrap_or_default();
+    rows.into_iter().find(|(r, _)| r.contains(pos)).map(|(_, w)| w)
+}
+
+/// While a section is dragged, mark where it would go; on release, move it there.
+fn drop_section(app: &mut NoteApp, ui: &Ui) {
+    let ctx = ui.ctx().clone();
+    let key = egui::Id::new(DRAGGED_SECTION);
+    let Some(dragged) = ctx.data(|d| d.get_temp::<Id>(key)) else { return };
+    let pos = ctx.pointer_interact_pos();
+    let target = pos.and_then(|p| drop_at(&ctx, p));
+    let rows: Vec<(Rect, NavDrop)> = ctx.data(|d| d.get_temp(egui::Id::new(DROP_ROWS))).unwrap_or_default();
+    if let Some((r, _)) = rows.iter().find(|(_, w)| Some(*w) == target) {
+        let y = if matches!(target, Some(NavDrop::Section { .. })) { r.min.y } else { r.max.y };
+        ui.painter().line_segment([pos2(r.min.x + 8.0, y), pos2(r.max.x - 8.0, y)], Stroke::new(2.0, app.tokens().accent));
+    }
+    if !ctx.input(|i| i.pointer.any_released()) {
+        return;
+    }
+    ctx.data_mut(|d| d.remove::<Id>(key));
+    let from = app.session.ws.notebook_of(dragged).and_then(|nb| {
+        let path = nb.find(dragged)?;
+        let (last, parent) = path.split_last()?;
+        let group = if parent.is_empty() { None } else { nb.node_at(parent).map(NavNode::id) };
+        Some((nb.id, group, *last))
+    });
+    let params = match target {
+        Some(NavDrop::Section { id, notebook, group, index }) if id != dragged => {
+            // The index counts after the section leaves its place.
+            let index = match from {
+                Some((nb, g, i)) if nb == notebook && g == group && i < index => index - 1,
+                _ => index,
+            };
+            json!({"section": dragged.to_string(), "notebook": notebook.to_string(), "group": group.map(|g| g.to_string()), "index": index})
+        }
+        Some(NavDrop::Group { id, notebook }) => json!({"section": dragged.to_string(), "notebook": notebook.to_string(), "group": id.to_string()}),
+        Some(NavDrop::Notebook { id }) => json!({"section": dragged.to_string(), "notebook": id.to_string()}),
+        _ => return,
+    };
+    app.run(&ctx, "section.moveOrCopy", params);
 }
 
 /// Add page (outlined, with the page-and-pencil icon) and the sort button.
