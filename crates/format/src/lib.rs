@@ -38,8 +38,8 @@ use notecraft_doc::media::{MAX_ATTACHMENT_BYTES, collect_blobs, provide_blobs};
 use notecraft_doc::{Id, NavNode, Notebook, RecycleBin, Section, SectionColor};
 use serde::{Deserialize, Serialize};
 
-#[cfg(not(target_arch = "wasm32"))]
 pub mod protect;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod store;
 
 /// Table-of-contents file name, at the notebook root and in every section-group folder.
