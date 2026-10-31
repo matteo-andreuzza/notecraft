@@ -405,3 +405,58 @@ fn page_links_survive_renames_and_moves() {
     assert_eq!(s.page().unwrap().id, target, "BEH.Links.PageRenameTracking");
     assert_eq!(s.page().unwrap().title.text(), "A brand new title");
 }
+
+fn type_keys(s: &mut Session, text: &str) {
+    for c in text.chars() {
+        run(s, "text.insert", json!({"text": c.to_string()}));
+    }
+}
+
+#[test]
+fn autocorrect_fixes_words_as_they_are_typed() {
+    let mut s = sample();
+    blank_page(&mut s);
+    type_keys(&mut s, "teh cat sat. it ran (c) THis ");
+    assert_eq!(paras(&s)[0].text(), "The cat sat. It ran © This ", "OPT.Proofing.AutoCorrect");
+    // Off, nothing changes; a whole string inserted at once is never corrected.
+    run(
+        &mut s,
+        "file.options",
+        json!({"set": {"autocorrect": {"capitalize_sentences": false, "two_initial_caps": false, "replace": false, "replacements": []}}}),
+    );
+    run(&mut s, "text.newline", json!({}));
+    type_keys(&mut s, "teh ");
+    run(
+        &mut s,
+        "file.options",
+        json!({"set": {"autocorrect": {"capitalize_sentences": true, "two_initial_caps": true, "replace": true, "replacements": [["teh", "the"]]}}}),
+    );
+    run(&mut s, "text.insert", json!({"text": " teh "}));
+    assert_eq!(paras(&s)[1].text(), "teh  teh ", "OPT.Proofing.AutoCorrect");
+}
+
+#[test]
+fn repeated_words_custom_words_completed_todos_and_pen_pressure() {
+    let mut s = sample();
+    let aff = "SET UTF-8\n";
+    let dic = "3\nthe\ncat\nsat\n";
+    s.set_dictionary("en_US", notecraft_spell::Dictionary::load(aff.as_bytes(), dic.as_bytes()).unwrap());
+    let text = "the the cat sat";
+    assert_eq!(s.misspelled(text), vec![4..7], "OPT.Proofing.FlagRepeated");
+    run(&mut s, "file.options", json!({"set": {"flag_repeated": false, "custom_words": ["Garden"]}}));
+    assert!(s.misspelled(text).is_empty());
+    assert!(s.misspelled("Garden").is_empty(), "OPT.Proofing.CustomDictionaries");
+    // Find Tags without checked To Do items.
+    blank_page(&mut s);
+    run(&mut s, "text.insert", json!({"text": "done"}));
+    run(&mut s, "tag.todo", json!({}));
+    run(&mut s, "tag.todo", json!({}));
+    assert_eq!(run(&mut s, "tag.findTags", json!({"scope": "page"}))["count"], 1);
+    run(&mut s, "file.options", json!({"set": {"show_completed_todos": false}}));
+    assert_eq!(run(&mut s, "tag.findTags", json!({"scope": "page"}))["count"], 0, "OPT.Advanced.CompletedToDoSummary");
+    // Pen pressure off: every point has the default pressure.
+    run(&mut s, "file.options", json!({"set": {"pen_pressure": false}}));
+    run(&mut s, "draw.stroke", json!({"points": [[10, 10, 0.1], [60, 40, 0.9], [90, 10, 0.2]]}));
+    let ink = s.page().unwrap().objects.iter().rev().find_map(|o| o.as_ink()).unwrap().clone();
+    assert!(ink.points.iter().all(|p| (p.pressure - notecraft_doc::ink::DEFAULT_PRESSURE).abs() < 1e-3), "OPT.Advanced.PenPressure");
+}

@@ -228,11 +228,29 @@ impl Session {
                 at = start + tok.len();
             }
         }
-        notecraft_spell::words(text)
-            .into_iter()
+        let words = notecraft_spell::words(text);
+        let mut out: Vec<Range<usize>> = words
+            .iter()
             .filter(|(r, w)| !skip.iter().any(|s| s.start <= r.start && r.end <= s.end) && !self.word_ok(&dict, w))
-            .map(|(r, _)| r)
-            .collect()
+            .map(|(r, _)| r.clone())
+            .collect();
+        // OPT.Proofing.FlagRepeated: "the the" (only spaces between the two).
+        if self.prefs.flag_repeated {
+            for pair in words.windows(2) {
+                let [(ra, a), (rb, b)] = pair else { continue };
+                let gap = text.get(ra.end..rb.start).unwrap_or("x");
+                if !gap.is_empty()
+                    && gap.chars().all(char::is_whitespace)
+                    && a.to_lowercase() == b.to_lowercase()
+                    && a.chars().any(char::is_alphabetic)
+                    && !out.contains(rb)
+                {
+                    out.push(rb.clone());
+                }
+            }
+            out.sort_by_key(|r| r.start);
+        }
+        out
     }
 
     /// The misspelled word of `text` that byte `offset` falls in, with its range and

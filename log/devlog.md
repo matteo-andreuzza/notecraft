@@ -1097,3 +1097,15 @@ were certain landed, behaviour unchanged (every test green after each commit).
   `Session::misspelled_at`, `Session::set_spelling_word`). CM.Text.NoSpellingSuggestions and
   CM.MisspelledWord.NoSpellingSuggestions wired.
 - docs/parity.md gains the OneNote import fidelity table, construct by construct.
+
+## 2026-10-31 — Options: Proofing and more Advanced
+
+- AutoCorrect (`Prefs.autocorrect`): a Space typed after a word applies the replacement
+  list (teh→the, (c)→©, ->→→ …), fixes TWo INitial CApitals and capitalizes the first word
+  of a sentence. Whole strings inserted by agents are left alone. An existing test now
+  expects "Hello world".
+- Flag repeated words ("the the"), the custom dictionary's word list (Options › Proofing ›
+  Custom Dictionaries…), completed To Do items left out of Find Tags by option, pen
+  pressure off giving even ink, search highlights off (UI).
+- Options › Proofing is a full page: AutoCorrect Options… (with its replacement list),
+  the spelling options, Custom Dictionaries…. Advanced gains "Tags, pens and search".

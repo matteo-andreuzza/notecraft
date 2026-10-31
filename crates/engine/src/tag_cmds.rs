@@ -371,7 +371,8 @@ fn find_tags(s: &mut Session, v: &Value) -> CmdResult {
     if !matches!(group, "tag" | "section" | "title" | "date" | "text") {
         return Err(CmdError::Params(format!("unknown grouping `{group}`")));
     }
-    let found = collect(s, kind, p::bool(v, "unchecked").unwrap_or(false));
+    // OPT.Advanced.CompletedToDoSummary off: checked To Do items are left out by default.
+    let found = collect(s, kind, p::bool(v, "unchecked").unwrap_or(!s.prefs.show_completed_todos));
     let mut groups: Vec<(String, Vec<Value>)> = Vec::new();
     for f in &found {
         let k = group_key(f, group, s.clock.utc_offset_min);

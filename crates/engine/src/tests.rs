@@ -299,15 +299,15 @@ fn typing_creates_a_container_and_undo_is_per_word() {
     for ch in "hello world".chars() {
         run(&mut s, "text.insert", json!({"text": ch.to_string()}));
     }
-    assert_eq!(body_texts(&s), vec!["hello world"]);
+    assert_eq!(body_texts(&s), vec!["Hello world"]);
     let pos = s.page().unwrap().objects[0].pos();
     assert_eq!((pos.x, pos.y), (100.0, 150.0));
     run(&mut s, "edit.undo", json!({}));
-    assert_eq!(body_texts(&s), vec!["hello "], "undo removes the last word");
+    assert_eq!(body_texts(&s), vec!["Hello "], "undo removes the last word (AutoCorrect capitalized the first)");
     run(&mut s, "edit.undo", json!({}));
     assert!(body_texts(&s).is_empty() || body_texts(&s) == vec![""], "then the first word: {:?}", body_texts(&s));
     run(&mut s, "edit.redo", json!({}));
-    assert_eq!(body_texts(&s), vec!["hello "]);
+    assert_eq!(body_texts(&s), vec!["Hello "]);
 }
 
 #[test]

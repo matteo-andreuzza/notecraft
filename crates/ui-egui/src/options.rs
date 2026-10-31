@@ -298,6 +298,11 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             ui.checkbox(&mut d.create_table_on_tab, "Create a table when Tab is pressed after text");
             ui.checkbox(&mut d.wiki_links, "Enable wiki linking ([[Page]])");
             ui.checkbox(&mut d.show_paste_options, "Show Paste Options button when content is pasted");
+            section(ui, "Tags, pens and search");
+            // OPT.Advanced.CompletedToDoSummary, PenPressure, SearchHighlight.
+            ui.checkbox(&mut d.show_completed_todos, "Show completed To Do tags in the Tags Summary");
+            ui.checkbox(&mut d.pen_pressure, "Use pen pressure sensitivity");
+            ui.checkbox(&mut d.search_highlight, "Highlight search results on the page");
             section(ui, "Passwords");
             // OPT.Advanced.LockAfterIdle, OPT.Advanced.LockOnLeave.
             ui.horizontal(|ui| {
@@ -342,8 +347,71 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             });
         }
         OptionsPage::Proofing => {
+            // OPT.Proofing.AutoCorrect.
+            section(ui, "AutoCorrect options");
+            egui::CollapsingHeader::new("AutoCorrect Options…").id_salt("opt-autocorrect").show(ui, |ui| {
+                let ac = &mut d.autocorrect;
+                ui.checkbox(&mut ac.two_initial_caps, "Correct TWo INitial CApitals");
+                ui.checkbox(&mut ac.capitalize_sentences, "Capitalize first letter of sentences");
+                ui.checkbox(&mut ac.replace, "Replace text as you type");
+                let mut remove = None;
+                egui::ScrollArea::vertical().id_salt("opt-ac-list").max_height(140.0).show(ui, |ui| {
+                    for (i, (from, to)) in ac.replacements.iter().enumerate() {
+                        ui.horizontal(|ui| {
+                            ui.label(format!("{from}  →  {to}"));
+                            if ui.small_button("Delete").clicked() {
+                                remove = Some(i);
+                            }
+                        });
+                    }
+                });
+                if let Some(i) = remove {
+                    ac.replacements.remove(i);
+                }
+                let id = egui::Id::new("opt-ac-new");
+                let (mut from, mut to): (String, String) = ui.data_mut(|m| m.get_temp(id)).unwrap_or_default();
+                ui.horizontal(|ui| {
+                    ui.add(egui::TextEdit::singleline(&mut from).desired_width(90.0).hint_text("Replace"));
+                    ui.add(egui::TextEdit::singleline(&mut to).desired_width(90.0).hint_text("With"));
+                    if ui.button("Add").clicked() && !from.trim().is_empty() && !to.is_empty() && ac.replacements.len() < 1000 {
+                        ac.replacements.retain(|(f, _)| *f != from.trim());
+                        ac.replacements.push((from.trim().to_string(), to.clone()));
+                        from.clear();
+                        to.clear();
+                    }
+                });
+                ui.data_mut(|m| m.insert_temp(id, (from, to)));
+            });
             section(ui, "When correcting spelling");
-            not_yet(ui, t, "Spelling checks arrive with the Review tab; NoteCraft doesn't check spelling yet.");
+            // OPT.Proofing.CheckAsYouType, HideSpellingErrors, IgnoreUppercase, IgnoreNumbers,
+            // IgnoreUrls, FlagRepeated.
+            ui.checkbox(&mut d.check_as_you_type, "Check spelling as you type");
+            ui.checkbox(&mut d.hide_spelling_errors, "Hide spelling and grammar errors");
+            ui.checkbox(&mut d.ignore_uppercase, "Ignore words in UPPERCASE");
+            ui.checkbox(&mut d.ignore_numbers, "Ignore words that contain numbers");
+            ui.checkbox(&mut d.ignore_urls, "Ignore Internet and file addresses");
+            ui.checkbox(&mut d.flag_repeated, "Flag repeated words");
+            // OPT.Proofing.CustomDictionaries: the words added with Add to Dictionary.
+            egui::CollapsingHeader::new("Custom Dictionaries…").id_salt("opt-custom-dict").show(ui, |ui| {
+                if d.custom_words.is_empty() {
+                    ui.label(RichText::new("No words added yet.").color(t.page_meta));
+                }
+                let mut remove = None;
+                egui::ScrollArea::vertical().id_salt("opt-words").max_height(140.0).show(ui, |ui| {
+                    for (i, w) in d.custom_words.iter().enumerate() {
+                        ui.horizontal(|ui| {
+                            ui.label(w);
+                            if ui.small_button("Delete").clicked() {
+                                remove = Some(i);
+                            }
+                        });
+                    }
+                });
+                if let Some(i) = remove {
+                    d.custom_words.remove(i);
+                }
+            });
+            not_yet(ui, t, "Dictionaries are the Hunspell ones installed on the system (Review › Spelling › Language).");
         }
         OptionsPage::SendToOneNote => {
             section(ui, "Send to NoteCraft");

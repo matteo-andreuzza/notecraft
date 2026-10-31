@@ -175,6 +175,7 @@ fn after_typing(s: &mut Session, caret: Pos, typed: &str) -> Result<Pos, CmdErro
     let Some(page) = s.page() else { return Ok(caret) };
     let Some(para) = Session::block_paras(page, caret.block).and_then(|ps| ps.get(caret.para)) else { return Ok(caret) };
     let text = para.text();
+    let in_equation = para.math.is_some();
     // BEH.Outline.AutoBullet / AutoNumber: the prefix must be the whole text before the caret.
     if typed.ends_with(' ')
         && para.list.is_none()
@@ -194,9 +195,17 @@ fn after_typing(s: &mut Session, caret: Pos, typed: &str) -> Result<Pos, CmdErro
             return Ok(Pos { offset: 0, ..caret });
         }
     }
+    // OPT.Proofing.AutoCorrect: a Space typed after a word (one keystroke, not a whole string
+    // an agent inserts) corrects it.
+    if typed == " "
+        && !in_equation
+        && let Some(c) = autocorrect(s, caret, &text)?
+    {
+        return Ok(c);
+    }
     // BEH.Text.MathCalc: "2+3=" then Space puts the answer after the sign.
     if typed.ends_with(' ')
-        && para.math.is_none()
+        && !in_equation
         && s.prefs.calculate_math
         && let Some(answer) = text.get(..caret.offset.saturating_sub(1)).and_then(notecraft_math::calc::answer)
     {
@@ -231,6 +240,53 @@ fn after_typing(s: &mut Session, caret: Pos, typed: &str) -> Result<Pos, CmdErro
         }
     }
     Ok(caret)
+}
+
+/// AutoCorrect the word before the Space just typed at `caret` (in `text`): the replacement
+/// list, TWo INitial CApitals, and a capital at the start of a sentence. Returns the moved
+/// caret when the word changed. Read-only until there is a change.
+fn autocorrect(s: &mut Session, caret: Pos, text: &str) -> Result<Option<Pos>, CmdError> {
+    let ac = s.prefs.autocorrect.clone();
+    let end = caret.offset.saturating_sub(1);
+    let Some(head) = text.get(..end) else { return Ok(None) };
+    let start = head.rfind(char::is_whitespace).map_or(0, |i| i + head[i..].chars().next().map_or(1, char::len_utf8));
+    let Some(word) = text.get(start..end).filter(|w| !w.is_empty()) else { return Ok(None) };
+    let mut new = word.to_string();
+    if ac.replace
+        && let Some((_, to)) = ac.replacements.iter().find(|(from, _)| from == word)
+    {
+        new = to.clone();
+    }
+    let chars: Vec<char> = new.chars().collect();
+    if ac.two_initial_caps
+        && chars.len() >= 3
+        && chars.iter().all(|c| c.is_alphabetic())
+        && chars[0].is_uppercase()
+        && chars[1].is_uppercase()
+        && chars[2..].iter().all(|c| c.is_lowercase())
+    {
+        new = chars[..1].iter().chain(chars[1].to_lowercase().collect::<Vec<_>>().iter()).chain(chars[2..].iter()).collect();
+    }
+    let before = head.get(..start).unwrap_or("").trim_end();
+    let sentence_start = before.is_empty() || before.ends_with(['.', '!', '?']);
+    if ac.capitalize_sentences
+        && sentence_start
+        && let Some(f) = new.chars().next()
+        && f.is_lowercase()
+        && new.chars().any(char::is_alphabetic)
+        && !new.contains(['.', '@', '/', ':'])
+    {
+        new = f.to_uppercase().chain(new.chars().skip(1)).collect();
+    }
+    if new == word {
+        return Ok(None);
+    }
+    let fmt = s.page().and_then(|p| Session::block_paras(p, caret.block)?.get(caret.para).map(|p| p.fmt_at(start + 1))).unwrap_or_default();
+    let page = s.page_mut().ok_or_else(no_page)?;
+    let Some(pm) = Session::para_mut(page, caret.block, caret.para) else { return Ok(None) };
+    t::delete(pm, start..end);
+    t::insert(pm, start, &new, &fmt);
+    Ok(Some(Pos { offset: caret.offset - word.len() + new.len(), ..caret }))
 }
 
 /// Split the caret paragraph (Enter) and return the caret at the start of the new paragraph.

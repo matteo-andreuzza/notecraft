@@ -1060,7 +1060,9 @@ fn range_rects(pl: &ParaLayout, a: usize, b: usize) -> Vec<Rect> {
 }
 
 fn highlights(app: &NoteApp, painter: &egui::Painter, paras: &[ParaLayout], t: Tokens) {
-    for &(block, para, a, b) in &app.session.view.find.matches {
+    // OPT.Advanced.SearchHighlight off: matches are found and selected, not painted.
+    let shown: &[_] = if app.session.prefs.search_highlight { &app.session.view.find.matches } else { &[] };
+    for &(block, para, a, b) in shown {
         if let Some(pl) = paras.iter().find(|p| p.block == block && p.para == para) {
             for r in range_rects(pl, a, b) {
                 painter.rect_filled(r, 0.0, t.find);

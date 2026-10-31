@@ -387,6 +387,12 @@ fn path(v: &Value, cap: usize) -> Result<Vec<(Point, f32)>, CmdError> {
 
 fn stroke(s: &mut Session, v: &Value) -> CmdResult {
     let mut samples = path(v, notecraft_ink::MAX_SAMPLES)?;
+    // OPT.Advanced.PenPressure off: every stroke has the even width of no pressure.
+    if !s.prefs.pen_pressure {
+        for (_, pr) in &mut samples {
+            *pr = notecraft_doc::ink::DEFAULT_PRESSURE;
+        }
+    }
     // R.Draw.Tools.Ruler: a stroke started at the ruler's edge runs along it.
     if let Some(r) = s.draw.ruler
         && p::bool(v, "free") != Some(true)

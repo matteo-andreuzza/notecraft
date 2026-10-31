@@ -80,7 +80,7 @@ pub use paper_cmds::{
     DEFAULT_MARGINS as DEFAULT_PAPER_MARGINS, PAPER_SIZES, PaperPreset, describe as describe_paper, is_landscape, preset_of as paper_preset,
 };
 pub use selection::{Block, Pos, Selection, TextRange};
-pub use session::{Clock, FindState, NbDirty, Prefs, RibbonMode, ScopeKind, ScrollRequest, Session, SpellingState, ViewState};
+pub use session::{AutoCorrect, Clock, FindState, NbDirty, Prefs, RibbonMode, ScopeKind, ScrollRequest, Session, SpellingState, ViewState};
 pub use spell_cmds::installed_languages;
 pub use template_cmds::{BUILT_IN as BUILT_IN_TEMPLATES, BuiltIn, MY_TEMPLATES, SavedTemplate};
 pub use versions_cmds::{Preview, VERSION_GAP_MS};

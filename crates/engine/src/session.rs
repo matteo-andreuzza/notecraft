@@ -112,6 +112,17 @@ pub struct Prefs {
     pub proofing_language: String,
     /// Words added to the dictionary (`OPT.Proofing.CustomDictionaries`).
     pub custom_words: Vec<String>,
+    /// Flag a word typed twice in a row (`OPT.Proofing.FlagRepeated`).
+    pub flag_repeated: bool,
+    /// AutoCorrect while typing (`OPT.Proofing.AutoCorrect`).
+    pub autocorrect: AutoCorrect,
+    /// Find Tags lists checked To Do items too (`OPT.Advanced.CompletedToDoSummary`).
+    pub show_completed_todos: bool,
+    /// Ink width follows pen pressure (`OPT.Advanced.PenPressure`).
+    pub pen_pressure: bool,
+    /// Highlight the search's matches on the page (`OPT.Advanced.SearchHighlight`; the UI
+    /// reads it).
+    pub search_highlight: bool,
     /// Where new notebooks go (`OPT.SaveBackup.DefaultNotebookLocation`; empty: ask).
     pub default_notebook_location: String,
     /// The notebook whose Quick Notes section takes quick notes
@@ -160,10 +171,57 @@ impl Default for Prefs {
             ignore_urls: true,
             proofing_language: "en_US".into(),
             custom_words: Vec::new(),
+            flag_repeated: true,
+            autocorrect: AutoCorrect::default(),
+            show_completed_todos: true,
+            pen_pressure: true,
+            search_highlight: true,
             default_notebook_location: String::new(),
             quick_notes_notebook: String::new(),
             templates: Vec::new(),
             recent_templates: Vec::new(),
+        }
+    }
+}
+
+/// AutoCorrect settings (Options › Proofing › AutoCorrect Options…).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AutoCorrect {
+    /// Capitalize the first letter of sentences.
+    pub capitalize_sentences: bool,
+    /// Correct TWo INitial CApitals.
+    pub two_initial_caps: bool,
+    /// Replace text as you type, from `replacements`.
+    pub replace: bool,
+    /// What is typed → what it becomes (whole words, exact case).
+    pub replacements: Vec<(String, String)>,
+}
+
+impl Default for AutoCorrect {
+    /// A short list of common slips and symbols (NoteCraft's own; unverified against the
+    /// reference's list).
+    fn default() -> AutoCorrect {
+        let r = |a: &str, b: &str| (a.to_string(), b.to_string());
+        AutoCorrect {
+            capitalize_sentences: true,
+            two_initial_caps: true,
+            replace: true,
+            replacements: vec![
+                r("teh", "the"),
+                r("adn", "and"),
+                r("recieve", "receive"),
+                r("seperate", "separate"),
+                r("definately", "definitely"),
+                r("occured", "occurred"),
+                r("untill", "until"),
+                r("wich", "which"),
+                r("(c)", "©"),
+                r("(r)", "®"),
+                r("(tm)", "™"),
+                r("->", "→"),
+                r("<-", "←"),
+            ],
         }
     }
 }
