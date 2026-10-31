@@ -48,6 +48,8 @@ mod view_cmds;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+mod tests_behaviour;
+#[cfg(test)]
 mod tests_cmds;
 #[cfg(test)]
 mod tests_draw;

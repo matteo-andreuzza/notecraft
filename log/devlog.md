@@ -798,3 +798,15 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Parallel sessions: a worktree must use its own `CARGO_TARGET_DIR` — two checkouts sharing
   one target dir get the same artifact hashes and run each other's binaries.
 - Next here: SVG page export (FMT.Export.Images).
+
+## 2026-10-31 — Behaviour rows pinned (BEH.*)
+
+- New `engine/src/tests_behaviour.rs` pins 15 P0 behaviour rows whose code already existed but
+  was never marked: copied page links navigate, a new notebook's default section and page,
+  numbering 1./a./i. and renumbering, subpages (two levels, move with the parent, collapse),
+  page date/time, dragging a page to another section, emptying the bin, nested section groups,
+  checkbox clicks, several tags on one paragraph, tag toggling, the default font, styles
+  replacing character formatting, and the zoom range and stops.
+- `mark.py` also promoted rows whose tests already carried `// parity:` tokens (FMT import and
+  export rows, the Paper Size pane). Numbers: wiring 716/1335 (53.6%), behaviour 190/1335
+  (14.2%), 346 commands.
