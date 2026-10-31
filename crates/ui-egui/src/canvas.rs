@@ -472,7 +472,9 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             draw_table(&painter, tb, tl, &app.session.sel.on_page, hot, t);
         }
         for o in &outlines {
-            let hot = hover.is_some_and(|h| o.rect.expand(6.0).contains(h)) || caret_outline == Some(o.id) || selected_objects.contains(&o.id);
+            // OPT.Display.ShowNoteContainers: off, a frame shows only on a selected container.
+            let near = hover.is_some_and(|h| o.rect.expand(6.0).contains(h)) || caret_outline == Some(o.id);
+            let hot = (near && app.session.prefs.show_note_containers) || selected_objects.contains(&o.id);
             if hot {
                 painter.rect_stroke(o.rect, 0.0, Stroke::new(1.0, t.container), egui::StrokeKind::Outside);
                 painter.rect_filled(o.bar, 0.0, t.container.gamma_multiply(0.6));

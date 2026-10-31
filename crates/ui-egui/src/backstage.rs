@@ -90,7 +90,11 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             Backstage::Export => export(app, ui, &ctx),
             Backstage::Print => print(app, ui, &ctx),
             Backstage::Account => account(app, ui, t),
-            Backstage::Options => options(app, ui, &ctx, t),
+            // File › Options opens the Options dialog over the backstage (UI.Dialogs.Options).
+            Backstage::Options => {
+                info(app, ui, &ctx, t);
+                crate::options::show(app, &ctx, t);
+            }
         }
     });
 }
@@ -450,71 +454,5 @@ fn account(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         RichText::new("Not affiliated with Microsoft. OneNote is a trademark of Microsoft Corporation, named only to describe compatibility.")
             .size(12.0)
             .color(t.page_meta),
-    );
-}
-
-fn options(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
-    heading(ui, "Options");
-    ui.columns(2, |cols| {
-        let ui = &mut cols[0];
-        ui.label(RichText::new("General").strong());
-        let mut author = app.session.prefs.author.clone();
-        ui.horizontal(|ui| {
-            ui.label("User name");
-            if ui.text_edit_singleline(&mut author).changed() {
-                app.run(ctx, "file.options", json!({"set": {"author": author}}));
-            }
-        });
-        ui.add_space(6.0);
-        // OPT.General.OfficeTheme (also in File › Account, UI.Window.DarkMode).
-        ui.label("Office Theme");
-        theme_picker(app, ui);
-        ui.add_space(10.0);
-        ui.label(RichText::new("Advanced › Editing").strong());
-        let mut bullets = app.session.prefs.auto_bullets;
-        if ui.checkbox(&mut bullets, "Apply auto-bulleting to lists").changed() {
-            app.run(ctx, "file.options", json!({"set": {"auto_bullets": bullets}}));
-        }
-        let mut numbers = app.session.prefs.auto_numbering;
-        if ui.checkbox(&mut numbers, "Apply auto-numbering to lists").changed() {
-            app.run(ctx, "file.options", json!({"set": {"auto_numbering": numbers}}));
-        }
-        let mut wiki = app.session.prefs.wiki_links;
-        if ui.checkbox(&mut wiki, "Enable wiki linking ([[Page]])").changed() {
-            app.run(ctx, "file.options", json!({"set": {"wiki_links": wiki}}));
-        }
-        ui.add_space(10.0);
-        ui.label(RichText::new("Advanced › Default font").strong());
-        let mut font = app.session.prefs.default_font.clone();
-        ui.horizontal(|ui| {
-            ui.label("Font");
-            if ui.text_edit_singleline(&mut font).lost_focus() {
-                app.run(ctx, "file.options", json!({"set": {"default_font": font}}));
-            }
-        });
-        let ui = &mut cols[1];
-        ui.label(RichText::new("Save & Backup").strong());
-        let mut copies = app.session.prefs.backup_copies as u32;
-        ui.horizontal(|ui| {
-            ui.label("Number of backup copies of each file");
-            if ui.add(egui::DragValue::new(&mut copies).range(1..=100)).changed() {
-                app.run(ctx, "file.options", json!({"set": {"backup_copies": copies}}));
-            }
-        });
-        ui.label(RichText::new("Notes are saved automatically about a second after each change.").size(12.0).color(t.page_meta));
-        ui.add_space(10.0);
-        ui.label(RichText::new("Display").strong());
-        let mut rules = app.session.prefs.new_pages_rule_lines.is_some();
-        if ui.checkbox(&mut rules, "Create all new pages with rule lines").changed() {
-            app.run(ctx, "view.newPagesWithRuleLines", json!({}));
-        }
-    });
-    ui.add_space(16.0);
-    ui.label(
-        RichText::new(
-            "More option pages (Proofing, Send to OneNote, Audio & Video, Language, Customize Ribbon, Quick Access Toolbar) arrive with M4.",
-        )
-        .size(12.0)
-        .color(t.page_meta),
     );
 }

@@ -821,3 +821,23 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Engine: `format: "svg"` on `file.exportPage` (a section is refused, one page per picture).
   UI: SVG Picture in File › Export for pages. Checked by eye with rsvg-convert against the PNG.
 - Catalog: FMT.Export.Images notes (PNG and SVG). Numbers unchanged (a format of an existing row).
+
+## 2026-10-31 — M4: the Options dialog, napkin math
+
+- File › Options is now the Options dialog (`ui-egui/src/options.rs`): twelve categories down
+  the left as in the reference. Changes go to a draft of `Prefs`, OK applies them in one
+  `file.options` call, Cancel forgets them. Categories NoteCraft can't offer yet (Proofing,
+  Send to, Audio & Video, Language, Ribbon/QAT customization, Add-ins) say so instead of
+  showing controls that do nothing.
+- New `Prefs` fields, each one changing behaviour: initials, show_mini_toolbar,
+  show_note_containers (canvas frames), default_color (with default_font/size: an empty Normal
+  paragraph types in them, `ops::typing_fmt`), show_paste_options, create_table_on_tab,
+  calculate_math, backup_folder, auto_backup_minutes and last_backup_ms (`Session::backup_due`;
+  the UI loop runs `file.backupChanged`), default_notebook_location (used by
+  `file.newNotebook` without a path unless `memory`), quick_notes_notebook.
+- New command `file.backupChanged` (OPT.SaveBackup.BackupChangedNow). `file.backupNow` falls
+  back to the Options folder.
+- BEH.Text.MathCalc: `notecraft_math::calc` reads the operators, functions and examples of
+  Microsoft's public pages ("Insert and calculate simple math equations", "Napkin Math in
+  OneNote"). Space or Enter after `expr=` types the answer.
+- Catalog: 18 OPT/BEH rows wired. Numbers: wiring 736/1335, behaviour 191/1335.

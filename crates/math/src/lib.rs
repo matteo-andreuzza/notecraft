@@ -17,10 +17,13 @@
 //! - combining accents after a letter (`x̂ x̃ x̄ ẋ x⃗`); `⬚` an empty placeholder;
 //! - `\alpha`-style control words for Greek letters and common symbols ([`control_word`]).
 //!
+//! [`calc`] is the napkin-math calculator (an expression typed before `=` worked out).
+//!
 //! Input is hostile (files, agents): text is capped at [`MAX_LEN`] characters and nesting at
 //! [`MAX_DEPTH`]; nothing here panics.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+pub mod calc;
 mod layout;
 mod parse;
 

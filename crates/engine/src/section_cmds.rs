@@ -182,7 +182,15 @@ fn parent_path(s: &Session, nb: &notecraft_doc::Notebook, group: Option<Id>) -> 
 pub(crate) const QUICK_NOTES: &str = "Quick Notes";
 
 fn quick_notes(s: &mut Session, _v: &Value) -> CmdResult {
-    let nb = s.ws.notebooks.first().cloned().ok_or_else(|| CmdError::Disabled("open a notebook first".into()))?;
+    // OPT.SaveBackup.QuickNotesSection: the notebook named in the Options, else the first.
+    let wanted = s.prefs.quick_notes_notebook.trim().to_lowercase();
+    let nb =
+        s.ws.notebooks
+            .iter()
+            .find(|n| !wanted.is_empty() && n.name.to_lowercase() == wanted)
+            .or_else(|| s.ws.notebooks.first())
+            .cloned()
+            .ok_or_else(|| CmdError::Disabled("open a notebook first".into()))?;
     let existing = nb.children.iter().find_map(|n| match n {
         NavNode::Section(sec) if sec.name.eq_ignore_ascii_case(QUICK_NOTES) => Some(sec.id),
         _ => None,

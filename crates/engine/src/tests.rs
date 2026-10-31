@@ -256,6 +256,7 @@ fn panic_hunt() {
                     | "file.import"
                     | "file.printPreview"
                     | "file.backupNow"
+                    | "file.backupChanged"
                     | "file.openBackups"
                     | "object.saveAs"
                     | "attachment.saveAs"

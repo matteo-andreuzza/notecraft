@@ -23,6 +23,7 @@ pub mod keymap;
 mod math_ui;
 pub mod mini_toolbar;
 pub mod nav;
+pub mod options;
 pub mod panes;
 pub mod paste_options;
 pub mod pictures;
@@ -221,6 +222,12 @@ pub struct UiState {
     /// The printers the host listed when File › Print opened (`None`: not asked yet).
     #[serde(skip)]
     pub printers: Option<Vec<(String, bool)>>,
+    /// File › Options: the category shown.
+    #[serde(default)]
+    pub options_page: options::OptionsPage,
+    /// File › Options: the settings being edited, applied with OK (`None`: not open).
+    #[serde(default)]
+    pub options_draft: Option<notecraft_engine::Prefs>,
 }
 
 /// Most paths kept in [`UiState::recent_notebooks`].
@@ -252,6 +259,8 @@ impl Default for UiState {
             print_printer: None,
             print_copies: 1,
             printers: None,
+            options_page: options::OptionsPage::General,
+            options_draft: None,
         }
     }
 }
@@ -350,7 +359,10 @@ impl NoteApp {
         }
         // UI.Canvas.PasteOptions: the button shows near the caret for a few seconds after any
         // paste, letting the choice be changed after the fact.
-        if matches!(id, "edit.paste" | "edit.pasteKeepSource" | "edit.pasteMerge" | "edit.pasteTextOnly" | "edit.pasteOptions") {
+        // OPT.Advanced.ShowPasteOptions turns the button off.
+        if self.session.prefs.show_paste_options
+            && matches!(id, "edit.paste" | "edit.pasteKeepSource" | "edit.pasteMerge" | "edit.pasteTextOnly" | "edit.pasteOptions")
+        {
             self.ui.paste_shown_at = Some(ctx.input(|i| i.time));
         }
         if let Some(path) = opened_path {
@@ -426,6 +438,20 @@ impl NoteApp {
             let errors = self.session.save_dirty();
             if let Some(e) = errors.first() {
                 self.ui.status = Some((e.clone(), ctx.input(|i| i.time)));
+            }
+        }
+        // OPT.SaveBackup.AutoBackup: the changed notebooks, into the Options' folder or the
+        // app's own. A failure is shown once and retried at the next interval.
+        if self.session.backup_due() {
+            let folder = Some(self.session.prefs.backup_folder.trim().to_string()).filter(|f| !f.is_empty()).or_else(|| self.host.backup_folder());
+            match folder {
+                Some(f) => {
+                    if let Err(e) = self.session.run("file.backupChanged", json!({"folder": f})) {
+                        self.ui.status = Some((format!("Automatic backup failed: {e}"), ctx.input(|i| i.time)));
+                        self.session.prefs.last_backup_ms = self.session.clock.now_ms;
+                    }
+                }
+                None => self.session.prefs.last_backup_ms = self.session.clock.now_ms,
             }
         }
         match self.host.take_screen_clip() {

@@ -48,7 +48,8 @@ fn anchor(app: &NoteApp, area: Rect) -> Option<Rect> {
 
 /// Draw the mini toolbar if the current selection calls for it.
 pub fn show(app: &mut NoteApp, ui: &mut Ui, area: Rect, t: Tokens) {
-    if !app.canvas.focused {
+    // OPT.General.ShowMiniToolbar.
+    if !app.canvas.focused || !app.session.prefs.show_mini_toolbar {
         return;
     }
     let Some(r) = anchor(app, area) else { return };

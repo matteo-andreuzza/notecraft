@@ -317,6 +317,10 @@ pub(crate) fn tooltip(app: &NoteApp, id: &str) -> String {
     s
 }
 
+/// The fonts the Font box and the Options' default font offer.
+pub(crate) const FONT_CHOICES: [&str; 10] =
+    ["Calibri", "Calibri Light", "Arial", "Cambria", "Consolas", "Courier New", "Georgia", "Segoe UI", "Times New Roman", "Verdana"];
+
 pub(crate) fn enabled(app: &NoteApp, id: &str) -> bool {
     match command(id) {
         Some(c) => app.disabled_reason(c).is_none(),
@@ -832,9 +836,7 @@ pub(crate) fn combo(app: &mut NoteApp, ui: &mut Ui, id: &str, w: f32, t: Tokens)
     let resp = ui.add_enabled_ui(on, |ui| {
         egui::ComboBox::from_id_salt(id).width(w).selected_text(RichText::new(value).size(12.0)).show_ui(ui, |ui| match key {
             "Font" => {
-                for f in
-                    ["Calibri", "Calibri Light", "Arial", "Cambria", "Consolas", "Courier New", "Georgia", "Segoe UI", "Times New Roman", "Verdana"]
-                {
+                for f in FONT_CHOICES {
                     if ui.selectable_label(false, f).clicked() {
                         app.run(&ctx, "format.font", json!({"font": f}));
                     }

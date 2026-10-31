@@ -711,6 +711,57 @@ fn options_page_has_the_office_theme_too() {
     assert_eq!(h.state().ui.theme, crate::ThemeKind::Black, "OPT.General.OfficeTheme: picked from the Options page too");
 }
 
+#[test]
+fn the_options_dialog_applies_on_ok_and_forgets_on_cancel() {
+    // parity: UI.Dialogs.Options
+    let mut h = harness(app());
+    h.state_mut().ui.backstage = Some(crate::Backstage::Options);
+    h.run();
+    for page in crate::options::OptionsPage::ALL {
+        present(&h, "UI.Dialogs.Options", page.label());
+    }
+    h.get_by_label("Advanced").click();
+    h.run();
+    h.get_by_label("Calculate mathematical expressions automatically").click();
+    h.run();
+    assert!(h.state().session.prefs.calculate_math, "nothing changes before OK");
+    h.get_by_label("OK").click();
+    h.run();
+    assert!(!h.state().session.prefs.calculate_math, "OPT.Advanced.CalculateMath");
+    assert_eq!(h.state().ui.backstage, None, "OK closes the dialog and the backstage");
+    // Cancel forgets.
+    h.state_mut().ui.backstage = Some(crate::Backstage::Options);
+    h.run();
+    h.get_by_label("Display").click();
+    h.run();
+    h.get_by_label("Show note containers on pages").click();
+    h.run();
+    h.get_by_label("Cancel").click();
+    h.run();
+    assert!(h.state().session.prefs.show_note_containers, "Cancel leaves the option as it was");
+    assert_eq!(h.state().ui.options_draft, None);
+}
+
+#[test]
+fn options_turn_off_the_mini_toolbar_and_the_paste_options_button() {
+    let mut a = app();
+    a.session.run("file.options", json!({"set": {"show_mini_toolbar": false, "show_paste_options": false}})).unwrap();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 60.0, "y": 120.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "Some words"})).unwrap();
+    let o = a.session.page().unwrap().objects[0].id();
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 0})).unwrap();
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 4, "extend": true})).unwrap();
+    a.canvas.focused = true;
+    a.ui.tab = "View".into();
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Bold").is_none(), "OPT.General.ShowMiniToolbar");
+    let ctx = h.ctx.clone();
+    h.state_mut().run(&ctx, "edit.paste", json!({"text": "x"}));
+    assert_eq!(h.state().ui.paste_shown_at, None, "OPT.Advanced.ShowPasteOptions");
+}
+
 /// A host whose save dialog answers with a fixed path.
 struct SaveHost(String);
 

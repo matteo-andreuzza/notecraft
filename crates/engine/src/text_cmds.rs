@@ -194,6 +194,17 @@ fn after_typing(s: &mut Session, caret: Pos, typed: &str) -> Result<Pos, CmdErro
             return Ok(Pos { offset: 0, ..caret });
         }
     }
+    // BEH.Text.MathCalc: "2+3=" then Space puts the answer after the sign.
+    if typed.ends_with(' ')
+        && para.math.is_none()
+        && s.prefs.calculate_math
+        && let Some(answer) = text.get(..caret.offset.saturating_sub(1)).and_then(notecraft_math::calc::answer)
+    {
+        let at = Pos { offset: caret.offset - 1, ..caret };
+        let fmt = typing_fmt(s, at);
+        let end = insert_at(s, at, &answer, &fmt)?;
+        return Ok(Pos { offset: end.offset + 1, ..caret });
+    }
     // BEH.Text.HyperlinkAuto: a URL followed by whitespace becomes a link.
     if typed.ends_with(char::is_whitespace) {
         let before = caret.offset.saturating_sub(typed.len());
@@ -303,7 +314,16 @@ pub(crate) fn newline(s: &mut Session, _: &Value) -> CmdResult {
     }
     // A URL right before the caret becomes a link on Enter too.
     let text = para.text();
+    let in_equation = para.math.is_some();
     autolink(s, caret, &text, caret.offset)?;
+    // BEH.Text.MathCalc: "2+3=" then Enter puts the answer after the sign, then a new line.
+    let caret = match text.get(..caret.offset).filter(|_| s.prefs.calculate_math && !in_equation).and_then(notecraft_math::calc::answer) {
+        Some(answer) => {
+            let fmt = typing_fmt(s, caret);
+            insert_at(s, caret, &answer, &fmt)?
+        }
+        None => caret,
+    };
     // An equation is never split (decision D11): Enter starts a paragraph after it.
     let caret = match equation_end {
         Some(end) => Pos { offset: end, ..caret },

@@ -26,7 +26,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         // BS.New.NewNotebook — a folder at `path` (desktop) or an in-memory notebook (web,
         // agents). It starts with one section holding one page (BEH.Notebooks.Default).
         CommandSpec::new("file.newNotebook", "BS.New.NewNotebook", "New Notebook", "File/New/New Notebook", new_notebook)
-            .params(r#"{"name": string, "path"?: folder}"#),
+            .params(r#"{"name": string, "path"?: folder, "memory"?: bool}"#),
         // BS.Open.OpenNotebook — Ctrl+O.
         CommandSpec::new("file.openNotebook", "BS.Open.OpenNotebook", "Open Notebook", "File/Open/Browse", open_notebook)
             .key("Mod+O")
@@ -74,7 +74,17 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             "File/Options/Save & Backup/Back Up All Notebooks Now",
             backup_now,
         )
-        .params(r#"{"folder": backup folder}"#)
+        .params(r#"{"folder"?: backup folder (default: Options › Save & Backup)}"#)
+        .pure(),
+        // OPT.SaveBackup.BackupChangedNow — only the notebooks changed since the last backup.
+        CommandSpec::new(
+            "file.backupChanged",
+            "OPT.SaveBackup.BackupChangedNow",
+            "Back Up Changed Files Now",
+            "File/Options/Save & Backup/Back Up Changed Files Now",
+            |s, v| backup(s, v, true),
+        )
+        .params(r#"{"folder"?: backup folder}"#)
         .pure(),
         // BS.Info.OpenBackups — the backups available for a notebook.
         CommandSpec::new("file.openBackups", "BS.Info.OpenBackups", "Open Backups", "File/Info/Open Backups", list_backups)
@@ -127,8 +137,12 @@ fn new_notebook(s: &mut Session, v: &Value) -> CmdResult {
     }
     let nb = starter_notebook(s, &name);
     let id = nb.id;
-    if let Some(path) = p::str(v, "path") {
-        attach_new(s, &nb, path)?;
+    // OPT.SaveBackup.DefaultNotebookLocation: without a path, a new notebook goes into the
+    // default location of the Options, if one is set (`memory` keeps it in memory).
+    let default_path = (!s.prefs.default_notebook_location.trim().is_empty() && p::bool(v, "memory") != Some(true))
+        .then(|| std::path::Path::new(s.prefs.default_notebook_location.trim()).join(notecraft_format::file_stem(&name)).display().to_string());
+    if let Some(path) = p::str(v, "path").map(str::to_string).or(default_path) {
+        attach_new(s, &nb, &path)?;
     }
     s.add_notebook(nb);
     Ok(json!({"notebook": id.to_string()}))
@@ -415,25 +429,57 @@ fn backup_label(s: &Session) -> String {
     format!("{:04}-{:02}-{:02}_{:02}{:02}{:02}", c.year, c.month, c.day, c.hour, c.minute, c.second)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn backup_now(s: &mut Session, v: &Value) -> CmdResult {
-    let folder = p::req_str(v, "folder")?;
+    backup(s, v, false)
+}
+
+impl Session {
+    /// Whether an automatic backup is due (`OPT.SaveBackup.AutoBackup`): the interval of the
+    /// Options has passed since the last one and some notebook lives in a folder. The host
+    /// asks this from its loop and runs `file.backupChanged`.
+    pub fn backup_due(&self) -> bool {
+        let every = i64::from(self.prefs.auto_backup_minutes).saturating_mul(60_000);
+        every > 0 && !self.stores.is_empty() && self.clock.now_ms.saturating_sub(self.prefs.last_backup_ms) >= every
+    }
+}
+
+/// The newest change in a notebook (its pages' modification times), Unix ms.
+#[cfg(not(target_arch = "wasm32"))]
+fn last_change(nb: &Notebook) -> i64 {
+    nb.sections().iter().flat_map(|sec| sec.pages.iter().map(|p| p.modified.0)).max().unwrap_or(0)
+}
+
+/// Back up every notebook stored in a folder (or, with `changed`, only those changed since
+/// the last backup) into `folder`, else the backup folder of the Options.
+#[cfg(not(target_arch = "wasm32"))]
+fn backup(s: &mut Session, v: &Value, changed: bool) -> CmdResult {
+    let folder = match p::str(v, "folder").filter(|f| !f.trim().is_empty()) {
+        Some(f) => f.to_string(),
+        None if !s.prefs.backup_folder.trim().is_empty() => s.prefs.backup_folder.trim().to_string(),
+        None => return Err(CmdError::Params("give `folder`, or set a backup folder in Options › Save & Backup".into())),
+    };
+    let folder = folder.as_str();
     let _ = s.save_dirty();
     let label = backup_label(s);
+    let since = s.prefs.last_backup_ms;
     let mut done = Vec::new();
     for nb in &s.ws.notebooks {
         let Some(store) = s.stores.get(&nb.id) else { continue };
+        if changed && since > 0 && last_change(nb) <= since {
+            continue;
+        }
         let dest_root = std::path::Path::new(folder).join(notecraft_format::file_stem(&nb.name));
         std::fs::create_dir_all(&dest_root).map_err(|e| CmdError::Failed(format!("{}: {e}", dest_root.display())))?;
         let dest = notecraft_format::store::backup(&store.root, &dest_root, &label, s.prefs.backup_copies.max(1))
             .map_err(|e| CmdError::Failed(e.to_string()))?;
         done.push(dest.display().to_string());
     }
+    s.prefs.last_backup_ms = s.clock.now_ms;
     Ok(json!({"backups": done}))
 }
 
 #[cfg(target_arch = "wasm32")]
-fn backup_now(_: &mut Session, _: &Value) -> CmdResult {
+fn backup(_: &mut Session, _: &Value, _: bool) -> CmdResult {
     Err(CmdError::Disabled("backups need a file system".into()))
 }
 
@@ -470,6 +516,9 @@ fn options(s: &mut Session, v: &Value) -> CmdResult {
         let mut prefs: crate::Prefs = serde_json::from_value(cur).map_err(|e| CmdError::Params(format!("bad option value: {e}")))?;
         prefs.default_size = prefs.default_size.clamp(notecraft_doc::text::MIN_FONT_SIZE, notecraft_doc::text::MAX_FONT_SIZE);
         prefs.backup_copies = prefs.backup_copies.clamp(1, 100);
+        // At most every eight weeks (the reference's longest interval is six weeks; unverified).
+        prefs.auto_backup_minutes = prefs.auto_backup_minutes.min(8 * 7 * 24 * 60);
+        prefs.initials = prefs.initials.chars().take(9).collect();
         prefs.custom_tags.truncate(notecraft_doc::tags::MAX_CUSTOM_TAGS);
         s.prefs = prefs;
     }

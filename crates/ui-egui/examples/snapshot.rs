@@ -210,6 +210,10 @@ fn main() {
     });
     shot("backstage-info", &out, 1.0, |a| a.ui.backstage = Some(Backstage::Info));
     shot("backstage-options", &out, 1.0, |a| a.ui.backstage = Some(Backstage::Options));
+    shot("options-advanced", &out, 1.0, |a| {
+        a.ui.backstage = Some(Backstage::Options);
+        a.ui.options_page = notecraft_ui_egui::options::OptionsPage::Advanced;
+    });
     shot("backstage-open", &out, 1.0, |a| a.ui.backstage = Some(Backstage::Open));
     for (name, kind) in [("theme-white", ThemeKind::White), ("theme-dark-gray", ThemeKind::DarkGray), ("theme-black", ThemeKind::Black)] {
         shot(name, &out, 1.0, |a| a.ui.theme = kind);

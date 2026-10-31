@@ -709,6 +709,10 @@ pub(crate) fn refresh_ids(s: &mut Session, t: &mut Table) {
 /// keys (KB.Table.NewColumnTab, KB.Table.NewRowEnter). List items, empty paragraphs and a caret
 /// inside the text are left to Tab's other meanings: returns `false` then.
 pub(crate) fn tab_to_table(s: &mut Session) -> Result<bool, CmdError> {
+    // OPT.Advanced.CreateTableOnTab.
+    if !s.prefs.create_table_on_tab {
+        return Ok(false);
+    }
     let Some(c) = s.text_range().filter(|r| r.is_caret()).map(|r| r.head) else { return Ok(false) };
     let Block::Outline(oid) = c.block else { return Ok(false) };
     let page = s.page().ok_or_else(no_page)?;

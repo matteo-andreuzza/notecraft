@@ -260,6 +260,18 @@ pub(crate) fn typing_fmt(s: &Session, pos: Pos) -> CharFormat {
     }
     let Some(page) = s.page() else { return CharFormat::default() };
     let Some(p) = Session::block_paras(page, pos.block).and_then(|ps| ps.get(pos.para)) else { return CharFormat::default() };
+    // OPT.Advanced.DefaultFont: an empty Normal paragraph types in the default font, size and
+    // colour of the Options (only what differs from the style is stored).
+    if p.is_empty() && p.style == notecraft_doc::ParaStyle::Normal && pos.block != Block::Title {
+        let base = notecraft_doc::ParaStyle::Normal.def().char;
+        let pr = &s.prefs;
+        return CharFormat {
+            font: Some(pr.default_font.clone()).filter(|f| !f.trim().is_empty() && Some(f) != base.font.as_ref()),
+            size: Some(pr.default_size).filter(|z| Some(*z) != base.size),
+            color: pr.default_color,
+            ..CharFormat::default()
+        };
+    }
     let mut f = p.fmt_at(pos.offset);
     if f.link.is_some() {
         let inside_after = p.fmt_at(t::next_grapheme(&p.text(), pos.offset)).link == f.link && pos.offset < p.len();

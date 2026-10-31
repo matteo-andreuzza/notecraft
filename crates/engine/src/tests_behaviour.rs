@@ -195,3 +195,135 @@ fn zoom_runs_from_10_to_400_percent_through_fixed_stops() {
     assert!(s.run("view.zoom", json!({"percent": 401})).is_err(), "BEH.View.Zoom");
     assert!(s.run("view.zoom", json!({"percent": 9})).is_err(), "BEH.View.Zoom");
 }
+
+#[test]
+fn an_expression_before_equals_is_worked_out_on_space_or_enter() {
+    let mut s = sample();
+    blank_page(&mut s);
+    for c in ["9", "5", "+", "8", "3", "+", "4", "1", "6", "=", " "] {
+        run(&mut s, "text.insert", json!({"text": c}));
+    }
+    assert_eq!(paras(&s)[0].text(), "95+83+416=594 ", "BEH.Text.MathCalc");
+    let c = s.sel.caret().unwrap();
+    assert_eq!(c.offset, "95+83+416=594 ".len(), "the caret follows the answer");
+    run(&mut s, "text.insert", json!({"text": "sqrt(16)="}));
+    run(&mut s, "text.newline", json!({}));
+    let texts: Vec<String> = paras(&s).iter().map(|p| p.text()).collect();
+    assert_eq!(texts, ["95+83+416=594 sqrt(16)=4", ""], "BEH.Text.MathCalc: Enter puts the answer, then a new line");
+    // Prose is left alone, and the option turns it off.
+    run(&mut s, "text.insert", json!({"text": "Total = "}));
+    assert_eq!(paras(&s)[1].text(), "Total = ");
+    run(&mut s, "file.options", json!({"set": {"calculate_math": false}}));
+    run(&mut s, "text.insert", json!({"text": "1+1= "}));
+    assert_eq!(paras(&s)[1].text(), "Total = 1+1= ", "OPT.Advanced.CalculateMath");
+}
+
+// ---- File › Options: each option changes what it says. ----
+
+fn temp(name: &str) -> std::path::PathBuf {
+    let d = std::env::temp_dir().join(format!("notecraft-options-{name}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    d
+}
+
+#[test]
+fn the_default_font_size_and_colour_apply_to_new_text() {
+    let mut s = sample();
+    run(&mut s, "file.options", json!({"set": {"default_font": "Georgia", "default_size": 14.0, "default_color": "#0A141E"}}));
+    blank_page(&mut s);
+    run(&mut s, "text.insert", json!({"text": "Hello\nWorld"}));
+    for p in paras(&s) {
+        let f = p.effective_fmt_at(1);
+        assert_eq!((f.font.as_deref(), f.size), (Some("Georgia"), Some(14.0)), "OPT.Advanced.DefaultFont");
+        assert_eq!(f.color, Some(notecraft_doc::color::Rgba { r: 10, g: 20, b: 30, a: 255 }), "OPT.Advanced.DefaultFont");
+    }
+    // The defaults store nothing extra.
+    run(&mut s, "file.options", json!({"set": {"default_font": "Calibri", "default_size": 11.0, "default_color": null}}));
+    blank_page(&mut s);
+    run(&mut s, "text.insert", json!({"text": "plain"}));
+    assert!(paras(&s)[0].runs.iter().all(|r| r.fmt.is_plain()));
+}
+
+#[test]
+fn auto_lists_tables_on_tab_and_wiki_links_follow_their_options() {
+    let mut s = sample();
+    run(&mut s, "file.options", json!({"set": {"auto_bullets": false, "auto_numbering": false}}));
+    blank_page(&mut s);
+    run(&mut s, "text.insert", json!({"text": "* item"}));
+    assert!(paras(&s)[0].list.is_none(), "OPT.Advanced.AutoBulleting");
+    run(&mut s, "text.newline", json!({}));
+    run(&mut s, "text.insert", json!({"text": "1. item"}));
+    assert!(paras(&s)[1].list.is_none(), "OPT.Advanced.AutoNumbering");
+    run(&mut s, "file.options", json!({"set": {"auto_bullets": true, "auto_numbering": true}}));
+    run(&mut s, "text.newline", json!({}));
+    run(&mut s, "text.insert", json!({"text": "* item"}));
+    assert!(paras(&s)[2].list.is_some(), "OPT.Advanced.AutoBulleting");
+    // Tab after text: a table only with the option on.
+    run(&mut s, "file.options", json!({"set": {"create_table_on_tab": false}}));
+    blank_page(&mut s);
+    run(&mut s, "text.insert", json!({"text": "Name"}));
+    let _ = s.run("para.indent", json!({"key": "tab"}));
+    assert!(s.page().unwrap().objects.iter().all(|o| o.as_table().is_none()), "OPT.Advanced.CreateTableOnTab");
+    run(&mut s, "file.options", json!({"set": {"create_table_on_tab": true}}));
+    blank_page(&mut s);
+    run(&mut s, "text.insert", json!({"text": "Name"}));
+    run(&mut s, "para.indent", json!({"key": "tab"}));
+    assert!(s.page().unwrap().objects.iter().any(|o| o.as_table().is_some()), "OPT.Advanced.CreateTableOnTab");
+    // Wiki links.
+    run(&mut s, "file.options", json!({"set": {"wiki_links": false}}));
+    blank_page(&mut s);
+    run(&mut s, "text.insert", json!({"text": "[[Plans]]"}));
+    assert_eq!(paras(&s)[0].text(), "[[Plans]]", "OPT.Advanced.WikiLinks");
+    run(&mut s, "file.options", json!({"set": {"wiki_links": true, "author": "Ada", "initials": "AL"}}));
+    run(&mut s, "text.insert", json!({"text": " [[Plans]]"}));
+    assert!(paras(&s)[0].runs.iter().any(|r| r.fmt.link.is_some()), "OPT.Advanced.WikiLinks");
+    assert_eq!(paras(&s)[0].author, "Ada", "OPT.General.UserName");
+    assert_eq!(s.prefs.initials, "AL", "OPT.General.Initials");
+}
+
+#[test]
+fn new_notebooks_go_to_the_default_location_and_quick_notes_to_the_chosen_notebook() {
+    let d = temp("location");
+    let mut s = sample();
+    run(&mut s, "file.options", json!({"set": {"default_notebook_location": d.to_str().unwrap()}}));
+    let r = run(&mut s, "file.newNotebook", json!({"name": "Garden"}));
+    let id = notecraft_doc::Id::parse(r["notebook"].as_str().unwrap()).unwrap();
+    assert_eq!(s.notebook_path(id).as_deref(), Some(d.join("Garden").as_path()), "OPT.SaveBackup.DefaultNotebookLocation");
+    let r = run(&mut s, "file.newNotebook", json!({"name": "Scratch", "memory": true}));
+    let id = notecraft_doc::Id::parse(r["notebook"].as_str().unwrap()).unwrap();
+    assert_eq!(s.notebook_path(id), None);
+    // Quick Notes go to the notebook named in the Options.
+    run(&mut s, "file.options", json!({"set": {"quick_notes_notebook": "garden"}}));
+    run(&mut s, "nav.quickNotes", json!({}));
+    assert_eq!(s.notebook().unwrap().name, "Garden", "OPT.SaveBackup.QuickNotesSection");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
+fn backups_use_the_folder_interval_and_copies_of_the_options() {
+    let d = temp("backup");
+    let mut s = sample();
+    run(&mut s, "file.newNotebook", json!({"name": "Work", "path": d.join("Work").to_str().unwrap()}));
+    assert!(s.run("file.backupNow", json!({})).is_err(), "no folder yet");
+    run(&mut s, "file.options", json!({"set": {"backup_folder": d.join("bk").to_str().unwrap(), "backup_copies": 1}}));
+    assert!(s.backup_due(), "OPT.SaveBackup.AutoBackup: never backed up");
+    let r = run(&mut s, "file.backupNow", json!({}));
+    assert_eq!(r["backups"].as_array().unwrap().len(), 1, "OPT.SaveBackup.BackupFolder");
+    assert!(r["backups"][0].as_str().unwrap().contains("Work"), "OPT.SaveBackup.BackupAllNow");
+    assert!(!s.backup_due(), "OPT.SaveBackup.AutoBackup: just done");
+    s.clock.now_ms += 25 * 3_600_000;
+    assert!(s.backup_due(), "OPT.SaveBackup.AutoBackup");
+    // Nothing changed since: Back Up Changed Files Now skips the notebook.
+    let r = run(&mut s, "file.backupChanged", json!({}));
+    assert_eq!(r["backups"].as_array().unwrap().len(), 0, "OPT.SaveBackup.BackupChangedNow");
+    s.clock.now_ms += 60_000;
+    run(&mut s, "text.insert", json!({"text": "changed"}));
+    let r = run(&mut s, "file.backupChanged", json!({}));
+    assert_eq!(r["backups"].as_array().unwrap().len(), 1, "OPT.SaveBackup.BackupChangedNow");
+    let kept = std::fs::read_dir(d.join("bk").join("Work")).unwrap().count();
+    assert_eq!(kept, 1, "OPT.SaveBackup.BackupCopies");
+    run(&mut s, "file.options", json!({"set": {"auto_backup_minutes": 0}}));
+    assert!(!s.backup_due());
+    let _ = std::fs::remove_dir_all(&d);
+}

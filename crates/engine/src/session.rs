@@ -44,16 +44,31 @@ pub struct Clock {
 pub struct Prefs {
     /// Author name stamped on edits (Options › General › User name).
     pub author: String,
-    /// Default font (Options › Advanced).
+    /// The author's initials (`OPT.General.Initials`).
+    pub initials: String,
+    /// Show the Mini Toolbar on a selection (`OPT.General.ShowMiniToolbar`; the UI reads it).
+    pub show_mini_toolbar: bool,
+    /// Show note container frames on pages (`OPT.Display.ShowNoteContainers`; the UI reads it).
+    pub show_note_containers: bool,
+    /// Default font of new text (`OPT.Advanced.DefaultFont`).
     pub default_font: String,
     /// Default size in points.
     pub default_size: f32,
+    /// Default colour of new text (`None`: automatic).
+    pub default_color: Option<notecraft_doc::color::Rgba>,
+    /// Show the Paste Options button after a paste (`OPT.Advanced.ShowPasteOptions`; the UI
+    /// reads it).
+    pub show_paste_options: bool,
+    /// Tab after text makes a table (`OPT.Advanced.CreateTableOnTab`, decision D6).
+    pub create_table_on_tab: bool,
     /// Auto-bulleting (catalog `OPT.Advanced.AutoBulleting`).
     pub auto_bullets: bool,
     /// Auto-numbering (`OPT.Advanced.AutoNumbering`).
     pub auto_numbering: bool,
     /// Wiki links `[[Page]]` (`OPT.Advanced.WikiLinks`).
     pub wiki_links: bool,
+    /// Work out `2+3=` when Space or Enter follows (`OPT.Advanced.CalculateMath`).
+    pub calculate_math: bool,
     /// Create new pages with rule lines (View › Rule Lines › Always Create Pages with Rule Lines).
     pub new_pages_rule_lines: Option<RuleLines>,
     /// Custom tags (Customize Tags).
@@ -62,6 +77,17 @@ pub struct Prefs {
     pub default_scope: ScopeKind,
     /// Backups to keep per notebook.
     pub backup_copies: usize,
+    /// Where backups go (`OPT.SaveBackup.BackupFolder`; empty: the app's own folder).
+    pub backup_folder: String,
+    /// Back up automatically this often, in minutes (`OPT.SaveBackup.AutoBackup`; 0: never).
+    pub auto_backup_minutes: u32,
+    /// When the last backup ran (Unix ms; 0: never).
+    pub last_backup_ms: i64,
+    /// Where new notebooks go (`OPT.SaveBackup.DefaultNotebookLocation`; empty: ask).
+    pub default_notebook_location: String,
+    /// The notebook whose Quick Notes section takes quick notes
+    /// (`OPT.SaveBackup.QuickNotesSection`; empty: the first open notebook).
+    pub quick_notes_notebook: String,
     /// Page templates of the user's own (decision D10).
     pub templates: Vec<crate::template_cmds::SavedTemplate>,
     /// Recently used templates, latest first.
@@ -72,15 +98,28 @@ impl Default for Prefs {
     fn default() -> Prefs {
         Prefs {
             author: String::new(),
+            initials: String::new(),
+            show_mini_toolbar: true,
+            show_note_containers: true,
             default_font: notecraft_doc::text::DEFAULT_FONT.to_string(),
             default_size: notecraft_doc::text::DEFAULT_SIZE,
+            default_color: None,
+            show_paste_options: true,
+            create_table_on_tab: true,
             auto_bullets: true,
             auto_numbering: true,
             wiki_links: true,
+            calculate_math: true,
             new_pages_rule_lines: None,
             custom_tags: Vec::new(),
             default_scope: ScopeKind::AllNotebooks,
             backup_copies: 2,
+            backup_folder: String::new(),
+            // The reference backs up once a day by default (unverified).
+            auto_backup_minutes: 24 * 60,
+            last_backup_ms: 0,
+            default_notebook_location: String::new(),
+            quick_notes_notebook: String::new(),
             templates: Vec::new(),
             recent_templates: Vec::new(),
         }
