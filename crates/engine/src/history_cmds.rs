@@ -29,8 +29,63 @@ pub const RECENT_RANGES: &[(&str, &str)] = &[
     ("all", "All Pages Sorted by Date"),
 ];
 
+/// Most pages kept marked unread (oldest marks go first).
+pub const MAX_UNREAD: usize = 10_000;
+
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
+        CommandSpec::new(
+            "history.markUnread",
+            "R.History.Unread.MarkPageAsUnreadContextual",
+            "Mark as Unread",
+            "History/Unread/Mark as Read/Mark as Unread",
+            mark_unread,
+        )
+        .key("Mod+Q")
+        .params(r#"{"page"?: id}"#)
+        .pure()
+        .when(crate::ops::need_page),
+        CommandSpec::new("history.markRead", "R.History.Unread.MarkPageAsReadContextual", "Mark as Read", "History/Unread/Mark as Read", mark_read)
+            .params(r#"{"page"?: id, "section"?: id, "group"?: id} (a page, every page of a section or section group)"#)
+            .pure(),
+        CommandSpec::new(
+            "history.markNotebookRead",
+            "R.History.Unread.MarkAllPagesAsRead",
+            "Mark Notebook as Read",
+            "History/Unread/Mark as Read/Mark Notebook as Read",
+            |s, v| {
+                let nb = match p::id(v, "notebook")? {
+                    Some(id) => s.ws.notebook(id).ok_or_else(|| crate::CmdError::Params("no such notebook".into()))?,
+                    None => s.notebook().ok_or_else(crate::ops::no_page)?,
+                };
+                let ids: Vec<notecraft_doc::Id> = nb.sections().iter().flat_map(|sec| sec.pages.iter().map(|p| p.id)).collect();
+                s.prefs.unread_pages.retain(|p| !ids.contains(p));
+                Ok(Value::Null)
+            },
+        )
+        .params(r#"{"notebook"?: id}"#)
+        .pure(),
+        CommandSpec::new(
+            "history.nextUnread",
+            "R.History.Unread.GoToNextUnreadPage",
+            "Next Unread",
+            "History/Unread/Next Unread",
+            next_unread,
+        )
+        .pure()
+        .when(|s| if s.prefs.unread_pages.is_empty() { Some("No unread pages") } else { None }),
+        CommandSpec::new(
+            "history.showUnread",
+            "R.History.Unread.UnreadNotebookChangesShow",
+            "Show Unread Changes in This Notebook",
+            "History/Unread/Mark as Read/Show Unread Changes in This Notebook",
+            |s, v| {
+                s.prefs.show_unread = p::bool(v, "on").unwrap_or(!s.prefs.show_unread);
+                Ok(json!({"on": s.prefs.show_unread}))
+            },
+        )
+        .params(r#"{"on"?: bool}"#)
+        .pure(),
         CommandSpec::new(
             "history.recentEdits",
             "R.History.Authors.FindByDateMenu",
@@ -43,6 +98,51 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         )
         .pure(),
     ]
+}
+
+fn mark_unread(s: &mut Session, v: &Value) -> CmdResult {
+    let page = match p::id(v, "page")? {
+        Some(id) => id,
+        None => s.sel.page.ok_or_else(crate::ops::no_page)?,
+    };
+    if s.ws.page(page).is_none() {
+        return Err(CmdError::Params("no such page".into()));
+    }
+    if !s.prefs.unread_pages.contains(&page) {
+        s.prefs.unread_pages.push(page);
+        let extra = s.prefs.unread_pages.len().saturating_sub(MAX_UNREAD);
+        s.prefs.unread_pages.drain(..extra);
+    }
+    Ok(Value::Null)
+}
+
+fn mark_read(s: &mut Session, v: &Value) -> CmdResult {
+    let pages: Vec<notecraft_doc::Id> = if let Some(sid) = p::id(v, "section")? {
+        s.ws.section(sid).ok_or_else(|| CmdError::Params("no such section".into()))?.pages.iter().map(|p| p.id).collect()
+    } else if let Some(gid) = p::id(v, "group")? {
+        let nb = s.ws.notebooks.iter().find(|nb| nb.find(gid).is_some()).ok_or_else(|| CmdError::Params("no such section group".into()))?;
+        nb.sections().iter().filter(|sec| in_group(nb, sec.id, Some(gid))).flat_map(|sec| sec.pages.iter().map(|p| p.id)).collect()
+    } else {
+        vec![match p::id(v, "page")? {
+            Some(id) => id,
+            None => s.sel.page.ok_or_else(crate::ops::no_page)?,
+        }]
+    };
+    s.prefs.unread_pages.retain(|p| !pages.contains(p));
+    Ok(Value::Null)
+}
+
+/// The next unread page after the current one, in notebook order (then from the top).
+fn next_unread(s: &mut Session, _: &Value) -> CmdResult {
+    let order: Vec<notecraft_doc::Id> =
+        s.ws.notebooks.iter().flat_map(|nb| nb.sections().into_iter().flat_map(|sec| sec.pages.iter().map(|p| p.id).collect::<Vec<_>>())).collect();
+    let here = s.sel.page.and_then(|cur| order.iter().position(|p| *p == cur)).map_or(0, |i| i + 1);
+    let next = order.iter().skip(here).chain(order.iter().take(here)).find(|p| s.prefs.unread_pages.contains(p)).copied();
+    // Marks of pages that no longer exist are dropped on the way.
+    s.prefs.unread_pages.retain(|p| order.contains(p));
+    let next = next.ok_or_else(|| CmdError::Disabled("No unread pages".into()))?;
+    s.goto_page(next)?;
+    Ok(json!({"page": next.to_string()}))
 }
 
 /// The earliest edit time `range` includes, in ms since the epoch (`None` = every page).
@@ -167,6 +267,38 @@ mod tests {
         assert!(matches!(s.run("history.recentEdits", json!({"range": "decade"})), Err(CmdError::Params(_))));
         assert!(matches!(s.run("history.recentEdits", json!({"scope": "galaxy"})), Err(CmdError::Params(_))));
         assert_eq!(run(&mut s, "history.recentEdits", json!({"range": "all", "limit": 1}))["pages"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn pages_marked_unread_until_opened_and_next_unread_finds_them() {
+        // parity: R.History.Unread.MarkPageAsUnreadContextual, R.History.Unread.MarkPageAsReadContextual, R.History.Unread.MarkAllPagesAsRead, R.History.Unread.GoToNextUnreadPage, R.History.Unread.UnreadNotebookChangesShow, BEH.History.Unread
+        let mut s = sample();
+        let pages: Vec<notecraft_doc::Id> = s.notebook().unwrap().sections().iter().flat_map(|x| x.pages.iter().map(|p| p.id)).collect();
+        let here = s.sel.page.unwrap();
+        assert!(s.run("history.nextUnread", json!({})).is_err(), "nothing unread");
+        run(&mut s, "history.markUnread", json!({"page": pages[3].to_string()}));
+        run(&mut s, "history.markUnread", json!({"page": pages[1].to_string()}));
+        assert_eq!(crate::commands::by_shortcut("Mod+Q").map(|c| c.id), Some("history.markUnread"));
+        // Next Unread goes forward from here, opening reads the page.
+        assert_eq!(run(&mut s, "history.nextUnread", json!({}))["page"], pages[1].to_string());
+        assert_eq!(s.prefs.unread_pages, vec![pages[3]]);
+        run(&mut s, "history.nextUnread", json!({}));
+        assert!(s.prefs.unread_pages.is_empty());
+        // A whole section, then the notebook.
+        let sec = s.notebook().unwrap().sections()[1].clone();
+        for p in &sec.pages {
+            run(&mut s, "history.markUnread", json!({"page": p.id.to_string()}));
+        }
+        run(&mut s, "history.markRead", json!({"section": sec.id.to_string()}));
+        assert!(s.prefs.unread_pages.is_empty());
+        run(&mut s, "history.markUnread", json!({"page": here.to_string()}));
+        run(&mut s, "history.markNotebookRead", json!({}));
+        assert!(s.prefs.unread_pages.is_empty());
+        assert_eq!(run(&mut s, "history.showUnread", json!({}))["on"], false);
+        // Reading is not an edit: no undo step.
+        run(&mut s, "history.markUnread", json!({}));
+        assert!(s.undo_labels().is_empty());
+        assert!(s.run("history.markUnread", json!({"page": notecraft_doc::Id::NIL.to_string()})).is_err());
     }
 
     #[test]

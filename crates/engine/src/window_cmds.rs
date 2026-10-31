@@ -16,6 +16,18 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
         CommandSpec::new("window.quickNote", "R.View.Window.NewSideNote", "New Quick Note", "View/Window/New Quick Note", quick_note)
             .key("Mod+Shift+M"),
+        CommandSpec::new("window.alwaysOnTop", "R.View.Window.WindowKeepOnTop", "Always on Top", "View/Window/Always on Top", |s, v| {
+            s.view.always_on_top = crate::p::bool(v, "on").unwrap_or(!s.view.always_on_top);
+            Ok(json!({"on": s.view.always_on_top}))
+        })
+        .params(r#"{"on"?: bool} (default: switch)"#)
+        .pure(),
+        CommandSpec::new("view.switchBackground", "R.View.Views.SwitchBackground", "Switch Background", "View/Views/Switch Background", |s, v| {
+            s.view.light_page = crate::p::bool(v, "on").unwrap_or(!s.view.light_page);
+            Ok(json!({"lightPage": s.view.light_page}))
+        })
+        .params(r#"{"on"?: bool} (a light page in a dark theme; default: switch)"#)
+        .pure(),
         // KB.General.ContextMenu: the UI opens the menu of what is selected (or under the caret).
         CommandSpec::new(
             "ui.contextMenu",
@@ -84,6 +96,16 @@ mod tests {
         run(&mut s, "section.delete", json!({"section": qid.to_string()}));
         run(&mut s, "window.quickNote", json!({}));
         assert_eq!((s.section().unwrap().name.as_str(), s.section().unwrap().pages.len()), ("Quick Notes", 1));
+    }
+
+    #[test]
+    fn always_on_top_and_switch_background_switch() {
+        // parity: R.View.Window.WindowKeepOnTop, R.View.Views.SwitchBackground
+        let mut s = sample();
+        assert_eq!(run(&mut s, "window.alwaysOnTop", json!({}))["on"], true);
+        assert_eq!(run(&mut s, "window.alwaysOnTop", json!({}))["on"], false);
+        assert_eq!(run(&mut s, "view.switchBackground", json!({}))["lightPage"], true);
+        assert_eq!(run(&mut s, "view.switchBackground", json!({"on": false}))["lightPage"], false);
     }
 
     #[test]
