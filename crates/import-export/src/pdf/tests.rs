@@ -65,6 +65,18 @@ fn a_page_becomes_a_letter_sheet_with_its_text() {
 #[test]
 fn every_object_kind_draws_and_hostile_values_are_clamped() {
     let Some(f) = fonts() else { return };
+    let p = all_objects();
+    let (bytes, report) = write(&[&p], &f, &opts()).unwrap();
+    assert_eq!(report.pictures_lost, 1, "the junk picture is a grey box");
+    assert_eq!(report.files, 1, "the attachment rides along");
+    let sheets = render(&bytes, &PdfLimits::PRINTOUT).unwrap();
+    assert_eq!(sheets.len(), 1);
+    let s = String::from_utf8_lossy(&bytes);
+    assert!(s.contains("https://example.org"), "the link annotation");
+}
+
+/// A page with every kind of object, some with hostile values.
+fn all_objects() -> Page {
     let mut g = IdGen::new(2);
     let mut p = page(&mut g, "All");
     p.setup.rule_lines = notecraft_doc::RuleLines::College;
@@ -118,13 +130,40 @@ fn every_object_kind_draws_and_hostile_values_are_clamped() {
         3.0,
         InkTool::Highlighter,
     )));
-    let (bytes, report) = write(&[&p], &f, &opts()).unwrap();
-    assert_eq!(report.pictures_lost, 1, "the junk picture is a grey box");
-    assert_eq!(report.files, 1, "the attachment rides along");
-    let sheets = render(&bytes, &PdfLimits::PRINTOUT).unwrap();
-    assert_eq!(sheets.len(), 1);
-    let s = String::from_utf8_lossy(&bytes);
-    assert!(s.contains("https://example.org"), "the link annotation");
+    p
+}
+
+#[test]
+fn a_page_becomes_an_svg_picture_with_every_object() {
+    // parity: FMT.Export.Images
+    let Some(f) = fonts() else { return };
+    let mut p = all_objects();
+    p.title = Paragraph::with_text(p.title.id, "A & <B>");
+    let o = PdfOptions { title: "A & <B>".into(), fit_content: true, ..opts() };
+    let (svg, report) = svg::write(&p, &f, &o).unwrap();
+    assert_eq!((report.pages, report.sheets), (1, 1));
+    assert!(svg.starts_with("<?xml") && svg.trim_end().ends_with("</svg>"));
+    assert!(svg.contains("<title>A &amp; &lt;B&gt;</title>"), "escaped title");
+    assert!(!svg.contains("NaN") && !svg.contains("inf"), "hostile numbers never reach the file");
+    assert!(svg.contains("fill=\"#fff8e0\""), "the page colour");
+    assert!(svg.contains("stroke=\"#e69a9a\""), "ruled paper's margin line");
+    assert!(svg.contains("<defs>") && svg.contains("<use xlink:href=\"#g"), "glyph outlines, used");
+    assert_eq!(svg.matches("data:image/png;base64,").count(), 1, "the readable picture embedded once, the junk one left out");
+    assert!(svg.contains("<a xlink:href=\"https://example.org\">"), "the link");
+    assert!(svg.contains("stroke-linecap=\"round\"") && svg.contains("stroke-opacity="), "ink, see-through highlighter");
+    // Every element opened is closed: tags balance.
+    for tag in ["svg", "g", "defs", "a"] {
+        assert_eq!(
+            svg.matches(&format!("<{tag} ")).count() + svg.matches(&format!("<{tag}>")).count(),
+            svg.matches(&format!("</{tag}>")).count(),
+            "<{tag}>"
+        );
+    }
+    // An empty page is still a picture.
+    let mut g = IdGen::new(9);
+    let (svg, _) = svg::write(&page(&mut g, ""), &f, &o).unwrap();
+    assert!(svg.contains("viewBox=\"0 0 "));
+    assert!(svg::write(&p, &notecraft_fonts::PageFonts::default(), &o).unwrap_err().contains("no font"));
 }
 
 #[test]

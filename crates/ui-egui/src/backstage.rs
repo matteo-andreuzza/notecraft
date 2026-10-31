@@ -350,6 +350,7 @@ fn export_formats(scope: &str) -> &'static [ExportFormat] {
             ("Single File Web Page (*.mht)", "mht", Some("file.exportPage")),
             ("Web Page (*.html)", "html", Some("file.exportPage")),
             ("PNG Picture (*.png)", "png", Some("file.exportPage")),
+            ("SVG Picture (*.svg)", "svg", Some("file.exportPage")),
             ("Markdown (*.md)", "md", Some("file.exportPage")),
         ],
     }

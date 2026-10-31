@@ -66,6 +66,19 @@ impl Face {
         found
     }
 
+    /// Font units per em.
+    pub(super) fn upem(&self) -> f32 {
+        self.upem
+    }
+
+    /// Draw glyph `gid`'s outline, in font units with y up, into `pen`; false when the face
+    /// has no such glyph or it fails to draw.
+    pub(super) fn draw_outline(&self, gid: u32, pen: &mut impl skrifa::outline::OutlinePen) -> bool {
+        let Ok(fr) = skrifa::FontRef::new(&self.data) else { return false };
+        let Some(g) = fr.outline_glyphs().get(skrifa::GlyphId::new(gid)) else { return false };
+        g.draw(skrifa::outline::DrawSettings::unhinted(Size::unscaled(), LocationRef::default()), pen).is_ok()
+    }
+
     /// Line height per point of size.
     fn line(&self) -> f32 {
         self.ascent + self.descent + self.gap

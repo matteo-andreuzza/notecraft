@@ -20,6 +20,7 @@
 //! same); ink pressure becomes the stroke's mean width. Nothing here panics: sizes are
 //! clamped, pictures that can't be read become grey boxes and are counted.
 
+pub mod svg;
 mod text;
 
 use std::collections::{HashMap, HashSet};
@@ -553,6 +554,8 @@ fn rect_path(r: R) -> Option<Path> {
 #[derive(Default)]
 struct Images {
     list: Vec<krilla::image::Image>,
+    /// Each picture's file, by the same index (the SVG embeds it as it is).
+    src: Vec<std::sync::Arc<[u8]>>,
     by_blob: HashMap<notecraft_doc::Id, Option<usize>>,
 }
 
@@ -577,6 +580,7 @@ impl Images {
         });
         let idx = img.map(|i| {
             self.list.push(i);
+            self.src.push(blob.bytes.clone());
             self.list.len() - 1
         });
         self.by_blob.insert(blob.id, idx);
@@ -856,16 +860,24 @@ pub fn write(pages: &[&Page], fonts: &notecraft_fonts::PageFonts, opts: &PdfOpti
     Ok((bytes, report))
 }
 
-/// Rule lines or grid across the sheet, aligned with the page's.
-fn rule_lines(s: &mut Surface, page: &Page, pw: f32, ph: f32, to_sheet: &dyn Fn(f32, f32) -> (f32, f32), k: f32) {
+/// Rule lines or grid across a `pw` × `ph` sheet, aligned with the page's: the line segments
+/// (x0, y0, x1, y1), their colour, and the margin line of ruled paper (x, colour). `None`
+/// without rule lines.
+#[allow(clippy::type_complexity)]
+fn rule_segments(
+    page: &Page,
+    pw: f32,
+    ph: f32,
+    to_sheet: &dyn Fn(f32, f32) -> (f32, f32),
+    k: f32,
+) -> Option<(Vec<[f32; 4]>, Rgba, Option<(f32, Rgba)>)> {
     let kind = page.setup.rule_lines;
     let step = kind.spacing() * k;
-    if step < 2.0 {
-        return;
+    if step < 2.0 || !step.is_finite() {
+        return None;
     }
     let color = page.setup.rule_color.unwrap_or(RULE);
-    let stroke = Stroke { paint: paint(color), width: 0.75, ..Default::default() };
-    let mut pb = PathBuilder::new();
+    let mut lines = Vec::new();
     // Ruled lines start below the title area (86 pt); grids cover the page.
     let mut y = if kind.is_grid() { to_sheet(0.0, 0.0).1 } else { to_sheet(0.0, 86.0).1 };
     if kind.is_grid() && y > 0.0 {
@@ -874,8 +886,7 @@ fn rule_lines(s: &mut Surface, page: &Page, pw: f32, ph: f32, to_sheet: &dyn Fn(
     }
     while y < ph {
         if y >= 0.0 {
-            pb.move_to(0.0, y);
-            pb.line_to(pw, y);
+            lines.push([0.0, y, pw, y]);
         }
         y += step;
     }
@@ -883,23 +894,33 @@ fn rule_lines(s: &mut Surface, page: &Page, pw: f32, ph: f32, to_sheet: &dyn Fn(
         let x0 = to_sheet(0.0, 0.0).0;
         let mut x = x0 - (x0 / step).floor() * step;
         while x < pw {
-            pb.move_to(x, 0.0);
-            pb.line_to(x, ph);
+            lines.push([x, 0.0, x, ph]);
             x += step;
         }
     }
+    let margin = (!kind.is_grid()).then(|| (to_sheet(24.0, 0.0).0, MARGIN_LINE));
+    Some((lines, color, margin))
+}
+
+/// Rule lines or grid across the sheet, aligned with the page's.
+fn rule_lines(s: &mut Surface, page: &Page, pw: f32, ph: f32, to_sheet: &dyn Fn(f32, f32) -> (f32, f32), k: f32) {
+    let Some((lines, color, margin)) = rule_segments(page, pw, ph, to_sheet, k) else { return };
+    let mut pb = PathBuilder::new();
+    for [x0, y0, x1, y1] in lines {
+        pb.move_to(x0, y0);
+        pb.line_to(x1, y1);
+    }
     if let Some(p) = pb.finish() {
         s.set_fill(None);
-        s.set_stroke(Some(stroke));
+        s.set_stroke(Some(Stroke { paint: paint(color), width: 0.75, ..Default::default() }));
         s.draw_path(&p);
     }
-    if !kind.is_grid() {
-        let mx = to_sheet(24.0, 0.0).0;
+    if let Some((mx, mc)) = margin {
         let mut pb = PathBuilder::new();
         pb.move_to(mx, 0.0);
         pb.line_to(mx, ph);
         if let Some(p) = pb.finish() {
-            s.set_stroke(Some(Stroke { paint: paint(MARGIN_LINE), width: 0.75, ..Default::default() }));
+            s.set_stroke(Some(Stroke { paint: paint(mc), width: 0.75, ..Default::default() }));
             s.draw_path(&p);
         }
     }
