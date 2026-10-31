@@ -157,7 +157,7 @@ fn search(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: &Tokens) {
         egui::TextEdit::singleline(&mut text)
             .id(id)
             .frame(Frame::NONE)
-            .hint_text(egui::RichText::new("Search").color(t.text_dim))
+            .hint_text(egui::RichText::new(crate::i18n::tr("Search")).color(t.text_dim))
             .text_color(t.text)
             .font(TypeRung::Body.font(&ctx, Weight::Regular))
             .vertical_align(Align::Center),
@@ -247,7 +247,7 @@ pub fn tab_row(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 let selected = current_tab(app).map(|x| x.name).unwrap_or("Home");
                 for (x, is_ctx) in TABS.iter().map(|x| (x, false)).chain(contextual.iter().map(|x| (*x, true))) {
                     let sel = selected == x.name && !app.session.view.ribbon_collapsed;
-                    let r = tab(ui, x.name, sel, is_ctx, &t);
+                    let r = tab(ui, &crate::i18n::tr(x.name), sel, is_ctx, &t);
                     if r.clicked() {
                         app.session.view.ribbon_collapsed = false;
                         app.ui.tab = x.name.to_string();
@@ -296,13 +296,13 @@ fn tab(ui: &mut Ui, name: &str, selected: bool, contextual: bool, t: &Tokens) ->
 /// Share: accent-filled, disabled (sharing needs OneDrive; catalog `UI.Window.Share`).
 fn share(ui: &mut Ui, t: &Tokens) {
     let font = crate::theme::font(ui.ctx(), TypeRung::Body.size(), Weight::Medium);
-    let w = ui.painter().layout_no_wrap("Share".into(), font.clone(), t.on_accent).size().x + 36.0;
+    let w = ui.painter().layout_no_wrap(crate::i18n::tr("Share"), font.clone(), t.on_accent).size().x + 36.0;
     let (r, resp) = ui.allocate_exact_size(vec2(w, 26.0), Sense::hover());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, false, "Share"));
     let fill = t.accent.gamma_multiply(0.55);
     ui.painter().rect_filled(r, radius::CONTROL, fill);
     icons::share(ui.painter(), Rect::from_center_size(pos2(r.min.x + 14.0, r.center().y), vec2(14.0, 14.0)), t.on_accent);
-    ui.painter().text(pos2(r.min.x + 25.0, r.center().y), Align2::LEFT_CENTER, "Share", font, t.on_accent);
+    ui.painter().text(pos2(r.min.x + 25.0, r.center().y), Align2::LEFT_CENTER, crate::i18n::tr("Share"), font, t.on_accent);
     resp.on_hover_text("Sharing needs OneDrive, a Microsoft service; not available in NoteCraft");
 }
 
@@ -333,7 +333,7 @@ pub fn card_header(ui: &mut Ui, title: &str, t: &Tokens) -> bool {
     let ctx = ui.ctx().clone();
     let mut closed = false;
     ui.horizontal(|ui| {
-        ui.label(egui::RichText::new(title).font(TypeRung::Heading.font(&ctx, Weight::Semibold)).color(t.text));
+        ui.label(egui::RichText::new(crate::i18n::tr(title)).font(TypeRung::Heading.font(&ctx, Weight::Semibold)).color(t.text));
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             let (resp, rect, color) = icon_button(ui, 24.0, "Close", true, t);
             icons::cross(ui.painter(), rect.shrink(3.0), color);

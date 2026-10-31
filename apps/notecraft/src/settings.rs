@@ -131,6 +131,8 @@ pub struct Appearance {
     pub ribbon_collapsed: bool,
     /// The Quick Access Toolbar's buttons (catalog ids; empty: the default).
     pub qat: Vec<String>,
+    /// The display language (`None`: the system locale's).
+    pub lang: Option<notecraft_ui_egui::i18n::Lang>,
 }
 
 /// Open notebooks, as OneNote reopens them.
@@ -284,6 +286,7 @@ pub fn capture(app: &NoteApp, previous: &DesktopSettings) -> DesktopSettings {
             ribbon: s.view.ribbon_mode,
             ribbon_collapsed: s.view.ribbon_collapsed,
             qat: app.ui.qat.clone(),
+            lang: Some(app.ui.lang),
         },
         editing: s.prefs.clone(),
         notebooks: Notebooks { open, last_page, recent: app.ui.recent_notebooks.clone() },
@@ -305,6 +308,11 @@ pub fn apply(app: &mut NoteApp, s: &DesktopSettings) {
     app.session.view.ribbon_mode = s.appearance.ribbon;
     app.session.view.ribbon_collapsed = s.appearance.ribbon_collapsed;
     // A settings file is hostile input: unknown or repeated buttons are dropped.
+    // OPT.Language.DisplayLanguage: the remembered choice, else the system's locale.
+    app.ui.lang = s.appearance.lang.unwrap_or_else(|| {
+        let locale = std::env::var("LC_ALL").or_else(|_| std::env::var("LC_MESSAGES")).or_else(|_| std::env::var("LANG")).unwrap_or_default();
+        notecraft_ui_egui::i18n::Lang::from_locale(&locale)
+    });
     if !s.appearance.qat.is_empty() {
         let mut qat = s.appearance.qat.clone();
         notecraft_ui_egui::qat::normalize(&mut qat);

@@ -52,7 +52,13 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 } else if resp.hovered() {
                     ui.painter().rect_filled(pill, crate::theme::radius::CONTROL, t.nav_hover);
                 }
-                ui.painter().text(r.left_center() + vec2(26.0, 0.0), egui::Align2::LEFT_CENTER, label, egui::FontId::proportional(14.0), t.text);
+                ui.painter().text(
+                    r.left_center() + vec2(26.0, 0.0),
+                    egui::Align2::LEFT_CENTER,
+                    crate::i18n::tr(label),
+                    egui::FontId::proportional(14.0),
+                    t.text,
+                );
                 if resp.clicked() {
                     app.ui.backstage = Some(p);
                 }

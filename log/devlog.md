@@ -979,3 +979,17 @@ were certain landed, behaviour unchanged (every test green after each commit).
   `quick-note`. unverified: the reference opens a separate window.
 - Catalog: UI.Window.QuickNote, R.View.Window.NewSideNote, KB.General.QuickNote,
   BEH.Notebooks.QuickNotes wired.
+
+## 2026-10-31 — M4: Italian display language
+
+- `ui-egui/src/i18n.rs`: `Lang { En, It }`, a per-thread current language set every frame
+  from `UiState.lang`, and `tr(label)`, which falls back to English. `i18n_it.rs` holds about
+  400 Italian labels, all NoteCraft's own translations of functional labels, plus prefixes
+  for numbered labels ("Section Color 12").
+- Translated: ribbon and menu labels (`ribbon::label`), tab names, ribbon group names,
+  backstage navigation, pane headers (`card_header`), the Options categories, the page
+  list and navigation buttons, the search hints and Share.
+- Options › Language switches at once. The desktop app remembers the choice and on first
+  run takes it from LC_ALL / LC_MESSAGES / LANG.
+- Catalog: OPT.Language.DisplayLanguage wired. Left in English: dialog bodies, notices and
+  error messages.

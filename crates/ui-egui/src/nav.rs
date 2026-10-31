@@ -148,7 +148,7 @@ pub fn notebook_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 ui.painter().text(
                     pos2(rect.min.x + 44.0, rect.center().y),
                     Align2::LEFT_CENTER,
-                    "Quick notes",
+                    crate::i18n::tr("Quick notes"),
                     TypeRung::Body.font(&ctx, Weight::Regular),
                     color,
                 );
@@ -224,7 +224,7 @@ fn new_section_row(app: &mut NoteApp, ui: &mut Ui, nb: Id, t: Tokens) {
     ui.painter().text(
         pos2(rect.min.x + 44.0, rect.center().y),
         Align2::LEFT_CENTER,
-        "New section",
+        crate::i18n::tr("New section"),
         TypeRung::Body.font(&ctx, Weight::Regular),
         t.accent_text,
     );
@@ -422,7 +422,7 @@ fn search_box(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: Tokens) {
     let id = egui::Id::new("search_box");
     crate::chrome::search_frame(ui, r, &t, id, "Search notebooks");
     icons::search(ui.painter(), Rect::from_center_size(pos2(r.min.x + 14.0, r.center().y), vec2(14.0, 14.0)), t.icon);
-    let hint = "Search notebooks";
+    let hint = crate::i18n::tr("Search notebooks");
     let mut q = app.ui.search.clone();
     let edit = Rect::from_min_max(pos2(r.min.x + 26.0, r.min.y + 1.0), pos2(r.max.x - 24.0, r.max.y - 1.0));
     let resp = ui.put(
@@ -734,7 +734,7 @@ fn page_header(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let ctx = ui.ctx().clone();
     let (row, _) = ui.allocate_exact_size(vec2(ui.available_width(), size::BUTTON + 4.0), Sense::hover());
     let font = TypeRung::Body.font(&ctx, Weight::Regular);
-    let tw = ui.painter().layout_no_wrap("Add page".into(), font.clone(), t.accent_text).size().x;
+    let tw = ui.painter().layout_no_wrap(crate::i18n::tr("Add page"), font.clone(), t.accent_text).size().x;
     let add = Rect::from_min_size(pos2(row.min.x + 6.0, row.min.y + 2.0), vec2(tw + 36.0, size::BUTTON));
     let resp = ui.interact(add, ui.id().with("add_page"), Sense::click());
     let on = app.disabled_reason("page.new").is_none();
@@ -743,7 +743,7 @@ fn page_header(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     ui.painter().rect(add, radius::CONTROL, fill, Stroke::new(1.0, t.card_border), egui::StrokeKind::Inside);
     let color = if on { t.accent_text } else { t.text_disabled };
     icons::add_page(ui.painter(), Rect::from_center_size(pos2(add.min.x + 15.0, add.center().y), vec2(size::ICON, size::ICON)), color);
-    ui.painter().text(pos2(add.min.x + 28.0, add.center().y), Align2::LEFT_CENTER, "Add page", font, color);
+    ui.painter().text(pos2(add.min.x + 28.0, add.center().y), Align2::LEFT_CENTER, crate::i18n::tr("Add page"), font, color);
     if resp.on_hover_text("Add a page at the end of the section (Ctrl+N)").clicked() && on {
         app.run(&ctx, "page.new", json!({}));
     }

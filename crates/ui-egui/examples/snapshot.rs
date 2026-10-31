@@ -221,6 +221,7 @@ fn main() {
         let _ = a.session.run("text.insert", json!({"text": "the cta sat on teh mat and slpet"}));
         let _ = a.session.run("review.spelling", json!({}));
     });
+    shot("italian", &out, 1.0, |a| a.ui.lang = notecraft_ui_egui::i18n::Lang::It);
     shot("options-advanced", &out, 1.0, |a| {
         a.ui.backstage = Some(Backstage::Options);
         a.ui.options_page = notecraft_ui_egui::options::OptionsPage::Advanced;

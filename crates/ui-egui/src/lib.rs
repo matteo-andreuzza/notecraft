@@ -17,6 +17,8 @@ pub mod context_menu;
 pub mod dialogs;
 pub mod fonts;
 pub mod help_ui;
+pub mod i18n;
+mod i18n_it;
 pub mod icons;
 pub mod icons_set;
 pub mod ink;
@@ -237,6 +239,9 @@ pub struct UiState {
     /// File › Options: the settings being edited, applied with OK (`None`: not open).
     #[serde(default)]
     pub options_draft: Option<notecraft_engine::Prefs>,
+    /// The display language (`OPT.Language.DisplayLanguage`; the desktop app remembers it).
+    #[serde(default)]
+    pub lang: i18n::Lang,
     /// The Quick Access Toolbar's buttons, as catalog ids (`qat`; the desktop app remembers it).
     #[serde(default)]
     pub qat: Vec<String>,
@@ -283,6 +288,7 @@ impl Default for UiState {
             options_page: options::OptionsPage::General,
             options_draft: None,
             password: password_ui::PasswordInput::default(),
+            lang: i18n::Lang::En,
             qat: qat::DEFAULT.iter().map(|s| s.to_string()).collect(),
             last_input_ms: 0,
         }
@@ -511,6 +517,7 @@ impl NoteApp {
     /// Draw the whole window.
     pub fn ui(&mut self, ui: &mut Ui) {
         let ctx = ui.ctx().clone();
+        i18n::set(self.ui.lang);
         if !self.fonts_installed {
             fonts::install(&ctx);
             self.fonts_installed = true;

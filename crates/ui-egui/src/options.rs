@@ -104,7 +104,7 @@ pub(crate) fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
     let mut close = None;
     let modal = egui::Modal::new(egui::Id::new("options")).show(ctx, |ui| {
         ui.set_width(760.0);
-        ui.label(RichText::new("NoteCraft Options").size(16.0).strong());
+        ui.label(RichText::new(crate::i18n::tr("NoteCraft Options")).size(16.0).strong());
         ui.add_space(8.0);
         // Fixed height: a separator or layout that takes the available height would make the
         // centred modal grow (and move) every frame.
@@ -114,7 +114,8 @@ pub(crate) fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
             ui.set_width(170.0);
             for page in OptionsPage::ALL {
                 // Stable ids: the modal's first (sizing) frame lays out differently.
-                let picked = ui.push_id(page.label(), |ui| ui.selectable_label(app.ui.options_page == page, page.label()).clicked()).inner;
+                let picked =
+                    ui.push_id(page.label(), |ui| ui.selectable_label(app.ui.options_page == page, crate::i18n::tr(page.label())).clicked()).inner;
                 if picked {
                     app.ui.options_page = page;
                 }
@@ -349,8 +350,16 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             not_yet(ui, t, "Audio and video recording isn't available in NoteCraft yet.");
         }
         OptionsPage::Language => {
-            section(ui, "Office display language");
-            not_yet(ui, t, "NoteCraft is in English for now; Italian is planned next.");
+            // OPT.Language.DisplayLanguage: applies at once (unverified: the reference asks
+            // for a restart).
+            section(ui, "Display language");
+            for l in crate::i18n::Lang::ALL {
+                if ui.radio(app.ui.lang == l, l.name()).clicked() {
+                    app.ui.lang = l;
+                    crate::i18n::set(l);
+                }
+            }
+            not_yet(ui, t, "The ribbon, menus and panes are translated; some dialog text is still in English.");
         }
         OptionsPage::CustomizeRibbon => {
             section(ui, "Customize the Ribbon");

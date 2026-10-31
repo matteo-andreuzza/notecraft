@@ -41,10 +41,12 @@ pub(crate) fn label(id: &str) -> String {
     let l = row(id).map(|r| r.label.clone()).unwrap_or_else(|| id.to_string());
     let l = l.trim_start_matches("Tag: ").trim_start_matches("Style: ").trim_start_matches("Recent Edits: ");
     // "Navigation Panes (show/hide)": the parenthetical explains the row, it isn't the label.
-    match l.find(" (") {
-        Some(i) if l.ends_with(')') => l[..i].to_string(),
-        _ => l.to_string(),
-    }
+    let l = match l.find(" (") {
+        Some(i) if l.ends_with(')') => &l[..i],
+        _ => l,
+    };
+    // OPT.Language.DisplayLanguage: in the chosen language when a translation is known.
+    crate::i18n::tr(l)
 }
 
 /// The params a control passes to its command (gallery items carry their value).
@@ -239,7 +241,13 @@ fn group(app: &mut NoteApp, ui: &mut Ui, g: &Group, t: Tokens) {
         });
         let w = ui.min_rect().width().max(40.0);
         let (lr, _) = ui.allocate_exact_size(vec2(w, LABEL_H), Sense::hover());
-        ui.painter().text(lr.center(), egui::Align2::CENTER_CENTER, g.name, egui::FontId::proportional(TypeRung::Caption.size()), t.text_dim);
+        ui.painter().text(
+            lr.center(),
+            egui::Align2::CENTER_CENTER,
+            crate::i18n::tr(g.name),
+            egui::FontId::proportional(TypeRung::Caption.size()),
+            t.text_dim,
+        );
     });
     let end = ui.cursor().min;
     let x = end.x + 1.0;
