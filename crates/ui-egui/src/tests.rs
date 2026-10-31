@@ -960,6 +960,56 @@ fn a_long_page_has_scroll_bars() {
 }
 
 #[test]
+fn shift_f10_opens_the_context_menu_of_the_selection() {
+    // parity: KB.General.ContextMenu
+    let mut a = app();
+    let o = a.session.page().unwrap().objects.iter().find_map(|o| o.as_outline().map(|x| x.id)).unwrap();
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 2})).unwrap();
+    let mut h = harness(a);
+    h.state_mut().canvas.focused = true;
+    h.run_steps(3);
+    assert!(h.query_by_label("Link to Page").is_none());
+    h.key_press_modifiers(egui::Modifiers::SHIFT, egui::Key::F10);
+    h.run_steps(3);
+    assert!(h.query_by_label("Link to Page").is_some(), "the text menu at the caret");
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    // A selected container: its own menu.
+    h.state_mut().session.run("object.select", json!({"ids": [o.to_string()]})).unwrap();
+    h.state_mut().session.run("ui.contextMenu", json!({})).unwrap();
+    h.run_steps(3);
+    assert!(h.query_by_label_contains("Order").is_some(), "the container menu");
+}
+
+#[test]
+fn down_in_the_search_box_previews_results() {
+    // parity: KB.Search.PreviewNext, KB.Search.ChangeScope
+    let mut a = app();
+    a.session.run("search.scopeAll", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Search notebooks").click();
+    h.run();
+    h.get_by_label("Search notebooks").type_text("the");
+    h.run();
+    let before = h.state().session.sel.page;
+    h.key_press(egui::Key::ArrowDown);
+    h.run();
+    h.key_press(egui::Key::ArrowDown);
+    h.run();
+    let st = h.state();
+    assert_eq!(st.session.view.search_preview.as_ref().map(|x| x.1), Some(1), "two results down");
+    assert!(st.ui.search_open, "the results stay open");
+    assert!(st.session.sel.page.is_some() && st.session.sel.page != before || before.is_some());
+    // Tab moves to the scope button; Space opens its choices.
+    h.key_press(egui::Key::Tab);
+    h.run();
+    h.key_press(egui::Key::Space);
+    h.run();
+    assert!(h.query_by_label("This Section Group").is_some(), "the scope choices");
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();

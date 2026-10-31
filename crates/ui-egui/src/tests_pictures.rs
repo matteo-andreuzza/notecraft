@@ -387,6 +387,7 @@ impl crate::Host for PickHost {
 
 #[test]
 fn ctrl_alt_shift_o_opens_a_section_file_from_the_picker() {
+    // parity: KB.Notebooks.OpenSection
     use notecraft_onestore::writer::section::{FixturePage, write};
     let dir = std::env::temp_dir().join(format!("notecraft-ui-open-section-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();

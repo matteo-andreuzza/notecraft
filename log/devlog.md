@@ -1044,3 +1044,15 @@ were certain landed, behaviour unchanged (every test green after each commit).
   second, with partial strokes. A bar over the page has Play/Pause, Rewind, the progress
   and Close. Real drawing times aren't stored, so the pace is steady (unverified against
   the reference).
+## 2026-10-31 — M3/P1: keyboard rows (context menu, search preview and scope)
+
+- `ui.contextMenu` (Shift+F10, KB.General.ContextMenu): sets `ViewState.menu_request`;
+  `context_menu::show` opens the selection's menu (selected object, lasso, else the caret's
+  paragraph) as the same popup a right click opens, placed at the selection
+  (`CanvasState.keyboard_menu_at`).
+- `search.previewNext` (KB.Search.PreviewNext): Down/Up in the search box open the next/previous
+  result (words highlighted), the dropdown stays open and marks it (`ViewState.search_preview`).
+  `search.scope` (KB.Search.ChangeScope) sets or cycles the scope; Tab reaches the scope button
+  and Space opens it.
+- KB.Table.RowAboveEnter and KB.Notebooks.OpenSection were implemented and tested already;
+  their tests now carry the row ids. 5 rows wired.

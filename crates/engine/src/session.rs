@@ -235,6 +235,12 @@ pub struct ViewState {
     pub notebook_pane_collapsed: bool,
     /// Scope of the search box.
     pub scope: ScopeKind,
+    /// The search result being previewed with Down/Up while searching: the query and the index.
+    #[serde(default)]
+    pub search_preview: Option<(String, usize)>,
+    /// The UI should open the context menu of the selection (Shift+F10); it clears the flag.
+    #[serde(default)]
+    pub menu_request: bool,
     /// Find on page.
     pub find: FindState,
     /// Page list width in points (Ctrl+Shift+[ / ]).
@@ -287,6 +293,8 @@ impl Default for ViewState {
             ribbon_mode: RibbonMode::Simplified,
             notebook_pane_collapsed: false,
             scope: ScopeKind::AllNotebooks,
+            search_preview: None,
+            menu_request: false,
             find: FindState::default(),
             page_list_width: 200.0,
             tags_pane: false,

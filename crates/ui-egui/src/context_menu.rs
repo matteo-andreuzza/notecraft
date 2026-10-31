@@ -595,8 +595,14 @@ pub fn show(app: &mut NoteApp, ui: &Ui, resp: &egui::Response, t: Tokens) {
         app.canvas.context_target = Some(target);
         place_for(app, &ctx, target);
     }
+    // KB.General.ContextMenu (Shift+F10): the menu of what is selected, at its place.
+    let opening = std::mem::take(&mut app.session.view.menu_request);
+    if opening && let Some((target, at)) = keyboard_target(app) {
+        app.canvas.context_target = Some(target);
+        app.canvas.keyboard_menu_at = Some(at);
+    }
     let Some(target) = app.canvas.context_target else { return };
-    resp.context_menu(|ui| {
+    let body = |app: &mut NoteApp, ui: &mut Ui| {
         ui.set_min_width(190.0);
         match target {
             ContextTarget::Container(_) => render(app, ui, CONTAINER_MENU, t),
@@ -608,7 +614,55 @@ pub fn show(app: &mut NoteApp, ui: &Ui, resp: &egui::Response, t: Tokens) {
             ContextTarget::Ink(_) => render(app, ui, INK_MENU, t),
             ContextTarget::Lasso(_) => render(app, ui, LASSO_MENU, t),
         }
-    });
+    };
+    if let Some(at) = app.canvas.keyboard_menu_at {
+        // The same popup a right click opens, placed at the selection instead of the pointer.
+        let id = egui::Popup::default_response_id(resp);
+        let set = if opening { Some(egui::SetOpenCommand::Bool(true)) } else { None };
+        egui::Popup::menu(resp).id(id).open_memory(set).at_position(at).show(|ui| body(app, ui));
+        if !egui::Popup::is_id_open(ui.ctx(), id) || resp.secondary_clicked() {
+            app.canvas.keyboard_menu_at = None;
+        }
+        return;
+    }
+    resp.context_menu(|ui| body(app, ui));
+}
+
+/// What Shift+F10 opens the menu of, and where: the selected object (several: the lasso
+/// selection), else the paragraph with the caret; `None` with nothing selected.
+fn keyboard_target(app: &NoteApp) -> Option<(ContextTarget, Pos2)> {
+    use notecraft_engine::selection::PageSel;
+    let page = app.session.page()?;
+    if let PageSel::Objects { ids } = &app.session.sel.on_page {
+        let id = *ids.first()?;
+        let obj = page.objects.iter().find(|o| o.id() == id)?;
+        let rect = app
+            .canvas
+            .media
+            .iter()
+            .find(|m| m.id == id)
+            .map(|m| m.rect)
+            .or_else(|| app.canvas.outlines.iter().find(|o| o.id == id).map(|o| o.rect))
+            .or_else(|| app.canvas.ink.layout.iter().find(|k| k.id == id).map(|k| k.rect))
+            .unwrap_or(app.canvas.viewport);
+        let target = match obj {
+            notecraft_engine::doc::PageObject::Image(_) => ContextTarget::Picture(id),
+            notecraft_engine::doc::PageObject::Attachment(_) => ContextTarget::Attachment(id),
+            notecraft_engine::doc::PageObject::Ink(_) if ids.len() > 1 => ContextTarget::Lasso(id),
+            notecraft_engine::doc::PageObject::Ink(_) => ContextTarget::Ink(id),
+            _ => ContextTarget::Container(id),
+        };
+        return Some((target, rect.center()));
+    }
+    let caret = app.session.sel.caret()?;
+    let at = app
+        .canvas
+        .paras
+        .iter()
+        .find(|p| p.block == caret.block && p.para == caret.para)
+        .map(|p| p.rect().left_bottom())
+        .unwrap_or(app.canvas.viewport.center());
+    Some((ContextTarget::Text(caret.block, caret.para, caret.offset), at))
 }
 
 #[cfg(test)]

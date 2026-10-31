@@ -247,6 +247,8 @@ pub struct CanvasState {
     pub extent: egui::Vec2,
     /// The open right-click context menu's target, if any (`context_menu.rs`).
     pub(crate) context_target: Option<ContextTarget>,
+    /// Where a context menu opened from the keyboard (Shift+F10) sits while it is open.
+    pub(crate) keyboard_menu_at: Option<Pos2>,
     /// Ink strokes of the last frame and the Draw gesture in progress (`ink.rs`).
     pub ink: crate::ink::InkUi,
     drag: Option<Drag>,
@@ -274,6 +276,7 @@ impl Default for CanvasState {
             preedit: String::new(),
             extent: egui::Vec2::ZERO,
             context_target: None,
+            keyboard_menu_at: None,
             ink: Default::default(),
             drag: None,
             scroll_to: None,

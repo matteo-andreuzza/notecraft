@@ -445,6 +445,17 @@ fn search_box(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: Tokens) {
     if resp.gained_focus() && !app.ui.search.is_empty() {
         app.ui.search_open = true;
     }
+    // KB.Search.PreviewNext: Down (Up) opens the next (previous) result, the search stays open.
+    if resp.has_focus() && !app.ui.search.trim().is_empty() {
+        let (down, up) =
+            ui.input_mut(|i| (i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowDown), i.consume_key(egui::Modifiers::NONE, egui::Key::ArrowUp)));
+        if down || up {
+            let q = app.ui.search.clone();
+            app.run(&ctx, "search.previewNext", json!({"query": q, "back": up}));
+            app.ui.search_open = true;
+            resp.request_focus();
+        }
+    }
     if resp.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Escape)) {
         app.ui.search_open = false;
         app.ui.search.clear();
@@ -497,7 +508,8 @@ pub fn search_dropdown(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                     if items.is_empty() {
                         ui.label("No results.");
                     }
-                    for it in items {
+                    let previewed = app.session.view.search_preview.as_ref().filter(|(pq, _)| *pq == q).map(|(_, i)| *i);
+                    for (n, it) in items.into_iter().enumerate() {
                         let title = it["title"].as_str().unwrap_or("").to_string();
                         let section = it["section"].as_str().unwrap_or("").to_string();
                         let snippet = it["snippet"].as_str().unwrap_or("").to_string();
@@ -509,7 +521,7 @@ pub fn search_dropdown(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                             })
                             .response
                             .interact(Sense::click());
-                        if resp.hovered() {
+                        if resp.hovered() || previewed == Some(n) {
                             ui.painter().rect_filled(resp.rect, 2.0, t.hover.gamma_multiply(0.4));
                         }
                         if resp.clicked() {
