@@ -185,12 +185,15 @@ struct Desktop {
     store: Store,
     control: Option<control::Control>,
     key_file: Option<KeyFile>,
+    /// The window as last observed (kept in the settings).
+    window: settings::Window,
 }
 
 impl Desktop {
     /// Remember the current look and notebooks (saved at most once a second, and on exit).
     fn remember(&mut self) {
-        let snap = settings::capture(&self.app, self.store.get());
+        let mut snap = settings::capture(&self.app, self.store.get());
+        snap.window = self.window;
         if &snap != self.store.get() {
             self.store.set(snap);
         }
@@ -200,6 +203,7 @@ impl Desktop {
 impl eframe::App for Desktop {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.app.logic(ctx);
+        self.window = ctx.input(|i| settings::Window::observe(self.window, i.viewport()));
         if let Some(c) = &mut self.control {
             c.drain(&mut self.app, ctx);
         }
@@ -260,11 +264,10 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    let mut viewport = egui::ViewportBuilder::default()
-        .with_title("NoteCraft")
-        .with_app_id("ai.storyteller.notecraft")
-        .with_inner_size([1366.0, 860.0])
-        .with_min_inner_size([720.0, 480.0]);
+    // The settings are read before the window opens: it opens at the size it had last time.
+    let store = Store::open();
+    let window = store.get().window.sane();
+    let mut viewport = window.viewport(egui::ViewportBuilder::default().with_title("NoteCraft").with_app_id("ai.storyteller.notecraft"));
     if let Some(icon) = app_icon() {
         viewport = viewport.with_icon(icon);
     }
@@ -273,7 +276,6 @@ fn main() -> ExitCode {
         "NoteCraft",
         options,
         Box::new(move |cc| {
-            let store = Store::open();
             let remembered = store.get().clone();
             let session = if args.sample { Session::with_sample(host::clock()) } else { Session::new(host::clock()) };
             let mut app = NoteApp::new(session, Box::new(host::DesktopHost::new(&cc.egui_ctx)));
@@ -291,7 +293,7 @@ fn main() -> ExitCode {
                     None => app.session.notice(format!("The control channel could not start on port {port} (see the log).")),
                 }
             }
-            Ok(Box::new(Desktop { app, store, control, key_file }))
+            Ok(Box::new(Desktop { app, store, control, key_file, window }))
         }),
     );
     match result {

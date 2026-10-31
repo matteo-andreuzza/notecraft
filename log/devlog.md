@@ -841,3 +841,11 @@ were certain landed, behaviour unchanged (every test green after each commit).
   can't be saved it refuses ("not closing: …") and the window stays open; the backstage Exit
   used to save, ignore errors and close. Agents and the control channel can run it too.
 - Catalog: BS.Exit, QAT.NR.FileExit wired.
+
+## 2026-10-31 — Desktop: the window opens as it was left
+
+- `settings::Window` (in `settings.json`): inner size, maximized, and the position where the
+  windowing system reports one (not on Wayland). The shell observes the viewport every frame
+  (`Window::observe`: maximized, full-screen or minimized windows keep the size to restore to)
+  and opens the next run with it (`Window::viewport`); the settings are now read before the
+  window opens. Hostile values are clamped or dropped (`Window::sane`). Closes part of gap 6.
