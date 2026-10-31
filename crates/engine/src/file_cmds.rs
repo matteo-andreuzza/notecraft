@@ -23,6 +23,8 @@ fn need_bin(s: &Session) -> Option<&'static str> {
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
+        // BS.Exit (QAT.NR.FileExit): save everything, then ask the shell to close.
+        CommandSpec::new("file.exit", "BS.Exit", "Exit", "File/Exit", exit).pure(),
         // BS.New.NewNotebook — a folder at `path` (desktop) or an in-memory notebook (web,
         // agents). It starts with one section holding one page (BEH.Notebooks.Default).
         CommandSpec::new("file.newNotebook", "BS.New.NewNotebook", "New Notebook", "File/New/New Notebook", new_notebook)
@@ -427,6 +429,17 @@ fn write_file(_: &str, _: &[u8]) -> Result<(), CmdError> {
 fn backup_label(s: &Session) -> String {
     let c = s.now().civil(s.clock.utc_offset_min);
     format!("{:04}-{:02}-{:02}_{:02}{:02}{:02}", c.year, c.month, c.day, c.hour, c.minute, c.second)
+}
+
+/// Exit: every unsaved change is written first; when a notebook can't be saved the window
+/// stays open (closing would lose the change) and the error says why.
+fn exit(s: &mut Session, _: &Value) -> CmdResult {
+    let errors = s.save_dirty();
+    if let Some(e) = errors.first() {
+        return Err(CmdError::Failed(format!("not closing: {e}")));
+    }
+    s.quit_request = true;
+    Ok(json!({"quit": true}))
 }
 
 fn backup_now(s: &mut Session, v: &Value) -> CmdResult {

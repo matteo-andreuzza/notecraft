@@ -841,3 +841,22 @@ were certain landed, behaviour unchanged (every test green after each commit).
   Microsoft's public pages ("Insert and calculate simple math equations", "Napkin Math in
   OneNote"). Space or Enter after `expr=` types the answer.
 - Catalog: 18 OPT/BEH rows wired. Numbers: wiring 736/1335, behaviour 191/1335.
+## 2026-10-31 — M3/P0: the Notebook Recycle Bin in the page column
+
+- History › Notebook Recycle Bin (and the notebook's context menu) already ran
+  `history.recycleBin`, but nothing showed the bin: deleted pages and sections could not be
+  found again from the UI. `nav::recycle_bin` now takes over the page column while
+  `ViewState.recycle_view` is set: Deleted Pages (title, from section, date) and Deleted
+  Sections (page count, date), Restore on hover and on right click, Move to › a section for
+  pages (`history.restore` with `section`), Empty Recycle Bin (asks first), ✕ to leave.
+  Restoring opens the item, which leaves the bin. Snapshot `recycle-bin`; UI test.
+- Catalog: UI.Panes.RecycleBin wired (P0). Not yet: a read-only preview of a deleted page, the
+  60-day purge (BEH.Recycle.DeletedPages).
+
+## 2026-10-31 — M3/P0: File › Exit is a command
+
+- New `file.exit` (BS.Exit, QAT.NR.FileExit): saves every notebook, then sets
+  `Session.quit_request`, which `NoteApp::logic` turns into the shell's close. When a notebook
+  can't be saved it refuses ("not closing: …") and the window stays open; the backstage Exit
+  used to save, ignore errors and close. Agents and the control channel can run it too.
+- Catalog: BS.Exit, QAT.NR.FileExit wired.

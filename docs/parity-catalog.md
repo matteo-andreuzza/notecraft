@@ -81,7 +81,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Panes.FindTags | Tags Summary pane: group by tag/section/title/date/note text, search scope, Show only unchecked items, Create Summary Page | Window/Panes/Tags Summary | surface |  |  | P0 | wired | FLUENT19:FindTaggedNotes; GK |  |
 | UI.Panes.CustomizeTags | Customize Tags dialog: new tag, modify (name, symbol, font colour, highlight colour), reorder, remove | Window/Panes/Customize Tags | surface |  |  | P1 | missing | FLUENT19:TagsCustomize; GK |  |
 | UI.Panes.PageVersions | Page versions listed under the page in the page list, by date and author | Window/Panes/Page Versions | surface |  |  | P1 | missing | FLUENT19:PageVersions |  |
-| UI.Panes.RecycleBin | Notebook Recycle Bin as a special section with Deleted Pages / Deleted Sections | Window/Panes/Recycle Bin | surface |  |  | P0 | missing | FLUENT19:RecycleBin; GK |  |
+| UI.Panes.RecycleBin | Notebook Recycle Bin as a special section with Deleted Pages / Deleted Sections | Window/Panes/Recycle Bin | surface |  | history.recycleBin | P0 | wired | FLUENT19:RecycleBin; GK | The page column lists Deleted Pages (title, section it came from, date) and Deleted Sections (pages, date); Restore on hover and right click, Move to › a section for pages, Empty Recycle Bin, ✕; restoring opens the item. unverified: the reference shows the bin as a section in the tree and previews a deleted page read-only; NoteCraft has no preview yet |
 | UI.Panes.Templates | Templates pane (categories, preview, Choose default template) | Window/Panes/Templates | surface |  |  | P1 | wired | FLUENT19:PageTemplatesTaskpane | Decision D10: NoteCraft's own templates by category (Academic, Blank, Business, Decorative, Planners; their content is NoteCraft's, not the reference's), Recently Used Templates, My Templates (right-click › Delete), Always use a specific template for the current section, and Save current page as a template (name, and Set as default); a click adds a page from a template (look and set unverified) |
 | UI.Panes.PaperSize | Paper Size pane (size, orientation, width, height, print margins, Save current page as a template) | Window/Panes/Paper Size | surface |  |  | P1 | verified | FLUENT19:PaperSize | A card at the right of the page (like the Templates pane), opened by View › Paper Size; the controls are the rows below. |
 | UI.Panes.PaperSize.Size | Paper Size pane: Size (Auto or a named paper) | Window/Panes/Paper Size/Size | dropdown |  | page.paperSize | P1 | wired | FLUENT19:PaperSize | unverified: the list (Statement, Letter, Tabloid, Legal, A3–A6, B4–B6 JIS, Japanese Postcard, Index Card, Billfold, Custom) is the common sizes, not the printer's; a new size keeps the orientation; Auto clears the paper (BEH.Canvas.PageGrows); a page with a paper size shows dashed lines where its printed sheets end |
@@ -570,7 +570,7 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Account.Insider | Account: Office Insider | File/Account/Insider | menu |  |  | P3 | out-of-scope | FLUENT19:GroupOfficeInsider |  |
 | BS.Feedback | Feedback | File/Feedback | page |  | help.feedback | P3 | missing | FLUENT19:TabOfficeFeedback |  |
 | BS.Options | Options | File/Options | dialog |  | file.options | P0 | wired | FLUENT19:ApplicationOptionsDialog |  |
-| BS.Exit | Exit | File/Exit | button |  | file.exit | P0 | missing | FLUENT19:FileExit |  |
+| BS.Exit | Exit | File/Exit | button |  | file.exit | P0 | wired | FLUENT19:FileExit | Saves every notebook first; when one can't be saved the window stays open and the error says why (closing would lose the change). |
 
 ## Context menus
 
@@ -1067,7 +1067,7 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.SendNotesToBlog | Send to Blog | Quick Access Toolbar/Commands Not in the Ribbon/Send to Blog | button |  |  | P3 | out-of-scope | FLUENT19:SendNotesToBlog |  |
 | QAT.NR.ApplicationOptionsDialog | Options | Quick Access Toolbar/Commands Not in the Ribbon/Options | button |  | file.options | P0 | missing | FLUENT19:ApplicationOptionsDialog |  |
 | QAT.NR.SendNotesAsAttachment | Send as Attachment | Quick Access Toolbar/Commands Not in the Ribbon/Send as Attachment | button |  | share.sendAttachment | P2 | missing | FLUENT19:SendNotesAsAttachment |  |
-| QAT.NR.FileExit | Exit | Quick Access Toolbar/Commands Not in the Ribbon/Exit | button |  | file.exit | P0 | missing | FLUENT19:FileExit |  |
+| QAT.NR.FileExit | Exit | Quick Access Toolbar/Commands Not in the Ribbon/Exit | button |  | file.exit | P0 | wired | FLUENT19:FileExit | Saves every notebook first; when one can't be saved the window stays open and the error says why (closing would lose the change). |
 | QAT.NR.OfficeFeedback | Feedback | Quick Access Toolbar/Commands Not in the Ribbon/Feedback | button |  | help.feedback | P3 | missing | FLUENT19:OfficeFeedback |  |
 | QAT.NR.ShapeColorAndThickness | Shape Color & Thickness | Quick Access Toolbar/Commands Not in the Ribbon/Shape Color & Thickness | toggle |  | draw.shapeColorThickness | P2 | missing | FLUENT19:ShapeColorAndThickness |  |
 | QAT.NR.NewSharedNotebookCreate | New Shared Notebook | Quick Access Toolbar/Commands Not in the Ribbon/New Shared Notebook | button |  |  | P3 | out-of-scope | FLUENT19:NewSharedNotebookCreate |  |

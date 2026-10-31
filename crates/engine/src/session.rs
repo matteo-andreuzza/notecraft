@@ -299,6 +299,9 @@ pub struct Session {
     pub pending_outline: Option<notecraft_doc::geom::Point>,
     /// A scroll request for the UI (Page Up/Down, Ctrl+Home/End), consumed by the canvas.
     pub scroll_request: Option<ScrollRequest>,
+    /// File › Exit ran and everything saved: the desktop shell closes the window (headless
+    /// hosts ignore it).
+    pub quit_request: bool,
     /// What needs saving, per notebook.
     pub dirty: HashMap<Id, NbDirty>,
     /// Increments whenever the workspace changes (UI caches layout by it).
@@ -341,6 +344,7 @@ impl Session {
             messages: Vec::new(),
             pending_outline: None,
             scroll_request: None,
+            quit_request: false,
             dirty: HashMap::new(),
             revision: 0,
             last_change_ms: 0,

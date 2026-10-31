@@ -546,6 +546,30 @@ fn notebook_operations() {
 }
 
 #[test]
+fn exit_saves_first_and_stays_open_when_it_cannot() {
+    // parity: BS.Exit, QAT.NR.FileExit
+    let mut s = sample();
+    assert_eq!(run(&mut s, "file.exit", json!({}))["quit"], true);
+    assert!(s.quit_request, "the shell closes the window");
+    // A notebook on disk whose folder became a file: saving fails, so Exit refuses.
+    let d = std::env::temp_dir().join(format!("notecraft-exit-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    let nb = d.join("Exit test");
+    let mut s = sample();
+    run(&mut s, "file.newNotebook", json!({"name": "Exit test", "path": nb.to_str().unwrap()}));
+    let _ = s.save_dirty();
+    run(&mut s, "text.insert", json!({"text": "unsaved"}));
+    std::fs::remove_dir_all(&nb).unwrap();
+    std::fs::write(&nb, b"in the way").unwrap();
+    s.quit_request = false;
+    let e = s.run("file.exit", json!({})).unwrap_err();
+    assert!(e.to_string().contains("not closing"), "{e}");
+    assert!(!s.quit_request, "the change would be lost: the window stays");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
 fn recycle_bin_view_and_empty() {
     // parity: R.History.History.RecycleBinMenu, R.History.History.EmptyRecycleBin
     let mut s = sample();

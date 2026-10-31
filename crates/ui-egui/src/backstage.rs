@@ -74,9 +74,9 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 ui.add_space(8.0);
                 let (r, resp) = ui.allocate_exact_size(vec2(190.0, 34.0), Sense::click());
                 ui.painter().text(r.left_center() + vec2(26.0, 0.0), egui::Align2::LEFT_CENTER, "Exit", egui::FontId::proportional(14.0), t.text);
+                resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Exit"));
                 if resp.clicked() {
-                    let _ = app.session.save_dirty();
-                    app.quit_requested = true;
+                    app.run(&ctx, "file.exit", json!({}));
                 }
             });
         },

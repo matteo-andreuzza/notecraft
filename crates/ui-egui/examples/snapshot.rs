@@ -326,6 +326,15 @@ fn main() {
         a.session.run("view.paperSize", json!({"on": true})).unwrap();
         a.ui.tab = "View".into();
     });
+    // History › Notebook Recycle Bin: a deleted page and a deleted section in the page column.
+    shot("recycle-bin", &out, 1.0, |a| {
+        a.session.run("page.new", json!({})).unwrap();
+        a.session.run("page.delete", json!({})).unwrap();
+        let meetings = a.session.notebook().unwrap().sections().iter().find(|s| s.name == "Meetings").map(|s| s.id.to_string()).unwrap();
+        a.session.run("section.delete", json!({"section": meetings})).unwrap();
+        a.session.run("history.recycleBin", json!({})).unwrap();
+        a.ui.tab = "History".into();
+    });
     // Merged cells (decision D9): the header across all three columns, a cell over two rows.
     shot("table-merged", &out, 1.0, |a| {
         table_page(a);

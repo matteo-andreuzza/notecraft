@@ -434,6 +434,9 @@ impl NoteApp {
     /// Per-frame logic outside drawing: clock, autosave, notices.
     pub fn logic(&mut self, ctx: &egui::Context) {
         self.session.clock = self.host.clock();
+        if std::mem::take(&mut self.session.quit_request) {
+            self.quit_requested = true;
+        }
         if self.session.autosave_due(1000) {
             let errors = self.session.save_dirty();
             if let Some(e) = errors.first() {
