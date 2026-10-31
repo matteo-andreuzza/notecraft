@@ -247,7 +247,7 @@ fn save(s: &mut Session, v: &Value) -> CmdResult {
     if name.is_empty() {
         return Err(CmdError::Params("give the template a name".into()));
     }
-    let mut page = (**s.page().ok_or_else(no_page)?).clone();
+    let mut page = s.page().ok_or_else(no_page)?.clone_without_versions();
     // Pictures and attachments stay on the page: a template keeps text, tables and ink.
     page.objects.retain(|o| !matches!(o, PageObject::Image(_) | PageObject::Attachment(_)));
     page.level = 0;

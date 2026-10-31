@@ -43,6 +43,7 @@ fn registry() -> &'static Registry {
         specs.extend(crate::nav_cmds::specs());
         specs.extend(crate::search_cmds::specs());
         specs.extend(crate::history_cmds::specs());
+        specs.extend(crate::versions_cmds::specs());
         specs.extend(crate::view_cmds::specs());
         let by_id = specs.iter().enumerate().map(|(i, s)| (s.id, i)).collect();
         Registry { specs, by_id }

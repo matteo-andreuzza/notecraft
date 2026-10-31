@@ -902,3 +902,25 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Catalog: R.History.Authors.FindByDateMenu and its 8 periods, UI.Panes.RecentEdits,
   BEH.History.RecentEdits wired. Numbers: wiring 748/1335 (56.0%), behaviour 191/1335, 349
   commands.
+
+## 2026-10-31 — M3/P1: Page versions (decision D14)
+
+- doc: `PageVersion` (time, author, title, objects, page setup) in `Page::versions`, oldest
+  first, at most `MAX_VERSIONS` = 50 (normalised like the page); `Page::snapshot`,
+  `push_version`, `version_page`, `clone_without_versions`. Format 6 (reads 1–5 unchanged);
+  version pictures save with the section like any other.
+- Engine `versions_cmds.rs`: `snapshot` after every editing command in `Session::run` (same
+  undo step; skipped for `history.*`): a page edited at least 5 minutes after its last change
+  keeps the previous state; steady typing keeps none; empty states never. Commands
+  `history.pageVersions` (show under pages), `history.versions`, `history.openVersion`,
+  `history.previewDeleted`, `history.closePreview`, `history.restoreVersion` (the replaced
+  state becomes a version), `history.deleteVersion`, `history.deleteVersions{Section,Group,
+  Notebook}`. `ViewState.page_versions/preview`; `Session::preview_page/preview_version/
+  preview_picture` (the PNG export's `picture`, now shared). Copies and templates drop versions.
+- UI: version rows under pages (`nav::version_rows`, context menu), Show/Hide Page Versions in
+  the page menu, `preview.rs` (bar with Restore Version / Delete Version / Close over the
+  page's picture, canvas not drawn and unfocused), Recycle Bin pages open read-only on a click.
+  Snapshot `page-version`.
+- Catalog: 17 rows wired (UI.Panes.PageVersions, the Page Versions ribbon and context rows,
+  BEH.Versions.Snapshots), new NC.Versions.Open, NC.Recycle.Preview, NC.Versions.ClosePreview.
+  Not yet: Move or Copy of a version, Disable History for This Notebook, versions from .one files.

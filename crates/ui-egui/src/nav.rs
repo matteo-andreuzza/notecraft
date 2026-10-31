@@ -593,8 +593,10 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                         app.run(&ctx, "nav.goto", json!({"page": page.id.to_string(), "add": add, "range": range}));
                     }
                     page_menu(app, &resp, page.id, has_kids, page.collapsed);
-                    // Drag a page onto another position (BEH.Pages.DragReorder).
+                    // Drag a page onto another position (BEH.Pages.DragReorder); rows are
+                    // uniform only while versions are hidden.
                     if resp.drag_stopped()
+                        && !app.session.view.page_versions
                         && let Some(pos) = ui.ctx().pointer_interact_pos()
                     {
                         let rows_top = r.min.y - (shown_i as f32) * row_h;
@@ -605,6 +607,9 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                         }
                     }
                     shown_i += 1;
+                    if app.session.view.page_versions {
+                        version_rows(app, ui, page, t);
+                    }
                 }
                 ui.allocate_space(vec2(ui.available_width(), 60.0))
             });
@@ -702,6 +707,10 @@ fn bin_row(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, id: Id, name: &s
     ui.painter().with_clip_rect(clip).text(pos2(r.min.x + 10.0, r.min.y + 13.0), Align2::LEFT_CENTER, name, font, t.text);
     ui.painter().with_clip_rect(clip).text(pos2(r.min.x + 10.0, r.min.y + 29.0), Align2::LEFT_CENTER, about, FontId::proportional(11.0), t.page_meta);
     let item = id.to_string();
+    // Pages (they have sections to move to) open read-only on a click.
+    if resp.clicked() && !sections.is_empty() {
+        app.run(ctx, "history.previewDeleted", json!({"item": item}));
+    }
     if hot {
         let b = ui.put(button, egui::Button::new("Restore").small());
         if b.on_hover_text("Put it back where it was").clicked() {
@@ -797,7 +806,55 @@ fn page_menu(app: &mut NoteApp, resp: &egui::Response, pid: Id, has_kids: bool, 
         }
         ui.separator();
         cmd_item(app, ui, "Mark as Unread", "history.markUnread", json!({}));
+        if app.session.view.page_versions {
+            cmd_item(app, ui, "Hide Page Versions", "history.pageVersions", json!({"on": false}));
+        } else {
+            cmd_item(app, ui, "Show Page Versions", "history.pageVersions", json!({"on": true}));
+        }
     });
+}
+
+/// A page's versions under it in the page list (History › Page Versions; decision D14),
+/// newest first: date, time and author, indented and dimmer than pages. A click shows the
+/// version read-only; the context menu restores or deletes it.
+fn version_rows(app: &mut NoteApp, ui: &mut Ui, page: &notecraft_engine::doc::Page, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    let off = app.session.clock.utc_offset_min;
+    let indent = size::ROW_PAD + 22.0 + page.level as f32 * size::INDENT;
+    for v in page.versions.iter().rev() {
+        let at = v.at.0;
+        let label = format!(
+            "{} {}{}",
+            v.at.short_date(off),
+            v.at.short_time(off),
+            if v.author.is_empty() { String::new() } else { format!("  {}", v.author) }
+        );
+        let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 24.0), Sense::click());
+        let shown = app.session.view.preview == Some(notecraft_engine::Preview::Version { page: page.id, at });
+        resp.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, shown, &label));
+        row_bg(ui, r, shown, resp.hovered(), &t);
+        ui.painter().with_clip_rect(r).text(
+            pos2(r.min.x + indent, r.center().y),
+            Align2::LEFT_CENTER,
+            &label,
+            FontId::new(12.0, egui::FontFamily::Proportional),
+            t.page_meta,
+        );
+        let p = page.id.to_string();
+        if resp.clicked() {
+            app.run(&ctx, "history.openVersion", json!({"page": p, "at": at}));
+        }
+        resp.context_menu(|ui| {
+            cmd_item(app, ui, "Restore Version", "history.restoreVersion", json!({"page": p, "at": at}));
+            cmd_item(app, ui, "Delete Version", "history.deleteVersion", json!({"page": p, "at": at}));
+            ui.separator();
+            cmd_item(app, ui, "Delete All Versions in Section", "history.deleteVersionsSection", json!({}));
+            cmd_item(app, ui, "Delete All Versions in Section Group", "history.deleteVersionsGroup", json!({}));
+            cmd_item(app, ui, "Delete All Versions in Notebook", "history.deleteVersionsNotebook", json!({}));
+            ui.separator();
+            cmd_item(app, ui, "Hide Page Versions", "history.pageVersions", json!({"on": false}));
+        });
+    }
 }
 
 /// The page area with no notebook open.
