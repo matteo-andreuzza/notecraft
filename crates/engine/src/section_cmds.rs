@@ -272,6 +272,10 @@ fn reselect(s: &mut Session, nb: Id) {
 
 fn delete_section(s: &mut Session, v: &Value) -> CmdResult {
     let sid = target_section(s, v)?;
+    // The Recycle Bin isn't sealed (decision D15).
+    if s.ws.section(sid).is_some_and(|x| x.protection.is_some()) {
+        return Err(CmdError::Failed("Remove the section's password before deleting it.".into()));
+    }
     let nb = s.ws.notebook_of(sid).map(|n| n.id).ok_or_else(|| CmdError::Params("no such section".into()))?;
     let NavNode::Section(sec) = take_node(s, nb, sid)? else { return Err(CmdError::Params("that is a section group".into())) };
     let now = s.now();
@@ -302,6 +306,9 @@ fn move_or_copy(s: &mut Session, v: &Value) -> CmdResult {
     let copy = p::bool(v, "copy").unwrap_or(false);
     let node = if copy {
         let sec = s.ws.section(sid).ok_or_else(no_page)?.clone();
+        if sec.protection.is_some() {
+            return Err(CmdError::Failed("Remove the section's password before copying it.".into()));
+        }
         NavNode::Section(Arc::new(fresh_section(s, &sec)))
     } else {
         take_node(s, from_nb, sid)?
@@ -420,6 +427,15 @@ fn rename_group(s: &mut Session, v: &Value) -> CmdResult {
 fn delete_group(s: &mut Session, v: &Value) -> CmdResult {
     let gid = p::req_id(v, "group")?;
     let nb = s.ws.notebook_of(gid).map(|n| n.id).ok_or_else(|| CmdError::Params("no such section group".into()))?;
+    // The Recycle Bin isn't sealed (decision D15).
+    let protected = s.ws.notebook(nb).and_then(|n| n.group(gid)).is_some_and(|g| {
+        let tmp =
+            notecraft_doc::Notebook { children: g.children.clone(), ..notecraft_doc::Notebook::new(gid, "", notecraft_doc::SectionColor::default()) };
+        tmp.sections().iter().any(|x| x.protection.is_some())
+    });
+    if protected {
+        return Err(CmdError::Failed("A section in this group has a password: remove it before deleting the group.".into()));
+    }
     let NavNode::Group(g) = take_node(s, nb, gid)? else { return Err(CmdError::Params("that is not a section group".into())) };
     // Every section inside goes to the recycle bin.
     let mut sections = Vec::new();

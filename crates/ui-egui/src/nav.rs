@@ -263,6 +263,10 @@ fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: 
                 } else {
                     ui.painter().with_clip_rect(rect).text(pos2(x + 18.0, rect.center().y), Align2::LEFT_CENTER, &s.name, font.clone(), t.text);
                 }
+                // A password-protected section shows a lock, closed while locked (decision D15).
+                if s.protection.is_some() {
+                    crate::password_ui::draw_lock(ui.painter(), pos2(rect.max.x - 18.0, rect.center().y - 6.0), s.is_locked(), &t);
+                }
                 if resp.clicked() {
                     app.run(&ctx, "section.select", json!({"section": s.id.to_string()}));
                 }

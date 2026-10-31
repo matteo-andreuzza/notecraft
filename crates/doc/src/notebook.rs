@@ -70,12 +70,35 @@ pub struct Section {
     /// decision D10): `builtin:<slug>` or `my:<name>`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default_template: Option<String>,
+    /// Password protection (decision D15). Never part of the section's own JSON: a protected
+    /// section is written as a sealed file whose clear header carries this.
+    #[serde(skip)]
+    pub protection: Option<Protection>,
+}
+
+/// How a password-protected section's key is derived, and its sealed file while locked
+/// (decision D15). The key itself is never stored here: the engine keeps it in memory while
+/// the section is unlocked.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Protection {
+    /// The Argon2id salt.
+    pub salt: Vec<u8>,
+    /// Argon2id memory cost (KiB), passes and lanes.
+    pub kdf: [u32; 3],
+    /// The sealed file, while the section is locked: its pages are then not in memory
+    /// (`pages` is empty) and saving writes these bytes back unchanged.
+    pub locked: Option<Arc<[u8]>>,
 }
 
 impl Section {
     /// A new empty section.
     pub fn new(id: Id, name: &str, color: SectionColor, now: Timestamp) -> Section {
-        Section { id, name: clean_name(name), color, pages: Vec::new(), created: now, default_template: None }
+        Section { id, name: clean_name(name), color, pages: Vec::new(), created: now, default_template: None, protection: None }
+    }
+
+    /// Whether the section has a password and is locked (its pages are not in memory).
+    pub fn is_locked(&self) -> bool {
+        self.protection.as_ref().is_some_and(|p| p.locked.is_some())
     }
 
     /// Index of the page with `id`.

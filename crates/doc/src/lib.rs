@@ -34,7 +34,9 @@ pub mod time;
 pub use id::{Id, IdGen};
 pub use ink::{Ink, InkPoint, InkTool};
 pub use media::{Attachment, Blob, Image};
-pub use notebook::{DeletedPage, DeletedSection, NavNode, Notebook, RecycleBin, Section, SectionColor, SectionGroup, Workspace, clean_name};
+pub use notebook::{
+    DeletedPage, DeletedSection, NavNode, Notebook, Protection, RecycleBin, Section, SectionColor, SectionGroup, Workspace, clean_name,
+};
 pub use page::{Outline, OutlineWidth, Page, PageObject, PageSetup, PaperSize, RuleLines};
 pub use table::{Table, TableCell, TableRow};
 pub use tags::{TagDef, TagSymbol, TagUse, builtin_tags};

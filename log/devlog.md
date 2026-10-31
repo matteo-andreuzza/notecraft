@@ -868,3 +868,25 @@ were certain landed, behaviour unchanged (every test green after each commit).
   (`Window::observe`: maximized, full-screen or minimized windows keep the size to restore to)
   and opens the next run with it (`Window::viewport`); the settings are now read before the
   window opens. Hostile values are clamped or dropped (`Window::sane`). Closes part of gap 6.
+
+## 2026-10-31 — M4: password-protected sections (decision D15)
+
+- `notecraft_format::protect`: sealed section files (magic `NCRAFT-SEALED`, a JSON header in
+  the clear, XChaCha20-Poly1305 over the ordinary zip with the header as associated data,
+  Argon2id keys; costs read from a file are bounded). `decode_section` opens a sealed file
+  locked; `encode_section` writes a locked section's bytes back unchanged and refuses an
+  unlocked protected section (`FormatError::NeedsKey`), so nothing protected is ever written
+  in the clear. Dependencies: chacha20poly1305 0.10, argon2 0.5, zeroize, getrandom 0.3
+  (native only), all MIT OR Apache-2.0.
+- doc `Section.protection` (`Protection { salt, kdf, locked }`, never in the JSON).
+- Engine `protect_cmds.rs`: review.password (pane), section.setPassword / changePassword /
+  removePassword / unlock / lock, protect.lockAll (Ctrl+Alt+L), `Session::auto_lock` (idle
+  minutes and lock-on-leave from the Options), `sealed_copy` before every save and Change
+  Location. Keys stay in `Session.keys` and are zeroed on drop. Locking clears the undo
+  history (`Session.forget_history`). Deletes skip the Recycle Bin, and protected sections
+  can't be deleted or copied. Archive export refuses locked sections.
+- UI `password_ui.rs`: the Password Protection pane, the unlock prompt in place of the page,
+  the lock on the section row, the lock options in Options › Advanced.
+- Fixed: the first-run guard for automatic backups (meant for the Options commit) was never
+  applied; now a fresh install waits one interval.
+- Catalog: 16 rows wired. Numbers: wiring 751/1340 (56.0%).

@@ -39,6 +39,7 @@ use notecraft_doc::{Id, NavNode, Notebook, RecycleBin, Section, SectionColor};
 use serde::{Deserialize, Serialize};
 
 #[cfg(not(target_arch = "wasm32"))]
+pub mod protect;
 pub mod store;
 
 /// Table-of-contents file name, at the notebook root and in every section-group folder.
@@ -87,6 +88,12 @@ pub enum FormatError {
     /// The bytes are not a valid NoteCraft file.
     #[error("{0}")]
     Corrupt(String),
+    /// The password of a protected section is wrong (or its file was changed).
+    #[error("the password is not correct")]
+    WrongPassword,
+    /// A protected section can't be written without its key (it would be written in the clear).
+    #[error("{0} is password protected and its key is not available")]
+    NeedsKey(String),
     /// Written by a newer NoteCraft.
     #[error("written by a newer NoteCraft (format {found}, this build reads up to {VERSION})")]
     TooNew {
@@ -98,7 +105,7 @@ pub enum FormatError {
 /// Result alias.
 pub type Result<T> = std::result::Result<T, FormatError>;
 
-fn corrupt(msg: impl Into<String>) -> FormatError {
+pub(crate) fn corrupt(msg: impl Into<String>) -> FormatError {
     FormatError::Corrupt(msg.into())
 }
 
@@ -284,13 +291,30 @@ fn decode_with_media<T: serde::de::DeserializeOwned>(bytes: &[u8], entry: &str) 
     provide_blobs(media, || serde_json::from_slice(&json)).map_err(|e| corrupt(format!("{entry}: {e}")))
 }
 
-/// Serialize a section to `.ncraft` bytes.
+/// Serialize a section to `.ncraft` bytes. A locked protected section is its sealed file,
+/// unchanged; an unlocked one must be sealed with its key ([`protect::seal`]) and is refused
+/// here, so a protected section is never written in the clear.
 pub fn encode_section(section: &Section) -> Result<Vec<u8>> {
+    match &section.protection {
+        Some(p) => match &p.locked {
+            Some(bytes) => Ok(bytes.to_vec()),
+            None => Err(FormatError::NeedsKey(section.name.clone())),
+        },
+        None => encode_section_plain(section),
+    }
+}
+
+/// The ordinary (unsealed) `.ncraft` bytes of a section.
+pub(crate) fn encode_section_plain(section: &Section) -> Result<Vec<u8>> {
     encode_with_media(SECTION_ENTRY, &SectionFile { format: SECTION_MAGIC.into(), version: VERSION, section: section.clone() }, "section")
 }
 
 /// Parse `.ncraft` bytes (validated and normalised).
 pub fn decode_section(bytes: &[u8]) -> Result<Section> {
+    // A password-protected section (decision D15) opens locked.
+    if protect::is_sealed(bytes) {
+        return protect::locked_section(bytes);
+    }
     let f: SectionFile = decode_with_media(bytes, SECTION_ENTRY)?;
     check_version(&f.format, SECTION_MAGIC, f.version)?;
     let mut s = f.section;

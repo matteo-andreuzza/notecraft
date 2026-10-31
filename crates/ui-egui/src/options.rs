@@ -293,6 +293,16 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             ui.checkbox(&mut d.create_table_on_tab, "Create a table when Tab is pressed after text");
             ui.checkbox(&mut d.wiki_links, "Enable wiki linking ([[Page]])");
             ui.checkbox(&mut d.show_paste_options, "Show Paste Options button when content is pasted");
+            section(ui, "Passwords");
+            // OPT.Advanced.LockAfterIdle, OPT.Advanced.LockOnLeave.
+            ui.horizontal(|ui| {
+                let mut idle = d.lock_after_minutes > 0;
+                if ui.checkbox(&mut idle, "Lock password-protected sections after I have not worked in them for").changed() {
+                    d.lock_after_minutes = if idle { 10 } else { 0 };
+                }
+                ui.add_enabled(idle, egui::DragValue::new(&mut d.lock_after_minutes).range(1..=1440).suffix(" min"));
+            });
+            ui.checkbox(&mut d.lock_on_leave, "Lock password-protected sections as soon as I navigate away from them");
             section(ui, "Default font");
             // OPT.Advanced.DefaultFont.
             egui::Grid::new("opt-font").num_columns(2).show(ui, |ui| {

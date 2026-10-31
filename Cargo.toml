@@ -51,6 +51,11 @@ unicode-segmentation = "1"
 # Markdown import (crates/import-export only): the CommonMark reference parser for Rust (MIT).
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 zip = { version = "9", default-features = false, features = ["deflate"] }
+# Password-protected sections (decision D15): RustCrypto, MIT OR Apache-2.0.
+chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
+argon2 = { version = "0.5", default-features = false, features = ["alloc"] }
+zeroize = "1"
+getrandom = "0.3"
 # MSZIP blocks of .onepkg cabinets (crates/onestore only): raw RFC 1951 with a kept history.
 miniz_oxide = "0.9"
 # Pictures (crates/codecs only): pure-Rust decoders, no default features (no rayon, builds for wasm).

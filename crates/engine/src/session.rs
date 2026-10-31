@@ -83,6 +83,12 @@ pub struct Prefs {
     pub auto_backup_minutes: u32,
     /// When the last backup ran (Unix ms; 0: never).
     pub last_backup_ms: i64,
+    /// Lock protected sections after this many idle minutes (`OPT.Advanced.LockAfterIdle`;
+    /// 0: never).
+    pub lock_after_minutes: u32,
+    /// Lock a protected section as soon as another section is opened
+    /// (`OPT.Advanced.LockOnLeave`).
+    pub lock_on_leave: bool,
     /// Where new notebooks go (`OPT.SaveBackup.DefaultNotebookLocation`; empty: ask).
     pub default_notebook_location: String,
     /// The notebook whose Quick Notes section takes quick notes
@@ -118,6 +124,9 @@ impl Default for Prefs {
             // The reference backs up once a day by default (unverified).
             auto_backup_minutes: 24 * 60,
             last_backup_ms: 0,
+            // The reference locks after 10 idle minutes by default (unverified).
+            lock_after_minutes: 10,
+            lock_on_leave: false,
             default_notebook_location: String::new(),
             quick_notes_notebook: String::new(),
             templates: Vec::new(),
@@ -194,6 +203,9 @@ pub struct ViewState {
     pub templates_pane: bool,
     /// Paper Size pane open (View › Paper Size).
     pub paper_pane: bool,
+    /// Password Protection pane open (Review › Password).
+    #[serde(default)]
+    pub password_pane: bool,
     /// The recycle bin of this notebook is being viewed.
     pub recycle_view: Option<Id>,
 }
@@ -213,6 +225,7 @@ impl Default for ViewState {
             tags_pane: false,
             templates_pane: false,
             paper_pane: false,
+            password_pane: false,
             recycle_view: None,
         }
     }
@@ -319,6 +332,14 @@ pub struct Session {
     pub(crate) last_sel: HashMap<Id, PageSel>,
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) stores: HashMap<Id, notecraft_format::store::NotebookStore>,
+    /// The keys of unlocked password-protected sections (decision D15), only in memory and
+    /// zeroed when dropped.
+    pub(crate) keys: HashMap<Id, notecraft_format::protect::Key>,
+    /// Set by a command whose undo history must not survive it (locking a section: earlier
+    /// steps hold its notes in the clear).
+    pub(crate) forget_history: bool,
+    /// Key derivation costs for new passwords (tests use cheap ones).
+    pub(crate) kdf: notecraft_format::protect::KdfParams,
 }
 
 impl Default for Session {
@@ -359,6 +380,9 @@ impl Session {
             last_sel: HashMap::new(),
             #[cfg(not(target_arch = "wasm32"))]
             stores: HashMap::new(),
+            keys: HashMap::new(),
+            forget_history: false,
+            kdf: notecraft_format::protect::KdfParams::DEFAULT,
         }
     }
 
@@ -429,6 +453,12 @@ impl Session {
             self.redo.clear();
         } else if !history_cmd && self.coalesce.is_none() {
             // A caret move or other non-editing command ends a typing burst.
+            self.last_coalesce = None;
+        }
+        // Locking a section: no undo or redo step may bring its notes back.
+        if std::mem::take(&mut self.forget_history) {
+            self.undo.clear();
+            self.redo.clear();
             self.last_coalesce = None;
         }
         result

@@ -828,6 +828,28 @@ fn options_turn_off_the_mini_toolbar_and_the_paste_options_button() {
     assert_eq!(h.state().ui.paste_shown_at, None, "OPT.Advanced.ShowPasteOptions");
 }
 
+#[test]
+fn a_locked_section_asks_for_its_password_instead_of_showing_a_page() {
+    // parity: UI.Panes.Password
+    let mut a = app();
+    a.session.run("section.setPassword", json!({"password": "pw"})).unwrap();
+    a.session.run("review.password", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    present(&h, "UI.Panes.Password", "Password Protection");
+    present(&h, "UI.Panes.Password", "Change Password…");
+    h.get_by_label("Lock All  (Ctrl+Alt+L)").click();
+    h.run();
+    let sid = h.state().session.section().unwrap().id;
+    assert!(h.state().session.ws.section(sid).unwrap().is_locked(), "KB.Protect.LockAll from the pane");
+    present(&h, "BEH.Password.Lock", "Unlock");
+    h.state_mut().ui.password.unlock = "pw".into();
+    h.get_by_label("Unlock").click();
+    h.run();
+    assert!(!h.state().session.ws.section(sid).unwrap().is_locked(), "BEH.Password.Lock: unlocked from the prompt");
+    assert!(h.state().ui.password.unlock.is_empty(), "the typed password is cleared");
+}
+
 /// A host whose save dialog answers with a fixed path.
 struct SaveHost(String);
 

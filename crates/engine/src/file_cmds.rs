@@ -207,7 +207,8 @@ fn change_location(s: &mut Session, v: &Value) -> CmdResult {
     {
         return Ok(json!({"notebook": id.to_string(), "path": path, "unchanged": true}));
     }
-    let store = notecraft_format::store::NotebookStore::create(root, &nb).map_err(|e| CmdError::Failed(e.to_string()))?;
+    let sealed = s.sealed_copy(&nb).map_err(CmdError::Failed)?;
+    let store = notecraft_format::store::NotebookStore::create(root, &sealed).map_err(|e| CmdError::Failed(e.to_string()))?;
     let previous = s.stores.insert(id, store).map(|st| st.root.display().to_string());
     s.dirty.remove(&id);
     s.notice(format!("{} is now saved in {path}", nb.name));
@@ -301,13 +302,22 @@ impl Session {
         let ids: Vec<_> = self.dirty.keys().copied().collect();
         for id in ids {
             let Some(d) = self.dirty.get(&id).cloned() else { continue };
-            let (Some(store), Some(nb)) = (self.stores.get_mut(&id), self.ws.notebook(id)) else {
+            let (true, Some(nb)) = (self.stores.contains_key(&id), self.ws.notebook(id)) else {
                 // In-memory notebook: nothing to write.
                 self.dirty.remove(&id);
                 continue;
             };
             let fd = notecraft_format::store::Dirty { sections: d.sections.clone(), structure: d.structure, recycle: d.recycle, all: false };
-            match store.save(nb, &fd) {
+            // Password-protected sections are written sealed (decision D15).
+            let nb = match self.sealed_copy(nb) {
+                Ok(nb) => nb,
+                Err(e) => {
+                    errors.push(format!("could not save {}: {e}", nb.name));
+                    continue;
+                }
+            };
+            let Some(store) = self.stores.get_mut(&id) else { continue };
+            match store.save(&nb, &fd) {
                 Ok(report) => {
                     let mut left = crate::session::NbDirty::default();
                     for (sid, e) in report.failed {
@@ -404,6 +414,10 @@ fn export_notebook(s: &mut Session, v: &Value) -> CmdResult {
         let nb = nb.clone();
         let pages: Vec<&notecraft_doc::Page> = nb.sections().iter().flat_map(|sec| sec.pages.iter().map(|p| p.as_ref())).collect();
         return crate::export_cmds::write_pdf(s, path, &nb.name, &pages);
+    }
+    // A locked section's pages aren't in memory: an archive would lose them (decision D15).
+    if let Some(locked) = nb.sections().iter().find(|x| x.is_locked()) {
+        return Err(CmdError::Failed(format!("{} is locked: unlock it before exporting the notebook", locked.name)));
     }
     let bytes = notecraft_format::encode_archive(nb).map_err(|e| CmdError::Failed(e.to_string()))?;
     write_file(path, &bytes)?;

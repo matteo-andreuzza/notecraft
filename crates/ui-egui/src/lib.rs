@@ -25,6 +25,7 @@ pub mod mini_toolbar;
 pub mod nav;
 pub mod options;
 pub mod panes;
+pub mod password_ui;
 pub mod paste_options;
 pub mod pictures;
 pub mod ribbon;
@@ -228,6 +229,13 @@ pub struct UiState {
     /// File › Options: the settings being edited, applied with OK (`None`: not open).
     #[serde(default)]
     pub options_draft: Option<notecraft_engine::Prefs>,
+    /// Passwords being typed in the Password pane or the unlock prompt (never serialized).
+    #[serde(skip)]
+    pub password: password_ui::PasswordInput,
+    /// When the user last gave any input (host clock, ms): the idle time that locks
+    /// password-protected sections (`OPT.Advanced.LockAfterIdle`).
+    #[serde(skip)]
+    pub last_input_ms: i64,
 }
 
 /// Most paths kept in [`UiState::recent_notebooks`].
@@ -261,6 +269,8 @@ impl Default for UiState {
             printers: None,
             options_page: options::OptionsPage::General,
             options_draft: None,
+            password: password_ui::PasswordInput::default(),
+            last_input_ms: 0,
         }
     }
 }
@@ -437,6 +447,14 @@ impl NoteApp {
         if std::mem::take(&mut self.session.quit_request) {
             self.quit_requested = true;
         }
+        // OPT.Advanced.LockAfterIdle / LockOnLeave: idle counts from the last input.
+        let now = self.session.clock.now_ms;
+        if self.ui.last_input_ms == 0 || ctx.input(|i| !i.events.is_empty() || i.pointer.is_moving()) {
+            self.ui.last_input_ms = now;
+        }
+        if self.session.auto_lock(now.saturating_sub(self.ui.last_input_ms)) {
+            self.ui.password = password_ui::PasswordInput::default();
+        }
         if self.session.autosave_due(1000) {
             let errors = self.session.save_dirty();
             if let Some(e) = errors.first() {
@@ -444,7 +462,11 @@ impl NoteApp {
             }
         }
         // OPT.SaveBackup.AutoBackup: the changed notebooks, into the Options' folder or the
-        // app's own. A failure is shown once and retried at the next interval.
+        // app's own. A failure is shown once and retried at the next interval. The first
+        // interval counts from the first run, so a fresh install doesn't back up at once.
+        if self.session.prefs.last_backup_ms == 0 {
+            self.session.prefs.last_backup_ms = self.session.clock.now_ms;
+        }
         if self.session.backup_due() {
             let folder = Some(self.session.prefs.backup_folder.trim().to_string()).filter(|f| !f.is_empty()).or_else(|| self.host.backup_folder());
             match folder {
@@ -507,6 +529,9 @@ impl NoteApp {
             if self.session.view.paper_pane {
                 panes::paper_pane(self, ui, t);
             }
+            if self.session.view.password_pane {
+                password_ui::pane(self, ui, t);
+            }
             if self.ui.search_pane {
                 panes::search_pane(self, ui, t);
             }
@@ -516,7 +541,10 @@ impl NoteApp {
             if self.session.notebook().is_none() {
                 nav::empty_state(self, ui, t);
             }
-            canvas::show(self, ui, t);
+            // A locked section shows its unlock prompt instead of a page (BEH.Password.Lock).
+            if !password_ui::locked_view(self, ui, t) {
+                canvas::show(self, ui, t);
+            }
             mini_toolbar::show(self, ui, area, t);
             paste_options::show(self, ui, area, t);
             if self.session.view.find.active {

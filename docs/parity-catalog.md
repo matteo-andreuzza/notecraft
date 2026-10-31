@@ -89,7 +89,10 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Panes.PaperSize.Dimensions | Paper Size pane: Width and Height | Window/Panes/Paper Size/Width | spinner |  | page.paperSize | P1 | verified | FLUENT19:PaperSize | in inches; 1"–200" (the PDF export's limits); a size of no named paper shows Custom |
 | UI.Panes.PaperSize.Margins | Paper Size pane: Print Margins (Top, Bottom, Left, Right) | Window/Panes/Paper Size/Print Margins | spinner |  | page.paperSize | P1 | wired | FLUENT19:PaperSize | unverified: half an inch by default; each kept under 10" and so that half an inch of paper stays printable |
 | UI.Panes.PaperSize.SaveTemplate | Paper Size pane: Save current page as a template | Window/Panes/Paper Size/Save current page as a template | link |  | template.save | P2 | verified | FLUENT19:PaperSize | opens the Save As Template dialog (NC.Templates.Save); the template keeps the paper size |
-| UI.Panes.Password | Password Protection pane (Set Password, Remove Password, Lock All, options) | Window/Panes/Password Protection | surface |  |  | P1 | missing | FLUENT19:PasswordProtectSection |  |
+| UI.Panes.Password | Password Protection pane (Set Password, Remove Password, Lock All, options) | Window/Panes/Password Protection | surface |  |  | P1 | wired | FLUENT19:PasswordProtectSection | unverified layout: current section, Set/Change/Remove Password…, Lock All, the lock options, the no-recovery warning (decision D15) |
+| UI.Panes.Password.SetPassword | Password Protection pane: Set Password… (password and confirmation) | Window/Panes/Password Protection/Set Password | button |  | section.setPassword | P1 | wired | FLUENT19:PasswordProtectSection | decision D15: Argon2id key (random 16-byte salt, 64 MiB, 3 passes), XChaCha20-Poly1305 sealed section file; unverified: the reference's scheme is not public; the section stays unlocked until locked; the undo history is cleared |
+| UI.Panes.Password.ChangePassword | Password Protection pane: Change Password… (old, new, confirmation) | Window/Panes/Password Protection/Change Password | button |  | section.changePassword | P1 | wired | FLUENT19:PasswordProtectSection | a new salt and key; a locked section stays locked |
+| UI.Panes.Password.RemovePassword | Password Protection pane: Remove Password… (asks for the password) | Window/Panes/Password Protection/Remove Password | button |  | section.removePassword | P1 | wired | FLUENT19:PasswordProtectSection | the section is written in the clear again |
 | UI.Panes.Research | Research / Thesaurus pane | Window/Panes/Research | surface |  |  | P3 | missing | FLUENT19:ResearchPane |  |
 | UI.Panes.RecentEdits | Search results pane listing recently edited pages by date | Window/Panes/Recent Edits | surface |  |  | P1 | missing | FLUENT19:FindByDateMenu |  |
 | UI.Panes.ColorThickness | Color & Thickness dialog (pen/highlighter, thickness, colour) | Window/Panes/Color & Thickness | surface |  |  | P1 | wired | FLUENT19:MoreColorAndThicknessOptions |  |
@@ -404,7 +407,7 @@ The Review tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Review.Language.LanguageCommands | Language | Review/Language | menu |  |  | P2 | missing | FLUENT19:LanguageCommands |  |
 | R.Review.Language.SetLanguage | Set Proofing Language | Review/Language/Set Proofing Language | toggle |  | review.setLanguage | P2 | missing | FLUENT19:SetLanguage |  |
 | R.Review.Language.LanguagePreferences | Language Preferences | Review/Language/Language Preferences | button |  | review.languagePreferences | P2 | missing | FLUENT19:LanguagePreferences |  |
-| R.Review.Section.PasswordProtectSection | Password | Review/Section/Password | button |  | review.password | P1 | missing | FLUENT19:PasswordProtectSection |  |
+| R.Review.Section.PasswordProtectSection | Password | Review/Section/Password | button |  | review.password | P1 | wired | FLUENT19:PasswordProtectSection |  |
 | R.Review.Notes.LinkedNotes | Linked Notes | Review/Notes/Linked Notes | button |  | review.linkedNotes | P3 | missing | FLUENT19:LinkedNotes |  |
 
 ## Ribbon › View
@@ -570,7 +573,7 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Account.Insider | Account: Office Insider | File/Account/Insider | menu |  |  | P3 | out-of-scope | FLUENT19:GroupOfficeInsider |  |
 | BS.Feedback | Feedback | File/Feedback | page |  | help.feedback | P3 | missing | FLUENT19:TabOfficeFeedback |  |
 | BS.Options | Options | File/Options | dialog |  | file.options | P0 | wired | FLUENT19:ApplicationOptionsDialog |  |
-| BS.Exit | Exit | File/Exit | button |  | file.exit | P0 | wired | FLUENT19:FileExit | Saves every notebook first; when one can't be saved the window stays open and the error says why (closing would lose the change). |
+| BS.Exit | Exit | File/Exit | button |  | file.exit | P0 | verified | FLUENT19:FileExit | Saves every notebook first; when one can't be saved the window stays open and the error says why (closing would lose the change). |
 
 ## Context menus
 
@@ -861,7 +864,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Section.SectionInsert | New Section | Context/Section/New Section | button | `Mod+T` | section.new | P0 | wired | FLUENT19:ContextMenuSection/SectionInsert |  |
 | CM.Section.SectionGroupInsert | New Section Group | Context/Section/New Section Group | button |  | sectionGroup.new | P0 | wired | FLUENT19:ContextMenuSection/SectionGroupInsert |  |
 | CM.Section.MarkPageAsRead | Mark as Read | Context/Section/Mark as Read | button |  | history.markRead | P2 | missing | FLUENT19:ContextMenuSection/MarkPageAsRead |  |
-| CM.Section.PasswordProtectSectionContextual | Password Protect This Section… | Context/Section/Password Protect This Section… | button |  | review.password | P1 | missing | FLUENT19:ContextMenuSection/PasswordProtectSectionContextual |  |
+| CM.Section.PasswordProtectSectionContextual | Password Protect This Section… | Context/Section/Password Protect This Section… | button |  | review.password | P1 | wired | FLUENT19:ContextMenuSection/PasswordProtectSectionContextual |  |
 | CM.Section.SectionColorMenu | Section Color | Context/Section/Section Color | menu |  | section.color | P0 | verified | FLUENT19:ContextMenuSection/SectionColorMenu |  |
 | CM.Section.NotebookColor4 | Section Color 4 | Context/Section/Section Color/Section Color 4 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor4 |  |
 | CM.Section.NotebookColor2 | Section Color 2 | Context/Section/Section Color/Section Color 2 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor2 |  |
@@ -1067,7 +1070,7 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.SendNotesToBlog | Send to Blog | Quick Access Toolbar/Commands Not in the Ribbon/Send to Blog | button |  |  | P3 | out-of-scope | FLUENT19:SendNotesToBlog |  |
 | QAT.NR.ApplicationOptionsDialog | Options | Quick Access Toolbar/Commands Not in the Ribbon/Options | button |  | file.options | P0 | missing | FLUENT19:ApplicationOptionsDialog |  |
 | QAT.NR.SendNotesAsAttachment | Send as Attachment | Quick Access Toolbar/Commands Not in the Ribbon/Send as Attachment | button |  | share.sendAttachment | P2 | missing | FLUENT19:SendNotesAsAttachment |  |
-| QAT.NR.FileExit | Exit | Quick Access Toolbar/Commands Not in the Ribbon/Exit | button |  | file.exit | P0 | wired | FLUENT19:FileExit | Saves every notebook first; when one can't be saved the window stays open and the error says why (closing would lose the change). |
+| QAT.NR.FileExit | Exit | Quick Access Toolbar/Commands Not in the Ribbon/Exit | button |  | file.exit | P0 | verified | FLUENT19:FileExit | Saves every notebook first; when one can't be saved the window stays open and the error says why (closing would lose the change). |
 | QAT.NR.OfficeFeedback | Feedback | Quick Access Toolbar/Commands Not in the Ribbon/Feedback | button |  | help.feedback | P3 | missing | FLUENT19:OfficeFeedback |  |
 | QAT.NR.ShapeColorAndThickness | Shape Color & Thickness | Quick Access Toolbar/Commands Not in the Ribbon/Shape Color & Thickness | toggle |  | draw.shapeColorThickness | P2 | missing | FLUENT19:ShapeColorAndThickness |  |
 | QAT.NR.NewSharedNotebookCreate | New Shared Notebook | Quick Access Toolbar/Commands Not in the Ribbon/New Shared Notebook | button |  |  | P3 | out-of-scope | FLUENT19:NewSharedNotebookCreate |  |
@@ -1279,7 +1282,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Share.SyncCurrent | Synchronize changes in the current shared notebook | Keyboard/Share/Synchronize changes in the current shared notebook | shortcut | `Shift+F9` | notebook.syncNow | P2 | missing | KBD365 |  |
 | KB.Share.SyncAll | Synchronize changes in all shared notebooks | Keyboard/Share/Synchronize changes in all shared notebooks | shortcut | `F9` | notebook.syncAll | P2 | missing | KBD365 |  |
 | KB.Share.MarkUnread | Mark the current page as unread | Keyboard/Share/Mark the current page as unread | shortcut | `Mod+Q` | history.markUnread | P2 | missing | KBD365 |  |
-| KB.Protect.LockAll | Lock all password-protected sections | Keyboard/Protect/Lock all password-protected sections | shortcut | `Mod+Alt+L` | protect.lockAll | P1 | missing | KBD365 |  |
+| KB.Protect.LockAll | Lock all password-protected sections | Keyboard/Protect/Lock all password-protected sections | shortcut | `Mod+Alt+L` | protect.lockAll | P1 | wired | KBD365 |  |
 | KB.App.Help | Help | Keyboard/Application/Help | shortcut | `F1` | help.help | P1 | missing | KBD365 | standard Office key |
 | KB.App.Ribbon | Collapse or expand the ribbon | Keyboard/Application/Collapse or expand the ribbon | shortcut | `Mod+F1` | ui.collapseRibbon | P1 | wired | KBD365 | standard Office key; unverified for OneNote |
 | KB.App.Keytips | Show keytips | Keyboard/Application/Show keytips | shortcut | `F10` | ui.keytips | P2 | missing | KBD365 | Alt alone too |
@@ -1357,8 +1360,8 @@ The OneNote Options dialog, category by category. Setting names are functional d
 | OPT.Advanced.CompletedToDoSummary | Show completed To Do tags in the Tags Summary | File/Options/Advanced/Show completed To Do tags in the Tags Summary | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.MeasurementUnits | Measurement units | File/Options/Advanced/Measurement units | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.DefaultFont | Default font, size and colour | File/Options/Advanced/Default font, size and colour | option |  |  | P0 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.Advanced.LockAfterIdle | Lock password-protected sections after N minutes idle | File/Options/Advanced/Lock password-protected sections after N minutes idle | option |  |  | P1 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.Advanced.LockOnLeave | Lock password-protected sections as soon as I navigate away from them | File/Options/Advanced/Lock password-protected sections as soon as I navigate away from them | option |  |  | P1 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.Advanced.LockAfterIdle | Lock password-protected sections after N minutes idle | File/Options/Advanced/Lock password-protected sections after N minutes idle | option |  |  | P1 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.Advanced.LockOnLeave | Lock password-protected sections as soon as I navigate away from them | File/Options/Advanced/Lock password-protected sections as soon as I navigate away from them | option |  |  | P1 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.AddinsAccessLocked | Enable add-on programs to access password-protected sections when unlocked | File/Options/Advanced/Enable add-on programs to access password-protected sections when unlocked | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.BatteryOptions | Battery life optimization | File/Options/Advanced/Battery life optimization | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.ShowAuthors | Show authors | File/Options/Advanced/Show authors | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
@@ -1428,9 +1431,9 @@ Documented (or, where marked, plausible and unverified) behaviour. A behaviour r
 | BEH.Search.Scope | Scopes: This Page, This Section, This Section Group, This Notebook, All Notebooks; default scope can be set | Behaviour/Search | behaviour |  |  | P0 | verified | FLUENT19:ContextMenuSearchScope |  |
 | BEH.Search.PrefixMatch | Search matches word prefixes, case-insensitively, and finds titles, text, tags and file names | Behaviour/Search | behaviour |  |  | P0 | wired | GK | unverified matching rules |
 | BEH.Search.Quoted | Quoted phrases match exactly; several words match pages that contain all of them | Behaviour/Search | behaviour |  |  | P1 | wired | GK | unverified |
-| BEH.Search.LockedExcluded | Locked password-protected sections are not searched | Behaviour/Search | behaviour |  |  | P1 | missing | GK (MS Support: password-protect sections) |  |
-| BEH.Password.Lock | A password-protected section shows a lock; its pages are hidden until unlocked; it relocks after the idle time | Behaviour/Password | behaviour |  |  | P1 | missing | FLUENT19:PasswordProtectSection; KBD365 (Ctrl+Alt+L) |  |
-| BEH.Password.NoRecovery | A forgotten section password cannot be recovered | Behaviour/Password | behaviour |  |  | P1 | missing | GK (MS Support) |  |
+| BEH.Search.LockedExcluded | Locked password-protected sections are not searched | Behaviour/Search | behaviour |  |  | P1 | wired | GK (MS Support: password-protect sections) |  |
+| BEH.Password.Lock | A password-protected section shows a lock; its pages are hidden until unlocked; it relocks after the idle time | Behaviour/Password | behaviour |  |  | P1 | wired | FLUENT19:PasswordProtectSection; KBD365 (Ctrl+Alt+L) |  |
+| BEH.Password.NoRecovery | A forgotten section password cannot be recovered | Behaviour/Password | behaviour |  |  | P1 | wired | GK (MS Support) |  |
 | BEH.View.RuleLines | Rule lines: Narrow, College, Standard, Wide ruled; Small, Medium, Large, Very Large grid; None; colour; optional margin line | Behaviour/View | behaviour |  |  | P1 | missing | FLUENT19:RuleLinesMenu | unverified spacings |
 | BEH.View.PageColor | Page colour: a palette of 16 light colours plus No Color | Behaviour/View | behaviour |  |  | P1 | missing | FLUENT19:PageColorGallery | unverified palette |
 | BEH.View.Zoom | Zoom from 10% to 400%; Zoom In/Out step through fixed stops | Behaviour/View | behaviour |  |  | P0 | wired | FLUENT19:ZoomClassic | unverified stops |
@@ -1513,6 +1516,8 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 | NC.Templates.Save | Save Current Page as a Template | Window/Panes/Templates/Save current page as a template | button |  | template.save | P2 | wired | NoteCraft (decision D10) | Keeps the page's text, tables, ink and page setup under a name in the preferences (pictures and attachments are left out); optionally the section's default. |
 | NC.Templates.Delete | Delete Template | Window/Panes/Templates/My Templates/Delete | button |  | template.delete | P2 | wired | NoteCraft (decision D10) | Deletes one of the user's own templates. |
 | NC.File.Import | Import a file (Markdown, plain text, HTML, a picture or a PDF as a page; Evernote .enex as a section) | File/Open/Import File | button |  | file.import | P1 | verified | NoteCraft | FMT.Import.Markdown, FMT.Import.Text, FMT.Import.Html, FMT.Import.Enex, FMT.Import.Images, FMT.Import.Pdf |
+| NC.Section.Unlock | Unlock a password-protected section (the prompt in place of the page) | Window/Canvas/Unlock Section | button |  | section.unlock | P1 | wired | NoteCraft (decision D15) | BEH.Password.Lock; a wrong password is refused and the section stays locked |
+| NC.Section.Lock | Lock one password-protected section | Window/Panes/Password Protection/Lock Section | button |  | section.lock | P2 | wired | NoteCraft (decision D15) | seals the pages, drops them and the key from memory, clears the undo history |
 
 ## Revision history
 

@@ -342,9 +342,15 @@ fn delete_one(s: &mut Session, pid: Id) -> Result<bool, CmdError> {
     }
     secm.normalize();
     let next = secm.pages.get(i).or_else(|| i.checked_sub(1).and_then(|j| secm.pages.get(j))).map(|p| p.id);
-    let nb = s.ws.notebook_mut(nb_id).ok_or_else(no_page)?;
-    for page in removed {
-        nb.recycle.pages.push(DeletedPage { page, from_section: sid, from_section_name: section_name.clone(), deleted: now });
+    // Pages of a password-protected section skip the Recycle Bin, whose file isn't sealed
+    // (decision D15; undo still brings them back in this session).
+    if sec.protection.is_some() {
+        s.notice("Pages deleted from a password-protected section are not kept in the Recycle Bin.".to_string());
+    } else {
+        let nb = s.ws.notebook_mut(nb_id).ok_or_else(no_page)?;
+        for page in removed {
+            nb.recycle.pages.push(DeletedPage { page, from_section: sid, from_section_name: section_name.clone(), deleted: now });
+        }
     }
     s.sel.pages.retain(|x| *x != pid);
     if s.sel.page == Some(pid) {
