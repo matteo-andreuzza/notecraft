@@ -72,7 +72,11 @@ pub fn toolbar(app: &mut NoteApp, ui: &mut Ui, t: &Tokens) {
     for id in app.ui.qat.clone() {
         let Some(cmd) = command(&id) else { continue };
         let enabled = app.disabled_reason(cmd).is_none();
-        let tip = label(&id);
+        // The label with its shortcut, as the reference's tooltips show ("Undo (Ctrl+Z)").
+        let tip = match crate::ribbon::row(&id).map(|r| r.shortcut.trim_matches('`').replace("Mod", "Ctrl")).filter(|k| !k.is_empty()) {
+            Some(k) => format!("{} ({k})", label(&id)),
+            None => label(&id),
+        };
         let (resp, rect, color) = icon_button(ui, size::BUTTON, &tip, enabled, t);
         let glyph = Rect::from_center_size(rect.center(), vec2(size::ICON + 2.0, size::ICON + 2.0));
         match id.as_str() {
