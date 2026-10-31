@@ -230,6 +230,10 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             }
             // OPT.Display.ShowNoteContainers.
             ui.checkbox(&mut d.show_note_containers, "Show note containers on pages");
+            // OPT.Display.NavBarLeft.
+            ui.checkbox(&mut d.nav_left, "Navigation bar appears on the left");
+            // OPT.Display.FloatingNewPage.
+            ui.checkbox(&mut d.floating_new_page, "Show the floating New Page button near page tabs");
         }
         OptionsPage::SaveBackup => {
             section(ui, "Save");

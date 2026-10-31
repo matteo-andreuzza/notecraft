@@ -917,6 +917,49 @@ fn ribbon_screentips_name_the_command_and_its_shortcut() {
 }
 
 #[test]
+fn display_options_containers_navigation_side_and_new_page_button() {
+    // parity: OPT.Display.ShowNoteContainers, OPT.Display.NavBarLeft, OPT.Display.FloatingNewPage
+    use crate::canvas::container_framed;
+    assert!(container_framed(true, true, false), "pointing at a container frames it");
+    assert!(!container_framed(false, true, false), "not with Show note containers off");
+    assert!(container_framed(false, false, true), "a selected container is always framed");
+    assert!(!container_framed(true, false, false));
+    // The navigation on the right of the page.
+    let mut a = app();
+    a.session.prefs.nav_left = false;
+    a.session.prefs.floating_new_page = false;
+    let sid = a.session.notebook().unwrap().sections()[1].id;
+    a.session.goto_section(sid).unwrap();
+    let first = a.session.section().unwrap().pages[0].clone();
+    let n = a.session.section().unwrap().pages.len();
+    let mut h = harness(a);
+    h.run();
+    let tree = h.get_by_label("Sample Notebook").rect();
+    let title = h.get_all_by_label(&first.display_title()).next().unwrap().rect();
+    assert!(tree.min.x > 640.0 && title.min.x > 640.0, "notebooks and pages on the right: {tree:?} {title:?}");
+    // No insertion point: the lower edge of a tab just opens the page.
+    crate::tests_canvas::click(&mut h, egui::pos2(title.center().x, title.max.y - 2.0));
+    assert_eq!(h.state().session.section().unwrap().pages.len(), n);
+}
+
+#[test]
+fn a_long_page_has_scroll_bars() {
+    // parity: UI.Canvas.Scrollbars
+    let bars = |long: bool| {
+        let mut a = app();
+        if long {
+            for _ in 0..80 {
+                a.session.run("text.insert", json!({"text": "A line of a long page\n"})).unwrap();
+            }
+        }
+        let mut h = harness(a);
+        h.run_steps(3);
+        h.query_all_by_role(egui::accesskit::Role::ScrollBar).count()
+    };
+    assert!(bars(true) > bars(false), "the page gets a vertical scroll bar when it outgrows the window");
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();

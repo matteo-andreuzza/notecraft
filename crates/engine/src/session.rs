@@ -50,6 +50,11 @@ pub struct Prefs {
     pub show_mini_toolbar: bool,
     /// Show note container frames on pages (`OPT.Display.ShowNoteContainers`; the UI reads it).
     pub show_note_containers: bool,
+    /// The navigation (notebooks and pages) on the left of the page, else on the right
+    /// (`OPT.Display.NavBarLeft`; the UI reads it).
+    pub nav_left: bool,
+    /// Pointing between page tabs offers to add a page there (`OPT.Display.FloatingNewPage`).
+    pub floating_new_page: bool,
     /// Default font of new text (`OPT.Advanced.DefaultFont`).
     pub default_font: String,
     /// Default size in points.
@@ -125,6 +130,8 @@ impl Default for Prefs {
             initials: String::new(),
             show_mini_toolbar: true,
             show_note_containers: true,
+            nav_left: true,
+            floating_new_page: true,
             default_font: notecraft_doc::text::DEFAULT_FONT.to_string(),
             default_size: notecraft_doc::text::DEFAULT_SIZE,
             default_color: None,

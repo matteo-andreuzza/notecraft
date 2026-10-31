@@ -409,6 +409,12 @@ fn layout_para(
     ctx.fonts_mut(|f| f.layout_job(job))
 }
 
+/// Whether a note container shows its frame and bar: when the pointer or the caret is in it
+/// (unless Options › Display › Show note containers is off), and always when it is selected.
+pub(crate) fn container_framed(show_containers: bool, pointer_or_caret_in_it: bool, selected: bool) -> bool {
+    (pointer_or_caret_in_it && show_containers) || selected
+}
+
 /// Draw the canvas.
 pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     let ctx = ui.ctx().clone();
@@ -477,7 +483,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         for o in &outlines {
             // OPT.Display.ShowNoteContainers: off, a frame shows only on a selected container.
             let near = hover.is_some_and(|h| o.rect.expand(6.0).contains(h)) || caret_outline == Some(o.id);
-            let hot = (near && app.session.prefs.show_note_containers) || selected_objects.contains(&o.id);
+            let hot = container_framed(app.session.prefs.show_note_containers, near, selected_objects.contains(&o.id));
             if hot {
                 painter.rect_stroke(o.rect, 0.0, Stroke::new(1.0, t.container), egui::StrokeKind::Outside);
                 painter.rect_filled(o.bar, 0.0, t.container.gamma_multiply(0.6));

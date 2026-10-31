@@ -386,6 +386,10 @@ fn main() {
             h.hover_at(egui::pos2(r.center().x, r.max.y - 2.0));
         },
     );
+    // Options › Display › Navigation bar appears on the left, unchecked.
+    shot("nav-right", &out, 1.0, |a| {
+        a.session.prefs.nav_left = false;
+    });
     // Merged cells (decision D9): the header across all three columns, a cell over two rows.
     shot("table-merged", &out, 1.0, |a| {
         table_page(a);

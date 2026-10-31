@@ -84,7 +84,9 @@ pub fn notebook_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         return;
     }
     let ctx = ui.ctx().clone();
-    let shown = egui::Panel::left("notebook_pane")
+    // OPT.Display.NavBarLeft: the navigation sits on the left of the page, or on its right.
+    let panel = if app.session.prefs.nav_left { egui::Panel::left("notebook_pane") } else { egui::Panel::right("notebook_pane") };
+    let shown = panel
         .default_size(app.ui.notebook_pane_width)
         .size_range(160.0..=420.0)
         .resizable(true)
@@ -536,7 +538,9 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     }
     let ctx = ui.ctx().clone();
     let width = app.session.view.page_list_width;
-    let shown = egui::Panel::left("page_list")
+    let left = app.session.prefs.nav_left;
+    let panel = if left { egui::Panel::left("page_list") } else { egui::Panel::right("page_list") };
+    let shown = panel
         .exact_size(width)
         .show_separator_line(true)
         .frame(Frame::NONE.fill(t.page_list).inner_margin(Margin { left: 4, right: 4, top: 6, bottom: 4 }))
@@ -622,13 +626,15 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     // Drag the right edge to resize (the canvas is registered later, so the handle sits half
     // inside the column, where it wins).
     let r = shown.response.rect;
-    let handle = Rect::from_min_max(pos2(r.max.x - 4.0, r.min.y), pos2(r.max.x + 2.0, r.max.y));
+    let edge = if left { r.max.x } else { r.min.x };
+    let handle = Rect::from_min_max(pos2(edge - 4.0, r.min.y), pos2(edge + 2.0, r.max.y));
     let h = ui.interact(handle, egui::Id::new("page_list_resize"), Sense::drag());
     if h.hovered() || h.dragged() {
         ctx.set_cursor_icon(egui::CursorIcon::ResizeHorizontal);
     }
     if h.dragged() {
-        app.session.view.page_list_width = (width + h.drag_delta().x).clamp(120.0, 480.0);
+        let d = if left { h.drag_delta().x } else { -h.drag_delta().x };
+        app.session.view.page_list_width = (width + d).clamp(120.0, 480.0);
     }
 }
 
@@ -736,7 +742,8 @@ fn bin_row(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, id: Id, name: &s
 /// subpages has none (a page there would split the family).
 fn insertion_point(app: &mut NoteApp, ui: &mut Ui, row: Rect, pid: Id, i: usize, section: &notecraft_engine::doc::Section, t: Tokens) {
     // Between a page and its own subpages a new page would split the family: only after it.
-    if section.page_family(i).end > i + 1 {
+    // OPT.Display.FloatingNewPage switches the insertion point off.
+    if section.page_family(i).end > i + 1 || !app.session.prefs.floating_new_page {
         return;
     }
     let band = Rect::from_min_max(pos2(row.min.x, row.max.y - 4.0), pos2(row.max.x, row.max.y));
