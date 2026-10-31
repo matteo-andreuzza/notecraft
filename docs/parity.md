@@ -40,6 +40,40 @@ tree on the left with Quick notes, the page column beside it and no section tabs
 five themes. Someone used to today's OneNote now finds things where they expect them; the
 2016-only surfaces (section tabs, their area menu, the page-tabs-left option) are out of scope.
 
+## OneNote import fidelity (M3, decision D12)
+
+What a `.one` section (alone, in a notebook folder or in a `.onepkg`) keeps when NoteCraft
+imports it, construct by construct. **Kept** means read into the same NoteCraft construct,
+**degraded** means read with something lost or approximated, **lost** means not imported
+(each import counts these in its report: `notecraft-cli onenote PATH` prints it). The
+status comes from the public [MS-ONESTORE]/[MS-ONE] specifications (rev 13.3) and from
+synthetic fixtures written by `onestore`'s own writer. Numbers measured on real notebooks
+are still missing: they need files from users, which are never committed.
+
+| Construct | Status | Notes |
+|---|---|---|
+| Pages, titles, subpage levels | kept | title from the title outline, else the cached title; levels 1–3 |
+| Page dates | kept | last modified and creation times |
+| Note containers | degraded | text, levels and width kept; position from OffsetFromParent, page margin origin not applied (unverified) |
+| Rich text | kept | bold, italic, underline, strike, super/subscript, font, size, colour, highlight, alignment |
+| Paragraph styles | degraded | Normal and Page Title exact; heading/citation/quote/code ids unverified |
+| Text hyperlinks | degraded | the text is kept, the link target is not in the public spec |
+| Bulleted and numbered lists | degraded | numbers and restarts kept; bullet glyphs mapped to the nearest NoteCraft bullet |
+| Note tags | degraded | label and checked state kept; non-built-in shapes get the nearest icon, colours not kept |
+| Pictures | degraded | PNG/JPEG/GIF/BMP kept with size, alt text and link; EMF, WMF and TIFF lost; pictures inside a container become page objects below their paragraph |
+| File attachments | degraded | embedded files kept; references to files beside the section lost |
+| Tables | degraded | rows, cells, column widths, borders and shading kept; merged cells read as single cells (not in the public spec) |
+| Ink (handwriting and drawings) | lost | not in the public [MS-ONE]; reported as other page objects |
+| Page versions | lost | revision manifests are not read |
+| Password-protected sections | lost | refused with a message (the encryption is not in the public spec) |
+| Section groups (folders) | kept | from the notebook folder's subfolders |
+| Section colours and order | degraded | order by name; the TOC's PropertyIDs are not in the public spec, so colours rotate |
+| `.onepkg` packages | kept | uncompressed and MSZIP cabinets; Quantum, LZX and multi-cabinet sets refused |
+| OneNote 2007 sections | lost | no public specification |
+
+Writing `.one` back is not done: decision D12 keeps OneNote files read-only until real-file
+measurements say which constructs survive a round trip.
+
 ## Unverified assumptions
 
 Behaviour that public documentation does not pin down is implemented the most plausible way and
