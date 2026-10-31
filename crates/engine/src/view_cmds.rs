@@ -106,6 +106,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("view.normal", "R.View.Views.NormalViewOneNote", "Normal View", "View/Views/Normal View", |s, _| {
             s.view.full_page = false;
             s.view.docked = false;
+            s.view.quick_note = false;
             Ok(Value::Null)
         })
         .pure(),

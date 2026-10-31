@@ -49,6 +49,7 @@ mod template_cmds;
 mod text_cmds;
 mod versions_cmds;
 mod view_cmds;
+mod window_cmds;
 
 #[cfg(test)]
 mod tests;

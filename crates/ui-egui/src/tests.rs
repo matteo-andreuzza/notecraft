@@ -820,6 +820,26 @@ fn about_shows_the_version_from_the_account_page() {
 }
 
 #[test]
+fn a_quick_note_shrinks_the_window_to_the_page() {
+    // parity: UI.Window.QuickNote, KB.General.QuickNote
+    let mut h = harness(app());
+    h.run_steps(3);
+    assert!(h.query_by_label("Insert").is_some());
+    h.key_press_modifiers(egui::Modifiers::COMMAND | egui::Modifiers::SHIFT, egui::Key::M);
+    h.run_steps(3);
+    let st = h.state();
+    assert!(st.session.view.quick_note, "Ctrl+Shift+M");
+    assert_eq!(st.session.section().unwrap().name, "Quick Notes");
+    assert!(st.ui.quick_note_shown && st.ui.quick_note_restore.is_some(), "the window was resized, its size kept");
+    assert!(h.query_by_label("Insert").is_none(), "no ribbon tabs in a Quick Note");
+    h.get_by_label("Open in the full window").click();
+    h.run_steps(3);
+    assert!(!h.state().session.view.quick_note);
+    assert!(!h.state().ui.quick_note_shown);
+    assert!(h.query_by_label("Insert").is_some(), "the full window is back");
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();
