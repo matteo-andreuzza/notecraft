@@ -840,6 +840,39 @@ fn a_quick_note_shrinks_the_window_to_the_page() {
 }
 
 #[test]
+fn customize_tags_reorders_removes_and_adds_tags() {
+    // parity: UI.Panes.CustomizeTags
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.ui.dialog = Some(Dialog::CustomizeTags(String::new()));
+    let mut h = harness(a);
+    h.run();
+    let keys = |h: &Harness<'static, NoteApp>| h.state().session.tag_defs().into_iter().map(|d| d.key).collect::<Vec<_>>();
+    // Select Question, move it up, then remove it.
+    h.get_by_label("Question").click();
+    h.run();
+    h.get_by_label("Move Up").click();
+    h.run();
+    assert_eq!(&keys(&h)[..3], &["todo", "question", "important"]);
+    assert!(h.query_by_label("Modify Tag").is_some(), "the selected tag can be modified");
+    h.get_by_label("Remove Tag").click();
+    h.run();
+    assert!(!keys(&h).contains(&"question".to_string()));
+    // A new tag goes on top.
+    h.state_mut().ui.dialog = Some(Dialog::CustomizeTags("Recipe".into()));
+    h.run();
+    h.get_by_label("Add").click();
+    h.run();
+    assert_eq!(h.state().session.tag_defs()[0].name, "Recipe");
+    h.get_by_label("Reset Tags").click();
+    h.run();
+    assert_eq!(&keys(&h)[..3], &["todo", "important", "question"], "built-ins back in order");
+    h.get_by_label("Close").click();
+    h.run();
+    assert!(h.state().ui.dialog.is_none());
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();

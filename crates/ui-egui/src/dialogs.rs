@@ -527,27 +527,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                 });
             }
             Dialog::CustomizeTags(name) => {
-                ui.label("Custom tags:");
-                for d in app.session.prefs.custom_tags.clone() {
-                    ui.horizontal(|ui| {
-                        ui.label(&d.name);
-                        if ui.small_button("Remove").clicked() {
-                            app.run(ctx, "tag.customize", json!({"action": "remove", "key": d.key}));
-                        }
-                    });
-                }
-                ui.separator();
-                ui.label("New Tag › Display name:");
-                ui.text_edit_singleline(name);
-                ui.horizontal(|ui| {
-                    if crate::chrome::primary_button(ui, "Add", &t).clicked() && !name.trim().is_empty() {
-                        app.run(ctx, "tag.customize", json!({"action": "add", "name": name.trim()}));
-                        name.clear();
-                    }
-                    if ui.button("Close").clicked() {
-                        close = true;
-                    }
-                });
+                close = customize_tags(app, ui, ctx, name, &t);
             }
             Dialog::InsertFile(files) => {
                 let names: Vec<String> = files.iter().map(file_name).collect();
@@ -599,4 +579,147 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
         close = true;
     }
     app.ui.dialog = if close { None } else { Some(next) };
+}
+
+/// The symbols a tag can have (Customize Tags › Symbol), with their `tag.customize` names.
+const TAG_SYMBOLS: &[(&str, notecraft_engine::doc::TagSymbol)] = {
+    use notecraft_engine::doc::TagSymbol as S;
+    &[
+        ("none", S::None),
+        ("checkbox", S::Checkbox),
+        ("star", S::Star),
+        ("question", S::Question),
+        ("person", S::Person),
+        ("house", S::House),
+        ("phone", S::Phone),
+        ("globe", S::Globe),
+        ("bulb", S::Bulb),
+        ("key", S::Key),
+        ("exclamation", S::Exclamation),
+        ("flag", S::FlagA),
+        ("film", S::Film),
+        ("book", S::Book),
+        ("music", S::Music),
+        ("document", S::Document),
+        ("pen", S::Pen),
+        ("envelope", S::Envelope),
+    ]
+};
+
+/// What the Customize Tags dialog is editing: the selected tag and its fields.
+#[derive(Clone, Default)]
+struct TagEdit {
+    key: String,
+    name: String,
+    symbol: String,
+    font: Option<[u8; 3]>,
+    highlight: Option<[u8; 3]>,
+}
+
+fn rgb3(c: Option<notecraft_engine::doc::color::Rgba>) -> Option<[u8; 3]> {
+    c.map(|c| [c.r, c.g, c.b])
+}
+
+/// One colour of a tag: "None" or a colour button.
+fn tag_color(ui: &mut egui::Ui, label: &str, c: &mut Option<[u8; 3]>) {
+    ui.horizontal(|ui| {
+        ui.label(label);
+        let mut on = c.is_some();
+        if ui.checkbox(&mut on, "").changed() {
+            *c = if on { Some([255, 255, 0]) } else { None };
+        }
+        if let Some(rgb) = c {
+            egui::color_picker::color_edit_button_srgb(ui, rgb);
+        } else {
+            ui.label(RichText::new("None").weak());
+        }
+    });
+}
+
+/// Customize Tags (catalog `UI.Panes.CustomizeTags`): every tag in order, built-in or not; the
+/// selected one can move up or down, be modified (name, symbol, font colour, highlight) or
+/// removed; New Tag adds one at the top. Returns true when the dialog closes.
+fn customize_tags(app: &mut NoteApp, ui: &mut egui::Ui, ctx: &egui::Context, name: &mut String, t: &Tokens) -> bool {
+    let id = egui::Id::new("customize_tags_edit");
+    let mut edit: TagEdit = ui.data(|d| d.get_temp(id)).unwrap_or_default();
+    let defs = app.session.tag_defs();
+    let mut close = false;
+    ui.label("Tags:");
+    egui::ScrollArea::vertical().max_height(220.0).show(ui, |ui| {
+        ui.set_min_width(320.0);
+        for d in &defs {
+            let selected = edit.key == d.key;
+            let resp = ui.horizontal(|ui| {
+                let (r, _) = ui.allocate_exact_size(vec2(16.0, 16.0), egui::Sense::hover());
+                crate::icons::tag(ui.painter(), r, d.symbol, false, t.text);
+                ui.selectable_label(selected, &d.name)
+            });
+            if resp.inner.clicked() {
+                edit = TagEdit {
+                    key: d.key.clone(),
+                    name: d.name.clone(),
+                    symbol: TAG_SYMBOLS.iter().find(|x| x.1 == d.symbol).map_or("star", |x| x.0).to_string(),
+                    font: rgb3(d.font_color),
+                    highlight: rgb3(d.highlight),
+                };
+            }
+        }
+    });
+    let chosen = defs.iter().any(|d| d.key == edit.key);
+    ui.horizontal(|ui| {
+        for (label, action) in [("Move Up", "moveUp"), ("Move Down", "moveDown"), ("Remove Tag", "remove")] {
+            if ui.add_enabled(chosen, egui::Button::new(label)).clicked() {
+                app.run(ctx, "tag.customize", json!({"action": action, "key": edit.key}));
+            }
+        }
+    });
+    ui.separator();
+    if chosen {
+        ui.label(RichText::new("Modify Tag").strong());
+        ui.horizontal(|ui| {
+            ui.label("Display name:");
+            ui.text_edit_singleline(&mut edit.name);
+        });
+        ui.horizontal(|ui| {
+            ui.label("Symbol:");
+            egui::ComboBox::from_id_salt("tag_symbol").selected_text(edit.symbol.clone()).show_ui(ui, |ui| {
+                for (n, sym) in TAG_SYMBOLS {
+                    ui.horizontal(|ui| {
+                        let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), egui::Sense::hover());
+                        crate::icons::tag(ui.painter(), r, *sym, false, t.text);
+                        ui.selectable_value(&mut edit.symbol, n.to_string(), *n);
+                    });
+                }
+            });
+        });
+        tag_color(ui, "Font Color:", &mut edit.font);
+        tag_color(ui, "Highlight Color:", &mut edit.highlight);
+        if ui.button("Apply").clicked() {
+            let hex = |c: Option<[u8; 3]>| c.map(|[r, g, b]| notecraft_engine::doc::color::Rgba::rgb(r, g, b).to_hex());
+            app.run(
+                ctx,
+                "tag.customize",
+                json!({"action": "modify", "key": edit.key, "name": edit.name, "symbol": edit.symbol, "fontColor": hex(edit.font), "highlight": hex(edit.highlight)}),
+            );
+        }
+        ui.separator();
+    }
+    ui.horizontal(|ui| {
+        ui.label("New Tag:");
+        ui.text_edit_singleline(name);
+        if ui.add_enabled(!name.trim().is_empty(), egui::Button::new("Add")).clicked() {
+            app.run(ctx, "tag.customize", json!({"action": "add", "name": name.trim()}));
+            name.clear();
+        }
+    });
+    ui.horizontal(|ui| {
+        if ui.button("Reset Tags").on_hover_text("The built-in tags in their first order; your own tags stay").clicked() {
+            app.run(ctx, "tag.customize", json!({"action": "reset"}));
+        }
+        if crate::chrome::primary_button(ui, "Close", t).clicked() {
+            close = true;
+        }
+    });
+    ui.data_mut(|d| d.insert_temp(id, edit));
+    close
 }

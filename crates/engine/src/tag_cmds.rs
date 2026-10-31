@@ -84,7 +84,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .when(ops::need_section),
         // R.Home.Tags.TagsCustomize — add, modify or remove a custom tag (stored in preferences).
         CommandSpec::new("tag.customize", "R.Home.Tags.TagsCustomize", "Customize Tags", "Home/Tags/Customize Tags", customize)
-            .params(r##"{"action": "add"|"modify"|"remove", "key"?: string, "name"?: string, "symbol"?: string, "fontColor"?: "#rrggbb", "highlight"?: "#rrggbb"}"##)
+            .params(r##"{"action": "add"|"modify"|"remove"|"moveUp"|"moveDown"|"reset", "key"?: string (any tag, built-in or custom), "name"?: string, "symbol"?: string, "fontColor"?: "#rrggbb"|null, "highlight"?: "#rrggbb"|null}"##)
             .pure(),
     ]
 }
@@ -448,64 +448,215 @@ fn parse_symbol(name: &str) -> Option<TagSymbol> {
     })
 }
 
+/// Keep `list` as the tag list (Customize Tags), and the custom ones also as `custom_tags`.
+fn store_tags(s: &mut Session, list: Vec<TagDef>) -> CmdResult {
+    s.prefs.custom_tags = list.iter().filter(|d| d.key.starts_with("custom-")).cloned().collect();
+    let keys: Vec<String> = list.iter().map(|d| d.key.clone()).collect();
+    s.prefs.tag_list = Some(list);
+    Ok(json!({"tags": keys}))
+}
+
 fn customize(s: &mut Session, v: &Value) -> CmdResult {
     let action = p::req_str(v, "action")?;
-    let color = |k: &str| -> Result<Option<notecraft_doc::color::Rgba>, CmdError> {
-        match p::str(v, k) {
+    // A colour param: absent = keep, null = none, "#rrggbb" = that colour.
+    let color = |k: &str| -> Result<Option<Option<notecraft_doc::color::Rgba>>, CmdError> {
+        match v.get(k) {
             None => Ok(None),
-            Some(c) => notecraft_doc::color::Rgba::from_hex(c).map(Some).ok_or_else(|| CmdError::Params(format!("`{k}` must be #rrggbb"))),
+            Some(Value::Null) => Ok(Some(None)),
+            Some(Value::String(c)) => notecraft_doc::color::Rgba::from_hex(c)
+                .map(|c| Some(Some(c)))
+                .ok_or_else(|| CmdError::Params(format!("`{k}` must be #rrggbb or null"))),
+            Some(_) => Err(CmdError::Params(format!("`{k}` must be #rrggbb or null"))),
         }
+    };
+    let symbol = || -> Result<Option<TagSymbol>, CmdError> {
+        match p::str(v, "symbol") {
+            Some(n) => parse_symbol(n).map(Some).ok_or_else(|| CmdError::Params(format!("unknown symbol `{n}`"))),
+            None => Ok(None),
+        }
+    };
+    let mut list = s.tag_defs();
+    let find = |list: &[TagDef]| -> Result<usize, CmdError> {
+        let key = p::req_str(v, "key")?;
+        list.iter().position(|d| d.key == key).ok_or_else(|| CmdError::Params(format!("no tag `{key}`")))
     };
     match action {
         "add" => {
-            if s.prefs.custom_tags.len() >= notecraft_doc::tags::MAX_CUSTOM_TAGS {
+            if list.iter().filter(|d| d.key.starts_with("custom-")).count() >= notecraft_doc::tags::MAX_CUSTOM_TAGS {
                 return Err(CmdError::Failed("too many custom tags".into()));
             }
             let name = notecraft_doc::clean_name(p::req_str(v, "name")?);
             if name.is_empty() {
                 return Err(CmdError::Params("`name` can't be empty".into()));
             }
-            let symbol = match p::str(v, "symbol") {
-                Some(n) => parse_symbol(n).ok_or_else(|| CmdError::Params(format!("unknown symbol `{n}`")))?,
-                None => TagSymbol::Star,
-            };
             let key = format!("custom-{}", s.new_id());
-            s.prefs.custom_tags.push(TagDef { key: key.clone(), name, symbol, font_color: color("fontColor")?, highlight: color("highlight")? });
-            Ok(json!({"key": key}))
+            let def = TagDef {
+                key: key.clone(),
+                name,
+                symbol: symbol()?.unwrap_or(TagSymbol::Star),
+                font_color: color("fontColor")?.flatten(),
+                highlight: color("highlight")?.flatten(),
+            };
+            // New tags go first in the list, as the reference puts them (unverified).
+            list.insert(0, def);
+            let mut r = store_tags(s, list)?;
+            r["key"] = json!(key);
+            Ok(r)
         }
         "modify" => {
-            let key = p::req_str(v, "key")?;
-            let fc = color("fontColor")?;
-            let hl = color("highlight")?;
-            let sym = match p::str(v, "symbol") {
-                Some(n) => Some(parse_symbol(n).ok_or_else(|| CmdError::Params(format!("unknown symbol `{n}`")))?),
-                None => None,
-            };
-            let def =
-                s.prefs.custom_tags.iter_mut().find(|d| d.key == key).ok_or_else(|| CmdError::Params("only custom tags can be modified".into()))?;
+            let i = find(&list)?;
+            let (sym, fc, hl) = (symbol()?, color("fontColor")?, color("highlight")?);
+            let def = list.get_mut(i).ok_or_else(|| CmdError::Params("no such tag".into()))?;
             if let Some(n) = p::str(v, "name") {
-                def.name = notecraft_doc::clean_name(n);
+                let n = notecraft_doc::clean_name(n);
+                if n.is_empty() {
+                    return Err(CmdError::Params("`name` can't be empty".into()));
+                }
+                def.name = n;
             }
             if let Some(sym) = sym {
                 def.symbol = sym;
             }
-            if fc.is_some() {
-                def.font_color = fc;
+            if let Some(c) = fc {
+                def.font_color = c;
             }
-            if hl.is_some() {
-                def.highlight = hl;
+            if let Some(c) = hl {
+                def.highlight = c;
             }
-            Ok(Value::Null)
+            store_tags(s, list)
         }
         "remove" => {
-            let key = p::req_str(v, "key")?;
-            let before = s.prefs.custom_tags.len();
-            s.prefs.custom_tags.retain(|d| d.key != key);
-            if s.prefs.custom_tags.len() == before {
-                return Err(CmdError::Params("no such custom tag".into()));
+            // Notes keep the tags they carry (a tag on a paragraph has its own name and symbol).
+            let i = find(&list)?;
+            list.remove(i);
+            store_tags(s, list)
+        }
+        "moveUp" | "moveDown" => {
+            let i = find(&list)?;
+            let j = if action == "moveUp" { i.checked_sub(1) } else { Some(i + 1).filter(|j| *j < list.len()) };
+            if let Some(j) = j {
+                list.swap(i, j);
             }
-            Ok(Value::Null)
+            store_tags(s, list)
+        }
+        "reset" => {
+            s.prefs.tag_list = None;
+            Ok(json!({"tags": s.tag_defs().iter().map(|d| d.key.clone()).collect::<Vec<_>>()}))
         }
         o => Err(CmdError::Params(format!("unknown action `{o}`"))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tests::{run, sample};
+
+    fn keys(s: &Session) -> Vec<String> {
+        s.tag_defs().into_iter().map(|d| d.key).collect()
+    }
+
+    #[test]
+    fn customize_tags_modifies_reorders_and_removes_any_tag() {
+        // parity: UI.Panes.CustomizeTags
+        let mut s = sample();
+        let builtins = keys(&s);
+        // A built-in renamed, recoloured and given another symbol.
+        run(
+            &mut s,
+            "tag.customize",
+            json!({"action": "modify", "key": "important", "name": "Urgent", "symbol": "exclamation", "highlight": "#ffcccc"}),
+        );
+        let d = s.tag_defs().into_iter().find(|d| d.key == "important").unwrap();
+        assert_eq!((d.name.as_str(), d.symbol), ("Urgent", TagSymbol::Exclamation));
+        assert!(d.highlight.is_some());
+        run(&mut s, "tag.customize", json!({"action": "modify", "key": "important", "highlight": null}));
+        assert!(s.tag_defs().into_iter().find(|d| d.key == "important").unwrap().highlight.is_none(), "null clears a colour");
+        // Reorder: Question up above Important.
+        run(&mut s, "tag.customize", json!({"action": "moveUp", "key": "question"}));
+        assert_eq!(&keys(&s)[..3], &["todo", "question", "important"]);
+        run(&mut s, "tag.customize", json!({"action": "moveUp", "key": "todo"}));
+        assert_eq!(keys(&s)[0], "todo", "the first stays first");
+        // A new tag goes first; removing a built-in leaves the notes that carry it alone.
+        let k = run(&mut s, "tag.customize", json!({"action": "add", "name": "Recipe"}))["key"].as_str().unwrap().to_string();
+        assert_eq!(keys(&s)[0], k);
+        assert_eq!(s.prefs.custom_tags.len(), 1, "custom tags stay listed on their own too");
+        run(&mut s, "text.insert", json!({"text": "x"}));
+        run(&mut s, "tag.toggle", json!({"key": "idea"}));
+        run(&mut s, "tag.customize", json!({"action": "remove", "key": "idea"}));
+        assert!(!keys(&s).contains(&"idea".to_string()));
+        assert!(
+            s.page()
+                .unwrap()
+                .objects
+                .iter()
+                .filter_map(PageObject::as_outline)
+                .flat_map(|o| o.paragraphs.iter())
+                .any(|p| p.tags.iter().any(|t| t.key == "idea"))
+        );
+        // Reset brings the built-ins back in order (custom tags after them).
+        run(&mut s, "tag.customize", json!({"action": "reset"}));
+        assert_eq!(&keys(&s)[..builtins.len()], &builtins[..]);
+        for bad in [
+            json!({"action": "moveUp", "key": "nope"}),
+            json!({"action": "modify", "key": "todo", "name": "  "}),
+            json!({"action": "modify", "key": "todo", "fontColor": 3}),
+            json!({"action": "spin"}),
+        ] {
+            assert!(matches!(s.run("tag.customize", bad.clone()), Err(CmdError::Params(_))), "{bad}");
+        }
+    }
+
+    #[test]
+    fn every_tag_of_the_gallery_applies() {
+        // The Tags gallery's items, in the ribbon's order, and the tags they apply.
+        let rows = [
+            ("R.Home.Tags.ToDo", "todo"),
+            ("R.Home.Tags.Important", "important"),
+            ("R.Home.Tags.Question", "question"),
+            ("R.Home.Tags.RememberForLater", "remember-for-later"),
+            ("R.Home.Tags.Definition", "definition"),
+            ("R.Home.Tags.Highlight", "highlight"),
+            ("R.Home.Tags.Contact", "contact"),
+            ("R.Home.Tags.Address", "address"),
+            ("R.Home.Tags.PhoneNumber", "phone-number"),
+            ("R.Home.Tags.WebSiteToVisit", "web-site-to-visit"),
+            ("R.Home.Tags.Idea", "idea"),
+            ("R.Home.Tags.Password", "password"),
+            ("R.Home.Tags.Critical", "critical"),
+            ("R.Home.Tags.ProjectA", "project-a"),
+            ("R.Home.Tags.ProjectB", "project-b"),
+            ("R.Home.Tags.MovieToSee", "movie-to-see"),
+            ("R.Home.Tags.BookToRead", "book-to-read"),
+            ("R.Home.Tags.MusicToListenTo", "music-to-listen-to"),
+            ("R.Home.Tags.SourceForArticle", "source-for-article"),
+            ("R.Home.Tags.RememberForBlog", "remember-for-blog"),
+            ("R.Home.Tags.DiscussWithPersonA", "discuss-with-person-a"),
+            ("R.Home.Tags.DiscussWithPersonB", "discuss-with-person-b"),
+            ("R.Home.Tags.DiscussWithManager", "discuss-with-manager"),
+            ("R.Home.Tags.SendInEmail", "send-in-email"),
+            ("R.Home.Tags.ScheduleMeeting", "schedule-meeting"),
+            ("R.Home.Tags.CallBack", "call-back"),
+            ("R.Home.Tags.ToDoPriority1", "todo-priority-1"),
+            ("R.Home.Tags.ToDoPriority2", "todo-priority-2"),
+            ("R.Home.Tags.ClientRequest", "client-request"),
+        ];
+        let builtins = notecraft_doc::builtin_tags();
+        assert_eq!(rows.len(), builtins.len());
+        for ((row, key), def) in rows.iter().zip(&builtins) {
+            assert_eq!(def.key, *key, "{row} is the built-in in the same place");
+            let mut s = sample();
+            run(&mut s, "text.insert", json!({"text": "x"}));
+            run(&mut s, "tag.toggle", json!({"key": key}));
+            let tagged = s
+                .page()
+                .unwrap()
+                .objects
+                .iter()
+                .filter_map(PageObject::as_outline)
+                .flat_map(|o| o.paragraphs.iter())
+                .any(|p| p.tags.iter().any(|t| t.key == *key && t.name == def.name));
+            assert!(tagged, "{row}");
+        }
     }
 }
