@@ -894,6 +894,14 @@ fn version_rows(app: &mut NoteApp, ui: &mut Ui, page: &notecraft_engine::doc::Pa
         resp.context_menu(|ui| {
             cmd_item(app, ui, "Restore Version", "history.restoreVersion", json!({"page": p, "at": at}));
             cmd_item(app, ui, "Delete Version", "history.deleteVersion", json!({"page": p, "at": at}));
+            // CM.PageVersion.CopyOrMoveToSection: the version as a new page in a section.
+            let sections: Vec<(String, String)> =
+                app.session.notebook().map(|nb| nb.sections().iter().map(|s| (s.id.to_string(), s.name.clone())).collect()).unwrap_or_default();
+            ui.menu_button("Move or Copy to Section", |ui| {
+                for (sid, name) in &sections {
+                    cmd_item(app, ui, name, "page.moveOrCopy", json!({"page": p, "version": at, "section": sid, "copy": true}));
+                }
+            });
             ui.separator();
             cmd_item(app, ui, "Delete All Versions in Section", "history.deleteVersionsSection", json!({}));
             cmd_item(app, ui, "Delete All Versions in Section Group", "history.deleteVersionsGroup", json!({}));

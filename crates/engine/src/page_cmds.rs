@@ -79,7 +79,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             move_or_copy,
         )
         .key("Mod+Alt+M")
-        .params(r#"{"section": id, "copy"?: bool, "page"?: id}"#)
+        .params(r#"{"section": id, "copy"?: bool, "page"?: id, "version"?: ms (copy that version of the page as a new page)}"#)
         .when(need_page_sel),
         // KB.Pages.Demote / Promote — Ctrl+Alt+] / [ (also Make Subpage / Promote Subpage).
         CommandSpec::new("page.demote", "KB.Pages.Demote", "Make Subpage", "Keyboard/Pages/Increase the indent level of the current page", |s, v| {
@@ -382,6 +382,20 @@ fn move_or_copy(s: &mut Session, v: &Value) -> CmdResult {
     let copy = p::bool(v, "copy").unwrap_or(false);
     if s.ws.section(to).is_none() {
         return Err(CmdError::Params("no such target section".into()));
+    }
+    // CM.PageVersion.CopyOrMoveToSection: a version becomes a page of its own (always a copy).
+    if let Some(at) = v.get("version").and_then(Value::as_i64) {
+        let page = s.ws.page(pid).ok_or_else(|| CmdError::Params("no such page".into()))?;
+        let i = page.versions.iter().position(|x| x.at.0 == at).ok_or_else(|| CmdError::Params("no version at that time".into()))?;
+        let old = page.version_page(i).ok_or_else(|| CmdError::Params("no version at that time".into()))?;
+        let now = s.now();
+        let mut np = ops::clone_page_fresh(s, &old, now);
+        np.level = 0;
+        let id = np.id;
+        let dst = s.ws.section_mut(to).ok_or_else(no_page)?;
+        dst.pages.push(Arc::new(np));
+        s.goto_page(id)?;
+        return Ok(json!({"page": id.to_string()}));
     }
     let (sid, i) = s.ws.locate_page(pid).ok_or_else(|| CmdError::Params("no such page".into()))?;
     let sec = s.ws.section(sid).ok_or_else(no_page)?.clone();

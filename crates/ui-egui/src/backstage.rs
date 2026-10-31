@@ -149,7 +149,17 @@ fn info(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
                             app.ui.dialog = Some(crate::dialogs::Dialog::NotebookProperties(nb.id, nb.name.clone()));
                             ui.close();
                         }
+                        // BS.Info.Settings: Properties, Sync, Close, Open Backups.
+                        crate::nav::cmd_item(app, ui, "Sync This Notebook Now", "notebook.syncNow", json!({}));
                         crate::nav::cmd_item(app, ui, "Close", "notebook.close", json!({"notebook": nb.id.to_string()}));
+                        if let Some(folder) = app.host.backup_folder()
+                            && ui.button("Open Backups").clicked()
+                        {
+                            if let Some(r) = app.run(ctx, "file.openBackups", json!({"folder": folder})) {
+                                app.ui.status = Some((format!("Backups: {r}"), ctx.input(|i| i.time)));
+                            }
+                            ui.close();
+                        }
                     });
                 });
             });

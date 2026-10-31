@@ -375,6 +375,17 @@ mod tests {
         run(&mut s, "edit.undo", json!({}));
         assert_ne!(s.page().unwrap().objects, original, "one undo step");
         run(&mut s, "edit.redo", json!({}));
+        // parity: CM.PageVersion.CopyOrMoveToSection
+        // A version copied to another section is a new page with the old content.
+        let at0 = s.page().unwrap().versions[0].at.0;
+        let old0 = s.page().unwrap().version_page(0).unwrap();
+        let garden = s.notebook().unwrap().sections().iter().find(|x| x.name == "Garden").unwrap().id;
+        let r = run(&mut s, "page.moveOrCopy", json!({"page": pid.to_string(), "version": at0, "section": garden.to_string()}));
+        assert_eq!(s.section().unwrap().id, garden);
+        assert_ne!(r["page"].as_str(), Some(pid.to_string().as_str()));
+        assert_eq!(s.page().unwrap().title.text(), old0.title.text());
+        assert!(s.page().unwrap().versions.is_empty(), "the copy starts its own history");
+        s.goto_page(pid).unwrap();
         // Delete one version, then all in the notebook.
         let at = s.page().unwrap().versions[0].at.0;
         run(&mut s, "history.deleteVersion", json!({"at": at}));

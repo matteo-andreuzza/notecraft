@@ -1065,3 +1065,12 @@ were certain landed, behaviour unchanged (every test green after each commit).
   and Space opens it.
 - KB.Table.RowAboveEnter and KB.Notebooks.OpenSection were implemented and tested already;
   their tests now carry the row ids. 5 rows wired.
+
+## 2026-10-31 — M3/P1: Info Settings menu, Account theme, Move or Copy rows
+
+- File › Info › Settings ▾ gains Sync This Notebook Now and Open Backups (BS.Info.Settings).
+  File › Account's Office Theme row is pinned by its test (BS.Account.Theme; a UI preference,
+  the row names no engine command now). The page menu's Move or Copy… is tested
+  (CM.Page.CopyOrMoveToSection).
+- `page.moveOrCopy {version}` copies a page version as a new page into a section; the version
+  menu has Move or Copy to Section › a section (CM.PageVersion.CopyOrMoveToSection). 4 rows wired.
