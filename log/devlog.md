@@ -1025,3 +1025,13 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Tests pin BEH.Text.HeadingSizes, BEH.View.RuleLines, BEH.View.PageColor and
   BEH.Links.PageRenameTracking.
 - Desktop: a test pins the portal file dialogs (UI.Window.FileDialogs).
+## 2026-10-31 — M3: Options › Display: navigation side, New Page button, containers, scroll bars
+
+- `Prefs.nav_left` (OPT.Display.NavBarLeft): off, the notebook tree and the page column are
+  right-hand panels (the column's resize handle moves to its left edge). `Prefs.
+  floating_new_page` (OPT.Display.FloatingNewPage) switches the insertion point between page
+  tabs. Both are checkboxes in Options › Display. Snapshot `nav-right`.
+- `canvas::container_framed` names the Show note containers rule and a test pins it; a test
+  shows the page's scroll bars. Catalog: OPT.Display.ShowNoteContainers, NavBarLeft,
+  FloatingNewPage, UI.Canvas.Scrollbars wired. Not done: the vertical bar on the left
+  (OPT.Display.ScrollBarLeft, P3: egui draws it on the right edge of its area).
