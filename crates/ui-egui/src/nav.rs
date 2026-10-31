@@ -205,7 +205,7 @@ fn notebook_row(app: &mut NoteApp, ui: &mut Ui, nb: &notecraft_engine::doc::Note
     resp.context_menu(|ui| {
         cmd_item(app, ui, "Sync This Notebook Now", "notebook.syncNow", json!({}));
         cmd_item(app, ui, "Copy Link to Notebook", "notebook.copyLink", json!({"notebook": nb_id}));
-        cmd_item(app, ui, "Mark Notebook as Read", "history.markNotebookRead", json!({}));
+        cmd_item(app, ui, "Mark Notebook as Read", "history.markNotebookRead", json!({"notebook": nb_id}));
         ui.separator();
         cmd_item(app, ui, "Move Up", "notebook.moveUp", json!({"notebook": nb_id}));
         cmd_item(app, ui, "Move Down", "notebook.moveDown", json!({"notebook": nb_id}));
@@ -272,7 +272,10 @@ fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: 
                 if renaming {
                     rename_field(app, ui, Rect::from_min_max(pos2(x + 14.0, rect.min.y + 2.0), rect.max - vec2(4.0, 2.0)));
                 } else {
-                    ui.painter().with_clip_rect(rect).text(pos2(x + 18.0, rect.center().y), Align2::LEFT_CENTER, &s.name, font.clone(), t.text);
+                    // A section with unread pages is bold too.
+                    let unread = app.session.prefs.show_unread && s.pages.iter().any(|p| app.session.prefs.unread_pages.contains(&p.id));
+                    let f = if unread { TypeRung::Body.font(&ctx, Weight::Semibold) } else { font.clone() };
+                    ui.painter().with_clip_rect(rect).text(pos2(x + 18.0, rect.center().y), Align2::LEFT_CENTER, &s.name, f, t.text);
                 }
                 // A password-protected section shows a lock, closed while locked (decision D15).
                 if s.protection.is_some() {
@@ -317,7 +320,7 @@ fn nodes(app: &mut NoteApp, ui: &mut Ui, children: &[NavNode], depth: usize, t: 
                         ui.close();
                     }
                     cmd_item(app, ui, "Copy Link to Section Group", "sectionGroup.copyLink", json!({"group": gid}));
-                    cmd_item(app, ui, "Mark as Read", "history.markRead", json!({}));
+                    cmd_item(app, ui, "Mark as Read", "history.markRead", json!({"group": gid}));
                     ui.separator();
                     cmd_item(app, ui, "New Section", "section.new", json!({"group": gid}));
                     cmd_item(app, ui, "New Section Group", "sectionGroup.new", json!({"group": gid}));
@@ -365,7 +368,7 @@ fn section_menu(app: &mut NoteApp, resp: &egui::Response, sid: Id, name: &str) {
         ui.separator();
         cmd_item(app, ui, "New Section", "section.new", json!({}));
         cmd_item(app, ui, "New Section Group", "sectionGroup.new", json!({}));
-        cmd_item(app, ui, "Mark as Read", "history.markRead", json!({}));
+        cmd_item(app, ui, "Mark as Read", "history.markRead", json!({"section": s}));
         cmd_item(app, ui, "Password Protect This Section…", "review.password", json!({}));
         ui.menu_button("Section Color", |ui| {
             cmd_item(app, ui, "None", "section.color", json!({"section": s, "color": null}));
@@ -605,7 +608,15 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                             app.run(&ctx, "page.toggleSubpages", json!({"page": page.id.to_string()}));
                         }
                     }
-                    let weight_font = if selected { TypeRung::Body.font(&ctx, Weight::Medium) } else { font.clone() };
+                    // Unread pages are bold (BEH.History.Unread, unless Show Unread Changes is off).
+                    let unread = app.session.prefs.show_unread && app.session.prefs.unread_pages.contains(&page.id);
+                    let weight_font = if unread {
+                        TypeRung::Body.font(&ctx, Weight::Semibold)
+                    } else if selected {
+                        TypeRung::Body.font(&ctx, Weight::Medium)
+                    } else {
+                        font.clone()
+                    };
                     let clip = Rect::from_min_max(r.min, pos2(r.max.x - if has_kids { 26.0 } else { 6.0 }, r.max.y));
                     ui.painter().with_clip_rect(clip).text(
                         pos2(r.min.x + indent, r.center().y),
@@ -932,7 +943,11 @@ fn page_menu(app: &mut NoteApp, resp: &egui::Response, pid: Id, has_kids: bool, 
             }
         }
         ui.separator();
-        cmd_item(app, ui, "Mark as Unread", "history.markUnread", json!({}));
+        if app.session.prefs.unread_pages.contains(&pid) {
+            cmd_item(app, ui, "Mark as Read", "history.markRead", json!({"page": p}));
+        } else {
+            cmd_item(app, ui, "Mark as Unread", "history.markUnread", json!({"page": p}));
+        }
         if app.session.view.page_versions {
             cmd_item(app, ui, "Hide Page Versions", "history.pageVersions", json!({"on": false}));
         } else {

@@ -50,6 +50,12 @@ pub struct Prefs {
     pub show_mini_toolbar: bool,
     /// Show note container frames on pages (`OPT.Display.ShowNoteContainers`; the UI reads it).
     pub show_note_containers: bool,
+    /// Pages marked unread (History › Mark as Unread), shown bold until opened. Kept with the
+    /// user's settings, not in the notebook: reading is per person.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub unread_pages: Vec<notecraft_doc::Id>,
+    /// Show unread pages bold (History › Show Unread Changes in This Notebook).
+    pub show_unread: bool,
     /// The navigation (notebooks and pages) on the left of the page, else on the right
     /// (`OPT.Display.NavBarLeft`; the UI reads it).
     pub nav_left: bool,
@@ -130,6 +136,8 @@ impl Default for Prefs {
             initials: String::new(),
             show_mini_toolbar: true,
             show_note_containers: true,
+            unread_pages: Vec::new(),
+            show_unread: true,
             nav_left: true,
             floating_new_page: true,
             default_font: notecraft_doc::text::DEFAULT_FONT.to_string(),
@@ -276,6 +284,10 @@ pub struct ViewState {
     pub help_pane: bool,
     /// The window is a small Quick Note window showing only the page (View › New Quick Note).
     pub quick_note: bool,
+    /// The window stays above other windows (View › Always on Top).
+    pub always_on_top: bool,
+    /// In a dark theme, the page is drawn light (View › Switch Background).
+    pub light_page: bool,
     /// The Help pane lists keyboard shortcuts only.
     pub help_shortcuts: bool,
     /// About NoteCraft shown.
@@ -313,6 +325,8 @@ impl Default for ViewState {
             page_versions: false,
             help_pane: false,
             quick_note: false,
+            always_on_top: false,
+            light_page: false,
             help_shortcuts: false,
             about: false,
             preview: None,
@@ -753,6 +767,8 @@ impl Session {
         self.view.find.matches.clear();
         self.view.recycle_view = None;
         self.view.preview = None;
+        // Opening a page reads it (BEH.History.Unread).
+        self.prefs.unread_pages.retain(|p| *p != page);
         self.view.ink_replay = false;
     }
 

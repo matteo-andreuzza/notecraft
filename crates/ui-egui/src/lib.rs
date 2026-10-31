@@ -189,6 +189,8 @@ pub struct UiState {
     pub quick_note_restore: Option<[f32; 2]>,
     /// Whether the window is currently sized as a Quick Note window.
     pub quick_note_shown: bool,
+    /// Whether the window was last told to stay on top (View › Always on Top).
+    pub on_top_applied: bool,
     /// The find-on-page box text.
     pub find: String,
     /// In-place rename.
@@ -267,6 +269,7 @@ impl Default for UiState {
             search_pane: false,
             quick_note_restore: None,
             quick_note_shown: false,
+            on_top_applied: false,
             find: String::new(),
             rename: None,
             dialog: None,
@@ -338,7 +341,23 @@ impl NoteApp {
 
     /// Theme tokens for the current theme.
     pub fn tokens(&self) -> Tokens {
-        Tokens::for_theme(self.resolved_theme())
+        let theme = self.resolved_theme();
+        let mut t = Tokens::for_theme(theme);
+        // View › Switch Background: a light page inside a dark window.
+        if self.session.view.light_page && theme.is_dark() {
+            let light = Tokens::for_theme(ThemeKind::White);
+            t.page = light.page;
+            t.page_text = light.page_text;
+            t.page_meta = light.page_meta;
+            t.container = light.container;
+            t.table_border = light.table_border;
+            t.selection = light.selection;
+            t.link = light.link;
+            t.rule = light.rule;
+            t.margin_line = light.margin_line;
+            t.find = light.find;
+        }
+        t
     }
 
     /// Run a command; errors become the status message. Results that need the platform (open
@@ -598,6 +617,12 @@ impl NoteApp {
     /// `UI.Window.FullPage`): Full Page View hides the ribbon and the navigation.
     /// Size the window for a Quick Note and back (View › New Quick Note), once per change.
     fn quick_note_window(&mut self, ctx: &egui::Context) {
+        // View › Always on Top, once per change.
+        if self.session.view.always_on_top != self.ui.on_top_applied {
+            self.ui.on_top_applied = self.session.view.always_on_top;
+            let level = if self.ui.on_top_applied { egui::WindowLevel::AlwaysOnTop } else { egui::WindowLevel::Normal };
+            ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(level));
+        }
         let want = self.session.view.quick_note;
         if want == self.ui.quick_note_shown {
             return;

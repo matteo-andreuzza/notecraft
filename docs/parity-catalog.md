@@ -365,12 +365,12 @@ The History tab, group by group, in ribbon order. Rows from the Microsoft 365 ap
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| R.History.Unread.GoToNextUnreadPage | Next Unread | History/Unread/Next Unread | button |  | history.nextUnread | P2 | missing | FLUENT19:GoToNextUnreadPage |  |
+| R.History.Unread.GoToNextUnreadPage | Next Unread | History/Unread/Next Unread | button |  | history.nextUnread | P2 | wired | FLUENT19:GoToNextUnreadPage |  |
 | R.History.Unread.UnreadMenu | Mark as Read | History/Unread/Mark as Read | menu |  |  | P2 | missing | FLUENT19:UnreadMenu |  |
-| R.History.Unread.MarkPageAsReadContextual | Mark as Read | History/Unread/Mark as Read | button |  | history.markRead | P2 | missing | FLUENT19:MarkPageAsReadContextual |  |
-| R.History.Unread.MarkPageAsUnreadContextual | Mark as Unread | History/Unread/Mark as Read/Mark as Unread | button | `Mod+Q` | history.markUnread | P2 | missing | FLUENT19:MarkPageAsUnreadContextual |  |
-| R.History.Unread.MarkAllPagesAsRead | Mark Notebook as Read | History/Unread/Mark as Read/Mark Notebook as Read | button |  | history.markNotebookRead | P2 | missing | FLUENT19:MarkAllPagesAsRead |  |
-| R.History.Unread.UnreadNotebookChangesShow | Show Unread Changes in This Notebook | History/Unread/Mark as Read/Show Unread Changes in This Notebook | toggle |  | history.showUnread | P2 | missing | FLUENT19:UnreadNotebookChangesShow |  |
+| R.History.Unread.MarkPageAsReadContextual | Mark as Read | History/Unread/Mark as Read | button |  | history.markRead | P2 | wired | FLUENT19:MarkPageAsReadContextual |  |
+| R.History.Unread.MarkPageAsUnreadContextual | Mark as Unread | History/Unread/Mark as Read/Mark as Unread | button | `Mod+Q` | history.markUnread | P2 | wired | FLUENT19:MarkPageAsUnreadContextual |  |
+| R.History.Unread.MarkAllPagesAsRead | Mark Notebook as Read | History/Unread/Mark as Read/Mark Notebook as Read | button |  | history.markNotebookRead | P2 | wired | FLUENT19:MarkAllPagesAsRead |  |
+| R.History.Unread.UnreadNotebookChangesShow | Show Unread Changes in This Notebook | History/Unread/Mark as Read/Show Unread Changes in This Notebook | toggle |  | history.showUnread | P2 | wired | FLUENT19:UnreadNotebookChangesShow |  |
 | R.History.Authors.FindByDateMenu | Recent Edits | History/Authors/Recent Edits | menu |  | history.recentEdits | P1 | verified | FLUENT19:FindByDateMenu | The split button opens the pane on Today; the menu lists the periods below. |
 | R.History.Authors.FindToday | Recent Edits: Today | History/Authors/Recent Edits/Recent Edits: Today | button |  | history.recentEdits | P1 | verified | FLUENT19:FindToday |  |
 | R.History.Authors.FindSinceYesterday | Recent Edits: Since Yesterday | History/Authors/Recent Edits/Recent Edits: Since Yesterday | button |  | history.recentEdits | P1 | verified | FLUENT19:FindSinceYesterday |  |
@@ -437,9 +437,9 @@ The View tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.View.Window.WindowNew | New Window | View/Window/New Window | button | `Mod+M` | window.new | P1 | missing | FLUENT19:WindowNew |  |
 | R.View.Window.NewDockedWindow | New Docked Window | View/Window/New Docked Window | button |  | window.newDocked | P2 | missing | FLUENT19:NewDockedWindow |  |
 | R.View.Window.NewSideNote | New Quick Note | View/Window/New Quick Note | button | `Mod+Shift+M` | window.quickNote | P1 | wired | FLUENT19:NewSideNote | A new page at the end of the Quick Notes section (OPT.SaveBackup.QuickNotesSection), shown in the Quick Note window (UI.Window.QuickNote) |
-| R.View.Window.WindowKeepOnTop | Always on Top | View/Window/Always on Top | toggle |  | window.alwaysOnTop | P2 | missing | FLUENT19:WindowKeepOnTop |  |
+| R.View.Window.WindowKeepOnTop | Always on Top | View/Window/Always on Top | toggle |  | window.alwaysOnTop | P2 | wired | FLUENT19:WindowKeepOnTop | Asks the windowing system to keep the window above others (some Wayland compositors ignore it) |
 | R.View.Immersive.ImmersiveReader | Immersive Reader | View/Immersive/Immersive Reader | button |  | view.immersiveReader | P3 | missing | GK (Microsoft 365 OneNote View tab) | unverified |
-| R.View.Views.SwitchBackground | Switch Background (dark mode page) | View/Views/Switch Background | toggle |  | view.switchBackground | P2 | missing | GK (Microsoft 365 OneNote dark mode) | unverified |
+| R.View.Views.SwitchBackground | Switch Background (dark mode page) | View/Views/Switch Background | toggle |  | view.switchBackground | P2 | wired | GK (Microsoft 365 OneNote dark mode) | unverified: in the Dark Gray and Black themes the page (and its text, rules, selection) is drawn as in the White theme; no effect in light themes |
 | R.View.Views.NavigationPanes | Navigation Panes (show/hide) | View/Views/Navigation Panes | toggle |  | view.navigationPanes | P1 | wired | GK (Microsoft 365 OneNote, 2023 navigation update) | Hides the notebook tree and the page column together, as the ☰ button does (unverified). |
 
 ## Ribbon › Help
@@ -842,7 +842,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Notebook.GroupSyncStatus | Notebook Sync Status | Context/Notebook/Notebook Sync Status | button |  | notebook.syncStatus | P2 | missing | FLUENT19:ContextMenuNotebook/GroupSyncStatus |  |
 | CM.Notebook.ShareThisNotebook | Share This Notebook | Context/Notebook/Share This Notebook | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuNotebook/ShareThisNotebook |  |
 | CM.Notebook.NotebookLinkCreate | Copy Link to Notebook | Context/Notebook/Copy Link to Notebook | button |  | notebook.copyLink | P1 | wired | FLUENT19:ContextMenuNotebook/NotebookLinkCreate |  |
-| CM.Notebook.MarkAllPagesAsRead | Mark Notebook as Read | Context/Notebook/Mark Notebook as Read | button |  | history.markNotebookRead | P2 | missing | FLUENT19:ContextMenuNotebook/MarkAllPagesAsRead |  |
+| CM.Notebook.MarkAllPagesAsRead | Mark Notebook as Read | Context/Notebook/Mark Notebook as Read | button |  | history.markNotebookRead | P2 | wired | FLUENT19:ContextMenuNotebook/MarkAllPagesAsRead |  |
 | CM.Notebook.NotebookMoveUp | Move Up | Context/Notebook/Move Up | button |  | notebook.moveUp | P1 | wired | FLUENT19:ContextMenuNotebook/NotebookMoveUp |  |
 | CM.Notebook.NotebookMoveDown | Move Down | Context/Notebook/Move Down | button |  | notebook.moveDown | P1 | wired | FLUENT19:ContextMenuNotebook/NotebookMoveDown |  |
 | CM.Notebook.RecycleBin | Notebook Recycle Bin | Context/Notebook/Notebook Recycle Bin | toggle |  | history.recycleBin | P0 | wired | FLUENT19:ContextMenuNotebook/RecycleBin |  |
@@ -852,7 +852,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.SectionGroup.FolderMove | Move… | Context/Section Group/Move… | button |  | sectionGroup.move | P1 | wired | FLUENT19:ContextMenuSectionGroup/FolderMove |  |
 | CM.SectionGroup.FolderDelete | Delete | Context/Section Group/Delete | button |  | sectionGroup.delete | P0 | wired | FLUENT19:ContextMenuSectionGroup/FolderDelete |  |
 | CM.SectionGroup.SectionGroupLinkCreate | Copy Link to Section Group | Context/Section Group/Copy Link to Section Group | button |  | sectionGroup.copyLink | P2 | wired | FLUENT19:ContextMenuSectionGroup/SectionGroupLinkCreate |  |
-| CM.SectionGroup.MarkPageAsRead | Mark as Read | Context/Section Group/Mark as Read | button |  | history.markRead | P2 | missing | FLUENT19:ContextMenuSectionGroup/MarkPageAsRead |  |
+| CM.SectionGroup.MarkPageAsRead | Mark as Read | Context/Section Group/Mark as Read | button |  | history.markRead | P2 | wired | FLUENT19:ContextMenuSectionGroup/MarkPageAsRead |  |
 | CM.SectionGroup.SectionInsert | New Section | Context/Section Group/New Section | button | `Mod+T` | section.new | P0 | wired | FLUENT19:ContextMenuSectionGroup/SectionInsert |  |
 | CM.SectionGroup.SectionGroupInsert | New Section Group | Context/Section Group/New Section Group | button |  | sectionGroup.new | P0 | wired | FLUENT19:ContextMenuSectionGroup/SectionGroupInsert |  |
 | CM.Section.SectionRenameOneNote | Rename | Context/Section/Rename | button |  | section.rename | P0 | wired | FLUENT19:ContextMenuSection/SectionRenameOneNote |  |
@@ -866,7 +866,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Section.SectionLinkCreate | Copy Link to Section | Context/Section/Copy Link to Section | button |  | section.copyLink | P1 | wired | FLUENT19:ContextMenuSection/SectionLinkCreate |  |
 | CM.Section.SectionInsert | New Section | Context/Section/New Section | button | `Mod+T` | section.new | P0 | wired | FLUENT19:ContextMenuSection/SectionInsert |  |
 | CM.Section.SectionGroupInsert | New Section Group | Context/Section/New Section Group | button |  | sectionGroup.new | P0 | wired | FLUENT19:ContextMenuSection/SectionGroupInsert |  |
-| CM.Section.MarkPageAsRead | Mark as Read | Context/Section/Mark as Read | button |  | history.markRead | P2 | missing | FLUENT19:ContextMenuSection/MarkPageAsRead |  |
+| CM.Section.MarkPageAsRead | Mark as Read | Context/Section/Mark as Read | button |  | history.markRead | P2 | wired | FLUENT19:ContextMenuSection/MarkPageAsRead |  |
 | CM.Section.PasswordProtectSectionContextual | Password Protect This Section… | Context/Section/Password Protect This Section… | button |  | review.password | P1 | wired | FLUENT19:ContextMenuSection/PasswordProtectSectionContextual |  |
 | CM.Section.SectionColorMenu | Section Color | Context/Section/Section Color | menu |  | section.color | P0 | verified | FLUENT19:ContextMenuSection/SectionColorMenu |  |
 | CM.Section.NotebookColor4 | Section Color 4 | Context/Section/Section Color/Section Color 4 | toggle |  | section.color | P0 | wired | FLUENT19:ContextMenuSection/NotebookColor4 |  |
@@ -899,8 +899,8 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Page.PagesPromote | Promote Subpage | Context/Page/Promote Subpage | button | `Mod+Alt+[` | page.promote | P0 | wired | FLUENT19:ContextMenuPage/PagesPromote |  |
 | CM.Page.IndentedPagesShow | Expand Subpages | Context/Page/Expand Subpages | button |  | page.expandSubpages | P0 | verified | FLUENT19:ContextMenuPage/IndentedPagesShow |  |
 | CM.Page.IndentedPagesCollapse | Collapse Subpages | Context/Page/Collapse Subpages | button |  | page.collapseSubpages | P0 | verified | FLUENT19:ContextMenuPage/IndentedPagesCollapse |  |
-| CM.Page.MarkPageAsUnreadContextual | Mark as Unread | Context/Page/Mark as Unread | button | `Mod+Q` | history.markUnread | P2 | missing | FLUENT19:ContextMenuPage/MarkPageAsUnreadContextual |  |
-| CM.Page.MarkPageAsReadContextual | Mark as Read | Context/Page/Mark as Read | button |  | history.markRead | P2 | missing | FLUENT19:ContextMenuPage/MarkPageAsReadContextual |  |
+| CM.Page.MarkPageAsUnreadContextual | Mark as Unread | Context/Page/Mark as Unread | button | `Mod+Q` | history.markUnread | P2 | wired | FLUENT19:ContextMenuPage/MarkPageAsUnreadContextual |  |
+| CM.Page.MarkPageAsReadContextual | Mark as Read | Context/Page/Mark as Read | button |  | history.markRead | P2 | wired | FLUENT19:ContextMenuPage/MarkPageAsReadContextual |  |
 | CM.Page.RefreshMeetingDetails | Refresh Meeting Details | Context/Page/Refresh Meeting Details | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuPage/RefreshMeetingDetails |  |
 | CM.Page.DownloadMeetingFileIntoOnenoteMenu | Download Meeting Files | Context/Page/Download Meeting Files | toggle |  |  | P3 | out-of-scope | FLUENT19:ContextMenuPage/DownloadMeetingFileIntoOnenoteMenu |  |
 | CM.Page.PageVersionsShow | Show Page Versions | Context/Page/Show Page Versions | button |  | history.pageVersions | P1 | wired | FLUENT19:ContextMenuPage/PageVersionsShow | unverified: versions follow NoteCraft's own policy (decision D14) |
@@ -1041,7 +1041,7 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.FavoriteHighlighter4 | Favorite Highlighter 4 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Highlighter 4 | toggle |  | draw.favoriteHighlighter4 | P2 | missing | FLUENT19:FavoriteHighlighter4 |  |
 | QAT.NR.PlaybackTipPlay | Play (playback tip) | Quick Access Toolbar/Commands Not in the Ribbon/Play (playback tip) | button |  | media.play | P3 | missing | FLUENT19:PlaybackTipPlay |  |
 | QAT.NR.About | About NoteCraft | Quick Access Toolbar/Commands Not in the Ribbon/About NoteCraft | button |  | help.about | P1 | wired | FLUENT19:About |  |
-| QAT.NR.MarkPageAsUnread | Mark as Unread | Quick Access Toolbar/Commands Not in the Ribbon/Mark as Unread | button | `Mod+Q` | history.markUnread | P2 | missing | FLUENT19:MarkPageAsUnread |  |
+| QAT.NR.MarkPageAsUnread | Mark as Unread | Quick Access Toolbar/Commands Not in the Ribbon/Mark as Unread | button | `Mod+Q` | history.markUnread | P2 | wired | FLUENT19:MarkPageAsUnread |  |
 | QAT.NR.MoveOrCopyPage | Move or Copy Page | Quick Access Toolbar/Commands Not in the Ribbon/Move or Copy Page | button | `Mod+Alt+M` | page.moveOrCopy | P0 | verified | FLUENT19:MoveOrCopyPage |  |
 | QAT.NR.NewPageAfterCurrentGroup | New Page After Current Group | Quick Access Toolbar/Commands Not in the Ribbon/New Page After Current Group | button |  | page.newAfterGroup | P1 | wired | FLUENT19:NewPageAfterCurrentGroup |  |
 | QAT.NR.FontSizeIncrease1Point | Increase Font Size | Quick Access Toolbar/Commands Not in the Ribbon/Increase Font Size | button | `Mod+Shift+>` | format.growFont | P0 | wired | FLUENT19:FontSizeIncrease1Point |  |
@@ -1284,7 +1284,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Share.TaskDelete | Delete the selected Outlook task | Keyboard/Share/Delete the selected Outlook task | shortcut | `Mod+Shift+0` |  | P3 | out-of-scope | KBD365 | Outlook |
 | KB.Share.SyncCurrent | Synchronize changes in the current shared notebook | Keyboard/Share/Synchronize changes in the current shared notebook | shortcut | `Shift+F9` | notebook.syncNow | P2 | missing | KBD365 |  |
 | KB.Share.SyncAll | Synchronize changes in all shared notebooks | Keyboard/Share/Synchronize changes in all shared notebooks | shortcut | `F9` | notebook.syncAll | P2 | missing | KBD365 |  |
-| KB.Share.MarkUnread | Mark the current page as unread | Keyboard/Share/Mark the current page as unread | shortcut | `Mod+Q` | history.markUnread | P2 | missing | KBD365 |  |
+| KB.Share.MarkUnread | Mark the current page as unread | Keyboard/Share/Mark the current page as unread | shortcut | `Mod+Q` | history.markUnread | P2 | wired | KBD365 |  |
 | KB.Protect.LockAll | Lock all password-protected sections | Keyboard/Protect/Lock all password-protected sections | shortcut | `Mod+Alt+L` | protect.lockAll | P1 | wired | KBD365 |  |
 | KB.App.Help | Help | Keyboard/Application/Help | shortcut | `F1` | help.help | P1 | wired | KBD365 | unverified: NoteCraft's help is a local command search, not the reference's online help; standard Office key |
 | KB.App.Ribbon | Collapse or expand the ribbon | Keyboard/Application/Collapse or expand the ribbon | shortcut | `Mod+F1` | ui.collapseRibbon | P1 | wired | KBD365 | standard Office key; unverified for OneNote |
@@ -1447,7 +1447,7 @@ Documented (or, where marked, plausible and unverified) behaviour. A behaviour r
 | BEH.Ink.PressureTilt | Pen pressure (and tilt where available) shapes ink stroke width | Behaviour/Ink | behaviour |  |  | P1 | wired | brief §6 M2 | Pens draw width × (0.4 + 1.2 × pressure), unverified curve; pressure from egui touch force where winit reports it, else 0.5; tilt not used |
 | BEH.Ink.Lasso | Lasso select picks ink strokes and objects inside the loop | Behaviour/Ink | behaviour |  | draw.lassoSelect | P1 | wired | FLUENT19:LassoSelect | A stroke is picked when three quarters of its points are inside, another object when its centre is (unverified) |
 | BEH.History.RecentEdits | Recent Edits lists pages changed in the chosen period, newest first | Behaviour/History | behaviour |  | history.recentEdits | P1 | verified | FLUENT19:FindByDateMenu | A page's edit time is its last change (Page::modified); Today and Since Yesterday count from local midnight |
-| BEH.History.Unread | Pages changed by others since you last looked are bold in the page list; Next Unread goes there | Behaviour/History | behaviour |  |  | P2 | missing | FLUENT19:GoToNextUnreadPage |  |
+| BEH.History.Unread | Pages changed by others since you last looked are bold in the page list; Next Unread goes there | Behaviour/History | behaviour |  |  | P2 | wired | FLUENT19:GoToNextUnreadPage | unverified for one person: there are no other authors' changes, so pages are unread only when marked (Mark as Unread, Ctrl+Q); they are bold in the page list (and their section in the tree) until opened; the marks live in the user's settings, not the notebook |
 
 ## File formats
 

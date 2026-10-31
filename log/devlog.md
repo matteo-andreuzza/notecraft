@@ -1097,3 +1097,15 @@ were certain landed, behaviour unchanged (every test green after each commit).
   `Session::misspelled_at`, `Session::set_spelling_word`). CM.Text.NoSpellingSuggestions and
   CM.MisspelledWord.NoSpellingSuggestions wired.
 - docs/parity.md gains the OneNote import fidelity table, construct by construct.
+## 2026-10-31 — M3/P2: History › Unread, Always on Top, Switch Background
+
+- `history.markUnread` (Ctrl+Q), `history.markRead` (a page, a section, a section group),
+  `history.markNotebookRead`, `history.nextUnread`, `history.showUnread`: unread marks are
+  `Prefs.unread_pages` (the user's settings, not the notebook; no undo step); opening a page
+  reads it (`Session::show_page`). Unread pages and their sections are semibold in the
+  navigation; page, section, group and notebook menus pass what they act on.
+- `window.alwaysOnTop` (ViewportCommand::WindowLevel, sent once per change) and
+  `view.switchBackground` (a light page inside a dark theme: `NoteApp::tokens` takes the
+  page's tokens from the White theme).
+- Catalog: 15 rows wired (the Unread group and its menu, QAT and keyboard rows,
+  BEH.History.Unread, WindowKeepOnTop, SwitchBackground).

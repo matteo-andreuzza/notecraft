@@ -1072,6 +1072,60 @@ fn sections_and_pages_drag_in_the_navigation() {
 }
 
 #[test]
+fn switch_background_lights_the_page_in_a_dark_theme() {
+    use crate::{ThemeKind, Tokens};
+    let mut a = app();
+    a.ui.theme = ThemeKind::Black;
+    a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    a.ui.tab = "View".into();
+    let mut h = harness(a);
+    h.run();
+    assert_eq!(h.state().tokens().page, Tokens::for_theme(ThemeKind::Black).page);
+    h.get_by_label("Switch Background").click();
+    h.run();
+    let t = h.state().tokens();
+    assert_eq!((t.page, t.page_text), (Tokens::for_theme(ThemeKind::White).page, Tokens::for_theme(ThemeKind::White).page_text), "a light page");
+    assert_eq!(t.window_back, Tokens::for_theme(ThemeKind::Black).window_back, "the window stays dark");
+    // (The Window group sits past the right edge of this 1280-point ribbon.)
+    h.state_mut().session.run("window.alwaysOnTop", json!({})).unwrap();
+    h.run();
+    assert!(h.state().session.view.always_on_top, "Always on Top is on");
+    assert!(h.state().ui.on_top_applied, "the window was told");
+}
+
+#[test]
+fn pages_marked_unread_from_their_menu_read_when_opened() {
+    // parity: CM.Page.MarkPageAsUnreadContextual, CM.Page.MarkPageAsReadContextual, CM.Section.MarkPageAsRead
+    let mut h = harness(app());
+    h.run();
+    let other = h.state().session.section().unwrap().pages[1].clone();
+    h.get_by_label(&other.display_title()).click_secondary();
+    h.run();
+    h.get_by_label("Mark as Unread").click();
+    h.run();
+    assert_eq!(h.state().session.prefs.unread_pages, vec![other.id]);
+    // Its menu now offers Mark as Read.
+    h.get_by_label(&other.display_title()).click_secondary();
+    h.run();
+    assert!(h.query_by_label("Mark as Read").is_some());
+    h.key_press(egui::Key::Escape);
+    h.run();
+    // The section menu reads every page in it.
+    let section = h.state().session.section().unwrap().name.clone();
+    h.get_all_by_label(&section).next().unwrap().click_secondary();
+    h.run();
+    h.get_by_label("Mark as Read").click();
+    h.run();
+    assert!(h.state().session.prefs.unread_pages.is_empty());
+    // Opening an unread page reads it.
+    h.state_mut().session.run("history.markUnread", json!({"page": other.id.to_string()})).unwrap();
+    h.run();
+    h.get_by_label(&other.display_title()).click();
+    h.run();
+    assert!(h.state().session.prefs.unread_pages.is_empty());
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();
