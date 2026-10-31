@@ -873,6 +873,50 @@ fn customize_tags_reorders_removes_and_adds_tags() {
 }
 
 #[test]
+fn pointing_between_page_tabs_adds_a_page_there() {
+    // parity: BEH.Pages.NewPageInsertion
+    let mut a = app();
+    // Meetings: two pages without subpages.
+    let sid = a.session.notebook().unwrap().sections()[1].id;
+    a.session.goto_section(sid).unwrap();
+    let first = a.session.section().unwrap().pages[0].clone();
+    let n = a.session.section().unwrap().pages.len();
+    let mut h = harness(a);
+    h.run();
+    let r = h.get_by_label(&first.display_title()).rect();
+    crate::tests_canvas::click(&mut h, egui::pos2(r.center().x, r.max.y - 2.0));
+    let sec = h.state().session.section().unwrap().clone();
+    assert_eq!(sec.pages.len(), n + 1, "a page was added");
+    assert_eq!(sec.pages[0].id, first.id);
+    assert_eq!(Some(sec.pages[1].id), h.state().session.sel.page, "right after the page, and opened");
+    // The middle of a row still just opens the page.
+    let r = h.get_by_label(&first.display_title()).rect();
+    crate::tests_canvas::click(&mut h, r.center());
+    assert_eq!(h.state().session.section().unwrap().pages.len(), n + 1);
+    assert_eq!(h.state().session.sel.page, Some(first.id));
+}
+
+#[test]
+fn ribbon_screentips_name_the_command_and_its_shortcut() {
+    // parity: UI.Ribbon.Tooltips
+    let mut a = app();
+    a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    let r = h.get_by_label("Bold").rect();
+    h.hover_at(r.center());
+    h.run_steps(80);
+    assert!(h.query_by_label_contains("Bold (Ctrl+B)").is_some(), "name and shortcut");
+    // A control that can't run says why.
+    h.state_mut().ui.tab = "Review".into();
+    h.run();
+    let r = h.get_by_label("Translate").rect();
+    h.hover_at(r.center());
+    h.run_steps(80);
+    assert!(h.query_all_by_label_contains("Translate\n").next().is_some(), "the name, then the reason it is disabled");
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();
