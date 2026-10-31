@@ -890,3 +890,15 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Fixed: the first-run guard for automatic backups (meant for the Options commit) was never
   applied; now a fresh install waits one interval.
 - Catalog: 16 rows wired. Numbers: wiring 751/1340 (56.0%).
+## 2026-10-31 — M3/P1: History › Recent Edits
+
+- New `history_cmds.rs`: `history.recentEdits` lists the pages changed in a period (Today and
+  Since Yesterday from local midnight; 7, 14, 30 days; 3 and 6 months as 91/182 days,
+  unverified; all), newest first by `Page::modified`, in a scope (section, section group,
+  notebook, all notebooks), capped at 5,000; it opens the Recent Edits pane
+  (`ViewState.recent_edits`).
+- UI: `panes::recent_pane` (Show, Search, the list; a click opens the page); the ribbon's
+  eight period rows pass their range (`ribbon::params_for`). Snapshot `recent-edits`.
+- Catalog: R.History.Authors.FindByDateMenu and its 8 periods, UI.Panes.RecentEdits,
+  BEH.History.RecentEdits wired. Numbers: wiring 748/1335 (56.0%), behaviour 191/1335, 349
+  commands.

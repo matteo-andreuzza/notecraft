@@ -1,6 +1,6 @@
 //! Task panes: the Tags Summary (Find Tags), the Templates pane, the Paper Size pane, the pinned
 //! search results, and the find-on-page bar (catalog `UI.Panes.FindTags`, `UI.Panes.Templates`,
-//! `UI.Panes.PaperSize`,
+//! `UI.Panes.PaperSize`, `UI.Panes.RecentEdits`,
 //! `UI.Nav.SearchResultsPane`, `UI.Nav.FindOnPage`). In the 2024
 //! look (`docs/ui-parity.md` §3 rows 15–16) the panes are cards at the right of the page with a
 //! title and ✕, and the find bar is a card floating over the page's top right corner.
@@ -336,6 +336,72 @@ fn scope_label(s: &str) -> &'static str {
         "notebook" => "This notebook",
         _ => "All notebooks",
     }
+}
+
+/// The Recent Edits pane (History › Recent Edits): the pages changed in a period, newest first,
+/// with the period and the scope to search; a click opens the page.
+pub fn recent_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    pane_panel("recent_pane", 280.0, &t).show(ui, |ui| {
+        card_frame(&t).show(ui, |ui| {
+            ui.set_min_size(ui.available_size());
+            if card_header(ui, "Recent Edits", &t) {
+                app.session.view.recent_edits = None;
+                return;
+            }
+            ui.add_space(4.0);
+            let mut range = app.session.view.recent_edits.clone().unwrap_or_else(|| "today".into());
+            let scope_id = egui::Id::new("recent_scope");
+            let mut scope: String = ui.data(|d| d.get_temp(scope_id)).unwrap_or_else(|| "all".to_string());
+            let range_label = |r: &str| notecraft_engine::RECENT_RANGES.iter().find(|x| x.0 == r).map_or("Today", |x| x.1);
+            egui::Grid::new("recent_grid").num_columns(2).spacing(vec2(8.0, 6.0)).show(ui, |ui| {
+                ui.label("Show:");
+                egui::ComboBox::from_id_salt("recent_range").width(170.0).selected_text(range_label(&range)).show_ui(ui, |ui| {
+                    for (id, name) in notecraft_engine::RECENT_RANGES {
+                        ui.selectable_value(&mut range, id.to_string(), *name);
+                    }
+                });
+                ui.end_row();
+                ui.label("Search:");
+                egui::ComboBox::from_id_salt("recent_scope").width(170.0).selected_text(scope_label(&scope)).show_ui(ui, |ui| {
+                    for sc in ["section", "sectionGroup", "notebook", "all"] {
+                        ui.selectable_value(&mut scope, sc.to_string(), scope_label(sc));
+                    }
+                });
+                ui.end_row();
+            });
+            ui.data_mut(|d| d.insert_temp(scope_id, scope.clone()));
+            let Some(res) = app.run(&ctx, "history.recentEdits", json!({"range": range, "scope": scope, "limit": 500})) else { return };
+            ui.separator();
+            let total = res["total"].as_u64().unwrap_or(0);
+            ui.label(RichText::new(format!("{total} page{}", if total == 1 { "" } else { "s" })).size(11.0).color(t.page_meta));
+            egui::ScrollArea::vertical().id_salt("recent_scroll").show(ui, |ui| {
+                let pages = res["pages"].as_array().cloned().unwrap_or_default();
+                if pages.is_empty() {
+                    ui.label(RichText::new("No pages were changed in this period.").color(t.text_disabled));
+                }
+                for it in pages {
+                    let resp = ui
+                        .vertical(|ui| {
+                            ui.add(egui::Label::new(RichText::new(it["title"].as_str().unwrap_or("")).strong().color(t.text)).selectable(false));
+                            let meta = format!(
+                                "{} · {} {}",
+                                it["section"].as_str().unwrap_or(""),
+                                it["date"].as_str().unwrap_or(""),
+                                it["time"].as_str().unwrap_or("")
+                            );
+                            ui.add(egui::Label::new(RichText::new(meta).size(11.0).color(t.page_meta)).selectable(false));
+                            ui.add_space(4.0);
+                        })
+                        .response
+                        .interact(Sense::click());
+                    if resp.clicked() {
+                        app.run(&ctx, "nav.goto", json!({"page": it["page"]}));
+                    }
+                }
+            });
+        });
+    });
 }
 
 /// The pinned search results (Alt+O).

@@ -51,6 +51,13 @@ pub(crate) fn label(id: &str) -> String {
 pub(crate) fn params_for(id: &str) -> Value {
     match id.rsplit('.').next() {
         Some("FindToday") => json!({"range": "today"}),
+        Some("FindSinceYesterday") => json!({"range": "yesterday"}),
+        Some("FindSinceSevenDays") => json!({"range": "7d"}),
+        Some("FindLastTwoWeeks") => json!({"range": "14d"}),
+        Some("FindLastMonth") => json!({"range": "30d"}),
+        Some("FindLastThreeMonths") => json!({"range": "3m"}),
+        Some("FindLasteSixMonths") => json!({"range": "6m"}),
+        Some("FindAllChangesByDate") => json!({"range": "all"}),
         _ => json!({}),
     }
 }

@@ -671,6 +671,42 @@ fn file_exit_saves_and_asks_to_close() {
 }
 
 #[test]
+fn recent_edits_lists_changed_pages_and_opens_them() {
+    // parity: UI.Panes.RecentEdits, R.History.Authors.FindLastMonth
+    let mut a = app();
+    a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    a.ui.tab = "History".into();
+    let mut h = harness(a);
+    h.run();
+    // The icon half runs Today; the lower half opens the periods.
+    let open_menu = |h: &mut Harness<'static, NoteApp>| {
+        let r = h.get_all_by_label("Recent Edits").next().unwrap().rect();
+        crate::tests_canvas::click(h, egui::pos2(r.center().x, r.max.y - 4.0));
+        h.run();
+    };
+    h.get_by_label("Recent Edits").click();
+    h.run();
+    assert_eq!(h.state().session.view.recent_edits.as_deref(), Some("today"), "the split button's main part");
+    open_menu(&mut h);
+    h.get_by_label("All Pages Sorted by Date").click();
+    h.run();
+    assert_eq!(h.state().session.view.recent_edits.as_deref(), Some("all"), "the menu row opens the pane on its period");
+    let shows =
+        |h: &Harness<'static, NoteApp>, v: &str| h.query_all_by_role(egui::accesskit::Role::ComboBox).any(|n| n.value().as_deref() == Some(v));
+    assert!(shows(&h, "All Pages Sorted by Date"), "the pane shows the period");
+    // A click on a listed page opens it.
+    let target = h.state().session.notebook().unwrap().sections()[1].pages[0].clone();
+    h.get_all_by_label(&target.display_title()).last().unwrap().click();
+    h.run();
+    assert_eq!(h.state().session.sel.page, Some(target.id));
+    // Another period from the ribbon; ✕ closes the pane.
+    open_menu(&mut h);
+    h.get_by_label("Last 30 Days").click();
+    h.run();
+    assert_eq!(h.state().session.view.recent_edits.as_deref(), Some("30d"));
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();

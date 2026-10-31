@@ -335,6 +335,11 @@ fn main() {
         a.session.run("history.recycleBin", json!({})).unwrap();
         a.ui.tab = "History".into();
     });
+    // History › Recent Edits: every page, newest first, in the pane.
+    shot("recent-edits", &out, 1.0, |a| {
+        a.session.run("history.recentEdits", json!({"range": "all"})).unwrap();
+        a.ui.tab = "History".into();
+    });
     // Merged cells (decision D9): the header across all three columns, a cell over two rows.
     shot("table-merged", &out, 1.0, |a| {
         table_page(a);

@@ -26,6 +26,7 @@ mod edit_cmds;
 mod export_cmds;
 mod file_cmds;
 mod format_cmds;
+mod history_cmds;
 mod import_cmds;
 mod math_cmds;
 mod nav_cmds;
@@ -64,6 +65,7 @@ mod tests_table;
 use serde_json::Value;
 
 pub use draw_cmds::{DrawState, DrawTool, EraserKind, MAX_PATH as MAX_DRAW_PATH, PenStyle};
+pub use history_cmds::{MAX_RECENT, RECENT_RANGES};
 pub use import_cmds::PICTURE_EXTENSIONS as IMPORT_PICTURE_EXTENSIONS;
 pub use math_cmds::{EQUATIONS, STRUCTURES as EQUATION_STRUCTURES, SYMBOLS as EQUATION_SYMBOLS};
 pub use notecraft_doc as doc;

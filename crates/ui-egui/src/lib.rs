@@ -532,6 +532,9 @@ impl NoteApp {
             if self.session.view.password_pane {
                 password_ui::pane(self, ui, t);
             }
+            if self.session.view.recent_edits.is_some() {
+                panes::recent_pane(self, ui, t);
+            }
             if self.ui.search_pane {
                 panes::search_pane(self, ui, t);
             }

@@ -206,6 +206,9 @@ pub struct ViewState {
     /// Password Protection pane open (Review › Password).
     #[serde(default)]
     pub password_pane: bool,
+    /// The Recent Edits pane's period (`history_cmds::RECENT_RANGES`), `None` = closed.
+    #[serde(default)]
+    pub recent_edits: Option<String>,
     /// The recycle bin of this notebook is being viewed.
     pub recycle_view: Option<Id>,
 }
@@ -226,6 +229,7 @@ impl Default for ViewState {
             templates_pane: false,
             paper_pane: false,
             password_pane: false,
+            recent_edits: None,
             recycle_view: None,
         }
     }
