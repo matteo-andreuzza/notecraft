@@ -100,6 +100,7 @@ fn tab_enter_and_arrows_move_through_cells() {
     run(&mut s, "text.insert", json!({"text": "after"}));
     let o = s.page().unwrap().objects.iter().find_map(PageObject::as_outline).unwrap().clone();
     assert!(o.pos.y > table(&s).pos.y, "the new container is below the table");
+    // parity: KB.Table.RowAboveEnter
     // Enter at the start of a later row inserts a row above it.
     at(&mut s, 1, 0);
     run(&mut s, "text.insert", json!({"text": "x"}));

@@ -16,6 +16,20 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
         CommandSpec::new("window.quickNote", "R.View.Window.NewSideNote", "New Quick Note", "View/Window/New Quick Note", quick_note)
             .key("Mod+Shift+M"),
+        // KB.General.ContextMenu: the UI opens the menu of what is selected (or under the caret).
+        CommandSpec::new(
+            "ui.contextMenu",
+            "KB.General.ContextMenu",
+            "Context Menu",
+            "Keyboard/General/Display the context menu for the focused object",
+            |s, _| {
+                s.view.menu_request = true;
+                Ok(Value::Null)
+            },
+        )
+        .key("Shift+F10")
+        .pure()
+        .when(crate::ops::need_page),
     ]
 }
 
@@ -70,5 +84,13 @@ mod tests {
         run(&mut s, "section.delete", json!({"section": qid.to_string()}));
         run(&mut s, "window.quickNote", json!({}));
         assert_eq!((s.section().unwrap().name.as_str(), s.section().unwrap().pages.len()), ("Quick Notes", 1));
+    }
+
+    #[test]
+    fn shift_f10_asks_the_ui_for_the_context_menu() {
+        let mut s = sample();
+        assert_eq!(crate::commands::by_shortcut("Shift+F10").map(|c| c.id), Some("ui.contextMenu"));
+        run(&mut s, "ui.contextMenu", json!({}));
+        assert!(s.view.menu_request);
     }
 }
