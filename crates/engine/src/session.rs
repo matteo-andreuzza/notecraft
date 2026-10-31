@@ -89,6 +89,20 @@ pub struct Prefs {
     /// Lock a protected section as soon as another section is opened
     /// (`OPT.Advanced.LockOnLeave`).
     pub lock_on_leave: bool,
+    /// Underline misspelled words while typing (`OPT.Proofing.CheckAsYouType`).
+    pub check_as_you_type: bool,
+    /// Hide the underlines (`OPT.Proofing.HideSpellingErrors`).
+    pub hide_spelling_errors: bool,
+    /// Don't check words in capitals (`OPT.Proofing.IgnoreUppercase`).
+    pub ignore_uppercase: bool,
+    /// Don't check words with digits (`OPT.Proofing.IgnoreNumbers`).
+    pub ignore_numbers: bool,
+    /// Don't check web and mail addresses (`OPT.Proofing.IgnoreUrls`).
+    pub ignore_urls: bool,
+    /// The proofing language: an installed dictionary's name (`R.Review.Language.SetLanguage`).
+    pub proofing_language: String,
+    /// Words added to the dictionary (`OPT.Proofing.CustomDictionaries`).
+    pub custom_words: Vec<String>,
     /// Where new notebooks go (`OPT.SaveBackup.DefaultNotebookLocation`; empty: ask).
     pub default_notebook_location: String,
     /// The notebook whose Quick Notes section takes quick notes
@@ -127,12 +141,28 @@ impl Default for Prefs {
             // The reference locks after 10 idle minutes by default (unverified).
             lock_after_minutes: 10,
             lock_on_leave: false,
+            check_as_you_type: true,
+            hide_spelling_errors: false,
+            ignore_uppercase: true,
+            ignore_numbers: true,
+            ignore_urls: true,
+            proofing_language: "en_US".into(),
+            custom_words: Vec::new(),
             default_notebook_location: String::new(),
             quick_notes_notebook: String::new(),
             templates: Vec::new(),
             recent_templates: Vec::new(),
         }
     }
+}
+
+/// The misspelled word the Spelling pane shows.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct SpellingState {
+    /// The word as written.
+    pub word: String,
+    /// Corrections, best first.
+    pub suggestions: Vec<String>,
 }
 
 /// The search scope choices (the search box drop-down).
@@ -206,6 +236,12 @@ pub struct ViewState {
     /// Password Protection pane open (Review › Password).
     #[serde(default)]
     pub password_pane: bool,
+    /// Spelling pane open (Review › Spelling).
+    #[serde(default)]
+    pub spelling_pane: bool,
+    /// The word the Spelling pane shows, with its suggestions.
+    #[serde(default)]
+    pub spelling: Option<SpellingState>,
     /// The Recent Edits pane's period (`history_cmds::RECENT_RANGES`), `None` = closed.
     #[serde(default)]
     pub recent_edits: Option<String>,
@@ -229,6 +265,8 @@ impl Default for ViewState {
             templates_pane: false,
             paper_pane: false,
             password_pane: false,
+            spelling_pane: false,
+            spelling: None,
             recent_edits: None,
             recycle_view: None,
         }
@@ -344,6 +382,8 @@ pub struct Session {
     pub(crate) forget_history: bool,
     /// Key derivation costs for new passwords (tests use cheap ones).
     pub(crate) kdf: notecraft_format::protect::KdfParams,
+    /// The spelling dictionary and Ignore All words.
+    pub(crate) speller: crate::spell_cmds::Speller,
 }
 
 impl Default for Session {
@@ -387,6 +427,7 @@ impl Session {
             keys: HashMap::new(),
             forget_history: false,
             kdf: notecraft_format::protect::KdfParams::DEFAULT,
+            speller: crate::spell_cmds::Speller::default(),
         }
     }
 

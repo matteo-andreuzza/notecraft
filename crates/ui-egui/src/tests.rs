@@ -886,6 +886,35 @@ fn a_locked_section_asks_for_its_password_instead_of_showing_a_page() {
     assert!(h.state().ui.password.unlock.is_empty(), "the typed password is cleared");
 }
 
+/// A small dictionary for spelling tests.
+pub(crate) fn test_dictionary() -> notecraft_spell::Dictionary {
+    let aff = "SET UTF-8\nTRY esianrtolcdugmphbyfvkwz\n";
+    let dic = "5\nthe\ncat\nsat\non\nmat\n";
+    notecraft_spell::Dictionary::load(aff.as_bytes(), dic.as_bytes()).unwrap()
+}
+
+#[test]
+fn the_spelling_pane_shows_the_word_and_fixes_it_with_a_suggestion() {
+    // parity: UI.Panes.Spelling
+    let mut a = app();
+    a.session.set_dictionary("en_US", test_dictionary());
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 60.0, "y": 120.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "the cta sat"})).unwrap();
+    assert_eq!(a.session.misspelled("the cta sat"), vec![4..7]);
+    a.ui.tab = "View".into();
+    let mut h = harness(a);
+    h.run();
+    let ctx = h.ctx.clone();
+    h.state_mut().run(&ctx, "review.spelling", json!({}));
+    h.run();
+    present(&h, "UI.Panes.Spelling", "Not in Dictionary");
+    h.get_by_label("cat").click();
+    h.run();
+    let o = h.state().session.page().unwrap().objects[0].as_outline().unwrap().paragraphs[0].text();
+    assert_eq!(o, "the cat sat");
+}
+
 /// A host whose save dialog answers with a fixed path.
 struct SaveHost(String);
 

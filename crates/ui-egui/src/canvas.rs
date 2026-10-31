@@ -214,6 +214,8 @@ pub(crate) enum ContextTarget {
 pub struct CanvasState {
     /// Paragraph layouts of the last frame.
     pub paras: Vec<ParaLayout>,
+    /// Misspelled words per paragraph text (`spell_ui`).
+    pub(crate) spell: crate::spell_ui::SpellCache,
     /// Container layouts of the last frame (tables included, for their move bar).
     pub outlines: Vec<OutlineLayout>,
     /// Table layouts of the last frame.
@@ -254,6 +256,7 @@ impl Default for CanvasState {
     fn default() -> CanvasState {
         CanvasState {
             paras: Vec::new(),
+            spell: Default::default(),
             outlines: Vec::new(),
             tables: Vec::new(),
             media: Vec::new(),
@@ -518,6 +521,10 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 Some(m) => crate::math_ui::draw(&ctx, &painter, pl.pos, m, page_text),
                 None => {
                     painter.galley(pl.pos, pl.galley.clone(), page_text);
+                    // OPT.Proofing.CheckAsYouType: misspelled words get a wavy underline.
+                    for r in crate::spell_ui::ranges(app, &pl.text) {
+                        crate::spell_ui::underline(&painter, pl, r);
+                    }
                 }
             }
             if pl.block != Block::Title

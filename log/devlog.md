@@ -902,3 +902,24 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Catalog: R.History.Authors.FindByDateMenu and its 8 periods, UI.Panes.RecentEdits,
   BEH.History.RecentEdits wired. Numbers: wiring 748/1335 (56.0%), behaviour 191/1335, 349
   commands.
+
+## 2026-10-31 — M4 Review: spelling
+
+- New L2 crate `notecraft-spell`: Hunspell-format dictionaries read from the format's
+  public description (`hunspell(5)`); no Hunspell code is used. It reads SET, FLAG
+  (char/long/num/UTF-8), AF, PFX/SFX with conditions, cross products and twofold suffixes,
+  KEEPCASE, NEEDAFFIX, FORBIDDENWORD, NOSUGGEST, ONLYINCOMPOUND, TRY and REP. Suggestions
+  come from REP, single edits and two-word splits. Compounding is not read. Bounded against
+  hostile files.
+- No dictionary ships: the engine loads `<lang>.aff/.dic` from the system's hunspell
+  folders on first use (none is installed on the dev machine; tests use synthetic ones).
+- Engine `spell_cmds.rs`: review.spelling (F7: the next misspelled word from the caret,
+  wrapping), review.spellingSuggestion (default: the first suggestion; enabled only during
+  a check), review.ignoreAll, review.addToDictionary (kept in `Prefs.custom_words`),
+  review.setLanguage, `Session::misspelled` for the squiggles.
+- New `Prefs` proofing fields: check_as_you_type, hide_spelling_errors, ignore_uppercase,
+  ignore_numbers, ignore_urls, proofing_language.
+- UI `spell_ui.rs`: wavy underlines in the canvas (cached per paragraph text and
+  invalidated by a spelling signature) and the Spelling pane (word, suggestions, Ignore,
+  Ignore All, Add to Dictionary, language).
+- The context menu still doesn't list suggestions (its CM rows stay missing).

@@ -41,6 +41,7 @@ mod printout_cmds;
 mod protect_cmds;
 mod search_cmds;
 mod section_cmds;
+mod spell_cmds;
 mod table_cmds;
 mod tag_cmds;
 mod template_cmds;
@@ -75,7 +76,8 @@ pub use paper_cmds::{
     DEFAULT_MARGINS as DEFAULT_PAPER_MARGINS, PAPER_SIZES, PaperPreset, describe as describe_paper, is_landscape, preset_of as paper_preset,
 };
 pub use selection::{Block, Pos, Selection, TextRange};
-pub use session::{Clock, FindState, NbDirty, Prefs, RibbonMode, ScopeKind, ScrollRequest, Session, ViewState};
+pub use session::{Clock, FindState, NbDirty, Prefs, RibbonMode, ScopeKind, ScrollRequest, Session, SpellingState, ViewState};
+pub use spell_cmds::installed_languages;
 pub use template_cmds::{BUILT_IN as BUILT_IN_TEMPLATES, BuiltIn, MY_TEMPLATES, SavedTemplate};
 
 /// Errors a command can return. Commands never panic; bad input is `Params`, an unavailable

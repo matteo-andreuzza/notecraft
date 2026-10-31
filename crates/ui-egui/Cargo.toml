@@ -26,6 +26,7 @@ log = { workspace = true }
 notecraft-fonts = { workspace = true }
 
 [dev-dependencies]
+notecraft-spell = { workspace = true }
 notecraft-onestore = { workspace = true, features = ["fixtures"] }
 egui_kittest = { workspace = true, features = ["wgpu", "snapshot"] }
 image = { version = "0.25", default-features = false, features = ["png"] }

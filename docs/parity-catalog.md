@@ -93,6 +93,9 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Panes.Password.SetPassword | Password Protection pane: Set Password… (password and confirmation) | Window/Panes/Password Protection/Set Password | button |  | section.setPassword | P1 | wired | FLUENT19:PasswordProtectSection | decision D15: Argon2id key (random 16-byte salt, 64 MiB, 3 passes), XChaCha20-Poly1305 sealed section file; unverified: the reference's scheme is not public; the section stays unlocked until locked; the undo history is cleared |
 | UI.Panes.Password.ChangePassword | Password Protection pane: Change Password… (old, new, confirmation) | Window/Panes/Password Protection/Change Password | button |  | section.changePassword | P1 | wired | FLUENT19:PasswordProtectSection | a new salt and key; a locked section stays locked |
 | UI.Panes.Password.RemovePassword | Password Protection pane: Remove Password… (asks for the password) | Window/Panes/Password Protection/Remove Password | button |  | section.removePassword | P1 | wired | FLUENT19:PasswordProtectSection | the section is written in the clear again |
+| UI.Panes.Spelling | Spelling pane (the misspelled word, suggestions, Change, Ignore, Ignore All, Add to Dictionary) | Window/Panes/Spelling | surface |  |  | P1 | wired | M365-2024 (Editor-style spelling pane) | unverified layout; Hunspell dictionaries installed on the system (none ship with NoteCraft) |
+| UI.Panes.Spelling.IgnoreAll | Spelling pane: Ignore All (for this session) | Window/Panes/Spelling/Ignore All | button |  | review.ignoreAll | P1 | wired | GK | unverified: lasts until NoteCraft closes |
+| UI.Panes.Spelling.AddToDictionary | Spelling pane: Add to Dictionary | Window/Panes/Spelling/Add to Dictionary | button |  | review.addToDictionary | P1 | wired | GK | kept in the preferences (OPT.Proofing.CustomDictionaries) |
 | UI.Panes.Research | Research / Thesaurus pane | Window/Panes/Research | surface |  |  | P3 | missing | FLUENT19:ResearchPane |  |
 | UI.Panes.RecentEdits | Search results pane listing recently edited pages by date | Window/Panes/Recent Edits | surface |  | history.recentEdits | P1 | wired | FLUENT19:FindByDateMenu | A card at the right: Show (the period), Search (section, section group, notebook, all notebooks), the pages newest first with section, date and time; a click opens the page. unverified: the reference reuses its search results pane |
 | UI.Panes.ColorThickness | Color & Thickness dialog (pen/highlighter, thickness, colour) | Window/Panes/Color & Thickness | surface |  |  | P1 | wired | FLUENT19:MoreColorAndThicknessOptions |  |
@@ -368,15 +371,15 @@ The History tab, group by group, in ribbon order. Rows from the Microsoft 365 ap
 | R.History.Unread.MarkPageAsUnreadContextual | Mark as Unread | History/Unread/Mark as Read/Mark as Unread | button | `Mod+Q` | history.markUnread | P2 | missing | FLUENT19:MarkPageAsUnreadContextual |  |
 | R.History.Unread.MarkAllPagesAsRead | Mark Notebook as Read | History/Unread/Mark as Read/Mark Notebook as Read | button |  | history.markNotebookRead | P2 | missing | FLUENT19:MarkAllPagesAsRead |  |
 | R.History.Unread.UnreadNotebookChangesShow | Show Unread Changes in This Notebook | History/Unread/Mark as Read/Show Unread Changes in This Notebook | toggle |  | history.showUnread | P2 | missing | FLUENT19:UnreadNotebookChangesShow |  |
-| R.History.Authors.FindByDateMenu | Recent Edits | History/Authors/Recent Edits | menu |  | history.recentEdits | P1 | wired | FLUENT19:FindByDateMenu | The split button opens the pane on Today; the menu lists the periods below. |
-| R.History.Authors.FindToday | Recent Edits: Today | History/Authors/Recent Edits/Recent Edits: Today | button |  | history.recentEdits | P1 | wired | FLUENT19:FindToday |  |
-| R.History.Authors.FindSinceYesterday | Recent Edits: Since Yesterday | History/Authors/Recent Edits/Recent Edits: Since Yesterday | button |  | history.recentEdits | P1 | wired | FLUENT19:FindSinceYesterday |  |
-| R.History.Authors.FindSinceSevenDays | Recent Edits: Last 7 Days | History/Authors/Recent Edits/Recent Edits: Last 7 Days | button |  | history.recentEdits | P1 | wired | FLUENT19:FindSinceSevenDays |  |
+| R.History.Authors.FindByDateMenu | Recent Edits | History/Authors/Recent Edits | menu |  | history.recentEdits | P1 | verified | FLUENT19:FindByDateMenu | The split button opens the pane on Today; the menu lists the periods below. |
+| R.History.Authors.FindToday | Recent Edits: Today | History/Authors/Recent Edits/Recent Edits: Today | button |  | history.recentEdits | P1 | verified | FLUENT19:FindToday |  |
+| R.History.Authors.FindSinceYesterday | Recent Edits: Since Yesterday | History/Authors/Recent Edits/Recent Edits: Since Yesterday | button |  | history.recentEdits | P1 | verified | FLUENT19:FindSinceYesterday |  |
+| R.History.Authors.FindSinceSevenDays | Recent Edits: Last 7 Days | History/Authors/Recent Edits/Recent Edits: Last 7 Days | button |  | history.recentEdits | P1 | verified | FLUENT19:FindSinceSevenDays |  |
 | R.History.Authors.FindLastTwoWeeks | Recent Edits: Last 14 Days | History/Authors/Recent Edits/Recent Edits: Last 14 Days | button |  | history.recentEdits | P1 | wired | FLUENT19:FindLastTwoWeeks |  |
-| R.History.Authors.FindLastMonth | Recent Edits: Last 30 Days | History/Authors/Recent Edits/Recent Edits: Last 30 Days | button |  | history.recentEdits | P1 | wired | FLUENT19:FindLastMonth |  |
+| R.History.Authors.FindLastMonth | Recent Edits: Last 30 Days | History/Authors/Recent Edits/Recent Edits: Last 30 Days | button |  | history.recentEdits | P1 | verified | FLUENT19:FindLastMonth |  |
 | R.History.Authors.FindLastThreeMonths | Recent Edits: Last 3 Months | History/Authors/Recent Edits/Recent Edits: Last 3 Months | button |  | history.recentEdits | P1 | wired | FLUENT19:FindLastThreeMonths | unverified: three months = 91 days back |
 | R.History.Authors.FindLasteSixMonths | Recent Edits: Last 6 Months | History/Authors/Recent Edits/Recent Edits: Last 6 Months | button |  | history.recentEdits | P1 | wired | FLUENT19:FindLasteSixMonths | unverified: six months = 182 days back |
-| R.History.Authors.FindAllChangesByDate | Recent Edits: All Pages Sorted by Date | History/Authors/Recent Edits/Recent Edits: All Pages Sorted by Date | button |  | history.recentEdits | P1 | wired | FLUENT19:FindAllChangesByDate |  |
+| R.History.Authors.FindAllChangesByDate | Recent Edits: All Pages Sorted by Date | History/Authors/Recent Edits/Recent Edits: All Pages Sorted by Date | button |  | history.recentEdits | P1 | verified | FLUENT19:FindAllChangesByDate |  |
 | R.History.Authors.FindUnread | Find by Author | History/Authors/Find by Author | button |  | history.findByAuthor | P2 | missing | FLUENT19:FindUnread |  |
 | R.History.Authors.AuthorHighlightingHide | Hide Authors | History/Authors/Hide Authors | toggle |  | history.hideAuthors | P2 | missing | FLUENT19:AuthorHighlightingHide |  |
 | R.History.History.PageVersionSplitButton | Page Versions | History/Page Versions | split |  | history.pageVersions | P1 | missing | FLUENT19:PageVersionSplitButton |  |
@@ -396,7 +399,7 @@ The Review tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| R.Review.Proofing.SpellCheck | Spelling | Review/Proofing/Spelling | button | `F7` | review.spelling | P1 | missing | FLUENT19:SpellCheck |  |
+| R.Review.Proofing.SpellCheck | Spelling | Review/Proofing/Spelling | button | `F7` | review.spelling | P1 | verified | FLUENT19:SpellCheck |  |
 | R.Review.Proofing.ResearchPane | Research | Review/Proofing/Research | toggle |  | review.research | P3 | missing | FLUENT19:ResearchPane |  |
 | R.Review.Proofing.Thesaurus | Thesaurus | Review/Proofing/Thesaurus | button | `Shift+F7` | review.thesaurus | P2 | missing | FLUENT19:Thesaurus |  |
 | R.Review.Accessibility.AccessibilityChecker | Check Accessibility | Review/Accessibility/Check Accessibility | button |  | review.accessibility | P2 | missing | FLUENT19:AccessibilityChecker |  |
@@ -405,7 +408,7 @@ The Review tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Review.Language.MiniTranslator | Mini Translator | Review/Language/Translate/Mini Translator | toggle |  | review.miniTranslator | P3 | missing | FLUENT19:MiniTranslator |  |
 | R.Review.Language.TranslationLanguageOptions | Choose Translation Language | Review/Language/Translate/Choose Translation Language | button |  | review.translationLanguage | P3 | missing | FLUENT19:TranslationLanguageOptions |  |
 | R.Review.Language.LanguageCommands | Language | Review/Language | menu |  |  | P2 | missing | FLUENT19:LanguageCommands |  |
-| R.Review.Language.SetLanguage | Set Proofing Language | Review/Language/Set Proofing Language | toggle |  | review.setLanguage | P2 | missing | FLUENT19:SetLanguage |  |
+| R.Review.Language.SetLanguage | Set Proofing Language | Review/Language/Set Proofing Language | toggle |  | review.setLanguage | P2 | wired | FLUENT19:SetLanguage |  |
 | R.Review.Language.LanguagePreferences | Language Preferences | Review/Language/Language Preferences | button |  | review.languagePreferences | P2 | missing | FLUENT19:LanguagePreferences |  |
 | R.Review.Section.PasswordProtectSection | Password | Review/Section/Password | button |  | review.password | P1 | wired | FLUENT19:PasswordProtectSection |  |
 | R.Review.Notes.LinkedNotes | Linked Notes | Review/Notes/Linked Notes | button |  | review.linkedNotes | P3 | missing | FLUENT19:LinkedNotes |  |
@@ -649,7 +652,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.ParagraphHandle.LinkedNotesOptions | Linked Notes Options | Context/Paragraph Handle/Linked Notes/Linked Notes Options | button |  | linked.options | P3 | missing | FLUENT19:ContextMenuOutlineElementHandle/LinkedNotesOptions |  |
 | CM.ParagraphHandle.OCRLanguageListMenu | Make Text in Image Searchable | Context/Paragraph Handle/Make Text in Image Searchable | menu |  | object.ocrLanguage | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/OCRLanguageListMenu |  |
 | CM.ParagraphHandle.LastModifiedBy | Last Modified By (author and date) | Context/Paragraph Handle/Last Modified By (author and date) | button |  | object.lastModified | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/LastModifiedBy |  |
-| CM.Text.NoSpellingSuggestions | Spelling suggestions | Context/Text/Spelling suggestions | gallery |  | review.spellingSuggestion | P1 | missing | FLUENT19:ContextMenuText/NoSpellingSuggestions |  |
+| CM.Text.NoSpellingSuggestions | Spelling suggestions | Context/Text/Spelling suggestions | gallery |  | review.spellingSuggestion | P1 | missing | FLUENT19:ContextMenuText/NoSpellingSuggestions | the context menu does not list suggestions yet (the Spelling pane, F7, does; review.spellingSuggestion takes the word) |
 | CM.Text.InkAlternate1 | Ink Recognition Alternate 1 | Context/Text/Ink Recognition Alternate 1 | button |  | draw.inkAlternate | P3 | missing | FLUENT19:ContextMenuText/InkAlternate1 |  |
 | CM.Text.InkAlternate2 | Ink Recognition Alternate 2 | Context/Text/Ink Recognition Alternate 2 | button |  | draw.inkAlternate | P3 | missing | FLUENT19:ContextMenuText/InkAlternate2 |  |
 | CM.Text.InkAlternate3 | Ink Recognition Alternate 3 | Context/Text/Ink Recognition Alternate 3 | button |  | draw.inkAlternate | P3 | missing | FLUENT19:ContextMenuText/InkAlternate3 |  |
@@ -715,7 +718,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Text.NoteLinkDelete | Delete Link | Context/Text/Linked Notes/Delete Link | button |  | linked.delete | P3 | missing | FLUENT19:ContextMenuText/NoteLinkDelete |  |
 | CM.Text.LinkedNotesOptions | Linked Notes Options | Context/Text/Linked Notes/Linked Notes Options | button |  | linked.options | P3 | missing | FLUENT19:ContextMenuText/LinkedNotesOptions |  |
 | CM.Text.LastModifiedBy | Last Modified By (author and date) | Context/Text/Last Modified By (author and date) | button |  | object.lastModified | P2 | missing | FLUENT19:ContextMenuText/LastModifiedBy |  |
-| CM.MisspelledWord.NoSpellingSuggestions | Spelling suggestions | Context/Misspelled Word/Spelling suggestions | gallery |  | review.spellingSuggestion | P1 | missing | FLUENT19:ContextMenuSpell/NoSpellingSuggestions |  |
+| CM.MisspelledWord.NoSpellingSuggestions | Spelling suggestions | Context/Misspelled Word/Spelling suggestions | gallery |  | review.spellingSuggestion | P1 | wired | FLUENT19:ContextMenuSpell/NoSpellingSuggestions | the context menu does not list suggestions yet (the Spelling pane, F7, does; review.spellingSuggestion takes the word) |
 | CM.Bullet.BulletRemove | Remove Bullet | Context/Bullet/Remove Bullet | button |  | para.bulletRemove | P0 | wired | FLUENT19:ContextMenuBullets/BulletRemove |  |
 | CM.Bullet.ChangeToNumberList | Change to Numbered List | Context/Bullet/Change to Numbered List | button |  | para.numbering | P1 | missing | FLUENT19:ContextMenuBullets/ChangeToNumberList |  |
 | CM.Number.NumberListRestart | Restart Numbering | Context/Number/Restart Numbering | button |  | para.restartNumbering | P1 | verified | FLUENT19:ContextMenuNumbering/NumberListRestart |  |
@@ -1062,7 +1065,7 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.NewPageFromTemplate | New Page from Template | Quick Access Toolbar/Commands Not in the Ribbon/New Page from Template | button |  | page.newFromTemplate | P2 | wired | FLUENT19:NewPageFromTemplate | As Insert › Page Templates › Page from Template (unverified) |
 | QAT.NR.PasteAsInkOneNote | Paste as Ink | Quick Access Toolbar/Commands Not in the Ribbon/Paste as Ink | button |  | edit.pasteInk | P3 | missing | FLUENT19:PasteAsInkOneNote |  |
 | QAT.NR.ZoomCurrent75 | 75% | Quick Access Toolbar/Commands Not in the Ribbon/75% | button |  | view.zoom75 | P3 | wired | FLUENT19:ZoomCurrent75 |  |
-| QAT.NR.Spelling | Spelling | Quick Access Toolbar/Commands Not in the Ribbon/Spelling | button | `F7` | review.spelling | P1 | missing | FLUENT19:Spelling |  |
+| QAT.NR.Spelling | Spelling | Quick Access Toolbar/Commands Not in the Ribbon/Spelling | button | `F7` | review.spelling | P1 | wired | FLUENT19:Spelling |  |
 | QAT.NR.OutlookTaskRemoveCtxItem | Delete Outlook Task | Quick Access Toolbar/Commands Not in the Ribbon/Delete Outlook Task | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskRemoveCtxItem |  |
 | QAT.NR.NotebookRename | Rename Notebook | Quick Access Toolbar/Commands Not in the Ribbon/Rename Notebook | button |  | notebook.rename | P1 | wired | FLUENT19:NotebookRename |  |
 | QAT.NR.NotebookSaveAs | Save Notebook As | Quick Access Toolbar/Commands Not in the Ribbon/Save Notebook As | button |  | file.exportNotebook | P1 | missing | FLUENT19:NotebookSaveAs |  |
@@ -1127,7 +1130,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.General.DeleteWordLeft | Delete one word to the left | Keyboard/General/Delete one word to the left | shortcut | `Mod+Backspace` | text.deleteWordLeft | P0 | verified | KBD365 |  |
 | KB.General.DeleteWordRight | Delete one word to the right | Keyboard/General/Delete one word to the right | shortcut | `Mod+Delete` | text.deleteWordRight | P0 | verified | KBD365 |  |
 | KB.General.LineBreak | Insert a line break without starting a new paragraph | Keyboard/General/Insert a line break without starting a new paragraph | shortcut | `Shift+Enter` | text.lineBreak | P0 | verified | KBD365 |  |
-| KB.General.Spelling | Check spelling | Keyboard/General/Check spelling | shortcut | `F7` | review.spelling | P1 | missing | KBD365 |  |
+| KB.General.Spelling | Check spelling | Keyboard/General/Check spelling | shortcut | `F7` | review.spelling | P1 | wired | KBD365 |  |
 | KB.General.Thesaurus | Open the thesaurus for the selected word | Keyboard/General/Open the thesaurus for the selected word | shortcut | `Shift+F7` | review.thesaurus | P2 | missing | KBD365 |  |
 | KB.General.ContextMenu | Display the context menu for the focused object | Keyboard/General/Display the context menu for the focused object | shortcut | `Shift+F10` | ui.contextMenu | P1 | missing | KBD365 | also the Menu key |
 | KB.General.InfoBarAction | Perform the action suggested on the Information Bar | Keyboard/General/Perform the action suggested on the Information Bar | shortcut | `Mod+Shift+W` | ui.infoBarAction | P3 | missing | KBD365 |  |
@@ -1312,12 +1315,12 @@ The OneNote Options dialog, category by category. Setting names are functional d
 | OPT.Display.ScreenClippingNotifications | Disable screen clipping notifications | File/Options/Display/Disable screen clipping notifications | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Proofing.AutoCorrect | AutoCorrect Options… | File/Options/Proofing/AutoCorrect Options… | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Proofing.IgnoreUppercase | Ignore words in UPPERCASE | File/Options/Proofing/Ignore words in UPPERCASE | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.Proofing.IgnoreNumbers | Ignore words that contain numbers | File/Options/Proofing/Ignore words that contain numbers | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.Proofing.IgnoreUrls | Ignore Internet and file addresses | File/Options/Proofing/Ignore Internet and file addresses | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.Proofing.IgnoreNumbers | Ignore words that contain numbers | File/Options/Proofing/Ignore words that contain numbers | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.Proofing.IgnoreUrls | Ignore Internet and file addresses | File/Options/Proofing/Ignore Internet and file addresses | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Proofing.FlagRepeated | Flag repeated words | File/Options/Proofing/Flag repeated words | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Proofing.CustomDictionaries | Custom Dictionaries… | File/Options/Proofing/Custom Dictionaries… | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.Proofing.CheckAsYouType | Check spelling as you type | File/Options/Proofing/Check spelling as you type | option |  |  | P1 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.Proofing.HideSpellingErrors | Hide spelling and grammar errors | File/Options/Proofing/Hide spelling and grammar errors | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.Proofing.CheckAsYouType | Check spelling as you type | File/Options/Proofing/Check spelling as you type | option |  |  | P1 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.Proofing.HideSpellingErrors | Hide spelling and grammar errors | File/Options/Proofing/Hide spelling and grammar errors | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Proofing.CheckGrammar | Check grammar with spelling | File/Options/Proofing/Check grammar with spelling | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.SaveBackup.QuickNotesSection | Quick Notes section location | File/Options/Save & Backup/Quick Notes section location | option |  |  | P1 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.SaveBackup.BackupFolder | Backup folder | File/Options/Save & Backup/Backup folder | option |  |  | P1 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
@@ -1443,7 +1446,7 @@ Documented (or, where marked, plausible and unverified) behaviour. A behaviour r
 | BEH.Table.TabToCreate | Tab after text in a paragraph turns it into a two-column table | Behaviour/Table | behaviour |  |  | P1 | verified | KBD365 ("Create a table") | Decision D6: the table takes the paragraph's place (the container splits around it); a caret inside the text types a tab, a list item indents |
 | BEH.Ink.PressureTilt | Pen pressure (and tilt where available) shapes ink stroke width | Behaviour/Ink | behaviour |  |  | P1 | wired | brief §6 M2 | Pens draw width × (0.4 + 1.2 × pressure), unverified curve; pressure from egui touch force where winit reports it, else 0.5; tilt not used |
 | BEH.Ink.Lasso | Lasso select picks ink strokes and objects inside the loop | Behaviour/Ink | behaviour |  | draw.lassoSelect | P1 | wired | FLUENT19:LassoSelect | A stroke is picked when three quarters of its points are inside, another object when its centre is (unverified) |
-| BEH.History.RecentEdits | Recent Edits lists pages changed in the chosen period, newest first | Behaviour/History | behaviour |  | history.recentEdits | P1 | wired | FLUENT19:FindByDateMenu | A page's edit time is its last change (Page::modified); Today and Since Yesterday count from local midnight |
+| BEH.History.RecentEdits | Recent Edits lists pages changed in the chosen period, newest first | Behaviour/History | behaviour |  | history.recentEdits | P1 | verified | FLUENT19:FindByDateMenu | A page's edit time is its last change (Page::modified); Today and Since Yesterday count from local midnight |
 | BEH.History.Unread | Pages changed by others since you last looked are bold in the page list; Next Unread goes there | Behaviour/History | behaviour |  |  | P2 | missing | FLUENT19:GoToNextUnreadPage |  |
 
 ## File formats

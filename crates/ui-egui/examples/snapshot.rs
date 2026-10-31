@@ -210,6 +210,17 @@ fn main() {
     });
     shot("backstage-info", &out, 1.0, |a| a.ui.backstage = Some(Backstage::Info));
     shot("backstage-options", &out, 1.0, |a| a.ui.backstage = Some(Backstage::Options));
+    shot("spelling", &out, 1.0, |a| {
+        let aff = "SET UTF-8\nTRY esianrtolcdugmphbyfvkwz\n";
+        let dic = "7\nthe\ncat\nsat\non\nmat\nand\nslept\n";
+        if let Ok(d) = notecraft_spell::Dictionary::load(aff.as_bytes(), dic.as_bytes()) {
+            a.session.set_dictionary("en_US", d);
+        }
+        let _ = a.session.run("page.new", json!({"title": "Spelling"}));
+        let _ = a.session.run("outline.new", json!({"x": 60.0, "y": 140.0}));
+        let _ = a.session.run("text.insert", json!({"text": "the cta sat on teh mat and slpet"}));
+        let _ = a.session.run("review.spelling", json!({}));
+    });
     shot("options-advanced", &out, 1.0, |a| {
         a.ui.backstage = Some(Backstage::Options);
         a.ui.options_page = notecraft_ui_egui::options::OptionsPage::Advanced;

@@ -22,6 +22,7 @@ notecraft-fonts = { workspace = true }
 notecraft-ink = { workspace = true }
 notecraft-ink-geom = { workspace = true }
 notecraft-math = { workspace = true }
+notecraft-spell = { workspace = true }
 notecraft-onestore = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

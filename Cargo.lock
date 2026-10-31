@@ -2946,6 +2946,7 @@ dependencies = [
  "notecraft-math",
  "notecraft-onestore",
  "notecraft-search",
+ "notecraft-spell",
  "notecraft-text",
  "serde",
  "serde_json",
@@ -3047,6 +3048,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "notecraft-spell"
+version = "0.1.0"
+
+[[package]]
 name = "notecraft-text"
 version = "0.1.0"
 dependencies = [
@@ -3070,6 +3075,7 @@ dependencies = [
  "notecraft-ink-geom",
  "notecraft-math",
  "notecraft-onestore",
+ "notecraft-spell",
  "serde",
  "serde_json",
 ]

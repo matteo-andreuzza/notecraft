@@ -123,6 +123,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "draw.snapToGrid" => s.draw.snap_to_grid,
         "draw.inkToShape" => s.draw.ink_to_shape,
         "review.password" => s.view.password_pane,
+        "review.spelling" => s.view.spelling_pane,
         "draw.withTouch" => s.draw.with_touch,
         "draw.lasso" => s.draw.tool == notecraft_engine::DrawTool::Lasso,
         "draw.pan" => s.draw.tool == notecraft_engine::DrawTool::Pan,

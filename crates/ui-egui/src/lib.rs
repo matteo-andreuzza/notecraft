@@ -31,6 +31,7 @@ pub mod pictures;
 pub mod ribbon;
 pub mod ribbon_layout;
 pub mod ribbon_simplified;
+pub mod spell_ui;
 pub mod theme;
 
 use egui::{Frame, Margin, Rect, RichText, Ui};
@@ -531,6 +532,9 @@ impl NoteApp {
             }
             if self.session.view.password_pane {
                 password_ui::pane(self, ui, t);
+            }
+            if self.session.view.spelling_pane {
+                spell_ui::pane(self, ui, t);
             }
             if self.session.view.recent_edits.is_some() {
                 panes::recent_pane(self, ui, t);
