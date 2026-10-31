@@ -1001,6 +1001,7 @@ fn version_rows(app: &mut NoteApp, ui: &mut Ui, page: &notecraft_engine::doc::Pa
             cmd_item(app, ui, "Delete All Versions in Section", "history.deleteVersionsSection", json!({}));
             cmd_item(app, ui, "Delete All Versions in Section Group", "history.deleteVersionsGroup", json!({}));
             cmd_item(app, ui, "Delete All Versions in Notebook", "history.deleteVersionsNotebook", json!({}));
+            cmd_item(app, ui, "Disable History for This Notebook", "history.disable", json!({}));
             ui.separator();
             cmd_item(app, ui, "Hide Page Versions", "history.pageVersions", json!({"on": false}));
         });

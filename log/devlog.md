@@ -1127,3 +1127,10 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - The paragraph handle and text menus end with "Last modified by <author>, <date> <time>"
   for the paragraph under the pointer (`context_menu::header`). CM.ParagraphHandle and
   CM.Text LastModifiedBy wired (an information line, no command).
+## 2026-10-31 — M3/P2: Disable History for This Notebook
+
+- `Notebook.history_disabled`, saved as `Toc.history_disabled` in the notebook's table of
+  contents (serde default; older tables read as enabled). `history.disable` switches it (a
+  notebook change: saved, undoable); `versions_cmds::snapshot` keeps no versions while it is on.
+  Ribbon rows (Page Versions and Recycle Bin menus) show it checked; the version menu has it.
+- Catalog: the three Disable History rows wired (unverified, D14).

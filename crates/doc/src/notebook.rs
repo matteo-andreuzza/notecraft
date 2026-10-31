@@ -283,12 +283,15 @@ pub struct Notebook {
     /// The recycle bin.
     #[serde(default)]
     pub recycle: RecycleBin,
+    /// History › Disable History for This Notebook: no new page versions (decision D14).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub history_disabled: bool,
 }
 
 impl Notebook {
     /// A new empty notebook.
     pub fn new(id: Id, name: &str, color: SectionColor) -> Notebook {
-        Notebook { id, name: clean_name(name), color, children: Vec::new(), recycle: RecycleBin::default() }
+        Notebook { id, name: clean_name(name), color, children: Vec::new(), recycle: RecycleBin::default(), history_disabled: false }
     }
 
     /// Every section in tab order, depth-first through groups (depth-capped).

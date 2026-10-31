@@ -148,6 +148,9 @@ pub struct Toc {
     pub color: SectionColor,
     /// Children in tab order.
     pub entries: Vec<TocEntry>,
+    /// No new page versions in this notebook (root only; decision D14).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub history_disabled: bool,
 }
 
 const TOC_MAGIC: &str = "notecraft-notebook";
@@ -414,7 +417,7 @@ impl NameAlloc {
 
 /// Build a notebook skeleton from its root TOC (sections empty, to be filled by the loader).
 pub fn toc_for(id: Id, name: &str, color: SectionColor, entries: Vec<TocEntry>) -> Toc {
-    Toc { format: TOC_MAGIC.into(), version: VERSION, id, name: name.to_string(), color, entries }
+    Toc { format: TOC_MAGIC.into(), version: VERSION, id, name: name.to_string(), color, entries, history_disabled: false }
 }
 
 /// Wrap a section as a navigation node.
