@@ -247,6 +247,12 @@ pub struct ViewState {
     pub recent_edits: Option<String>,
     /// Page versions shown under the pages in the page list (History › Page Versions).
     pub page_versions: bool,
+    /// Help pane open (F1).
+    pub help_pane: bool,
+    /// The Help pane lists keyboard shortcuts only.
+    pub help_shortcuts: bool,
+    /// About NoteCraft shown.
+    pub about: bool,
     /// A version or a deleted page shown read-only instead of the canvas.
     #[serde(default)]
     pub preview: Option<crate::versions_cmds::Preview>,
@@ -274,6 +280,9 @@ impl Default for ViewState {
             spelling: None,
             recent_edits: None,
             page_versions: false,
+            help_pane: false,
+            help_shortcuts: false,
+            about: false,
             preview: None,
             recycle_view: None,
         }
