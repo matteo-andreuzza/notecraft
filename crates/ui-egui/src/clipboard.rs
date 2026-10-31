@@ -54,6 +54,14 @@ pub(crate) fn after_copy(app: &mut NoteApp, ctx: &egui::Context, v: &Value) {
 pub(crate) fn paste(app: &mut NoteApp, ctx: &egui::Context, cmd: &str, text: Option<String>) {
     let as_picture = cmd == "edit.pastePicture";
     let rich = app.host.read_clipboard(text.is_none() || as_picture);
+    // BEH.Paste.Files: files copied in a file manager go on the page like dropped files (their
+    // paths also arrive as text, which a plain paste would type in). Paste as text only keeps
+    // the paths.
+    if !rich.files.is_empty() && cmd != "edit.pasteTextOnly" && app.session.page().is_some() {
+        // No point given: the files go where the caret is (`ops::insert_pos`).
+        crate::pictures::insert_files(app, ctx, &rich.files, None);
+        return;
+    }
     let text = text.or(rich.text);
     let mut params = json!({});
     if let Some(t) = &text {

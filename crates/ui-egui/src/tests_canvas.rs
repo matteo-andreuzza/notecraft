@@ -585,3 +585,16 @@ fn typing_then_tab_makes_a_table_and_tab_adds_columns() {
     assert!(page.objects.iter().all(|o| o.as_outline().is_none()), "the container became the table");
     assert_eq!(h.state().canvas.tables.len(), 1, "drawn as a table");
 }
+
+#[test]
+fn open_link_is_enabled_only_on_a_link() {
+    let (mut a, o) = page_with("see ");
+    let caret = |a: &mut NoteApp, offset: usize| a.session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": offset})).unwrap();
+    caret(&mut a, 2);
+    assert!(a.disabled_reason("link.open").is_some(), "KB.Format.OpenLink is disabled off a link");
+    a.session.run("insert.link", json!({"url": "https://example.org", "text": "example"})).unwrap();
+    caret(&mut a, 6);
+    assert_eq!(a.disabled_reason("link.open"), None, "and enabled on one");
+    // A click on a link still opens it: the command itself takes the url.
+    assert!(a.session.run("link.open", json!({"url": "https://example.org"})).is_ok());
+}

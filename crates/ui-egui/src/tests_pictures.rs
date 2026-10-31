@@ -111,6 +111,7 @@ struct Clip {
     text: Option<String>,
     html: Option<String>,
     image: Option<notecraft_codecs::Rgba8>,
+    files: Vec<std::path::PathBuf>,
 }
 
 struct ClipHost(std::sync::Arc<std::sync::Mutex<Clip>>);
@@ -121,11 +122,16 @@ impl crate::Host for ClipHost {
     }
     fn read_clipboard(&mut self, image: bool) -> crate::RichClip {
         let c = self.0.lock().unwrap();
-        crate::RichClip { text: c.text.clone(), html: c.html.clone(), image: if image { c.image.clone() } else { None } }
+        crate::RichClip { text: c.text.clone(), html: c.html.clone(), image: if image { c.image.clone() } else { None }, files: c.files.clone() }
     }
     fn write_clipboard(&mut self, text: &str, html: &str, image: Option<&notecraft_codecs::Rgba8>) -> bool {
         let mut c = self.0.lock().unwrap();
-        *c = Clip { text: (!text.is_empty()).then(|| text.to_string()), html: (!html.is_empty()).then(|| html.to_string()), image: image.cloned() };
+        *c = Clip {
+            text: (!text.is_empty()).then(|| text.to_string()),
+            html: (!html.is_empty()).then(|| html.to_string()),
+            image: image.cloned(),
+            files: Vec::new(),
+        };
         true
     }
 }
@@ -198,6 +204,7 @@ fn pasting_html_from_a_browser_keeps_its_table() {
         text: Some("Fruit\tQty\nPears\t4".into()),
         html: Some("<table><tr><td><b>Fruit</b></td><td>Qty</td></tr><tr><td>Pears</td><td>4</td></tr></table>".into()),
         image: None,
+        files: Vec::new(),
     };
     let mut h = harness(a);
     h.run();
@@ -398,4 +405,27 @@ fn ctrl_alt_shift_o_opens_a_section_file_from_the_picker() {
     assert!(names.contains(&"Recipes".to_string()), "BS.Open.OpenSection: {names:?}");
     assert_eq!(app.session.page().unwrap().title.text(), "Pancakes");
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn files_copied_in_a_file_manager_paste_as_attachments_and_pictures() {
+    // BEH.Paste.Files: Ctrl+V with files on the clipboard puts them on the page like a drop,
+    // not their paths as text.
+    let d = std::env::temp_dir().join(format!("notecraft-paste-files-{}", std::process::id()));
+    std::fs::create_dir_all(&d).unwrap();
+    std::fs::write(d.join("notes.txt"), b"hello").unwrap();
+    std::fs::write(d.join("dot.png"), png(16, 8)).unwrap();
+    let (mut a, clip) = clip_app();
+    a.session.run("outline.new", json!({"x": 40.0, "y": 120.0})).unwrap();
+    let paths = vec![d.join("notes.txt"), d.join("dot.png")];
+    let text = paths.iter().map(|p| format!("file://{}", p.display())).collect::<Vec<_>>().join("\n");
+    *clip.lock().unwrap() = Clip { text: Some(text.clone()), files: paths, ..Clip::default() };
+    let mut h = harness(a);
+    h.run();
+    ctrl_v(&mut h, Some(&text));
+    let page = h.state().session.page().unwrap().clone();
+    assert!(page.objects.iter().any(|o| matches!(o, notecraft_engine::doc::PageObject::Attachment(x) if x.name == "notes.txt")), "BEH.Paste.Files");
+    assert_eq!(page.objects.iter().filter(|o| o.as_image().is_some()).count(), 1);
+    assert!(!page.plain_text().contains("file://"), "the paths are not typed in");
+    let _ = std::fs::remove_dir_all(&d);
 }

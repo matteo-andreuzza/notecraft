@@ -407,7 +407,7 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
 }
 
 /// Most files taken from one drop.
-const MAX_DROPPED: usize = 50;
+const MAX_DROPPED: usize = crate::MAX_PASTED_FILES;
 
 /// Files dropped on the page (`BEH.Paste.Files`): a picture file becomes a picture, anything
 /// else (or a picture that can't be read) an attachment, at the drop point, several stacked
@@ -423,10 +423,17 @@ pub(crate) fn handle_drops(app: &mut NoteApp, ctx: &egui::Context) {
         return;
     }
     let at = ctx.pointer_latest_pos().filter(|p| app.canvas.viewport.contains(*p)).map(|p| app.canvas.to_page(p));
+    let paths: Vec<std::path::PathBuf> = files.iter().take(MAX_DROPPED).map(|f| f.path().to_path_buf()).collect();
+    insert_files(app, ctx, &paths, at);
+}
+
+/// Put files on the page (dropped, or pasted from a file manager): pictures as pictures, a PDF
+/// asks whether to attach it or insert its printout, anything else as an attachment. `at` is
+/// the page point of the first one; the next ones step down and right.
+pub(crate) fn insert_files(app: &mut NoteApp, ctx: &egui::Context, paths: &[std::path::PathBuf], at: Option<notecraft_engine::doc::geom::Point>) {
     let pictures = picture_filter();
     let mut ask = Vec::new();
-    for (k, f) in files.iter().take(MAX_DROPPED).enumerate() {
-        let path = f.path();
+    for (k, path) in paths.iter().take(MAX_DROPPED).enumerate() {
         let mut params = json!({"path": path.display().to_string()});
         if let Some(pt) = at {
             let d = k as f32 * 24.0;

@@ -755,3 +755,13 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Catalog: FMT.Import.Images, FMT.Export.Archive, the new row wired. Numbers: wiring
   693/1330 (52.1%), behaviour 176/1330 (13.2%), 343 commands.
 - A second session (notecraft-61) took the Paper Size pane and SVG export on `m3/paper-size`.
+
+## 2026-10-31 — M2 leftovers: Open Link only on a link, pasting copied files
+
+- `NoteApp::disabled_reason` draws `link.open` (KB.Format.OpenLink, "Open Link" in the text
+  and handle menus) disabled unless the caret or the selected object has a link. The command
+  itself still takes an explicit `url`, so clicks on links and agents are unchanged.
+- BEH.Paste.Files: files copied in a file manager (`text/uri-list`, arboard `file_list`)
+  paste like dropped files: pictures as pictures, PDFs through the Insert File dialog, the rest
+  as attachments, at the caret. Their paths no longer get typed in as text. `RichClip.files`,
+  `pictures::insert_files` shared with drops, `MAX_PASTED_FILES` = 50.

@@ -46,7 +46,12 @@ pub struct RichClip {
     pub html: Option<String>,
     /// A picture (RGBA pixels), when one was asked for.
     pub image: Option<notecraft_codecs::Rgba8>,
+    /// Files copied in a file manager (local paths, `text/uri-list`).
+    pub files: Vec<std::path::PathBuf>,
 }
+
+/// Most files one drop or paste puts on a page.
+pub const MAX_PASTED_FILES: usize = 50;
 
 /// What the host platform provides (desktop app, web app, tests).
 pub trait Host {
@@ -538,6 +543,10 @@ impl NoteApp {
     pub fn disabled_reason(&self, id: &str) -> Option<String> {
         match notecraft_engine::commands::find(id) {
             None => Some("Not available yet in NoteCraft".to_string()),
+            // KB.Format.OpenLink: the command also takes an explicit `url` (a click on a link,
+            // agents), so its `enabled` predicate can't ask for a link; a menu row without
+            // one has nothing to open.
+            Some(c) if c.id == "link.open" && self.session.current_link().is_none() => Some("Put the caret on a link first".to_string()),
             Some(c) => (c.enabled)(&self.session).map(str::to_string),
         }
     }

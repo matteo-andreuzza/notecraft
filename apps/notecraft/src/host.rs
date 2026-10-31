@@ -112,7 +112,9 @@ impl Host for DesktopHost {
         } else {
             None
         };
-        RichClip { text, html, image }
+        // Files copied in a file manager; only regular files, and not too many of them.
+        let files = c.get().file_list().unwrap_or_default().into_iter().filter(|p| p.is_file()).take(notecraft_ui_egui::MAX_PASTED_FILES).collect();
+        RichClip { text, html, image, files }
     }
 
     fn write_clipboard(&mut self, text: &str, html: &str, image: Option<&notecraft_codecs::Rgba8>) -> bool {
