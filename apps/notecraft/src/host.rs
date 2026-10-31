@@ -157,3 +157,17 @@ impl Host for DesktopHost {
         self.dark
     }
 }
+
+#[cfg(test)]
+mod tests {
+    /// UI.Window.FileDialogs: the desktop host's file dialogs are rfd's, built with its default
+    /// features, whose Linux backend is the XDG desktop portal (no GTK linked in).
+    #[test]
+    fn file_dialogs_go_through_the_desktop_portal() {
+        let workspace = include_str!("../../../Cargo.toml");
+        let line = workspace.lines().find(|l| l.trim_start().starts_with("rfd ")).unwrap_or_default();
+        assert!(line.contains("\"0.17\"") && !line.contains("default-features"), "UI.Window.FileDialogs: {line}");
+        let app = include_str!("../Cargo.toml");
+        assert!(app.contains("rfd = { workspace = true }") && !app.contains("gtk3"), "UI.Window.FileDialogs");
+    }
+}

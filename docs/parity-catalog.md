@@ -119,7 +119,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Window.IME | IME composition for CJK and other input methods | Window/IME | surface |  |  | P0 | wired | brief §4 | Commit inserts the composed text; the preedit is not drawn in place yet (unverified). |
 | UI.Window.Clipboard | System clipboard: text, rich text (HTML), images | Window/Clipboard | surface |  |  | P0 | wired | brief §4 | desktop: copy puts text with HTML (tables as tables) or the copied picture on the system clipboard; paste reads HTML and pictures (arboard through the host); the web build stays plain text |
 | UI.Window.DragDrop | Drag & drop of files, images and text onto the page; pages/sections in the navigation | Window/Drag and Drop | surface |  |  | P1 | missing | brief §4; GK |  |
-| UI.Window.FileDialogs | Native file dialogs through the XDG desktop portal | Window/File Dialogs | surface |  |  | P0 | missing | brief §4 |  |
+| UI.Window.FileDialogs | Native file dialogs through the XDG desktop portal | Window/File Dialogs | surface |  |  | P0 | wired | brief §4 | rfd 0.17 with its default xdg-portal backend: Open/Save/folder pickers through org.freedesktop.portal.FileChooser (no GTK); unverified on every desktop environment |
 | UI.Window.Accessibility | Screen reader support (AccessKit) for panes, page list and canvas | Window/Accessibility | surface |  |  | P1 | wired | brief §6 M4 | Controls expose labels through AccessKit (the UI tests query them); not yet tried with a screen reader (unverified). |
 
 ## Quick Access Toolbar
