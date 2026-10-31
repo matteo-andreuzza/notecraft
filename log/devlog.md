@@ -798,3 +798,15 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Parallel sessions: a worktree must use its own `CARGO_TARGET_DIR` — two checkouts sharing
   one target dir get the same artifact hashes and run each other's binaries.
 - Next here: SVG page export (FMT.Export.Images).
+
+## 2026-10-31 — M3: Export a page as an SVG picture
+
+- `import-export::pdf::svg::write`: the PDF's display list (same layout, fonts, pictures, ink,
+  rule lines and page colour as the PDF and PNG exports) written as SVG 1.1, one picture the
+  size of the content (18 pt margin). Text is glyph outlines from the page fonts (`skrifa`
+  pen, one `<defs>` path per glyph, at most 20,000, `<use>` per character), so the file looks
+  the same without the fonts; pictures are `data:` URIs (PNG/JPEG/GIF/WebP as they are, others
+  re-encoded to PNG); links are `<a>` areas. `pdf::rule_segments` now feeds both writers.
+- Engine: `format: "svg"` on `file.exportPage` (a section is refused, one page per picture).
+  UI: SVG Picture in File › Export for pages. Checked by eye with rsvg-convert against the PNG.
+- Catalog: FMT.Export.Images notes (PNG and SVG). Numbers unchanged (a format of an existing row).

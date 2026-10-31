@@ -21,7 +21,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
         // BS.Export.Page — the current page (or `page`).
         CommandSpec::new("file.exportPage", "BS.Export.Page", "Export Page", "File/Export/Page", export_page)
-            .params(r#"{"path": file, "format"?: "mht"|"docx"|"pdf"|"png"|"html"|"md", "page"?: id}"#)
+            .params(r#"{"path": file, "format"?: "mht"|"docx"|"pdf"|"png"|"svg"|"html"|"md", "page"?: id}"#)
             .pure()
             .when(need_page),
         // BS.Export.Section and CM.Section.FileSaveAsContextualItem — every page of the
@@ -104,6 +104,7 @@ enum Format {
     Docx,
     Pdf,
     Png,
+    Svg,
     Html,
     Markdown,
 }
@@ -119,12 +120,13 @@ fn format(v: &Value, path: &str) -> Result<Format, CmdError> {
         "docx" => Ok(Format::Docx),
         "pdf" => Ok(Format::Pdf),
         "png" => Ok(Format::Png),
+        "svg" => Ok(Format::Svg),
         "html" | "htm" => Ok(Format::Html),
         "md" | "markdown" => Ok(Format::Markdown),
         "one" | "onepkg" | "doc" | "xps" => {
             Err(CmdError::Disabled(format!("export to .{name} is not available yet (M3: web page, Word, PDF and Markdown first)")))
         }
-        other => Err(CmdError::Params(format!("unknown export format `{other}` (mht, docx, pdf, png, html or md)"))),
+        other => Err(CmdError::Params(format!("unknown export format `{other}` (mht, docx, pdf, png, svg, html or md)"))),
     }
 }
 
@@ -177,6 +179,7 @@ fn write(s: &Session, path: &str, fmt: Format, title: &str, pages: &[&Page]) -> 
     let bytes = match fmt {
         Format::Pdf => return write_pdf(s, path, title, pages),
         Format::Png => return write_png(s, path, title, pages),
+        Format::Svg => return write_svg(s, path, title, pages),
         Format::Mht => export::mht(&e, title),
         Format::Docx => {
             let (bytes, r) = docx::write(&e, title).map_err(CmdError::Failed)?;
@@ -223,6 +226,17 @@ fn write_png(s: &Session, path: &str, title: &str, pages: &[&Page]) -> CmdResult
     let png = notecraft_codecs::encode_png(&img, &notecraft_codecs::Limits::PICTURE).map_err(|e| CmdError::Failed(e.to_string()))?;
     write_file(path, &png)?;
     Ok(json!({"bytes": png.len(), "pages": 1, "width": w, "height": h, "inkLost": 0, "written": [path]}))
+}
+
+/// A page as an SVG picture (FMT.Export.Images): the same drawing as the PNG picture, as
+/// vectors (text as glyph outlines, pictures embedded).
+fn write_svg(s: &Session, path: &str, title: &str, pages: &[&Page]) -> CmdResult {
+    let [page] = pages else { return Err(CmdError::Disabled("a picture holds one page: export a page".into())) };
+    let opts =
+        pdf::PdfOptions { title: title.to_string(), author: s.prefs.author.clone(), utc_offset_min: s.clock.utc_offset_min, fit_content: true };
+    let (svg, _) = pdf::svg::write(page, notecraft_fonts::page_fonts(), &opts).map_err(CmdError::Failed)?;
+    write_file(path, svg.as_bytes())?;
+    Ok(json!({"bytes": svg.len(), "pages": 1, "inkLost": 0, "written": [path]}))
 }
 
 /// The pages as PDF (decision D13), with the system's page fonts.

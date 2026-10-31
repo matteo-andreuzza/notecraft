@@ -66,6 +66,13 @@ fn a_page_exports_as_web_page_html_and_markdown() {
         assert!(r["width"].as_u64().unwrap() > 100, "{r}");
         assert!(std::fs::read(&png).unwrap().starts_with(b"\x89PNG"));
         assert!(s.run("file.exportSection", json!({"path": d.join("s.png").to_str().unwrap()})).is_err(), "one page per picture");
+        // The same picture as vectors (FMT.Export.Images, SVG).
+        let svg = d.join("Trip.svg");
+        run(&mut s, "file.exportPage", json!({"path": svg.to_str().unwrap()}));
+        let text = std::fs::read_to_string(&svg).unwrap();
+        assert!(text.starts_with("<?xml") && text.contains("<svg ") && text.trim_end().ends_with("</svg>"), "{text}");
+        assert!(text.contains("<title>Trip</title>") && text.contains("<use ") && text.contains("data:image/png;base64,"), "title, glyphs, picture");
+        assert!(s.run("file.exportSection", json!({"path": d.join("s.svg").to_str().unwrap()})).is_err(), "one page per picture");
         let nb = d.join("Notebook.pdf");
         let r = run(&mut s, "file.exportNotebook", json!({"path": nb.to_str().unwrap()}));
         assert!(r["pages"].as_u64().unwrap() >= 3, "every page of the notebook: {r}");
