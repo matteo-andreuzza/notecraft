@@ -19,6 +19,21 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("text.insert", "NC.Text.Insert", "Type Text", "Keyboard/Typing/Type text", insert)
             .params(r#"{"text": string}"#)
             .when(need_page),
+        // R.Insert.Symbols.SymbolInsertGallery — the quick symbol gallery; both this and the
+        // dialog below insert one symbol at the caret, same as typing it.
+        CommandSpec::new("insert.symbol", "R.Insert.Symbols.SymbolInsertGallery", "Symbol", "Insert/Symbols/Symbol", insert_symbol)
+            .params(r#"{"char": string}"#)
+            .when(need_page),
+        // R.Insert.Symbols.SymbolsDialog — More Symbols…, the dialog's own Insert button.
+        CommandSpec::new(
+            "insert.symbolDialog",
+            "R.Insert.Symbols.SymbolsDialog",
+            "More Symbols…",
+            "Insert/Symbols/Symbol/More Symbols…",
+            insert_symbol,
+        )
+        .params(r#"{"char": string}"#)
+        .when(need_page),
         // NC.Text.Enter — Enter: new paragraph (BEH.Outline.EnterNewParagraph, EmptyBulletEnds).
         CommandSpec::new("text.newline", "NC.Text.Enter", "New Paragraph", "Keyboard/Typing/New paragraph", newline).key("Enter").when(need_page),
         // KB.General.LineBreak — Shift+Enter: soft line break inside the paragraph.
@@ -76,6 +91,15 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
 
 fn coalesce_key(pos: Pos, page: Option<notecraft_doc::Id>) -> String {
     format!("type:{}:{:?}:{}", page.unwrap_or_default(), pos.block, pos.para)
+}
+
+/// Insert one symbol at the caret — the same as typing it (`R.Insert.Symbols.*`).
+fn insert_symbol(s: &mut Session, v: &Value) -> CmdResult {
+    let ch = p::req_str(v, "char")?;
+    if ch.chars().count() > 8 {
+        return Err(CmdError::Params("`char` is more than a symbol".into()));
+    }
+    insert(s, &json!({"text": ch}))
 }
 
 /// Type `text` at the caret. Newlines start new paragraphs (as pressing Enter would).
@@ -170,18 +194,21 @@ fn after_typing(s: &mut Session, caret: Pos, typed: &str) -> Result<Pos, CmdErro
             return Ok(Pos { offset: 0, ..caret });
         }
     }
+    // BEH.Text.MathCalc: "2+3=" then Space puts the answer after the sign.
+    if typed.ends_with(' ')
+        && para.math.is_none()
+        && s.prefs.calculate_math
+        && let Some(answer) = text.get(..caret.offset.saturating_sub(1)).and_then(notecraft_math::calc::answer)
+    {
+        let at = Pos { offset: caret.offset - 1, ..caret };
+        let fmt = typing_fmt(s, at);
+        let end = insert_at(s, at, &answer, &fmt)?;
+        return Ok(Pos { offset: end.offset + 1, ..caret });
+    }
     // BEH.Text.HyperlinkAuto: a URL followed by whitespace becomes a link.
     if typed.ends_with(char::is_whitespace) {
         let before = caret.offset.saturating_sub(typed.len());
-        if let Some(r) = t::detect_url_before(&text, before)
-            && para.fmt_at(r.end).link.is_none()
-        {
-            let url = t::url_target(text.get(r.clone()).unwrap_or(""));
-            let page = s.page_mut().ok_or_else(no_page)?;
-            if let Some(pm) = Session::para_mut(page, caret.block, caret.para) {
-                t::apply_format(pm, r, &|f| f.link = Some(url.clone()));
-            }
-        }
+        autolink(s, caret, &text, before)?;
     }
     // BEH.Links.Wiki: "[[Page name]]" links to that page, creating it in this section.
     if s.prefs.wiki_links && text.get(..caret.offset).is_some_and(|h| h.ends_with("]]")) {
@@ -207,7 +234,7 @@ fn after_typing(s: &mut Session, caret: Pos, typed: &str) -> Result<Pos, CmdErro
 }
 
 /// Split the caret paragraph (Enter) and return the caret at the start of the new paragraph.
-fn split_at_caret(s: &mut Session, caret: Pos) -> Result<Pos, CmdError> {
+pub(crate) fn split_at_caret(s: &mut Session, caret: Pos) -> Result<Pos, CmdError> {
     let new_id = s.new_id();
     let author = s.author();
     let now = s.now();
@@ -233,7 +260,25 @@ fn split_at_caret(s: &mut Session, caret: Pos) -> Result<Pos, CmdError> {
 }
 
 /// Enter.
-fn newline(s: &mut Session, _: &Value) -> CmdResult {
+/// BEH.Text.HyperlinkAuto: the URL ending at `end` in the caret's paragraph (whose text is
+/// `text`) becomes a link, unless it already is one. Read-only until there is a change, so a
+/// no-op records no undo step.
+fn autolink(s: &mut Session, caret: Pos, text: &str, end: usize) -> Result<(), CmdError> {
+    let Some(r) = t::detect_url_before(text, end) else { return Ok(()) };
+    let linked =
+        s.page().and_then(|p| Session::block_paras(p, caret.block)?.get(caret.para).map(|para| para.fmt_at(r.end).link.is_some())).unwrap_or(true);
+    if linked {
+        return Ok(());
+    }
+    let url = t::url_target(text.get(r.clone()).unwrap_or(""));
+    let page = s.page_mut().ok_or_else(no_page)?;
+    if let Some(pm) = Session::para_mut(page, caret.block, caret.para) {
+        t::apply_format(pm, r, &|f| f.link = Some(url.clone()));
+    }
+    Ok(())
+}
+
+pub(crate) fn newline(s: &mut Session, _: &Value) -> CmdResult {
     // In the title, Enter moves to the page body (the first container, created if needed).
     if s.sel.caret().is_some_and(|c| c.block == Block::Title) {
         let first = s.page().and_then(|p| p.objects.iter().find_map(PageObject::as_outline).map(|o| o.id));
@@ -251,6 +296,7 @@ fn newline(s: &mut Session, _: &Value) -> CmdResult {
     let page = s.page().ok_or_else(no_page)?;
     let para =
         Session::block_paras(page, caret.block).and_then(|ps| ps.get(caret.para)).ok_or_else(|| CmdError::Failed("paragraph not found".into()))?;
+    let equation_end = para.math.map(|_| para.len());
     // BEH.Outline.EmptyBulletEnds: Enter on an empty list item outdents it, then ends the list;
     // on an empty to-do line it removes the checkbox (unverified exact sequence).
     if para.is_empty() && (para.list.is_some() || para.tags.iter().any(|t| t.symbol.is_checkbox())) {
@@ -268,15 +314,21 @@ fn newline(s: &mut Session, _: &Value) -> CmdResult {
     }
     // A URL right before the caret becomes a link on Enter too.
     let text = para.text();
-    if let Some(r) = t::detect_url_before(&text, caret.offset)
-        && para.fmt_at(r.end).link.is_none()
-    {
-        let url = t::url_target(text.get(r.clone()).unwrap_or(""));
-        let page = s.page_mut().ok_or_else(no_page)?;
-        if let Some(pm) = Session::para_mut(page, caret.block, caret.para) {
-            t::apply_format(pm, r, &|f| f.link = Some(url.clone()));
+    let in_equation = para.math.is_some();
+    autolink(s, caret, &text, caret.offset)?;
+    // BEH.Text.MathCalc: "2+3=" then Enter puts the answer after the sign, then a new line.
+    let caret = match text.get(..caret.offset).filter(|_| s.prefs.calculate_math && !in_equation).and_then(notecraft_math::calc::answer) {
+        Some(answer) => {
+            let fmt = typing_fmt(s, caret);
+            insert_at(s, caret, &answer, &fmt)?
         }
-    }
+        None => caret,
+    };
+    // An equation is never split (decision D11): Enter starts a paragraph after it.
+    let caret = match equation_end {
+        Some(end) => Pos { offset: end, ..caret },
+        None => caret,
+    };
     let pos = split_at_caret(s, caret)?;
     s.set_caret(pos);
     ops::touch(s, pos.block, pos.para);
@@ -303,6 +355,22 @@ pub(crate) fn delete_selection(s: &mut Session) -> Result<bool, CmdError> {
         let page = s.page_mut().ok_or_else(no_page)?;
         page.objects.retain(|o| !ids.contains(&o.id()));
         s.sel.on_page = crate::selection::PageSel::None;
+        return Ok(true);
+    }
+    // Selected table cells are emptied (the table stays).
+    if let crate::selection::PageSel::Cells { .. } = s.sel.on_page {
+        let cells = ops::selected_cells(s);
+        let page = s.page_mut().ok_or_else(no_page)?;
+        for (id, _) in cells {
+            if let Some(c) = page.cell_mut(id) {
+                c.paragraphs.truncate(1);
+                if let Some(p) = c.paragraphs.first_mut() {
+                    p.runs.clear();
+                    p.tags.clear();
+                    p.list = None;
+                }
+            }
+        }
         return Ok(true);
     }
     match s.text_range() {
@@ -379,6 +447,7 @@ fn delete_forward(s: &mut Session, _: &Value) -> CmdResult {
         return Ok(Value::Null);
     }
     if caret.para + 1 >= n_paras {
+        crate::table_cmds::delete_empty_row(s);
         return Ok(Value::Null);
     }
     let page = s.page_mut().ok_or_else(no_page)?;

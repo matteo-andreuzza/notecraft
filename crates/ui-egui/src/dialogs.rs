@@ -3,7 +3,7 @@
 //! Notebook Properties, Paragraph Spacing, Customize Tags, and confirmations.
 
 use egui::{RichText, vec2};
-use notecraft_engine::doc::{Id, NavNode};
+use notecraft_engine::doc::{Id, NavNode, Section};
 use serde_json::json;
 
 use crate::{NoteApp, Tokens};
@@ -11,17 +11,25 @@ use crate::{NoteApp, Tokens};
 /// An open dialog and its in-progress values.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Dialog {
-    /// Link (Ctrl+K): address and text to display.
+    /// Link (Ctrl+K): address, text to display, and the page/section search filter.
     Link {
         /// Address.
         url: String,
         /// Text to display.
         text: String,
+        /// Filters the picker below by name.
+        filter: String,
     },
-    /// Move or Copy Pages (Ctrl+Alt+M).
-    MovePage(Id),
-    /// Move or Copy a section.
-    MoveSection(Id),
+    /// Insert Table: columns, rows.
+    InsertTable(usize, usize),
+    /// Notebook List (Ctrl+G): pick a notebook to switch to.
+    NotebookList,
+    /// Symbol: pick a symbol to insert.
+    Symbol,
+    /// Move or Copy Pages (Ctrl+Alt+M): the page, and the search filter.
+    MovePage(Id, String),
+    /// Move or Copy a section: the section, and the search filter.
+    MoveSection(Id, String),
     /// Merge a section into another.
     MergeSection(Id),
     /// Notebook Properties: display name.
@@ -32,23 +40,89 @@ pub enum Dialog {
     CustomizeTags(String),
     /// Confirm emptying the recycle bin.
     ConfirmEmptyBin,
+    /// Alt Text of the selected picture or attachment (`CM.Picture.AlternativeText`).
+    AltText(String),
+    /// Rename the selected file attachment (`CM.FileAttachment.RenameSelected`).
+    RenameAttachment(String),
+    /// Insert File (`BEH.Paste.Files`): dropped files NoteCraft can print, as the parameters of
+    /// `insert.file` / `insert.printout` (path, and where they were dropped).
+    InsertFile(Vec<serde_json::Value>),
+    /// Save current page as a template (decision D10): its name, and whether it becomes the
+    /// current section's default.
+    SaveTemplate {
+        /// Template name.
+        name: String,
+        /// Also the section's default template.
+        default: bool,
+    },
+    /// Sort… of the current table (`CT.TableLayout.Data.ShowSortTableRowsDialog`): the column to
+    /// sort by and an optional second one, each descending or not, and the header row.
+    SortTable {
+        /// Sort by, then by (`None`: no second column).
+        by: [Option<usize>; 2],
+        /// Descending, for each.
+        descending: [bool; 2],
+        /// The first row is a header, kept on top.
+        header: bool,
+    },
+    /// Color & Thickness of the selected pen (`UI.Panes.ColorThickness`): highlighter or pen,
+    /// colour `#rrggbb`, width in points.
+    ColorThickness {
+        /// A highlighter (else a pen).
+        highlighter: bool,
+        /// Colour.
+        color: String,
+        /// Tip width, points.
+        width: f32,
+    },
+}
+
+/// A curated set of common symbols for the Symbol dialog (`UI.Dialogs.Symbol`); plain Unicode
+/// characters, not from any Microsoft font or symbol set (clean room).
+const SYMBOLS: &[&str] = &[
+    "©", "®", "™", "€", "£", "¥", "¢", "§", "¶", "†", "‡", "•", "…", "‰", "′", "″", "°", "±", "×", "÷", "≤", "≥", "≠", "≈", "∞", "√", "∑", "π", "Ω",
+    "α", "β", "γ", "Δ", "←", "→", "↑", "↓", "↔", "⇒", "★", "☆", "♥", "♦", "♣", "♠", "✓", "✗", "¼", "½", "¾",
+];
+
+/// The file name in a dropped file's `insert.file` parameters.
+fn file_name(params: &serde_json::Value) -> String {
+    let path = params.get("path").and_then(serde_json::Value::as_str).unwrap_or_default();
+    std::path::Path::new(path).file_name().map_or_else(|| path.to_string(), |n| n.to_string_lossy().into_owned())
+}
+
+/// Every section with its path `Notebook › Group › … › Section`, in tab order (group depth
+/// capped like the model's own walks).
+fn section_paths(app: &NoteApp) -> Vec<(&Section, String)> {
+    fn walk<'a>(nodes: &'a [NavNode], prefix: &str, out: &mut Vec<(&'a Section, String)>, depth: usize) {
+        if depth > notecraft_engine::doc::notebook::MAX_GROUP_DEPTH {
+            return;
+        }
+        for n in nodes {
+            match n {
+                NavNode::Section(s) => out.push((s, format!("{prefix}{}", s.name))),
+                NavNode::Group(g) => walk(&g.children, &format!("{prefix}{} › ", g.name), out, depth + 1),
+            }
+        }
+    }
+    let mut out = Vec::new();
+    for nb in &app.session.ws.notebooks {
+        walk(&nb.children, &format!("{} › ", nb.name), &mut out, 0);
+    }
+    out
 }
 
 fn sections(app: &NoteApp) -> Vec<(Id, String)> {
+    section_paths(app).into_iter().map(|(s, path)| (s.id, path)).collect()
+}
+
+/// Every page, named `Notebook › … › Section › Page` (for the Link dialog's page search;
+/// `UI.Dialogs.Link`).
+fn pages(app: &NoteApp) -> Vec<(Id, String)> {
     let mut out = Vec::new();
-    for nb in &app.session.ws.notebooks {
-        fn walk(nodes: &[NavNode], prefix: &str, out: &mut Vec<(Id, String)>, depth: usize) {
-            if depth > 16 {
-                return;
-            }
-            for n in nodes {
-                match n {
-                    NavNode::Section(s) => out.push((s.id, format!("{prefix}{}", s.name))),
-                    NavNode::Group(g) => walk(&g.children, &format!("{prefix}{} › ", g.name), out, depth + 1),
-                }
-            }
+    for (s, path) in section_paths(app) {
+        for p in &s.pages {
+            out.push((p.id, format!("{path} › {}", p.display_title())));
         }
-        walk(&nb.children, &format!("{} › ", nb.name), &mut out, 0);
     }
     out
 }
@@ -60,20 +134,29 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
     let mut next = dialog.clone();
     let title = match &dialog {
         Dialog::Link { .. } => "Link",
-        Dialog::MovePage(_) => "Move or Copy Pages",
-        Dialog::MoveSection(_) => "Move or Copy Section",
+        Dialog::InsertTable(..) => "Insert Table",
+        Dialog::NotebookList => "Notebooks",
+        Dialog::Symbol => "Symbol",
+        Dialog::MovePage(..) => "Move or Copy Pages",
+        Dialog::MoveSection(..) => "Move or Copy Section",
         Dialog::MergeSection(_) => "Merge Section",
         Dialog::NotebookProperties(..) => "Notebook Properties",
         Dialog::Spacing(..) => "Paragraph Spacing",
         Dialog::CustomizeTags(_) => "Customize Tags",
         Dialog::ConfirmEmptyBin => "Empty Recycle Bin",
+        Dialog::AltText(_) => "Alt Text",
+        Dialog::RenameAttachment(_) => "Rename",
+        Dialog::InsertFile(_) => "Insert File",
+        Dialog::ColorThickness { .. } => "Color & Thickness",
+        Dialog::SortTable { .. } => "Sort",
+        Dialog::SaveTemplate { .. } => "Save As Template",
     };
     let modal = egui::Modal::new(egui::Id::new("dialog")).show(ctx, |ui| {
         ui.set_min_width(380.0);
         ui.label(RichText::new(title).size(16.0).strong());
         ui.add_space(8.0);
         match &mut next {
-            Dialog::Link { url, text } => {
+            Dialog::Link { url, text, filter } => {
                 ui.label("Text to display:");
                 ui.text_edit_singleline(text);
                 ui.label("Address:");
@@ -82,9 +165,20 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                     r.request_focus();
                 }
                 ui.add_space(4.0);
-                ui.label(RichText::new("Or pick a location in your notebooks:").size(12.0).color(t.page_meta));
-                egui::ScrollArea::vertical().max_height(140.0).show(ui, |ui| {
-                    for (id, name) in sections(app) {
+                ui.label(RichText::new("Or search for a page or section in your notebooks:").size(12.0).color(t.page_meta));
+                ui.add(egui::TextEdit::singleline(filter).hint_text("Search pages and sections"));
+                let needle = filter.to_lowercase();
+                let matches = |name: &str| needle.is_empty() || name.to_lowercase().contains(&needle);
+                egui::ScrollArea::vertical().max_height(180.0).show(ui, |ui| {
+                    for (id, name) in pages(app).into_iter().filter(|(_, n)| matches(n)) {
+                        if ui.selectable_label(false, &name).clicked() {
+                            *url = format!("notecraft:page/{id}");
+                            if text.is_empty() {
+                                *text = name.rsplit(" › ").next().unwrap_or("").to_string();
+                            }
+                        }
+                    }
+                    for (id, name) in sections(app).into_iter().filter(|(_, n)| matches(n)) {
                         if ui.selectable_label(false, &name).clicked() {
                             *url = format!("notecraft:section/{id}");
                             if text.is_empty() {
@@ -99,7 +193,10 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                         if !text.is_empty() {
                             p["text"] = json!(text);
                         }
-                        app.run(ctx, "insert.link", p);
+                        // On an existing link (text at the caret, or a selected object's) OK
+                        // changes it; otherwise it makes a new one.
+                        let cmd = if app.disabled_reason("link.edit").is_none() { "link.edit" } else { "insert.link" };
+                        app.run(ctx, cmd, p);
                         close = true;
                     }
                     if ui.button("Cancel").clicked() {
@@ -107,11 +204,136 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                     }
                 });
             }
-            Dialog::MovePage(pid) => {
+            Dialog::SaveTemplate { name, default } => {
+                ui.label("Template name:");
+                let r = ui.text_edit_singleline(name);
+                if !r.has_focus() && name.is_empty() {
+                    r.request_focus();
+                }
+                ui.checkbox(default, "Set as default template for new pages in the current section");
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if crate::chrome::primary_button(ui, "Save", &t).clicked() && !name.trim().is_empty() {
+                        app.run(ctx, "template.save", json!({"name": name.trim(), "default": *default}));
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::SortTable { by, descending, header } => {
+                // Columns go by their header text when the first row is a header (unverified).
+                let names: Vec<String> = crate::ribbon::current_table(app)
+                    .map(|tb| {
+                        (0..tb.n_cols())
+                            .map(|c| {
+                                let head = if *header { tb.cell(0, c).map(|x| x.text()).unwrap_or_default() } else { String::new() };
+                                if head.trim().is_empty() { format!("Column {}", c + 1) } else { head.trim().to_string() }
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                if names.is_empty() {
+                    close = true;
+                }
+                let name = |c: Option<usize>| c.and_then(|c| names.get(c).cloned()).unwrap_or_else(|| "(none)".into());
+                egui::Grid::new("sort_table").num_columns(3).spacing(vec2(12.0, 8.0)).show(ui, |ui| {
+                    for (k, label) in ["Sort by:", "Then by:"].into_iter().enumerate() {
+                        ui.label(label);
+                        egui::ComboBox::from_id_salt(("sort_by", k)).selected_text(name(by[k])).width(150.0).show_ui(ui, |ui| {
+                            if k > 0 {
+                                ui.selectable_value(&mut by[k], None, "(none)");
+                            }
+                            for (c, n) in names.iter().enumerate() {
+                                ui.selectable_value(&mut by[k], Some(c), n);
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add_enabled_ui(by[k].is_some(), |ui| {
+                                ui.radio_value(&mut descending[k], false, "Ascending");
+                                ui.radio_value(&mut descending[k], true, "Descending");
+                            });
+                        });
+                        ui.end_row();
+                    }
+                });
+                ui.add_space(4.0);
+                ui.checkbox(header, "Header row (excluded from sort)");
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if crate::chrome::primary_button(ui, "OK", &t).clicked() {
+                        let keys: Vec<serde_json::Value> =
+                            by.iter().zip(descending.iter()).filter_map(|(c, d)| c.map(|c| json!({"col": c, "descending": d}))).collect();
+                        if !keys.is_empty() {
+                            app.run(ctx, "table.sortDialog", json!({"keys": keys, "headerRow": *header}));
+                        }
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::InsertTable(cols, rows) => {
+                egui::Grid::new("insert_table").show(ui, |ui| {
+                    ui.label("Columns:");
+                    ui.add(egui::DragValue::new(cols).range(1..=notecraft_engine::doc::table::MAX_COLS));
+                    ui.end_row();
+                    ui.label("Rows:");
+                    ui.add(egui::DragValue::new(rows).range(1..=notecraft_engine::doc::table::MAX_ROWS));
+                    ui.end_row();
+                });
+                ui.horizontal(|ui| {
+                    if crate::chrome::primary_button(ui, "OK", &t).clicked() {
+                        app.run(ctx, "insert.tableDialog", json!({"cols": *cols, "rows": *rows}));
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::NotebookList => {
+                ui.label("Switch to a notebook:");
+                let current = app.session.sel.notebook;
+                egui::ScrollArea::vertical().max_height(260.0).show(ui, |ui| {
+                    for nb in app.session.ws.notebooks.clone() {
+                        if ui.selectable_label(Some(nb.id) == current, &nb.name).clicked() {
+                            app.run(ctx, "notebook.select", json!({"notebook": nb.id.to_string()}));
+                            close = true;
+                        }
+                    }
+                });
+                if ui.button("Cancel").clicked() {
+                    close = true;
+                }
+            }
+            Dialog::Symbol => {
+                ui.label("Click a symbol to insert it:");
+                ui.add_space(4.0);
+                egui::Grid::new("symbol_grid").spacing(vec2(4.0, 4.0)).show(ui, |ui| {
+                    for (i, sym) in SYMBOLS.iter().enumerate() {
+                        if ui.add(egui::Button::new(RichText::new(*sym).size(16.0)).min_size(vec2(28.0, 28.0))).clicked() {
+                            app.run(ctx, "insert.symbolDialog", json!({"char": sym}));
+                            close = true;
+                        }
+                        if (i + 1) % 10 == 0 {
+                            ui.end_row();
+                        }
+                    }
+                });
+                if ui.button("Cancel").clicked() {
+                    close = true;
+                }
+            }
+            Dialog::MovePage(pid, filter) => {
                 ui.label("Pick a section:");
                 let pid = *pid;
+                ui.add(egui::TextEdit::singleline(filter).hint_text("Search sections"));
+                let needle = filter.to_lowercase();
                 egui::ScrollArea::vertical().max_height(260.0).show(ui, |ui| {
-                    for (id, name) in sections(app) {
+                    for (id, name) in sections(app).into_iter().filter(|(_, n)| needle.is_empty() || n.to_lowercase().contains(&needle)) {
                         ui.horizontal(|ui| {
                             ui.label(&name);
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -131,10 +353,20 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                     close = true;
                 }
             }
-            Dialog::MoveSection(sid) => {
+            Dialog::MoveSection(sid, filter) => {
                 let sid = *sid;
                 ui.label("Move or copy into a notebook:");
-                for nb in app.session.ws.notebooks.clone() {
+                ui.add(egui::TextEdit::singleline(filter).hint_text("Search notebooks"));
+                let needle = filter.to_lowercase();
+                for nb in app
+                    .session
+                    .ws
+                    .notebooks
+                    .iter()
+                    .filter(|nb| needle.is_empty() || nb.name.to_lowercase().contains(&needle))
+                    .cloned()
+                    .collect::<Vec<_>>()
+                {
                     ui.horizontal(|ui| {
                         ui.label(&nb.name);
                         if ui.button("Copy").clicked() {
@@ -181,6 +413,18 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                         }
                     }
                 });
+                // UI.Dialogs.NotebookProperties.ChangeLocation: a folder named after the
+                // notebook inside the folder picked.
+                let place = app.session.notebook_path(nid).map(|p| p.display().to_string());
+                ui.label("Location:");
+                ui.label(RichText::new(place.as_deref().unwrap_or("In memory only (not saved to disk)")).size(12.0).color(t.page_meta));
+                if ui.button("Change Location…").on_hover_text("Save this notebook in a new folder and keep saving there").clicked()
+                    && let Some(dir) = app.host.pick_folder("Choose where to keep the notebook")
+                {
+                    let path = std::path::Path::new(&dir).join(notecraft_engine::doc::clean_name(name));
+                    app.run(ctx, "notebook.changeLocation", json!({"notebook": nid.to_string(), "path": path.to_string_lossy()}));
+                }
+                ui.add_space(6.0);
                 ui.horizontal(|ui| {
                     if crate::chrome::primary_button(ui, "OK", &t).clicked() {
                         app.run(ctx, "notebook.properties", json!({"notebook": nid.to_string(), "name": name}));
@@ -213,25 +457,106 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                     }
                 });
             }
+            Dialog::ColorThickness { highlighter, color, width } => {
+                use notecraft_engine::doc::InkTool;
+                ui.horizontal(|ui| {
+                    if ui.radio(!*highlighter, "Pen").clicked() && *highlighter {
+                        *highlighter = false;
+                        *width = 0.5 * crate::ink::MM;
+                    }
+                    if ui.radio(*highlighter, "Highlighter").clicked() && !*highlighter {
+                        *highlighter = true;
+                        *width = 5.0 * crate::ink::MM;
+                    }
+                });
+                let tool = if *highlighter { InkTool::Highlighter } else { InkTool::Pen };
+                ui.label(RichText::new("Thickness").color(t.text_dim));
+                ui.horizontal_wrapped(|ui| {
+                    for mm in if *highlighter { crate::ink::HIGHLIGHTER_MM } else { crate::ink::PEN_MM } {
+                        let on = (*width - mm * crate::ink::MM).abs() < 0.05;
+                        if ui.selectable_label(on, format!("{mm} mm")).clicked() {
+                            *width = mm * crate::ink::MM;
+                        }
+                    }
+                });
+                ui.label(RichText::new("Color").color(t.text_dim));
+                let mut picked = None;
+                crate::ribbon::swatch_grid(ui, &crate::ink::colors(tool), 6, |c| picked = Some(c));
+                if let Some(c) = picked {
+                    *color = c.to_hex();
+                }
+                let sample = notecraft_engine::doc::color::Rgba::from_hex(color).map(crate::theme::c32).unwrap_or(t.text);
+                let (r, _) = ui.allocate_exact_size(vec2(200.0, 18.0), egui::Sense::hover());
+                ui.painter().line_segment([r.left_center(), r.right_center()], egui::Stroke::new((*width * 1.33).clamp(1.0, 18.0), sample));
+                ui.horizontal(|ui| {
+                    if crate::chrome::primary_button(ui, "OK", &t).clicked() {
+                        let tool = if *highlighter { "highlighter" } else { "pen" };
+                        app.run(ctx, "draw.colorThickness", json!({"tool": tool, "color": color, "width": width}));
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::AltText(text) => {
+                ui.label("Describe the picture for people who can't see it:");
+                ui.add(egui::TextEdit::multiline(text).desired_rows(3).desired_width(f32::INFINITY));
+                ui.horizontal(|ui| {
+                    if crate::chrome::primary_button(ui, "OK", &t).clicked() {
+                        app.run(ctx, "object.altText", json!({"text": text}));
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::RenameAttachment(name) => {
+                ui.label("File name:");
+                let r = ui.text_edit_singleline(name);
+                let enter = r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                ui.horizontal(|ui| {
+                    if (crate::chrome::primary_button(ui, "OK", &t).clicked() || enter) && !name.trim().is_empty() {
+                        app.run(ctx, "attachment.rename", json!({"name": name.trim()}));
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
             Dialog::CustomizeTags(name) => {
-                ui.label("Custom tags:");
-                for d in app.session.prefs.custom_tags.clone() {
-                    ui.horizontal(|ui| {
-                        ui.label(&d.name);
-                        if ui.small_button("Remove").clicked() {
-                            app.run(ctx, "tag.customize", json!({"action": "remove", "key": d.key}));
+                close = customize_tags(app, ui, ctx, name, &t);
+            }
+            Dialog::InsertFile(files) => {
+                let names: Vec<String> = files.iter().map(file_name).collect();
+                match names.as_slice() {
+                    [one] => ui.label(format!("How do you want to insert \u{201c}{one}\u{201d}?")),
+                    many => ui.label(format!("How do you want to insert these {} files?", many.len())),
+                };
+                if names.len() > 1 {
+                    egui::ScrollArea::vertical().max_height(120.0).show(ui, |ui| {
+                        for n in &names {
+                            ui.label(RichText::new(n).color(t.page_meta));
                         }
                     });
                 }
-                ui.separator();
-                ui.label("New Tag › Display name:");
-                ui.text_edit_singleline(name);
+                ui.add_space(4.0);
                 ui.horizontal(|ui| {
-                    if crate::chrome::primary_button(ui, "Add", &t).clicked() && !name.trim().is_empty() {
-                        app.run(ctx, "tag.customize", json!({"action": "add", "name": name.trim()}));
-                        name.clear();
+                    if crate::chrome::primary_button(ui, "Attach File", &t).clicked() {
+                        for p in files.iter() {
+                            app.run(ctx, "insert.file", p.clone());
+                        }
+                        close = true;
                     }
-                    if ui.button("Close").clicked() {
+                    if ui.button("Insert Printout").clicked() {
+                        for p in files.iter() {
+                            app.run(ctx, "insert.printout", p.clone());
+                        }
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
                         close = true;
                     }
                 });
@@ -254,4 +579,147 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
         close = true;
     }
     app.ui.dialog = if close { None } else { Some(next) };
+}
+
+/// The symbols a tag can have (Customize Tags › Symbol), with their `tag.customize` names.
+const TAG_SYMBOLS: &[(&str, notecraft_engine::doc::TagSymbol)] = {
+    use notecraft_engine::doc::TagSymbol as S;
+    &[
+        ("none", S::None),
+        ("checkbox", S::Checkbox),
+        ("star", S::Star),
+        ("question", S::Question),
+        ("person", S::Person),
+        ("house", S::House),
+        ("phone", S::Phone),
+        ("globe", S::Globe),
+        ("bulb", S::Bulb),
+        ("key", S::Key),
+        ("exclamation", S::Exclamation),
+        ("flag", S::FlagA),
+        ("film", S::Film),
+        ("book", S::Book),
+        ("music", S::Music),
+        ("document", S::Document),
+        ("pen", S::Pen),
+        ("envelope", S::Envelope),
+    ]
+};
+
+/// What the Customize Tags dialog is editing: the selected tag and its fields.
+#[derive(Clone, Default)]
+struct TagEdit {
+    key: String,
+    name: String,
+    symbol: String,
+    font: Option<[u8; 3]>,
+    highlight: Option<[u8; 3]>,
+}
+
+fn rgb3(c: Option<notecraft_engine::doc::color::Rgba>) -> Option<[u8; 3]> {
+    c.map(|c| [c.r, c.g, c.b])
+}
+
+/// One colour of a tag: "None" or a colour button.
+fn tag_color(ui: &mut egui::Ui, label: &str, c: &mut Option<[u8; 3]>) {
+    ui.horizontal(|ui| {
+        ui.label(label);
+        let mut on = c.is_some();
+        if ui.checkbox(&mut on, "").changed() {
+            *c = if on { Some([255, 255, 0]) } else { None };
+        }
+        if let Some(rgb) = c {
+            egui::color_picker::color_edit_button_srgb(ui, rgb);
+        } else {
+            ui.label(RichText::new("None").weak());
+        }
+    });
+}
+
+/// Customize Tags (catalog `UI.Panes.CustomizeTags`): every tag in order, built-in or not; the
+/// selected one can move up or down, be modified (name, symbol, font colour, highlight) or
+/// removed; New Tag adds one at the top. Returns true when the dialog closes.
+fn customize_tags(app: &mut NoteApp, ui: &mut egui::Ui, ctx: &egui::Context, name: &mut String, t: &Tokens) -> bool {
+    let id = egui::Id::new("customize_tags_edit");
+    let mut edit: TagEdit = ui.data(|d| d.get_temp(id)).unwrap_or_default();
+    let defs = app.session.tag_defs();
+    let mut close = false;
+    ui.label("Tags:");
+    egui::ScrollArea::vertical().max_height(220.0).show(ui, |ui| {
+        ui.set_min_width(320.0);
+        for d in &defs {
+            let selected = edit.key == d.key;
+            let resp = ui.horizontal(|ui| {
+                let (r, _) = ui.allocate_exact_size(vec2(16.0, 16.0), egui::Sense::hover());
+                crate::icons::tag(ui.painter(), r, d.symbol, false, t.text);
+                ui.selectable_label(selected, &d.name)
+            });
+            if resp.inner.clicked() {
+                edit = TagEdit {
+                    key: d.key.clone(),
+                    name: d.name.clone(),
+                    symbol: TAG_SYMBOLS.iter().find(|x| x.1 == d.symbol).map_or("star", |x| x.0).to_string(),
+                    font: rgb3(d.font_color),
+                    highlight: rgb3(d.highlight),
+                };
+            }
+        }
+    });
+    let chosen = defs.iter().any(|d| d.key == edit.key);
+    ui.horizontal(|ui| {
+        for (label, action) in [("Move Up", "moveUp"), ("Move Down", "moveDown"), ("Remove Tag", "remove")] {
+            if ui.add_enabled(chosen, egui::Button::new(label)).clicked() {
+                app.run(ctx, "tag.customize", json!({"action": action, "key": edit.key}));
+            }
+        }
+    });
+    ui.separator();
+    if chosen {
+        ui.label(RichText::new("Modify Tag").strong());
+        ui.horizontal(|ui| {
+            ui.label("Display name:");
+            ui.text_edit_singleline(&mut edit.name);
+        });
+        ui.horizontal(|ui| {
+            ui.label("Symbol:");
+            egui::ComboBox::from_id_salt("tag_symbol").selected_text(edit.symbol.clone()).show_ui(ui, |ui| {
+                for (n, sym) in TAG_SYMBOLS {
+                    ui.horizontal(|ui| {
+                        let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), egui::Sense::hover());
+                        crate::icons::tag(ui.painter(), r, *sym, false, t.text);
+                        ui.selectable_value(&mut edit.symbol, n.to_string(), *n);
+                    });
+                }
+            });
+        });
+        tag_color(ui, "Font Color:", &mut edit.font);
+        tag_color(ui, "Highlight Color:", &mut edit.highlight);
+        if ui.button("Apply").clicked() {
+            let hex = |c: Option<[u8; 3]>| c.map(|[r, g, b]| notecraft_engine::doc::color::Rgba::rgb(r, g, b).to_hex());
+            app.run(
+                ctx,
+                "tag.customize",
+                json!({"action": "modify", "key": edit.key, "name": edit.name, "symbol": edit.symbol, "fontColor": hex(edit.font), "highlight": hex(edit.highlight)}),
+            );
+        }
+        ui.separator();
+    }
+    ui.horizontal(|ui| {
+        ui.label("New Tag:");
+        ui.text_edit_singleline(name);
+        if ui.add_enabled(!name.trim().is_empty(), egui::Button::new("Add")).clicked() {
+            app.run(ctx, "tag.customize", json!({"action": "add", "name": name.trim()}));
+            name.clear();
+        }
+    });
+    ui.horizontal(|ui| {
+        if ui.button("Reset Tags").on_hover_text("The built-in tags in their first order; your own tags stay").clicked() {
+            app.run(ctx, "tag.customize", json!({"action": "reset"}));
+        }
+        if crate::chrome::primary_button(ui, "Close", t).clicked() {
+            close = true;
+        }
+    });
+    ui.data_mut(|d| d.insert_temp(id, edit));
+    close
 }

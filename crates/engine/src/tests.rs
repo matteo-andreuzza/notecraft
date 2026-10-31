@@ -164,6 +164,21 @@ const PARAM_NAMES: &[&str] = &[
     "tag",
     "once",
     "limit",
+    "rows",
+    "cols",
+    "table",
+    "col",
+    "data",
+    "dx",
+    "dy",
+    "dw",
+    "dh",
+    "height",
+    "dir",
+    "points",
+    "gesture",
+    "pen",
+    "tool",
 ];
 
 #[test]
@@ -190,11 +205,64 @@ fn panic_hunt() {
             s.sel.focus = crate::selection::FocusArea::PageList;
             s
         }),
+        // A table with the caret in a cell, and with cells selected.
+        Box::new(|| {
+            let mut s = sample();
+            run(&mut s, "insert.table", json!({"rows": 2, "cols": 3}));
+            run(&mut s, "text.insert", json!({"text": "b\tc"}));
+            s
+        }),
+        Box::new(|| {
+            let mut s = sample();
+            run(&mut s, "insert.table", json!({"rows": 3, "cols": 2}));
+            run(&mut s, "table.selectColumns", json!({}));
+            s
+        }),
+        // A selected picture, and a selected attachment (decision D3).
+        Box::new(|| {
+            let mut s = sample();
+            let png = notecraft_codecs::encode_png(&notecraft_codecs::Rgba8::new(2, 2, vec![9; 16]).unwrap(), &Default::default()).unwrap();
+            run(&mut s, "insert.picture", json!({"data": crate::b64::encode(&png)}));
+            s
+        }),
+        Box::new(|| {
+            let mut s = sample();
+            run(&mut s, "insert.file", json!({"data": "aGVsbG8=", "name": "a.txt"}));
+            s
+        }),
+        // Ink strokes, lassoed (decision D4).
+        Box::new(|| {
+            let mut s = sample();
+            run(&mut s, "draw.stroke", json!({"points": [[10, 300, 0.5], [60, 320, 0.9], [90, 300]]}));
+            run(&mut s, "draw.stroke", json!({"points": [[20, 400]], "pen": 3}));
+            run(&mut s, "draw.lassoSelect", json!({"points": [[0, 280], [200, 280], [200, 450], [0, 450]]}));
+            s
+        }),
     ];
     let mut tried = 0usize;
     for make in &states {
         for c in commands::all() {
-            if matches!(c.id, "file.newNotebook" | "file.openNotebook" | "file.exportNotebook" | "file.backupNow" | "file.openBackups") {
+            if matches!(
+                c.id,
+                "file.newNotebook"
+                    | "file.openNotebook"
+                    | "file.openRecent"
+                    | "file.exportNotebook"
+                    | "notebook.changeLocation"
+                    | "file.exportPage"
+                    | "file.exportSection"
+                    | "file.exportMht"
+                    | "file.print"
+                    | "file.import"
+                    | "file.printPreview"
+                    | "file.backupNow"
+                    | "file.backupChanged"
+                    | "file.openBackups"
+                    | "object.saveAs"
+                    | "attachment.saveAs"
+                    | "attachment.open"
+                    | "printout.openOriginal"
+            ) {
                 // These touch the file system; the hostile `path`/`folder` values are covered by
                 // their own tests below with a sandboxed folder.
                 continue;

@@ -1,6 +1,6 @@
 # NoteCraft UI parity: the 2024 look, surface by surface
 
-> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** major (first version, decision D1) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows, 2024 UI
+> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** minor (M2: tables, the paragraph handle) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows, 2024 UI
 
 Decision D1 ([`plan.md`](plan.md) §6) makes the current Microsoft 365 app the visual model. This
 page specifies every surface of that look in NoteCraft's own terms: placement, measures, radii,
@@ -115,7 +115,7 @@ Status: **done** (built in the 2024 style and tested), **partial**, **planned** 
 | 1 | Title bar | `window_back`; drawn app mark (ours, no logo), Back, Undo, ▾ quick-access menu (Redo, customize later), title `Page - Notebook` in `title`; drag moves the window, double-click maximizes; the native frame stays on Linux | UI.Window.TitleBar, UI.Window.QAT | done (A2); the QAT menu holds Redo, customizing is not implemented |
 | 2 | Search (title bar) | centred, 260–440 wide × 26, `input` with `radius.search`, magnifier; finds commands (Tell Me; Enter runs the first) and hands the text to Search notebooks for notes; Alt+Q focuses it | UI.Window.SearchBox, UI.Window.TellMe | done (A2) |
 | 3 | Account | initials of the author in a 28 circle at the right; disabled (Microsoft account) | UI.Window.Account | out-of-scope; drawn (A2) |
-| 4 | Tab row | File Home Insert Draw History Review View Help (+ contextual tabs in accent text); active tab semibold with a 3 pt accent underline as wide as the label, radius 1.5; hover = `hover` background radius 4; double-click collapses the ribbon | UI.Ribbon.Tabs, UI.Ribbon.ContextualTabs | done (A2); contextual tabs wait for M2 objects (a hidden one falls back to Home) |
+| 4 | Tab row | File Home Insert Draw History Review View Help (+ contextual tabs in accent text); active tab semibold with a 3 pt accent underline as wide as the label, radius 1.5; hover = `hover` background radius 4; double-click collapses the ribbon | UI.Ribbon.Tabs, UI.Ribbon.ContextualTabs | done (A2); Table Layout appears while the selection is in a table (M2), Equation and Audio & Video with their objects; a hidden one falls back to Home |
 | 5 | Share | accent-filled button with `on_accent` text, radius 4, at the right of the tab row; disabled (OneDrive) | UI.Window.Share | out-of-scope; drawn disabled (A2) |
 | 6 | Ribbon card | `ribbon_card`, `radius.card`, hairline `card_border`, shadow; inset `space.card_margin` from the window edges; ▾/▴ chevron at the bottom right opens Ribbon layout (single-line, classic) and Show ribbon (always, tabs only) | UI.Ribbon.ModeSwitch, UI.Ribbon.DisplayOptions | done (A3); auto-hide is disabled |
 | 7 | Simplified ribbon | one row, 28 pt buttons with 16 px icons; labels only where the reference has them (Styles, Email Page, Meeting Details); font and size combos; split ▾ buttons; separators between groups; what doesn't fit goes into the **…** overflow menu by priority; every Classic control reachable (tested); tabs without a table (contextual) get one derived from the classic layout | UI.Ribbon.Simplified | done (A3) |
@@ -126,6 +126,7 @@ Status: **done** (built in the 2024 style and tested), **partial**, **planned** 
 | 12 | Quick notes | pinned at the bottom of the navigation pane above a separator; opens the Quick Notes section | UI.Nav.QuickNotes | done (A4) |
 | 13 | Page column | `page_list`; Add page (outlined, radius 4, pencil icon, `accent` text) and sort (⇅) on top; rows 28 radius 4, subpages indented 16, stroke chevrons; drag to resize (remembered) | UI.Nav.PageList, UI.Nav.AddPage, UI.Nav.SortPages | done (A4) |
 | 14 | Page | `canvas`; title in `page_title` with a hairline under it, date and time in `caption` `text_dim`; expand ⤢ at the top right (full page view, restore ⤡) | UI.Canvas.Page, UI.Canvas.TitleArea, UI.Canvas.ExpandButton | done (A5); the title bar stays in Full Page View |
+| 14a | Tables and paragraph handle | tables on the page: borders 1 pt `table_border`, cells padded 4 pt, shading from the colour picker, selected cells in `selection`, hidden borders as faint `container` lines while hot; move bar like a container; column borders drag. Paragraph handle (four-way arrow, `page_meta`) left of the hovered paragraph: click selects, drag moves with a 2 pt `accent` drop line, double-click collapses. Table Layout icons drawn in code on the 3 × 3 grid (`icons::table_icon`) | UI.Canvas.ParagraphHandle, UI.Ribbon.ContextualTabs, CT.TableLayout.* | done (M2) |
 | 15 | Panes | Tags summary and Search results as cards at the right of the page: `heading` title, ✕ close | UI.Panes.FindTags, UI.Nav.SearchResultsPane | done (A5) |
 | 16 | Find on page | floating card at the top right of the page: box, count, ↑ ↓, ✕ | UI.Nav.FindOnPage | done (A5) |
 | 17 | Menus | `ribbon_card`, `radius.menu`, shadow (0, 4) blur 16, rows 28, shortcuts in `text_dim`, separators | UI.Window.ContextMenus | done (A1/A5): egui menus take the radius, shadow and colours from the theme |
@@ -147,4 +148,5 @@ both ribbon modes, every theme, navigation hidden, a narrow window (overflow), f
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-15 | minor | M2: tables (surface 14a, token `table_border`), the paragraph handle, the Table Layout tab |
 | 2026-10-15 | major | First version (decision D1): structure, tokens, type, 24 surfaces |

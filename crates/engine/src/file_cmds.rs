@@ -10,12 +10,8 @@ use std::sync::Arc;
 use notecraft_doc::{NavNode, Notebook, Section, SectionColor};
 use serde_json::{Value, json};
 
-use crate::ops::no_page;
+use crate::ops::{need_notebook, no_page};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
-
-fn need_notebook(s: &Session) -> Option<&'static str> {
-    if s.notebook().is_some() { None } else { Some("Open a notebook first") }
-}
 
 fn need_bin(s: &Session) -> Option<&'static str> {
     match s.notebook() {
@@ -27,13 +23,19 @@ fn need_bin(s: &Session) -> Option<&'static str> {
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
+        // BS.Exit (QAT.NR.FileExit): save everything, then ask the shell to close.
+        CommandSpec::new("file.exit", "BS.Exit", "Exit", "File/Exit", exit).pure(),
         // BS.New.NewNotebook — a folder at `path` (desktop) or an in-memory notebook (web,
         // agents). It starts with one section holding one page (BEH.Notebooks.Default).
         CommandSpec::new("file.newNotebook", "BS.New.NewNotebook", "New Notebook", "File/New/New Notebook", new_notebook)
-            .params(r#"{"name": string, "path"?: folder}"#),
+            .params(r#"{"name": string, "path"?: folder, "memory"?: bool}"#),
         // BS.Open.OpenNotebook — Ctrl+O.
         CommandSpec::new("file.openNotebook", "BS.Open.OpenNotebook", "Open Notebook", "File/Open/Browse", open_notebook)
             .key("Mod+O")
+            .params(r#"{"path": folder}"#),
+        // BS.Open.RecentNotebooks — a folder picked from the recent list, not Browse; same
+        // open (opening an already-open folder just selects it).
+        CommandSpec::new("file.openRecent", "BS.Open.RecentNotebooks", "Recent Notebooks", "File/Open/Recent Notebooks", open_notebook)
             .params(r#"{"path": folder}"#),
         // CM.Notebook.NotebookClose — saves first.
         CommandSpec::new(
@@ -51,9 +53,21 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .pure(),
         // BS.Export.Notebook — a single-file archive of the notebook.
         CommandSpec::new("file.exportNotebook", "BS.Export.Notebook", "Export Notebook", "File/Export/Notebook", export_notebook)
-            .params(r#"{"path": file, "notebook"?: id}"#)
+            .params(r#"{"path": file, "format"?: "archive"|"pdf", "notebook"?: id}"#)
             .pure()
             .when(need_notebook),
+        // UI.Dialogs.NotebookProperties.ChangeLocation — store the notebook in a new, empty
+        // folder (an imported copy becomes a NoteCraft notebook on disk).
+        CommandSpec::new(
+            "notebook.changeLocation",
+            "UI.Dialogs.NotebookProperties.ChangeLocation",
+            "Change Location",
+            "Window/Dialogs/Notebook Properties/Change Location",
+            change_location,
+        )
+        .params(r#"{"path": new empty folder, "notebook"?: id}"#)
+        .pure()
+        .when(need_notebook),
         // OPT.SaveBackup.BackupAllNow — back up every open notebook now (BEH.Save.Backups).
         CommandSpec::new(
             "file.backupNow",
@@ -62,7 +76,17 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             "File/Options/Save & Backup/Back Up All Notebooks Now",
             backup_now,
         )
-        .params(r#"{"folder": backup folder}"#)
+        .params(r#"{"folder"?: backup folder (default: Options › Save & Backup)}"#)
+        .pure(),
+        // OPT.SaveBackup.BackupChangedNow — only the notebooks changed since the last backup.
+        CommandSpec::new(
+            "file.backupChanged",
+            "OPT.SaveBackup.BackupChangedNow",
+            "Back Up Changed Files Now",
+            "File/Options/Save & Backup/Back Up Changed Files Now",
+            |s, v| backup(s, v, true),
+        )
+        .params(r#"{"folder"?: backup folder}"#)
         .pure(),
         // BS.Info.OpenBackups — the backups available for a notebook.
         CommandSpec::new("file.openBackups", "BS.Info.OpenBackups", "Open Backups", "File/Info/Open Backups", list_backups)
@@ -115,8 +139,12 @@ fn new_notebook(s: &mut Session, v: &Value) -> CmdResult {
     }
     let nb = starter_notebook(s, &name);
     let id = nb.id;
-    if let Some(path) = p::str(v, "path") {
-        attach_new(s, &nb, path)?;
+    // OPT.SaveBackup.DefaultNotebookLocation: without a path, a new notebook goes into the
+    // default location of the Options, if one is set (`memory` keeps it in memory).
+    let default_path = (!s.prefs.default_notebook_location.trim().is_empty() && p::bool(v, "memory") != Some(true))
+        .then(|| std::path::Path::new(s.prefs.default_notebook_location.trim()).join(notecraft_format::file_stem(&name)).display().to_string());
+    if let Some(path) = p::str(v, "path").map(str::to_string).or(default_path) {
+        attach_new(s, &nb, &path)?;
     }
     s.add_notebook(nb);
     Ok(json!({"notebook": id.to_string()}))
@@ -134,6 +162,64 @@ fn attach_new(_: &mut Session, _: &Notebook, _: &str) -> Result<(), CmdError> {
     Err(CmdError::Disabled("the web version keeps notebooks in the browser; folders are not available".into()))
 }
 
+/// Largest notebook archive opened (pictures and attachments are inside it).
+#[cfg(not(target_arch = "wasm32"))]
+const MAX_ARCHIVE_BYTES: usize = 2 << 30;
+
+/// New ids for every group, section and page under `nodes` (an archive opened twice).
+/// Depth is bounded like the notebook model's own nesting.
+#[cfg(not(target_arch = "wasm32"))]
+fn fresh_ids(s: &mut Session, nodes: &mut [NavNode], depth: usize) {
+    if depth > notecraft_doc::notebook::MAX_GROUP_DEPTH {
+        return;
+    }
+    for n in nodes {
+        match n {
+            NavNode::Group(g) => {
+                g.id = s.new_id();
+                fresh_ids(s, &mut g.children, depth + 1);
+            }
+            NavNode::Section(sec) => {
+                let sec = Arc::make_mut(sec);
+                sec.id = s.new_id();
+                for pg in &mut sec.pages {
+                    Arc::make_mut(pg).id = s.new_id();
+                }
+            }
+        }
+    }
+}
+
+/// UI.Dialogs.NotebookProperties.ChangeLocation: write the whole notebook into `path` (new or
+/// empty) and keep saving there. The previous folder, if any, is left as it was (the
+/// reference moves the notebook; NoteCraft never deletes a folder of notes — unverified).
+#[cfg(not(target_arch = "wasm32"))]
+fn change_location(s: &mut Session, v: &Value) -> CmdResult {
+    let path = p::req_str(v, "path")?;
+    let id = match p::id(v, "notebook")? {
+        Some(id) => id,
+        None => s.notebook().map(|n| n.id).ok_or_else(no_page)?,
+    };
+    let nb = s.ws.notebook(id).ok_or_else(|| CmdError::Params("no such notebook".into()))?.clone();
+    let root = std::path::Path::new(path);
+    if let Some(old) = s.stores.get(&id).map(|st| st.root.clone())
+        && std::fs::canonicalize(&old).ok().zip(std::fs::canonicalize(root).ok()).is_some_and(|(a, b)| a == b)
+    {
+        return Ok(json!({"notebook": id.to_string(), "path": path, "unchanged": true}));
+    }
+    let sealed = s.sealed_copy(&nb).map_err(CmdError::Failed)?;
+    let store = notecraft_format::store::NotebookStore::create(root, &sealed).map_err(|e| CmdError::Failed(e.to_string()))?;
+    let previous = s.stores.insert(id, store).map(|st| st.root.display().to_string());
+    s.dirty.remove(&id);
+    s.notice(format!("{} is now saved in {path}", nb.name));
+    Ok(json!({"notebook": id.to_string(), "path": path, "previous": previous}))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn change_location(_: &mut Session, _: &Value) -> CmdResult {
+    Err(CmdError::Disabled("the web version keeps notebooks in the browser; folders are not available".into()))
+}
+
 fn open_notebook(s: &mut Session, v: &Value) -> CmdResult {
     let path = p::req_str(v, "path")?;
     s.open_path(path)
@@ -145,6 +231,30 @@ impl Session {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn open_path(&mut self, path: &str) -> CmdResult {
         let root = std::path::Path::new(path);
+        // A OneNote notebook, by its folder or its .onetoc2, is imported as a copy (D12).
+        let folder = match crate::onenote_cmds::extension(root).as_deref() {
+            Some("onetoc2") => root.parent().unwrap_or(root),
+            Some("onepkg") => return self.import_onepkg(root),
+            Some("ncraft-archive") => return self.open_archive(root),
+            // A single OneNote section (opened from a file manager): a copy into the current
+            // notebook, or into a new in-memory one when none is open (D12).
+            Some("one") => {
+                if self.notebook().is_none() {
+                    let nb = Notebook::new(self.new_id(), "OneNote Sections", SectionColor::index(0));
+                    self.add_notebook(nb);
+                }
+                let notebook = self.notebook().map(|n| n.id.to_string());
+                return self.run_nested_open_section(path, notebook);
+            }
+            _ => root,
+        };
+        // A NoteCraft section file opens the notebook folder it belongs to.
+        let root =
+            if crate::onenote_cmds::extension(root).as_deref() == Some(notecraft_format::SECTION_EXT) { root.parent().unwrap_or(root) } else { root };
+        let folder = if folder.extension().is_some_and(|e| e == notecraft_format::SECTION_EXT) { root } else { folder };
+        if crate::onenote_cmds::is_onenote_folder(folder) {
+            return self.import_onenote_folder(folder);
+        }
         let canon = std::fs::canonicalize(root).unwrap_or_else(|_| root.to_path_buf());
         if let Some((id, _)) = self.stores.iter().find(|(_, st)| std::fs::canonicalize(&st.root).unwrap_or_else(|_| st.root.clone()) == canon) {
             let id = *id;
@@ -172,6 +282,26 @@ impl Session {
         Ok(json!({"notebook": id.to_string()}))
     }
 
+    /// Open a notebook archive (`FMT.Export.Archive`) as an in-memory notebook; Change
+    /// Location stores it in a folder. An archive of a notebook that is already open gets new
+    /// notebook, group, section and page ids, so both can be open side by side.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn open_archive(&mut self, path: &std::path::Path) -> CmdResult {
+        let file = path.to_str().ok_or_else(|| CmdError::Failed(format!("{}: the file name is not valid Unicode", path.display())))?;
+        let (bytes, _) = crate::picture_cmds::read_path(file, MAX_ARCHIVE_BYTES)?;
+        let mut nb = notecraft_format::decode_archive(&bytes).map_err(|e| CmdError::Failed(format!("{file}: {e}")))?;
+        drop(bytes);
+        if self.ws.notebook(nb.id).is_some() {
+            nb.id = self.new_id();
+            fresh_ids(self, &mut nb.children, 0);
+        }
+        let id = nb.id;
+        let name = nb.name.clone();
+        self.add_notebook(nb);
+        self.notice(format!("{name}: opened from an archive, in memory (File › Info › Properties › Change Location keeps it in a folder)"));
+        Ok(json!({"notebook": id.to_string(), "archive": true}))
+    }
+
     /// Opening folders is not available on the web build.
     #[cfg(target_arch = "wasm32")]
     pub fn open_path(&mut self, _path: &str) -> CmdResult {
@@ -186,13 +316,22 @@ impl Session {
         let ids: Vec<_> = self.dirty.keys().copied().collect();
         for id in ids {
             let Some(d) = self.dirty.get(&id).cloned() else { continue };
-            let (Some(store), Some(nb)) = (self.stores.get_mut(&id), self.ws.notebook(id)) else {
+            let (true, Some(nb)) = (self.stores.contains_key(&id), self.ws.notebook(id)) else {
                 // In-memory notebook: nothing to write.
                 self.dirty.remove(&id);
                 continue;
             };
             let fd = notecraft_format::store::Dirty { sections: d.sections.clone(), structure: d.structure, recycle: d.recycle, all: false };
-            match store.save(nb, &fd) {
+            // Password-protected sections are written sealed (decision D15).
+            let nb = match self.sealed_copy(nb) {
+                Ok(nb) => nb,
+                Err(e) => {
+                    errors.push(format!("could not save {}: {e}", nb.name));
+                    continue;
+                }
+            };
+            let Some(store) = self.stores.get_mut(&id) else { continue };
+            match store.save(&nb, &fd) {
                 Ok(report) => {
                     let mut left = crate::session::NbDirty::default();
                     for (sid, e) in report.failed {
@@ -230,6 +369,12 @@ impl Session {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn notebook_path(&self, id: notecraft_doc::Id) -> Option<std::path::PathBuf> {
         self.stores.get(&id).map(|s| s.root.clone())
+    }
+
+    /// The web build stores no notebook in a folder.
+    #[cfg(target_arch = "wasm32")]
+    pub fn notebook_path(&self, _id: notecraft_doc::Id) -> Option<std::path::PathBuf> {
+        None
     }
 }
 
@@ -274,6 +419,20 @@ fn export_notebook(s: &mut Session, v: &Value) -> CmdResult {
         Some(id) => s.ws.notebook(id).ok_or_else(|| CmdError::Params("no such notebook".into()))?,
         None => s.notebook().ok_or_else(no_page)?,
     };
+    // BS.Export.FormatPdf: every page of every section, in navigation order.
+    let pdf = match p::str(v, "format") {
+        Some(f) => f.eq_ignore_ascii_case("pdf"),
+        None => path.to_ascii_lowercase().ends_with(".pdf"),
+    };
+    if pdf {
+        let nb = nb.clone();
+        let pages: Vec<&notecraft_doc::Page> = nb.sections().iter().flat_map(|sec| sec.pages.iter().map(|p| p.as_ref())).collect();
+        return crate::export_cmds::write_pdf(s, path, &nb.name, &pages);
+    }
+    // A locked section's pages aren't in memory: an archive would lose them (decision D15).
+    if let Some(locked) = nb.sections().iter().find(|x| x.is_locked()) {
+        return Err(CmdError::Failed(format!("{} is locked: unlock it before exporting the notebook", locked.name)));
+    }
     let bytes = notecraft_format::encode_archive(nb).map_err(|e| CmdError::Failed(e.to_string()))?;
     write_file(path, &bytes)?;
     Ok(json!({"bytes": bytes.len()}))
@@ -300,25 +459,75 @@ fn backup_label(s: &Session) -> String {
     format!("{:04}-{:02}-{:02}_{:02}{:02}{:02}", c.year, c.month, c.day, c.hour, c.minute, c.second)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+/// Exit: every unsaved change is written first; when a notebook can't be saved the window
+/// stays open (closing would lose the change) and the error says why.
+fn exit(s: &mut Session, _: &Value) -> CmdResult {
+    let errors = s.save_dirty();
+    if let Some(e) = errors.first() {
+        return Err(CmdError::Failed(format!("not closing: {e}")));
+    }
+    s.quit_request = true;
+    Ok(json!({"quit": true}))
+}
+
 fn backup_now(s: &mut Session, v: &Value) -> CmdResult {
-    let folder = p::req_str(v, "folder")?;
+    backup(s, v, false)
+}
+
+impl Session {
+    /// Whether an automatic backup is due (`OPT.SaveBackup.AutoBackup`): the interval of the
+    /// Options has passed since the last one and some notebook lives in a folder. The host
+    /// asks this from its loop and runs `file.backupChanged`.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn backup_due(&self) -> bool {
+        let every = i64::from(self.prefs.auto_backup_minutes).saturating_mul(60_000);
+        every > 0 && !self.stores.is_empty() && self.clock.now_ms.saturating_sub(self.prefs.last_backup_ms) >= every
+    }
+
+    /// The web build has no folders to back up.
+    #[cfg(target_arch = "wasm32")]
+    pub fn backup_due(&self) -> bool {
+        false
+    }
+}
+
+/// The newest change in a notebook (its pages' modification times), Unix ms.
+#[cfg(not(target_arch = "wasm32"))]
+fn last_change(nb: &Notebook) -> i64 {
+    nb.sections().iter().flat_map(|sec| sec.pages.iter().map(|p| p.modified.0)).max().unwrap_or(0)
+}
+
+/// Back up every notebook stored in a folder (or, with `changed`, only those changed since
+/// the last backup) into `folder`, else the backup folder of the Options.
+#[cfg(not(target_arch = "wasm32"))]
+fn backup(s: &mut Session, v: &Value, changed: bool) -> CmdResult {
+    let folder = match p::str(v, "folder").filter(|f| !f.trim().is_empty()) {
+        Some(f) => f.to_string(),
+        None if !s.prefs.backup_folder.trim().is_empty() => s.prefs.backup_folder.trim().to_string(),
+        None => return Err(CmdError::Params("give `folder`, or set a backup folder in Options › Save & Backup".into())),
+    };
+    let folder = folder.as_str();
     let _ = s.save_dirty();
     let label = backup_label(s);
+    let since = s.prefs.last_backup_ms;
     let mut done = Vec::new();
     for nb in &s.ws.notebooks {
         let Some(store) = s.stores.get(&nb.id) else { continue };
+        if changed && since > 0 && last_change(nb) <= since {
+            continue;
+        }
         let dest_root = std::path::Path::new(folder).join(notecraft_format::file_stem(&nb.name));
         std::fs::create_dir_all(&dest_root).map_err(|e| CmdError::Failed(format!("{}: {e}", dest_root.display())))?;
         let dest = notecraft_format::store::backup(&store.root, &dest_root, &label, s.prefs.backup_copies.max(1))
             .map_err(|e| CmdError::Failed(e.to_string()))?;
         done.push(dest.display().to_string());
     }
+    s.prefs.last_backup_ms = s.clock.now_ms;
     Ok(json!({"backups": done}))
 }
 
 #[cfg(target_arch = "wasm32")]
-fn backup_now(_: &mut Session, _: &Value) -> CmdResult {
+fn backup(_: &mut Session, _: &Value, _: bool) -> CmdResult {
     Err(CmdError::Disabled("backups need a file system".into()))
 }
 
@@ -355,7 +564,13 @@ fn options(s: &mut Session, v: &Value) -> CmdResult {
         let mut prefs: crate::Prefs = serde_json::from_value(cur).map_err(|e| CmdError::Params(format!("bad option value: {e}")))?;
         prefs.default_size = prefs.default_size.clamp(notecraft_doc::text::MIN_FONT_SIZE, notecraft_doc::text::MAX_FONT_SIZE);
         prefs.backup_copies = prefs.backup_copies.clamp(1, 100);
+        // At most every eight weeks (the reference's longest interval is six weeks; unverified).
+        prefs.auto_backup_minutes = prefs.auto_backup_minutes.min(8 * 7 * 24 * 60);
+        prefs.initials = prefs.initials.chars().take(9).collect();
         prefs.custom_tags.truncate(notecraft_doc::tags::MAX_CUSTOM_TAGS);
+        if let Some(list) = &mut prefs.tag_list {
+            list.truncate(notecraft_doc::tags::MAX_CUSTOM_TAGS + notecraft_doc::builtin_tags().len());
+        }
         s.prefs = prefs;
     }
     serde_json::to_value(&s.prefs).map_err(|e| CmdError::Failed(e.to_string()))

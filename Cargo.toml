@@ -24,10 +24,20 @@ notecraft-format = { path = "crates/format" }
 notecraft-engine = { path = "crates/engine" }
 notecraft-ui-egui = { path = "crates/ui-egui" }
 notecraft-automation = { path = "crates/automation" }
+notecraft-codecs = { path = "crates/codecs" }
+notecraft-spell = { path = "crates/spell" }
+notecraft-import-export = { path = "crates/import-export" }
+notecraft-ink-geom = { path = "crates/ink-geom" }
+notecraft-ink = { path = "crates/ink" }
+notecraft-math = { path = "crates/math" }
+notecraft-onestore = { path = "crates/onestore" }
+notecraft-fonts = { path = "crates/fonts" }
 
 # shared Craft libraries, pinned by immutable revision (structure-audit.md › Repository hygiene)
 craft-atomic = { git = "https://github.com/storytold/craft-libs", rev = "457a078809690994b22debdffb703ff36d3129df" }
 craft-settings = { git = "https://github.com/storytold/craft-libs", rev = "457a078809690994b22debdffb703ff36d3129df" }
+# The system print spooler (CUPS; native on Windows), shared by the Craft apps.
+craft-print = { git = "https://github.com/storytold/craft-libs", rev = "457a078809690994b22debdffb703ff36d3129df" }
 
 # foundation
 thiserror = "2"
@@ -39,7 +49,25 @@ log = "0.4"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std", "wasmbind"] }
 proptest = "1"
 unicode-segmentation = "1"
-zip = { version = "3", default-features = false, features = ["deflate"] }
+# Markdown import (crates/import-export only): the CommonMark reference parser for Rust (MIT).
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }
+# Password-protected sections (decision D15): RustCrypto, MIT OR Apache-2.0.
+chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
+argon2 = { version = "0.5", default-features = false, features = ["alloc"] }
+zeroize = "1"
+getrandom = "0.3"
+# MSZIP blocks of .onepkg cabinets (crates/onestore only): raw RFC 1951 with a kept history.
+miniz_oxide = "0.9"
+# Pictures (crates/codecs only): pure-Rust decoders, no default features (no rayon, builds for wasm).
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "webp"] }
+# PDF pages for file printouts (crates/codecs only): pure-Rust CPU rasterizer, the renderer
+# PdfCraft uses; its default features compile in the standard-14 substitute fonts (ATTRIBUTION.md).
+hayro = "0.7.1"
+# PDF export (crates/import-export only): pure-Rust PDF writer with font subsetting, the one
+# WordCraft uses; `skrifa` (the version krilla uses) measures glyphs for the layout.
+krilla = { version = "0.8", default-features = false, features = ["raster-images"] }
+skrifa = { version = "0.42", default-features = false, features = ["std"] }
 
 # ui
 egui = "0.36"

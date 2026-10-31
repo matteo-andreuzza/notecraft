@@ -93,3 +93,1007 @@ this log plus a green tree is how the next agent picks up.
   227); in-scope 30.5% / 8.8%.
 - Still open: see `docs/gaps.md` item 8 (older icons on ~135 controls, default combo boxes,
   auto-hide, QAT customization, Options dialog, drawn window buttons). Next: M2 Insert and Draw.
+
+## 2026-10-15 — M2 (part 1): canvas structure and tables (branch `m2/insert-draw`)
+
+- Canvas: the paragraph handle drags the paragraph with its children (pointer x sets the level,
+  a 2 pt accent drop line; dropped on empty canvas it starts a new container:
+  `outline.moveParagraph` takes x/y); click selects, double-click collapses. Drags hit-test the
+  press origin, so a quick drag of a handle, bar or edge no longer misses. Kittest tests drive the
+  real canvas with pointer events (handle, container bar and edge, growing containers and page).
+- Tables (decision D2, `docs/plan.md` §4.8): `PageObject::Table` (rows, cells with paragraphs and
+  shading, column widths, borders, header row; limits 5,000 rows / 64 columns / 50,000 cells),
+  `Block::Cell` (cells are ordinary text blocks), `PageSel::Cells`; `.ncraft` format 2 with a
+  byte-exact format-1 file test; loaded pages are now normalised in full (`normalize_pages`: the
+  old loader only fixed page levels). `table_cmds.rs`, 25 commands: Insert › Table (size grid),
+  select table/columns/rows/cell/range, delete, insert above/below/left/right, hide borders,
+  shading, sort, header row, column width, convert text ↔ table, Tab/Shift+Tab/Enter/Alt+Enter;
+  arrows cross cells; copy, delete, find and search see cells. Canvas layout per cell, borders,
+  shading, selected cells, column-border drag, drag across cells; `chrome::contextual_tabs`
+  shows Table Layout in both ribbon layouts with icons drawn on a 3 × 3 grid.
+- Fixed: a Tab used by the page (indent, next cell) let egui move focus to the search box, so the
+  next keystrokes went there.
+- `ui.inspect` reports contextual tabs, tables and handles; control method `ui.pointer` for drags;
+  e2e under Xvfb 16/16 (8 new); snapshots add a table page, Table Layout simplified and classic,
+  selected cells, a hovered handle. `panic_hunt` gains two table states.
+- Numbers: wiring 416/1320 (31.5%), behaviour 134/1320 (10.2%), 256 commands (was 377/1314,
+  109, 231).
+- Not done here (next, in order, `plan/handoff.md` §7): mini toolbar, text/container context
+  menus, Paste Options, dialogs (Insert Table included), Insert misc, gaps item 8; then pictures
+  and the rich clipboard, then ink. M2 exit criteria not met: no merge, no tag.
+
+## 2026-10-16 — M2 (part 2): mini toolbar, context menus, Paste Options (branch `m2/insert-draw`)
+
+- Mini toolbar (`UI.Canvas.MiniToolbar`, `mini_toolbar.rs`): a card above a text selection with
+  font, size, bold, italic, underline, highlight, font colour, outdent, indent, bullets,
+  numbering, styles and tags — reuses the Home ribbon's own `pub(crate)` helpers (`combo`,
+  `small`, `gallery_menu`), so it's the same commands, `enabled` and tooltips as the ribbon, not
+  a parallel implementation. Works in table cells too (read-only off `CanvasState.paras`; no
+  change to canvas layout or hit-test).
+- Context menus (`CM.Text.*`, `CM.NoteContainer.*`, `CM.ParagraphHandle.*`, `context_menu.rs`):
+  built straight from the catalog's own `Path` column (a one-off Python script turned 134 rows
+  into `Entry::Item`/`Submenu` trees), so the menus can't drift out of sync with the catalog;
+  `menus_cover_every_context_row` checks placement both ways. Every entry is the ribbon's own
+  catalog control (`menu_item`/`special`); unimplemented ones (ink, OCR, linked notes, picture
+  rotation, spelling, translate, Excel/Visio) show disabled with a reason. A right click resolves
+  to the paragraph handle, else a container's bar, else the text/cell under the pointer (`hit_para`
+  already covers cells, so a cell's right click gets the Text menu with a working Table submenu);
+  it places the caret/selection there as a left click would, unless the point is already inside
+  an existing selection. New commands `object.bringForward/bringToFront/sendBackward/sendToBack`
+  (the Note Container menu's Order submenu) reorder within `Page::objects`'s existing z-order, no
+  model change; a boundary no-op is checked read-only before `page_mut` so it costs no undo step
+  (`Arc::make_mut`'s copy-on-write would otherwise record one from the clone alone).
+- Paste Options (`UI.Canvas.PasteOptions`, `paste_options.rs`): a button near the caret for 6 s
+  after any paste, opening the ribbon's own three choices (Keep Source/Merge/Text Only).
+- Found and fixed along the way: egui's `Response::context_menu`, reused for a *second* right
+  click on the canvas's one shared response within a kittest session, closes the popup again
+  within a frame or two (not a production bug — reproduced down to a minimal repro, a single
+  right click stays open indefinitely, and real use always has real frames between two clicks);
+  worked around with one right click per kittest harness. Found, not fixed: `link.open` has no
+  `enabled` predicate, so "Open Link" shows enabled even off a link.
+- Tests: 7 new kittest tests (mini toolbar, 4 context-menu targets, a table-cell right click,
+  Paste Options) plus an engine test for the 4 z-order commands; e2e under Xvfb 18/18 (2 new:
+  a table-cell right click, Paste Options after a title paste), new screenshots `mini-toolbar`,
+  `context-menu-text`, `paste-options`.
+- Numbers: wiring 481/1320 (36.4%), behaviour 142/1320 (10.8%), 260 commands (was 416/1320,
+  134, 256).
+- Not done here (next, in order, `plan/handoff.md` §7): the dialogs (Insert Table, Link with page
+  search, Move/Copy as a tree, notebook list, Recent Notebooks, Symbol, Options), small table
+  leftovers, gaps item 8, the `link.open` fix. Stopped after three complete, committed steps on a
+  long session, before starting the larger dialogs arc. M2 exit criteria not met: no merge, no tag.
+
+## 2026-10-16 — M2 (part 3): Dialogs, `KB.Table.DeleteEmptyRow` (branch `m2/insert-draw`)
+
+- Dialogs, three commits (`e18c0c1`, `c2ba2db`, `f2c539d`), one `egui::Modal` driven by
+  `app.ui.dialog: Option<Dialog>` (`dialogs.rs`) and `ribbon::dialog_for` intercepting the
+  matching ribbon/context-menu click:
+  - Insert Table (`R.Insert.Tables.TableInsert`): `insert.tableDialog` reuses `insert_table`
+    (made `pub(crate)`), same pattern as `para.spacingDialog`.
+  - Link (`UI.Dialogs.Link`) and Move/Copy Page/Section (`UI.Dialogs.MoveCopyPage/Section`):
+    page/section/notebook search added. Shipped as a flat, searchable, full-breadcrumb-path list
+    rather than a collapsible tree — the catalog's own "simplest compatible choice" per
+    `AGENTS.md`, and the catalog Notes say so rather than overclaiming "tree" fidelity.
+  - Notebook List (`Ctrl+G`, `UI.Nav.NotebookList`) and Recent Notebooks (`BS.Open.RecentNotebooks`):
+    a new engine command `file.openRecent`, `UiState.recent_notebooks` (capped at 8, tracked in
+    `NoteApp::try_run`'s single after-every-command hook), a Recent Notebooks section in the Open
+    backstage page, and a desktop-settings round trip (`settings.rs`).
+  - Symbol (`UI.Dialogs.Symbol`, `R.Insert.Symbols.*`): a 10-per-row button grid of Unicode
+    symbols (clean-room: plain Unicode, nothing derived from Microsoft glyphs); both the gallery
+    and full-dialog ribbon entries map to the same `Dialog::Symbol` so there's one implementation,
+    not two.
+  - Options (`UI.Dialogs.Options`, `OPT.General.OfficeTheme`): the theme picker also appears on
+    the Options page (it already existed on Account); `OPT.General.OfficeTheme`'s own pre-existing
+    "unverified wording" catalog note correctly keeps it at `wired`, not `verified`.
+  - Recurring kittest snag: a dialog's row label (a breadcrumb, a plain notebook name) can exactly
+    match an always-rendered background control (the nav tree), so an exact `query_by_label`
+    panics on 2+ matches — fixed per-case with `_contains` substrings, `query_all_by_label(...)
+    .count()`, or collapsing the competing pane first.
+  - Investigated, not applied: `link.open`'s missing `enabled` predicate (noted in part 2). Its
+    body already takes an optional `url` override (wiki-link follow, `para.copyLink`'s navigate-
+    back) used from a caret position that is *not* on a link — both paths are tested
+    (`wiki_links_create_and_follow_pages`, `links_insert_edit_remove_copy_select`). `Enabled` is
+    `fn(&Session) -> Option<&'static str>`, blind to params, and `Session::run` checks it
+    unconditionally; a caret-only predicate would disable those explicit-`url` calls too. No safe
+    one-line fix exists without either breaking that navigation or widening `Enabled` to see
+    params (too big for a P2 nicety) — left as is.
+- `KB.Table.DeleteEmptyRow` (`03503fa`): Delete at the very start of a wholly empty table row
+  removes it (`table_cmds::delete_empty_row`, called from `text_cmds::delete_forward`'s existing
+  "nothing left to merge forward" branch). Simplified to one press, not the reference's reported
+  two — the end state is the same and a cross-call key-repeat counter is a lot of state for a P2
+  behaviour; the catalog Note says so.
+- Not done, judged not worth it this session: `BEH.Table.TabToCreate` (Tab after text makes a
+  table) needs a real design decision (first Tab must create the table and keep "creating" mode
+  for further Tabs/columns, Enter must exit it) rather than a one-line change, so it stays a gap.
+- Docs updated to match: `gaps.md` gap 5 (Dialogs) closed and renumbered; `roadmap.md`,
+  `plan.md`'s M2 increments 2 and 5.
+- Numbers: wiring 494/1320 (37.4%), behaviour 153/1320 (11.6%), 264 commands (was 481/1320, 142,
+  260).
+- Not done here (next, `plan/handoff.md` §7): gaps item 8 (leftovers of the look) if a future
+  session has room; then pictures, the rich clipboard, then ink. M2 exit criteria not met: no
+  merge, no tag.
+
+## 2026-10-20 — M2 increment 3: pictures, attachments, rich clipboard, drag and drop
+
+- **Decision D3** (`docs/plan.md` §4.9, §6): pictures and attachments are page objects beside
+  containers and tables; bytes in `Blob { id, len, bytes: Arc<[u8]> }`, serialized as `{id, len}`
+  with the bytes in uncompressed `media/<id>` zip entries (section, recycle bin, archive);
+  `.ncraft` format 3 (format 1 and 2 files still open, tested); limits: picture ≤ 64 MiB and
+  16,384 px / 64 Mpx, attachment ≤ 256 MiB, ≤ 1 GiB media per file, ≤ 10,000 objects per page.
+  A missing or mismatched media entry loads as a placeholder, never an error.
+- **`notecraft-codecs`** (standalone): PNG/JPEG/GIF/BMP/WebP through `image` 0.25 without default
+  features (pure Rust, wasm); header checked before any allocation, EXIF orientation applied,
+  decoder panics caught; tests with truncation at every length, byte flips, random bytes, a
+  10^12-pixel header.
+- **Engine** `picture_cmds.rs` (15 commands): Insert › Pictures / File Attachment (path or base64
+  `data`), rotate 90°/flip, move/resize (handles, arrow keys), restore size, background, alt
+  text, save as, attachment open/save as/rename; objects copy and paste sharing bytes; whole
+  tables copy as table objects. `edit.paste` reads `html` (another app's formatting, lists,
+  tables as table objects), `image` and `external`.
+- **`notecraft-import-export`** (L4, first code): `html.rs`, a bounded tolerant HTML reader and a
+  writer (Copy returns HTML; tables as `<table>`).
+- **UI**: `pictures.rs` (LRU texture cache by blob id, turns/flips through UVs, handles,
+  placeholders, host actions), picture/attachment context menus from the catalog (rows not yet
+  acting on objects drawn disabled), Alt Text and Rename dialogs, `clipboard.rs` (system clipboard
+  through `Host::read_clipboard/write_clipboard`, arboard on the desktop; Ctrl+V with only a
+  picture caught on the key release because egui-winit drops the press), dropped files become
+  pictures or attachments. Snapshots: picture page, selected, dark, context menu. E2E 26/26
+  (pictures, handle resize, attachment save, real X11 clipboard round trips).
+- Gates: the refreshed advisory DB flagged `zip` 3 (unused `extract()`): upgraded to `zip` 9; the
+  zbus helper crates' "unmaintained" advisories are ignored in `deny.toml` with reasons.
+- Printouts (not done): PdfCraft's renderer `hayro` 0.7.1 passes NoteCraft's `cargo deny` policy
+  (licences, bans, sources, advisories) and `cargo check --target wasm32-unknown-unknown`.
+- Numbers: wiring 525/1320 (39.8%), behaviour 158/1320 (12.0%), 279 commands (was 494, 153, 264).
+- Still open: printouts, screen clipping, 45° rotation, crop, OCR, picture links, ink, audio;
+  M2 exit not met (no merge, no tag).
+
+## 2026-10-20 — M2 increment 4: ink and the Draw tab (decision D4)
+
+- **Decision D4** (`docs/plan.md` §4.10, §6): one ink stroke is one page object
+  (`PageObject::Ink`: points relative to the object's position with per-point pressure, colour,
+  width, pen or highlighter), so selection, lasso, Delete, Cut/Copy/Paste, Order, Move, Rotate
+  and Undo work on ink unchanged; [MS-ONE] ink nodes map stroke by stroke (only the grouping is
+  lost). `.ncraft` **format 4** (formats 1–3 open unchanged, tested with a v3 file). Limits:
+  20,000 points per stroke, widths 0.1–72 pt, pressure 0–1 (NaN → 0.5), strokes count against
+  the 10,000-objects-per-page cap; empty strokes are dropped on load.
+- **`notecraft-ink-geom`** (L0): distances, polygon test, iterative RDP, disc cuts, stroke
+  outlines, rotation (proptests on hostile input). **`notecraft-ink`** (L2): strokes from
+  samples (cleaned, simplified at 0.2 pt, capped), hit tests, the stroke eraser and partial
+  erasers (pieces outside the disc become new strokes; the sweep is bounded to 2,000 positions
+  after a proptest showed a hostile path costing a minute), the lasso rule (¾ of the points,
+  unverified), turns, flips, scaling.
+- **Engine** `draw_cmds.rs` (16 commands): Type, Lasso Select, Panning Hand, Eraser and its four
+  sizes, the pen gallery, Add Pen, Color & Thickness — session state, never an undo step;
+  `draw.stroke` (one undo step), `draw.erase` (coalesced per gesture), `draw.lassoSelect`,
+  Rotate Right/Left 45°; Rotate 90°/Flip turn ink about the selection's centre and keep it on
+  the page; copy/paste carry strokes.
+- **UI** `ink.rs`: strokes as triangle strips with round caps/joins (width from pressure, black
+  ink follows the page text colour in dark themes, translucent highlighters), the live stroke,
+  lasso and eraser feedback, the dashed selection box (drag to move), pen tool samples from every
+  `PointerMoved` of a frame, pressure from egui touch force (else 0.5), the panning hand; the
+  pen gallery inline in both ribbon layouts (pen glyphs drawn in code; a click on the selected
+  pen opens thickness and colour), the Color & Thickness dialog, the ink and lasso context menus
+  (`CM.InkDrawing.*`, `CM.LassoSelection.*` from the catalog), arrow keys nudge ink.
+  Snapshots: `ink-page`, `ink-page-classic`, `ink-page-dark`, `ink-lasso`, `ink-zoom-2x`.
+- Learned: a touch held still for many frames is egui's long press (the touch-screen context
+  menu), not a drag — the kittest pressure test sends one sample per frame, as a pen does.
+- Numbers: wiring 574/1322 (43.4%), behaviour 159/1322 (12.0%), 295 commands (was 525/1320,
+  158, 279).
+- Still open: ruler, shapes, Ink to Text/Math, Ink Replay, resizing ink by handles, tablet
+  pressure on Linux (PhotoCraft's XInput2 `tablet` crate), `render`; printouts; audio; M2 exit
+  not met (no merge, no tag).
+
+## 2026-10-20 — M2: file printouts
+
+- **Insert › File Printout** (`insert.printout`), and on an attachment **Insert Printout**,
+  **Delete Printout Pages**; on a printed page **Open Original** (`printout_cmds.rs`, 4 commands).
+  A printout is the attachment plus one picture per page linked to it (`Image::printout`, an
+  optional field: format 4 unchanged), stacked below it at the page's print size, one undo step.
+- **`codecs::pdf`**: PDF pages rendered by `hayro` 0.7.1 from crates.io (the user's choice; pure
+  Rust, PdfCraft's renderer) on white at 108 dpi, at most 200 pages, 3,000 px a side, 8 Mpx a
+  page, under the codecs' panic guard; encrypted files refused; `sample_pdf` writes the test PDFs
+  (no fixtures). A picture file prints as itself; other formats are refused with a hint.
+- `ATTRIBUTION.md` lists the BSD-3-Clause Foxit/PDFium substitute fonts and the CC0 ICC profile
+  that `hayro` compiles into the binary.
+- Snapshot `printout-page`; e2e check of a two-page PDF in the real app.
+- Numbers: wiring 579/1322 (43.8%), behaviour 159/1322 (12.0%), 299 commands.
+- Still open: text from printout pages, asynchronous rendering of large PDFs, the "attach or
+  print" question when a file is dropped.
+
+## 2026-10-20 — M2: links on pictures, attachments and ink; resizing ink
+
+- Pictures, attachments and ink strokes carry a hyperlink of their own (`link`, optional,
+  format 4 unchanged; cleaned on load). Link…, Edit Link…, Open Link, Copy Link and Remove Link
+  act on the selected objects (`view_cmds.rs` `object_link`/`set_object_link`,
+  `Session::current_link`); Edit Link… opens the Link dialog prefilled, and its OK edits an
+  existing link instead of inserting linked text (this also fixes Edit Link… on text, which ran
+  `link.edit` without a URL). Linked objects show their link in the tooltip.
+- Ink selection box has the eight sizing handles; `object.resize` maps the box `from` → `to`
+  (one small step per frame, coalesced into one undo step), or `dw`/`dh`.
+- Menu header rows (Rotate, Order/Arrange) of the ink, lasso and Draw tab menus pinned by tests.
+- Numbers: wiring 592/1322 (44.8%), behaviour 159/1322 (12.0%), 299 commands.
+- Environment: the disk filled up during a gate (`target/debug/incremental` had grown to
+  5.7 GB); deleted it and ran later builds with `CARGO_INCREMENTAL=0`.
+
+## 2026-10-20 — M2: Insert Space
+
+- **Insert Space** (`insert.space`, a toggle on Insert and Draw and in the ink menu) turns on a
+  tool; dragging on the page runs `canvas.insertSpace` (`BEH.Canvas.InsertSpace`): every object
+  that starts below (or right of, when the drag went sideways) the start line moves by the
+  drag; removing space stops at the line; the tool returns to Type after one use (unverified).
+  A band shows the space while dragging. One undo step; a drag that moves nothing records none.
+- Numbers: wiring 596/1322 (45.1%), behaviour 159/1322 (12.0%), 301 commands.
+- Environment: a gate failed with the linker killed by the OOM killer (15 GB RAM, ~4 GB
+  available): `CARGO_BUILD_JOBS=4` fixed it.
+
+## 2026-10-20 — M2: screen clipping
+
+- **Insert › Screen Clipping** (`insert.screenClipping`): on Linux the desktop app asks the XDG
+  Screenshot portal (interactive: the compositor draws the area selection, Wayland or X11) on a
+  background thread (`apps/notecraft/src/screen_clip.rs`, zbus); the UI polls
+  `Host::take_screen_clip` each frame and inserts the picture with a "Screen clipping taken:"
+  line below it (wording unverified), one undo step. Elsewhere it explains why it's unavailable.
+  Not exercised live (it would open the selection on the maintainer's screen); the engine path
+  and the portal URI decoding are tested.
+- Numbers: wiring 597/1322 (45.2%), behaviour 159/1322 (12.0%), 302 commands.
+
+## 2026-10-20 — M2: shapes
+
+- **Draw › Shapes** (`draw.shapes`, a gallery drawn in code: line, arrow, double arrow,
+  rectangle, oval, triangle, right triangle, diamond, parallelogram; unverified list) and
+  **Lock Drawing Mode** (`draw.lockDrawingMode`). A shape is dragged out (Shift: squares,
+  circles, 45° lines) and stored as one ink stroke with the selected pen (`draw.shape`,
+  `NC.Draw.Shape`; generator `notecraft_ink::shape_points`), one undo step; without the lock the
+  tool returns to Type.
+- Drawing: strokes are now split at sharp corners (an averaged normal pinched the line there),
+  each run a triangle strip, the corners round joins.
+- Numbers: wiring 600/1323 (45.4%), behaviour 160/1323 (12.1%), 305 commands.
+
+## 2026-10-21 — M2: tags on ink (decision D5)
+
+- **Decision D5** (`docs/plan.md` §4.11): `Ink.tags` (optional in `section.json`, format 4
+  unchanged; one per key, at most 32). The tag commands treat the selected strokes as one
+  drawing: a new tag goes on the leftmost stroke unless one has it; remove/check/clear touch
+  every selected stroke, so Find Tags lists a drawing once ("Ink drawing", unverified wording).
+  Icons left of the stroke (unverified placement), the checkbox toggles on click (`tag.click`
+  takes an ink id), the ink menu's Tags submenu is the whole tag gallery, the Tags pane selects
+  a tagged stroke. `ui.inspect` (`ink`) and `notebook.inspect` show ink tags; e2e check added.
+- Fixed on the way: Tags pane rows weren't clickable on their text (a selectable label took
+  the click from the row).
+- Rows: `CM.InkDrawing.TagsGallery/TagsCustomize/TagsRemoveAll/TagsRemoveAll2` wired.
+
+## 2026-10-21 — M2: picture leftovers
+
+- **Paste: Picture** (`edit.pastePicture`): the clipboard's picture even when text came with
+  it; NoteCraft's own copied pictures come back as pictures; text alone is refused until the
+  renderer exists.
+- **Inline pictures in pasted HTML**: `<img src="data:image/…;base64,…">` becomes
+  `html::Block::Image` (at most 256; web pictures and pictures in table cells dropped); a paste
+  places them in reading order, skipping ones that don't decode; alt text kept.
+- **Stacking**: a picture or attachment in front of every container it overlaps is drawn over
+  the text and takes clicks there (`pictures::stack`, `Layer`; plan §4.9).
+- **Attachment menu headers**: file name and size (`CM.FileAttachment.FileAttachmentName/Size`).
+
+## 2026-10-21 — M2: Tab after text makes a table (decision D6)
+
+- **Decision D6** (`docs/plan.md` §4.8): Tab at the end of a paragraph's text turns it into a
+  one-row, two-column table that takes the paragraph's place (`table_cmds::tab_to_table`, from
+  `para.indent`'s Tab branch); no session state — later Tabs and Enter use the existing
+  one-row-table keys. `BEH.Table.TabToCreate` verified, `KB.Table.CreateWithTab` wired.
+- Numbers: wiring 610/1323 (46.1%), behaviour 161/1323 (12.2%), 306 commands; e2e 33/33.
+- Environment: the linker was OOM-killed again with `CARGO_BUILD_JOBS=4`; gates ran with 2.
+- Open: see `plan/handoff.md` §7 (ink leftovers: ruler, Ink to Shape, tablet pressure, pens in
+  settings; picture leftovers: 45° rotation and crop, files pasted from a file manager; page
+  templates need screenshots).
+
+## 2026-10-23 — M2: Paste Options on objects, Insert File on drop, pens kept, the ruler (D7)
+
+- **Paste Options in context menus** (`*.PasteGalleryMini`): a "Paste Options:" caption over
+  the four paste choices as icon buttons (Keep Source Formatting, Merge Formatting, Keep Text
+  Only, Picture; distinct icons now), each reading the system clipboard as Ctrl+V does — the
+  old menu item pasted only NoteCraft's own clipboard. Now on the ink menu too
+  (`CM.InkDrawing.PasteGalleryMini` wired).
+- **Insert File on drop** (`BEH.Paste.Files`): a dropped PDF asks Attach File / Insert
+  Printout / Cancel (several at once are asked about once); pictures still insert directly,
+  other files are attached (NoteCraft prints only PDFs and pictures).
+- **Pens kept**: the desktop settings remember the pen gallery, the selected pen, the eraser
+  size and the shape (`settings.json` › `drawing`); `DrawState::normalize` repairs what a file
+  gives back (≤ 32 pens, widths in range, the Type tool, no ruler).
+- **The ruler (decision D7, `docs/plan.md` §4.12)**: `notecraft_ink::ruler` (geometry and
+  `snap`), `DrawState.ruler` (session state, never saved or undone), `draw.ruler`
+  (`R.Draw.Tools.Ruler`, shown in the middle of the page's view) and `draw.rulerPlace`
+  (`NC.Draw.RulerPlace`, new row, verified); `draw.stroke` lays a stroke started within 12 pt of
+  a long edge along it (`"free": true` opts out), and the canvas shows the same while drawing.
+  The canvas draws it as a translucent card with millimetre ticks and its angle; a drag on it
+  moves it, the wheel over it turns it a degree a notch. Snapshot `ink-ruler.png`.
+- Numbers: wiring 613/1324 (46.3%), behaviour 162/1324 (12.2%), 308 commands.
+- Open: two-finger turning of the ruler, Snap to Grid, Draw with Touch, Ink to Shape, tablet
+  pressure on Linux; files copied in a file manager pasting as attachments; the M2 exit
+  workflows (see `plan/handoff.md` §7).
+
+## 2026-10-24 — M2: the exit workflows, Snap to Grid, Draw with Touch (D8)
+
+- **Headless acceptance** (`crates/automation/tests/m2_workflows.rs`, helpers shared with M1 in
+  `tests/common/mod.rs`): "a page with a table and pictures" (a table filled with Tab, rows
+  added in the last cell, a header row, sorted, the header shaded; a picture from bytes resized
+  with alt text, one from a file turned; a file attachment) and "handwritten notes" (pen
+  strokes, a shape, a line along the ruler, a lasso selection tagged as a checked to-do and
+  moved, the stroke eraser). Both drive MCP tools over a folder notebook, then a fresh session
+  reads the page back from disk and must see exactly the same objects (blobs included).
+- Seen on the way: a picture under 4 pt a side is raised to 4 pt on each side separately, so a
+  tiny picture loses its proportions; kept (it keeps a hair-thin separator thin), the test uses
+  a 16×8 picture.
+- **P0/P1 rows of the M2 exit still `missing`** (`R.Draw.*` and `BEH.Ink/Table/Paste.*` have
+  none left):
+  - `R.Insert.Pages.PageTemplatesSplitButton`, `R.Insert.Pages.PageTemplatesTaskpane` (page
+    templates: need the user's screenshots).
+  - `CT.TableLayout.Data.SortMenu` (the Sort… dialog), `CT.TableLayout.Merge.MergeCells`,
+    `CT.TableLayout.Merge.UnmergeCells` (cell spans: a model change to discuss first).
+  - Object menus: `CM.NoteContainer.OrderObjectsMenu`, `CM.NoteContainer.ObjectMove`,
+    `CM.NoteContainer.ObjectResize`; `CM.ParagraphHandle.AlternativeText`,
+    `CM.ParagraphHandle.ImageSaveAs`, `CM.ParagraphHandle.TableMenu`,
+    `CM.ParagraphHandle.TableInsert`; `CM.Equation.Cut`, `CM.Equation.CopyOneNote`,
+    `CM.Equation.PasteGalleryMini` (equations, later).
+  - Outside the M2 scope but P0/P1 and small: `CM.Tag.FindTaggedNotes`,
+    `CM.OutlookTask.TagsRemove`, `CM.Bullet.ChangeToNumberList`, `CM.Number.ChangeToBullet`,
+    the object rows of `CM.Text.*` (Rotate, flips, Alt Text, Set Picture as Background, Table).
+- **Decision D8 (`docs/plan.md` §4.13)**: `draw.snapToGrid` (`R.Draw.Shapes.GridSnapTo`) puts a
+  shape's two end points on the page's grid, or on 1/8 in without one, in the engine's
+  `draw.shape` and in the canvas preview; `draw.withTouch` (`R.Draw.Tools.FingerPaintingMode`,
+  on by default) off makes a finger pan with the drawing tools, a finger being a touch without
+  pressure (egui can't tell pens from fingers); two fingers on the ruler move it and turn it
+  about their midpoint, the first finger's drag becoming a drag of the ruler. Both settings are
+  kept in the desktop settings with the pens.
+- **Sort… for tables** (`CT.TableLayout.Data.ShowSortTableRowsDialog`, `table.sortDialog`): a
+  Sort dialog (Sort by, Then by, each Ascending or Descending, Header row), columns named by the
+  header row's text; the engine sorts by 1–3 columns in turn, stably, and can set the header
+  row in the same undo step. The Table Layout › Sort menu is tested end to end
+  (`CT.TableLayout.Data.SortMenu` verified).
+- Numbers: wiring 617/1324 (46.6%), behaviour 163/1324 (12.3%), 311 commands; e2e 33/33.
+- Open: the object menu rows above (NoteContainer Order/Move/Resize, ParagraphHandle Alt Text,
+  Save As, Table), copied files from a file manager pasting as attachments, merge/split cells
+  (to discuss), page templates (need screenshots).
+
+## 2026-10-24 — M2 done: object menus, merged cells (D9), page templates (D10), equations (D11)
+
+- **Object menus:** the note container's Order submenu, Move and Resize (they keep the container
+  selected and say how; the arrow keys then nudge it, Shift+Left/Right change its width), the
+  paragraph handle's Table submenu with Insert Table. The handle's picture rows (Alt Text, Save
+  As, Copy Text from Picture) are `out-of-scope`: a paragraph never holds a picture (D3), the
+  picture's own menu has them.
+- **Merged cells (decision D9, `.ncraft` version 5):** `TableCell::row_span`/`col_span`, covered
+  cells kept in the grid empty and hidden; `table.merge` joins the selected cells' text into the
+  first, `table.split` undoes it; row/column inserts and deletes, Tab and the arrows respect
+  merged cells; Sort refuses cells merged across rows; the canvas lays a merged cell over its
+  columns and rows and draws borders cell by cell. Snapshot `table-merged.png`.
+- **Page templates (decision D10):** NoteCraft's own built-in set (Academic, Blank, Business,
+  Decorative, Planners) built in code, the user's own saved in the preferences (pictures left
+  out), the last five used, and a default template per section (`Section.default_template`)
+  that New Page starts from; Insert › Page Templates opens the Templates pane; Save As Template
+  dialog; `template.list/setDefault/save/delete` for agents (new rows `NC.Templates.*`).
+  Snapshot `templates-pane.png`.
+- **Equations (decision D11):** new pure crate `notecraft-math` (L2) parses the UnicodeMath
+  linear format (fractions with whole terms as operands, scripts, radicals with degrees, large
+  operators with limits, stretchy brackets, matrices, accents, function names, control words,
+  `⬚` slots) and lays it out built up, the large signs drawn as paths; an equation is a
+  paragraph of linear text (`Paragraph::math`), built up on the canvas and edited as text in a
+  light box while the caret is in it; Enter never splits one, a pasted one stays one.
+  Insert › Equation (Alt+=) with built-in equations previewed built up, the contextual Equation
+  tab (Professional, Linear, Symbols, eleven Structures galleries, own icons and a simplified
+  layout), the equation context menu. Snapshots `equations.png`, `equation-tab.png`.
+- **The M2 exit is met:** no P0/P1 row of `R.Insert.*`, `R.Draw.*`, `CT.TableLayout.*`,
+  `CT.Equation.*`, the object `CM.*` or `BEH.Ink/Table/Paste.*` is `missing`; the headless
+  workflows pass. Audio and video (P2) are left for after M3.
+- Numbers: wiring 657/1328 (49.5%), behaviour 174/1328 (13.1%), 335 commands.
+
+## 2026-10-25 — Code review: duplicated, dead and slow code; HTML spans; two dialogs
+
+Branch `chore/code-review` (from `main` = `c03d1ed`). A review pass for duplicated, obsolete,
+redundant and unoptimised code, found with a line-window duplicate scanner (exact and with
+identifiers normalised), an unused-public-item scan and clippy's extra lints; only changes that
+were certain landed, behaviour unchanged (every test green after each commit).
+
+- **Dead code removed:** `icons_set.rs` kept all 306 icons ported from WordCraft but only the 57
+  that `icons::set_name` maps to can be painted (1455 → 399 lines); `icons::draw_own` had 34
+  arms (and parts of 19) for keys `set_name` always routes to the set. Unused items:
+  `DocError` (and doc's `thiserror`), `AUTOMATIC_TEXT`, `PAGE_COLUMN_WIDTH`, `ICON_LARGE`,
+  `has_bold`, `Dirty::is_clean`, `NotebookStore::section_path`, `Session::redo_labels`,
+  `group_from_entry`; `proptest` dev-deps of four crates that never used it; `let _ = x;`
+  lines that only hid dead variables and imports; redundant `too_many_arguments` allows.
+- **Duplicates merged:** `automation::base64` (a copy of `engine::b64::encode`, now a
+  re-export); `need_section`/`need_notebook` (six copies, now in `ops`), the link clipboard
+  (four), search scope parsing, the search box frame, URL autolink on typing and Enter,
+  "hidden under a collapsed ancestor" (pages and paragraphs), the math parser's scripts, the
+  dialogs' section walk, attachment insertion (files and printouts), object drag start, the
+  handle cursor, the theme picker, `execute_request`/`save_now` (headless and the desktop
+  control channel), Back/Forward (`travel`), the UI tests' `harness()`.
+- **Fixes found on the way:** going to an empty section skipped the 200-entry Back cap and
+  kept a stale Forward stack (one `leave_page` now); stale M1 comments; an orphan doc comment.
+- **Faster:** `text::snap` (twice per `Session::text_range`, which many enabled predicates call
+  every frame) scanned the paragraph from its start: now a grapheme cursor around the offset,
+  pinned to the old scan by a proptest; `Paragraph::text_cow` avoids a copy for single-run
+  paragraphs; `ribbon::command` returns `&'static str`; `with_spans` collects merged cells once.
+- **M2 leftovers:** merged cells copy to other applications as HTML `colspan`/`rowspan` (covered
+  places left out) and pasted HTML spans make merged cells (`html::TableBlock`, the reader lays
+  cells out as browsers do, hostile spans clamped); `UI.Dialogs.ParagraphSpacing` verified and
+  `UI.Dialogs.NotebookProperties` wired (display name and colour; no location/format choice).
+- Numbers: wiring 659/1328 (49.6%), behaviour 175/1328 (13.2%), 335 commands.
+- Open: `link.open` still shows enabled off a link (its `url` param makes a `when` predicate
+  wrong; needs a UI-side check); the two loggers of the binaries are near copies (kept: they
+  differ in filtering); the canvas lays every page out each frame (a cache by revision would be
+  a larger change). Next: M3 (`plan/next-session-prompt.md`), starting with the D12 proposal.
+
+## 2026-10-27 — M3 starts: decision D12, crate `onestore`, Open Section
+
+- **D12 approved** (the three questions answered: read-only in M3, real-file fidelity measured by
+  the user locally, import as a copy). `docs/plan.md` §4.17 and the D12 row. Branch `m3/interop`
+  from `chore/code-review` (the review branch is pushed to `origin`, not merged yet).
+- **Crate `onestore` (L4, `doc` + `geom` only, wasm-clean)**, written from the public
+  [MS-ONESTORE]/[MS-ONE] PDFs (rev. 13.3, local copies in `plan/specs/`, never committed), every
+  structure cited: `bytes` (bounds-checked cursor), `types` (§2.2), `header` (§2.3.1; OneNote
+  2007 and foreign files are `Unsupported`), `txlog` (§2.3.3, uncommitted nodes ignored),
+  `nodelist` (§2.4: fragment chains, magic numbers, loops refused), `filenode` (§2.4.3, the §2.5
+  nodes; unknown nodes skipped by size), `propset` (§2.6.1–2.6.9, generic by stored type,
+  references resolved), `revision` (§2.1: object spaces, current revision of role 0x1/default
+  context, dependency chains with loop guard, object groups, global id tables incl. `.onetoc2`
+  Entry2/3, file data store §2.6.13, encrypted spaces → `Encrypted`), `one` ([MS-ONE] walk:
+  section → page series → page spaces → title, outlines, nested outline elements, Unicode and
+  Windows-1252 text, PageLevel, times) with a per-construct `Report`. `#![deny(clippy::indexing_slicing)]`.
+- **Test writer** `onestore::writer` (tests + `fixtures` feature): raw nodes and lists, property
+  sets, whole stores (`StoreBuilder`), synthetic sections (`writer::section`). 46 tests incl.
+  every truncation, byte flips and a proptest of random tails (no panic).
+- **`file.openSection`** (`BS.Open.OpenSection`, Ctrl+Alt+Shift+O, `onenote_cmds.rs`): path or
+  base64 `data`, a unique section name, one undo step, the report in a notice and the result.
+- Catalog: `FMT.One.ReadPages` verified; `FMT.One.Read`, `FMT.One.ReadOutlines`,
+  `BS.Open.OpenSection` wired (outline position ignores PageMarginOrigin — unverified; the
+  reference opens sections in place). Numbers: wiring 663/1328 (49.9%), behaviour 176/1328
+  (13.3%), 336 commands.
+- Open (D12 order of work, step 2): text formats (TextRunIndex/TextRunFormatting →
+  jcidParagraphStyleObject), lists, tags, tables, pictures, attachments, ink; then `.onetoc2`,
+  `.onepkg`; the UI file picker for Open Section; a CLI `import-one` report command.
+- **Later the same day** (`84dc81a`, `4220d3f`, and the pictures commit): Open Section in the
+  backstage and on Ctrl+Alt+Shift+O through the host picker (UI test with a fake picker,
+  `backstage-open` snapshot); rich text (TextRunIndex/TextRunFormatting, character formats,
+  style ids, alignment; hidden runs dropped; text hyperlink targets are not in the public spec),
+  lists (NumberListFormat/MSONFC, ListRestart), note tags (built-in names keep NoteCraft's tag,
+  others the nearest icon for NoteTagShape), pictures (PictureContainer → file data store,
+  `codecs::probe` for pixels), attachments (EmbeddedFileContainer), tables (rows, cells, column
+  widths, borders); content inside outlines becomes page objects below them (unverified
+  placement). `onestore` now depends on `codecs` too. 50 tests. Rows `FMT.One.ReadRichText`,
+  `ReadLists`, `ReadTags`, `ReadImages`, `ReadTables`, `ReadAttachments` wired. Numbers:
+  wiring 669/1328 (50.4%), behaviour 176/1328 (13.3%), 336 commands.
+- Open: ink (its [MS-ONE] structures), merged cells and shading in `.one` tables, `.onetoc2`,
+  `.onepkg`, a CLI report command, the per-construct fidelity table once the user has measured
+  real files.
+
+## 2026-10-28 — M3: table shading, OneNote notebook folders; ink and TOC are not public
+
+- **What the public spec leaves out** (checked in `plan/specs/ms-one.txt`, rev 13.3,
+  2022-11-15): no ink JCID or property, no merged-cell property, and none of the `.onetoc2`
+  PropertyIDs (FileIdentityGuid, FolderChildFilename, NotebookColor,
+  NotebookElementOrderingID, TOCEntryIndex_OidIndex: the structures are described, their ids
+  are not in the 144-entry table). Under the clean room they can't be read: ink stays reported
+  lost (`FMT.One.ReadInk` missing, note says blocked), spans read as 1.
+- `.one` tables: CellShadingColor (§2.2.97) → `TableCell::shading` (automatic = none); the
+  fixture writer shades cells (`FixturePage::cell_shading`).
+- **OneNote notebook folders** (user's choice): `file.openNotebook` on a folder with a
+  `.onetoc2`/`.one` and no NoteCraft TOC (or on the `.onetoc2` itself) imports an in-memory
+  copy (`onenote_cmds::import_onenote_folder`): each `.one` a section named by its file, each
+  subfolder with sections a group, sorted by name; `OneNote_RecycleBin`, hidden entries and
+  symlinks skipped; limits on files, total bytes and depth; damaged files are warnings, a
+  folder with nothing readable fails cleanly; nothing is ever written to the folder (test
+  compares the listing after `save_dirty`). Before this, such a folder opened as an empty
+  NoteCraft notebook that would have written into it. `onestore::Report::absorb`/`lose_one`.
+- Catalog: `FMT.Onetoc2.Read` wired (order from the folder — unverified). Numbers: wiring
+  670/1328 (50.5%), behaviour 176/1328 (13.3%), 336 commands.
+- Open: `.onepkg` ([MS-CAB]: download the spec to `plan/specs/`, unpack to the same folder
+  import); a CLI report command; the fidelity table after the user's real-file measurements.
+- **Later:** `notecraft-cli onenote PATH [--json]` prints the fidelity report of a `.one`, a
+  OneNote folder or a `.onetoc2` (throwaway session, nothing saved): the tool for the user's
+  real-file measurements. Both import results now list the damage messages (`warnings`, ≤ 50).
+  `.onepkg` is on hold: the official [MS-CAB] PDF could not be found (the learn.microsoft.com
+  and officeprotocoldoc URLs return 404; only secondary/GPL sources online, not usable under
+  the clean room). The `cab` crate (MIT) was rejected: unchecked indexing and `unreachable!`
+  on its read path. Plan: a bounded CAB reader in `onestore` (MSZIP via `miniz_oxide`,
+  LZX/Quantum refused) once the spec is in `plan/specs/`.
+
+## 2026-10-29 — M3: `.onepkg` packages
+
+- Specs: the official [MS-CAB] (v20101026) and [MS-MCI] PDFs are gone from Microsoft's sites;
+  the Wayback Machine copy of a mirror (`web.archive.org/web/2025…/rfc.nop.hu/winprot2/MS-CAB.pdf`,
+  `MS-MCI.pdf`) is Microsoft's own document. Both in `plan/specs/` (text beside them).
+- `onestore::cab` (`read_cabinet`, `CabLimits`): CFHEADER/CFFOLDER/CFFILE/CFDATA with every
+  offset checked; stored and MSZIP folders (fresh decoder per block on a buffer that starts
+  with the previous 32 KB, so back-references across blocks work — [MS-MCI] §2); Quantum, LZX,
+  split cabinets refused; names UTF-8 or Windows-1252, `..`/empty parts dropped; a damaged
+  folder costs only its files (warnings); caps on files and bytes unpacked; csum not verified
+  (optional per §2.4.1). New dependency `miniz_oxide` 0.9 (already in the tree via flate2).
+  The `cab` crate was rejected (panics on its read path). Tests: the spec's §3 example byte
+  for byte, a hand-made fixed-Huffman block referring into the previous block, truncations,
+  byte flips, a proptest. Fixture writer `writer::cab`.
+- Engine: the notebook import walks a `Source` (disk folder or unpacked package);
+  `file.openNotebook` on a `.onepkg` imports an in-memory copy named after the file, stepping
+  into a single top folder (package layout unverified). CLI `onenote` takes `.onepkg` too.
+- Catalog: `FMT.Onepkg.Read` wired. Numbers: wiring 671/1328 (50.5%), behaviour 176/1328
+  (13.3%), 336 commands.
+- Open: the fidelity table in `parity.md` after the user's real-file measurements
+  (`notecraft-cli onenote PATH`); then the M3 exports/imports (PDF/DOCX/HTML/Markdown, ENEX…).
+
+## 2026-10-29 — M3: Export page and section (web page, HTML, Markdown)
+
+- `import-export::export`: `collect` turns pages into a format-neutral export (objects in
+  reading order: top to bottom, then left to right; title and date line per page; pictures and
+  attachments as resources, each blob once, names made safe and unique; ink counted as lost);
+  `html_document` (inline `data:` URIs or relative links), `mht` (RFC 2557 multipart/related,
+  base64 parts with `Content-Location`, RFC 2047 subject). `import-export::markdown`:
+  CommonMark + GFM tables, strikethrough, task items for to-do tags; escapes what would start
+  a block; fenced code; nested lists. `TableBlock::from_table` moved here from the engine;
+  `b64` moved from the engine to `codecs` (re-exported as `notecraft_engine::b64`).
+- Engine `export_cmds`: `file.exportPage`, `file.exportSection` (`format` mht/html/md or the
+  path's extension), `file.exportMht` (`scope` page/section). Markdown writes pictures and
+  files into `<name>_files` beside it, never through a link; `.one/.docx/.pdf/.xps` refused as
+  "not available yet". Automation roots cover the three commands (write).
+- UI: File › Export is the reference's two steps (1. Export Current: Page/Section/Notebook,
+  2. Select Format, Export…); formats not written yet are listed disabled. The section menu's
+  Export… opens it with that section chosen.
+- Catalog: BS.Export.Page, BS.Export.Section, BS.Export.FormatMht,
+  CM.Section.FileSaveAsContextualItem, FMT.Export.Html, FMT.Export.Markdown wired. Numbers:
+  wiring 677/1328 (51.0%), behaviour 176/1328 (13.3%), 339 commands.
+- Dev machine: the disk was full (target/ 27 GB); stale test binaries, incremental and
+  examples removed; builds use `CARGO_INCREMENTAL=0` for now.
+- Open: PDF (FMT.Export.Pdf, needs a page renderer to vectors), DOCX (WordCraft crates?),
+  Markdown/text import, ENEX; the `.one` fidelity table still waits for real-file runs.
+
+## 2026-10-29 — M3: Export to Word (.docx)
+
+- `import-export::docx`: own WordprocessingML writer from ECMA-376 Part 1 (no WordCraft
+  dependency needed): content types, relationships, core properties, styles built from
+  `ParaStyle::def` (built-in ids/names for Heading1–6, Title, Quote; Citation and Code custom;
+  Hyperlink character style), numbering (an abstract list per bullet glyph and per number
+  format, one instance per run of numbered paragraphs, `restart` as `startOverride`), runs with
+  every character format in schema order, hyperlinks as external relationships, tabs and soft
+  breaks, to-do tags as ☐/☒, tables (fixed grid from the column widths, borders or `nil`,
+  shading, `gridSpan`/`vMerge`), inline pictures scaled to the 468 pt text width (WebP/BMP
+  re-encoded as PNG, a picture used twice stored once), page breaks between pages.
+  Attachments become "Attached file: name" (reported). Export items now carry table widths,
+  borders and shading.
+- Engine: `format: "docx"` (or `.docx`) on `file.exportPage`/`file.exportSection`; UI: Word
+  Document enabled for pages. Checked by hand: LibreOffice headless opens the sample section
+  and a page with a link, a 3×3 table and a picture (text and PDF conversion look right).
+- Catalog: BS.Export.FormatDocx, FMT.Export.Docx wired. Numbers: wiring 679/1328 (51.1%),
+  behaviour 176/1328 (13.3%), 339 commands.
+
+## 2026-10-29 — M3: Export to PDF (decision D13), crate `fonts`
+
+- Decision D13 (plan §4.18, §6): flow formats share `export::collect`; PDF is drawn like the
+  canvas with `krilla` 0.8 (MIT/Apache; features `raster-images` only — `simple-text` would
+  pull the unmaintained `rustybuzz`/`ttf-parser`, and glyphs are measured here anyway).
+- New L0 crate `notecraft-fonts`: the page font candidates (Carlito, Noto, Liberation,
+  DejaVu; mono; symbol/math fallbacks), size-capped and validated with skrifa, looked up once
+  per process. The canvas now takes its page faces from it (same bytes the PDF embeds).
+- `import-export::pdf`: `text` lays paragraphs out with skrifa metrics (greedy breaks at
+  spaces, hard breaks, tab stops every 36 pt, super/subscript rise, "at least" line spacing,
+  glyph fallback across faces); the page becomes a display list (title + underline + date,
+  containers with the canvas's indent/list/tag columns, bullets drawn as shapes, tables with
+  merged cells, shading and borders, pictures with turns and flips, attachment cards, ink with
+  round caps, highlighter opacity), then sheets: paper from the page setup else Letter with
+  36 pt margins, scaled to the width, breaks between line and row bands. Real text with
+  subsetted fonts, link annotations, metadata, attachments embedded as PDF files.
+- Engine: `format: "pdf"` on `file.exportPage`/`file.exportSection`, and
+  `file.exportNotebook` with `format: "pdf"` or a `.pdf` path. UI: PDF enabled for all three.
+- Checked by hand: sample pages rendered with pdftoppm look like the canvas; `pdffonts`
+  shows embedded, subsetted CID TrueType faces with Unicode maps.
+- Catalog: BS.Export.FormatPdf, FMT.Export.Pdf wired. Numbers: 681/1328 (51.3%), behavioural coverage 176/1328 (13.3%), 339 commands.
+- Disk: still tight (1.5 GB free after the gate); prune `target/debug/deps` between gates.
+
+## 2026-10-30 — M3: Print (File › Print, Ctrl+P)
+
+- Engine: `file.print` (BS.Print.Print, Ctrl+P) and `file.printPreview` (BS.Print.Preview)
+  write the print-ready PDF of the current page or section (`scope`) into `dir` (default: a
+  `notecraft-print` temp folder) through the PDF export, and return its path and title.
+  Automation roots cover `dir`.
+- UI: a File › Print backstage page (printer list from the host with the default chosen,
+  copies, current page or whole section; Print and Print Preview); Ctrl+P opens it. Host gains
+  `printers()` and `print_pdf()`; the desktop host uses `craft-print` (craft-libs, same pinned
+  revision; CUPS `lp`/`lpstat`, native Windows printing), Print Preview opens the PDF in the
+  system viewer. deny.toml allows storytold's winprint fork (craft-print's Windows backend).
+- Catalog: BS.Print.Print, BS.Print.Preview, KB.Pages.Print wired (QAT.FilePrint stays until
+  the QAT can be customised). Numbers: wiring 684/1328 (51.5%), behaviour 176/1328 (13.3%), 341 commands.
+- Dev machine: `cargo clean` (25 GB of stale artifacts); builds keep `CARGO_INCREMENTAL=0`.
+
+## 2026-10-30 — M3: Import Markdown, text and HTML files
+
+- `import-export::import`: Markdown through `pulldown-cmark` 0.13 (MIT; tables,
+  strikethrough, task lists) into HTML and then the clipboard's HTML reader, so a file keeps
+  what a paste keeps; local pictures go through `nc-res:N` references (`html::parse_refs`,
+  never accepted from plain HTML) so they skip the HTML size cap; task items become ☐/☑
+  markers; plain text (a paragraph per line, tabs → levels; UTF-8 else Latin-1); HTML files
+  as a paste. A leading first-level heading is the title.
+- Engine `file.import` (new row NC.File.Import): a new page in the current section (its
+  default template applies), content placed in fresh containers (`paste_blocks` gains
+  `fresh`), ☐/☑ → To Do tags, pictures read only from the Markdown file's folder and below
+  (canonicalised, size-capped), one undo step. Automation roots: read.
+- UI: File › Open › Import File… (the stale ".onepkg coming later" line is gone).
+- Catalog: NC.File.Import (new), FMT.Import.Markdown, FMT.Import.Text, FMT.Import.Html wired.
+  Numbers: wiring 688/1329 (51.8%), behaviour 176/1329 (13.2%), 342 commands.
+- Next: Evernote .enex (a section with a page per note) on the same path.
+
+## 2026-10-30 — M3: Import Evernote exports (.enex)
+
+- `import-export::enex`: Evernote's public export format with a small pull XML reader
+  (elements, CDATA, the five entities and numeric references; no DTD), MD5 from RFC 1321
+  (its test suite in the tests) to match `<en-media hash>` to resources, ENML → the HTML
+  reader (`en-todo` → ☐/☑, `en-media` pictures through `nc-res:` references, `en-crypt`
+  dropped and counted), other resources as files. Caps: 10,000 notes, 1,000 resources each;
+  truncated or junk input ends the read, never a panic.
+- Engine: `file.import` on a `.enex` makes a section named after the file (unique in the
+  notebook) with a page per note (title, created/updated dates, content in fresh containers,
+  To Do tags, attachments), opens the first, one undo step. UI picker offers `.enex`.
+- Catalog: FMT.Import.Enex wired. Numbers: wiring 689/1329 (51.8%), behaviour 176/1329 (13.2%), 342 commands.
+
+## 2026-10-30 — M3: Export a page as a PNG picture
+
+- `pdf::PdfOptions::fit_content`: one sheet as large as the page's content (18 pt margin, no
+  scaling). Engine `format: "png"` on `file.exportPage` renders that sheet with the codecs'
+  PDF renderer at 144 dpi (capped at 16,000 px a side, 64 Mpx) and writes a PNG; a section is
+  refused (one page per picture). UI: PNG Picture in File › Export for pages.
+- Catalog: FMT.Export.Images wired (PNG; SVG not yet). Numbers: wiring 690/1329 (51.9%),
+  behaviour 176/1329 (13.2%), 342 commands.
+
+## 2026-10-31 — M3: import pictures and PDFs, reopen archives, Change Location
+
+- `file.import` reads pictures (PNG/JPEG/GIF/BMP/WebP: a page titled with the file name
+  holding the picture) and PDFs (a page holding its file printout, `printout_cmds::printout`
+  now takes bytes). The file is checked before the page is made. The picker offers all of them.
+- `file.openNotebook` on a `.ncraft-archive` opens a copy in memory; when the same notebook is
+  already open the copy gets fresh notebook/group/section/page ids. Backstage Open gains
+  "Open a Package or Archive…" (`.onepkg`, `.ncraft-archive`), which a folder picker could not reach.
+- New `notebook.changeLocation` (row UI.Dialogs.NotebookProperties.ChangeLocation): writes
+  the whole notebook into a new or empty folder and keeps saving there. This lets an imported
+  OneNote notebook (folder, `.onepkg`) or an archive become a notebook on disk; until now an
+  import could only be exported. The old folder is never deleted (the reference moves it:
+  unverified). Notebook Properties shows the location and a Change Location… button.
+- Catalog: FMT.Import.Images, FMT.Export.Archive, the new row wired. Numbers: wiring
+  693/1330 (52.1%), behaviour 176/1330 (13.2%), 343 commands.
+- A second session (notecraft-61) took the Paper Size pane and SVG export on `m3/paper-size`.
+
+## 2026-10-31 — M2 leftovers: Open Link only on a link, pasting copied files
+
+- `NoteApp::disabled_reason` draws `link.open` (KB.Format.OpenLink, "Open Link" in the text
+  and handle menus) disabled unless the caret or the selected object has a link. The command
+  itself still takes an explicit `url`, so clicks on links and agents are unchanged.
+- BEH.Paste.Files: files copied in a file manager (`text/uri-list`, arboard `file_list`)
+  paste like dropped files: pictures as pictures, PDFs through the Insert File dialog, the rest
+  as attachments, at the caret. Their paths no longer get typed in as text. `RichClip.files`,
+  `pictures::insert_files` shared with drops, `MAX_PASTED_FILES` = 50.
+
+## 2026-10-31 — M2 leftover: Ink to Shape
+
+- `notecraft_ink::recognize`: one stroke recognised as a line, triangle, rectangle/square,
+  diamond, other four-sided shape, pentagon, hexagon, ellipse or circle. It compares the
+  stroke's corner polygon (RDP at 8% of its size, weak corners merged) with the ellipse in its
+  box and keeps the closer one within 6% of the size. Rectangles, squares, diamonds and circles
+  are straightened; other polygons keep the corners drawn. Strokes under 8 pt, scribbles and
+  writing stay as drawn; input over 20,000 samples is never examined.
+- Engine: `draw.inkToShape` toggle (`DrawState.ink_to_shape`, no undo step); `draw.stroke`
+  replaces a recognised stroke with the neat shape in the same pen and reports `shape`
+  (`free: true` skips it, as for the ruler). The ribbon's Ink to Shape button is live and
+  shows its state. The source is Microsoft's public "Convert ink to shapes in Office" page;
+  the thresholds are unverified.
+- Numbers: wiring 694/1330 (52.2%), behaviour 176/1330 (13.2%), 344 commands.
+## 2026-10-31 — M3: the Paper Size pane
+
+- Engine `paper_cmds.rs` (new): `view.paperSize` opens and closes the pane
+  (`ViewState.paper_pane`); `page.paperSize` sets the page's `PageSetup.paper` — Auto (none),
+  a named paper (`PAPER_SIZES`: Statement, Letter, Tabloid, Legal, A3–A6, B4–B6 JIS, Japanese
+  Postcard, Index Card, Billfold), Custom width/height, Portrait/Landscape (the margins turn
+  with the paper) and the four print margins; values clamped to the PDF export's limits; no
+  params reports the paper. One undo step per change.
+- UI: `panes::paper_pane` (Size, Orientation, Width, Height in inches, Print Margins, Save
+  current page as a template); a drag or a typed number runs one command when it ends. The
+  canvas dashes where a page's printed sheets end (`canvas::paper_marks`, unverified).
+  Snapshot `paper-pane`.
+- Catalog: R.View.PageSetup.PaperSize, UI.Panes.PaperSize wired; new rows
+  UI.Panes.PaperSize.{Size, Orientation, Dimensions, Margins, SaveTemplate}. Numbers: wiring
+  700/1335 (52.4%), behaviour 176/1335 (13.2%), 345 commands.
+- Parallel sessions: a worktree must use its own `CARGO_TARGET_DIR` — two checkouts sharing
+  one target dir get the same artifact hashes and run each other's binaries.
+- Next here: SVG page export (FMT.Export.Images).
+
+## 2026-10-31 — Behaviour rows pinned (BEH.*)
+
+- New `engine/src/tests_behaviour.rs` pins 15 P0 behaviour rows whose code already existed but
+  was never marked: copied page links navigate, a new notebook's default section and page,
+  numbering 1./a./i. and renumbering, subpages (two levels, move with the parent, collapse),
+  page date/time, dragging a page to another section, emptying the bin, nested section groups,
+  checkbox clicks, several tags on one paragraph, tag toggling, the default font, styles
+  replacing character formatting, and the zoom range and stops.
+- `mark.py` also promoted rows whose tests already carried `// parity:` tokens (FMT import and
+  export rows, the Paper Size pane). Numbers: wiring 716/1335 (53.6%), behaviour 190/1335
+  (14.2%), 346 commands.
+## 2026-10-31 — M3: Export a page as an SVG picture
+
+- `import-export::pdf::svg::write`: the PDF's display list (same layout, fonts, pictures, ink,
+  rule lines and page colour as the PDF and PNG exports) written as SVG 1.1, one picture the
+  size of the content (18 pt margin). Text is glyph outlines from the page fonts (`skrifa`
+  pen, one `<defs>` path per glyph, at most 20,000, `<use>` per character), so the file looks
+  the same without the fonts; pictures are `data:` URIs (PNG/JPEG/GIF/WebP as they are, others
+  re-encoded to PNG); links are `<a>` areas. `pdf::rule_segments` now feeds both writers.
+- Engine: `format: "svg"` on `file.exportPage` (a section is refused, one page per picture).
+  UI: SVG Picture in File › Export for pages. Checked by eye with rsvg-convert against the PNG.
+- Catalog: FMT.Export.Images notes (PNG and SVG). Numbers unchanged (a format of an existing row).
+
+## 2026-10-31 — M4: the Options dialog, napkin math
+
+- File › Options is now the Options dialog (`ui-egui/src/options.rs`): twelve categories down
+  the left as in the reference. Changes go to a draft of `Prefs`, OK applies them in one
+  `file.options` call, Cancel forgets them. Categories NoteCraft can't offer yet (Proofing,
+  Send to, Audio & Video, Language, Ribbon/QAT customization, Add-ins) say so instead of
+  showing controls that do nothing.
+- New `Prefs` fields, each one changing behaviour: initials, show_mini_toolbar,
+  show_note_containers (canvas frames), default_color (with default_font/size: an empty Normal
+  paragraph types in them, `ops::typing_fmt`), show_paste_options, create_table_on_tab,
+  calculate_math, backup_folder, auto_backup_minutes and last_backup_ms (`Session::backup_due`;
+  the UI loop runs `file.backupChanged`), default_notebook_location (used by
+  `file.newNotebook` without a path unless `memory`), quick_notes_notebook.
+- New command `file.backupChanged` (OPT.SaveBackup.BackupChangedNow). `file.backupNow` falls
+  back to the Options folder.
+- BEH.Text.MathCalc: `notecraft_math::calc` reads the operators, functions and examples of
+  Microsoft's public pages ("Insert and calculate simple math equations", "Napkin Math in
+  OneNote"). Space or Enter after `expr=` types the answer.
+- Catalog: 18 OPT/BEH rows wired. Numbers: wiring 736/1335, behaviour 191/1335.
+## 2026-10-31 — M3/P0: the Notebook Recycle Bin in the page column
+
+- History › Notebook Recycle Bin (and the notebook's context menu) already ran
+  `history.recycleBin`, but nothing showed the bin: deleted pages and sections could not be
+  found again from the UI. `nav::recycle_bin` now takes over the page column while
+  `ViewState.recycle_view` is set: Deleted Pages (title, from section, date) and Deleted
+  Sections (page count, date), Restore on hover and on right click, Move to › a section for
+  pages (`history.restore` with `section`), Empty Recycle Bin (asks first), ✕ to leave.
+  Restoring opens the item, which leaves the bin. Snapshot `recycle-bin`; UI test.
+- Catalog: UI.Panes.RecycleBin wired (P0). Not yet: a read-only preview of a deleted page, the
+  60-day purge (BEH.Recycle.DeletedPages).
+
+## 2026-10-31 — M3/P0: File › Exit is a command
+
+- New `file.exit` (BS.Exit, QAT.NR.FileExit): saves every notebook, then sets
+  `Session.quit_request`, which `NoteApp::logic` turns into the shell's close. When a notebook
+  can't be saved it refuses ("not closing: …") and the window stays open; the backstage Exit
+  used to save, ignore errors and close. Agents and the control channel can run it too.
+- Catalog: BS.Exit, QAT.NR.FileExit wired.
+
+## 2026-10-31 — Desktop: the window opens as it was left
+
+- `settings::Window` (in `settings.json`): inner size, maximized, and the position where the
+  windowing system reports one (not on Wayland). The shell observes the viewport every frame
+  (`Window::observe`: maximized, full-screen or minimized windows keep the size to restore to)
+  and opens the next run with it (`Window::viewport`); the settings are now read before the
+  window opens. Hostile values are clamped or dropped (`Window::sane`). Closes part of gap 6.
+
+## 2026-10-31 — M4: password-protected sections (decision D15)
+
+- `notecraft_format::protect`: sealed section files (magic `NCRAFT-SEALED`, a JSON header in
+  the clear, XChaCha20-Poly1305 over the ordinary zip with the header as associated data,
+  Argon2id keys; costs read from a file are bounded). `decode_section` opens a sealed file
+  locked; `encode_section` writes a locked section's bytes back unchanged and refuses an
+  unlocked protected section (`FormatError::NeedsKey`), so nothing protected is ever written
+  in the clear. Dependencies: chacha20poly1305 0.10, argon2 0.5, zeroize, getrandom 0.3
+  (native only), all MIT OR Apache-2.0.
+- doc `Section.protection` (`Protection { salt, kdf, locked }`, never in the JSON).
+- Engine `protect_cmds.rs`: review.password (pane), section.setPassword / changePassword /
+  removePassword / unlock / lock, protect.lockAll (Ctrl+Alt+L), `Session::auto_lock` (idle
+  minutes and lock-on-leave from the Options), `sealed_copy` before every save and Change
+  Location. Keys stay in `Session.keys` and are zeroed on drop. Locking clears the undo
+  history (`Session.forget_history`). Deletes skip the Recycle Bin, and protected sections
+  can't be deleted or copied. Archive export refuses locked sections.
+- UI `password_ui.rs`: the Password Protection pane, the unlock prompt in place of the page,
+  the lock on the section row, the lock options in Options › Advanced.
+- Fixed: the first-run guard for automatic backups (meant for the Options commit) was never
+  applied; now a fresh install waits one interval.
+- Catalog: 16 rows wired. Numbers: wiring 751/1340 (56.0%).
+## 2026-10-31 — M3/P1: History › Recent Edits
+
+- New `history_cmds.rs`: `history.recentEdits` lists the pages changed in a period (Today and
+  Since Yesterday from local midnight; 7, 14, 30 days; 3 and 6 months as 91/182 days,
+  unverified; all), newest first by `Page::modified`, in a scope (section, section group,
+  notebook, all notebooks), capped at 5,000; it opens the Recent Edits pane
+  (`ViewState.recent_edits`).
+- UI: `panes::recent_pane` (Show, Search, the list; a click opens the page); the ribbon's
+  eight period rows pass their range (`ribbon::params_for`). Snapshot `recent-edits`.
+- Catalog: R.History.Authors.FindByDateMenu and its 8 periods, UI.Panes.RecentEdits,
+  BEH.History.RecentEdits wired. Numbers: wiring 748/1335 (56.0%), behaviour 191/1335, 349
+  commands.
+
+## 2026-10-31 — M4 Review: spelling
+
+- New L2 crate `notecraft-spell`: Hunspell-format dictionaries read from the format's
+  public description (`hunspell(5)`); no Hunspell code is used. It reads SET, FLAG
+  (char/long/num/UTF-8), AF, PFX/SFX with conditions, cross products and twofold suffixes,
+  KEEPCASE, NEEDAFFIX, FORBIDDENWORD, NOSUGGEST, ONLYINCOMPOUND, TRY and REP. Suggestions
+  come from REP, single edits and two-word splits. Compounding is not read. Bounded against
+  hostile files.
+- No dictionary ships: the engine loads `<lang>.aff/.dic` from the system's hunspell
+  folders on first use (none is installed on the dev machine; tests use synthetic ones).
+- Engine `spell_cmds.rs`: review.spelling (F7: the next misspelled word from the caret,
+  wrapping), review.spellingSuggestion (default: the first suggestion; enabled only during
+  a check), review.ignoreAll, review.addToDictionary (kept in `Prefs.custom_words`),
+  review.setLanguage, `Session::misspelled` for the squiggles.
+- New `Prefs` proofing fields: check_as_you_type, hide_spelling_errors, ignore_uppercase,
+  ignore_numbers, ignore_urls, proofing_language.
+- UI `spell_ui.rs`: wavy underlines in the canvas (cached per paragraph text and
+  invalidated by a spelling signature) and the Spelling pane (word, suggestions, Ignore,
+  Ignore All, Add to Dictionary, language).
+- The context menu still doesn't list suggestions (its CM rows stay missing).
+## 2026-10-31 — M3/P1: Page versions (decision D14)
+
+- doc: `PageVersion` (time, author, title, objects, page setup) in `Page::versions`, oldest
+  first, at most `MAX_VERSIONS` = 50 (normalised like the page); `Page::snapshot`,
+  `push_version`, `version_page`, `clone_without_versions`. Format 6 (reads 1–5 unchanged);
+  version pictures save with the section like any other.
+- Engine `versions_cmds.rs`: `snapshot` after every editing command in `Session::run` (same
+  undo step; skipped for `history.*`): a page edited at least 5 minutes after its last change
+  keeps the previous state; steady typing keeps none; empty states never. Commands
+  `history.pageVersions` (show under pages), `history.versions`, `history.openVersion`,
+  `history.previewDeleted`, `history.closePreview`, `history.restoreVersion` (the replaced
+  state becomes a version), `history.deleteVersion`, `history.deleteVersions{Section,Group,
+  Notebook}`. `ViewState.page_versions/preview`; `Session::preview_page/preview_version/
+  preview_picture` (the PNG export's `picture`, now shared). Copies and templates drop versions.
+- UI: version rows under pages (`nav::version_rows`, context menu), Show/Hide Page Versions in
+  the page menu, `preview.rs` (bar with Restore Version / Delete Version / Close over the
+  page's picture, canvas not drawn and unfocused), Recycle Bin pages open read-only on a click.
+  Snapshot `page-version`.
+- Catalog: 17 rows wired (UI.Panes.PageVersions, the Page Versions ribbon and context rows,
+  BEH.Versions.Snapshots), new NC.Versions.Open, NC.Recycle.Preview, NC.Versions.ClosePreview.
+  Not yet: Move or Copy of a version, Disable History for This Notebook, versions from .one files.
+
+## 2026-10-31 — M3/P1: Help (F1), Keyboard Shortcuts and About
+
+- Engine `help_cmds.rs`: `help.help` (F1) opens the Help pane, `help.keyboardShortcuts` opens
+  it on shortcuts only, `help.search` searches every command (label, ribbon path, id, shortcut;
+  every word must match; label matches first; queries cut at 200 characters), `help.about`
+  (name, version, licence). Local only: the registry is the help, so it is never out of date.
+- UI `help_ui.rs`: the pane (search box, results with path and shortcut, a click runs the
+  command) and the About window (from File › Account and the QAT row). Snapshot `help-pane`.
+- Catalog: R.Help.Help.Help, KB.App.Help, QAT.NR.Help, QAT.NR.HelpKeyboardShortcuts,
+  BS.Account.About, QAT.NR.About wired; new NC.Help.Search.
+
+## 2026-10-31 — M4: the Quick Access Toolbar can be customized
+
+- `ui-egui/src/qat.rs`: the toolbar is a list of QAT catalog ids (`UiState.qat`, default
+  Back and Undo, remembered by the desktop app and cleaned on load). Buttons run their
+  row's command the way the ribbon does (`ribbon::fire`: dialogs and file pickers
+  included). The ▾ menu switches the common commands on and off and opens More Commands….
+  Options › Quick Access Toolbar adds any QAT command NoteCraft has, and removes, reorders
+  and resets.
+- `pictures::host_action` opens the right backstage page for file.options,
+  file.printPreview, file.exportNotebook and file.openBackups.
+- Catalog: 11 QAT/OPT/UI rows wired.
+## 2026-10-31 — M3/P1: New Quick Note (Ctrl+Shift+M)
+
+- Engine `window_cmds.rs`: `window.quickNote` adds a page at the end of the Quick Notes
+  section of the default notebook (`section_cmds::quick_notes`, now shared, makes the section
+  when missing), opens it and sets `ViewState.quick_note`; `view.normal` clears it. One undo
+  step.
+- UI: in a Quick Note the window shrinks to 460×400 with only the title bar and the page
+  (`NoteApp::quick_note_window` keeps the old size and restores it); the expand button reads
+  "Open in the full window". The desktop shell doesn't remember the small size. Snapshot
+  `quick-note`. unverified: the reference opens a separate window.
+- Catalog: UI.Window.QuickNote, R.View.Window.NewSideNote, KB.General.QuickNote,
+  BEH.Notebooks.QuickNotes wired.
+
+## 2026-10-31 — M4: Italian display language
+
+- `ui-egui/src/i18n.rs`: `Lang { En, It }`, a per-thread current language set every frame
+  from `UiState.lang`, and `tr(label)`, which falls back to English. `i18n_it.rs` holds about
+  400 Italian labels, all NoteCraft's own translations of functional labels, plus prefixes
+  for numbered labels ("Section Color 12").
+- Translated: ribbon and menu labels (`ribbon::label`), tab names, ribbon group names,
+  backstage navigation, pane headers (`card_header`), the Options categories, the page
+  list and navigation buttons, the search hints and Share.
+- Options › Language switches at once. The desktop app remembers the choice and on first
+  run takes it from LC_ALL / LC_MESSAGES / LANG.
+- Catalog: OPT.Language.DisplayLanguage wired. Left in English: dialog bodies, notices and
+  error messages.
+## 2026-10-31 — M3/P1: Customize Tags for every tag; the Tags gallery follows it
+
+- Engine: `Prefs.tag_list` (the whole ordered list once customized; `None` = built-ins then
+  `custom_tags`, which stays in step). `tag.customize` now modifies or removes any tag
+  (built-ins too; `null` clears a colour), moves tags up and down, adds new tags at the top
+  (unverified) and resets the built-ins (`reset`). Notes keep the tags they carry.
+- UI: the Customize Tags dialog lists every tag with its symbol: Move Up/Down, Remove Tag,
+  Modify Tag (name, symbol, font and highlight colour or none), New Tag, Reset Tags. The Tags
+  gallery (inline rows and drop-down, both ribbons) draws `tag_defs` in order, so renamed,
+  reordered and custom tags show there, with the built-ins' Ctrl+1…9 shortcuts.
+- Tests: every one of the 29 gallery rows applies its tag (the 20 "Tag: …" P1 rows were missing
+  only for lack of a test). Help and page-version rows say "unverified" (our own designs).
+- Catalog: UI.Panes.CustomizeTags + 20 R.Home.Tags.* rows wired.
+
+## 2026-10-31 — M3/P1: add a page between page tabs
+
+- `nav::insertion_point`: pointing at the lower edge of a page tab (its last 4 px) draws an
+  accent line with ⊕ at its left; a click runs `page.new {after}` (a page right after it, opened).
+  Not offered between a page and its own subpages. Snapshot `page-insertion`.
+- Catalog: BEH.Pages.NewPageInsertion wired (unverified details).
+- Also: UI.Ribbon.Tooltips wired with a UI test (name and shortcut, or the reason a control
+  is disabled; no description line yet).
+
+## 2026-10-31 — Context menu and behaviour rows
+
+- New command `link.toPage` (CM.Text.ToPageLink): the selected words link to the page of
+  that title, created in the section if missing (the same rule as `[[wiki links]]`).
+- A test pins the Text menu's object rows (Rotate submenu, Set Picture as Background, Alt
+  Text) and its Table submenu as working commands in the right state.
+- Tests pin BEH.Text.HeadingSizes, BEH.View.RuleLines, BEH.View.PageColor and
+  BEH.Links.PageRenameTracking.
+- Desktop: a test pins the portal file dialogs (UI.Window.FileDialogs).
+## 2026-10-31 — M3: Options › Display: navigation side, New Page button, containers, scroll bars
+
+- `Prefs.nav_left` (OPT.Display.NavBarLeft): off, the notebook tree and the page column are
+  right-hand panels (the column's resize handle moves to its left edge). `Prefs.
+  floating_new_page` (OPT.Display.FloatingNewPage) switches the insertion point between page
+  tabs. Both are checkboxes in Options › Display. Snapshot `nav-right`.
+- `canvas::container_framed` names the Show note containers rule and a test pins it; a test
+  shows the page's scroll bars. Catalog: OPT.Display.ShowNoteContainers, NavBarLeft,
+  FloatingNewPage, UI.Canvas.Scrollbars wired. Not done: the vertical bar on the left
+  (OPT.Display.ScrollBarLeft, P3: egui draws it on the right edge of its area).
+
+## 2026-10-31 — M2 leftover: Ink Replay
+
+- Engine `draw.replay` (R.Draw.Replay.InkReplay): a toggle on `ViewState.ink_replay`,
+  enabled when the page has ink, no undo step; changing page stops it.
+- UI: `ink::Replay` draws the page's strokes progressively in page order, at 150 points a
+  second, with partial strokes. A bar over the page has Play/Pause, Rewind, the progress
+  and Close. Real drawing times aren't stored, so the pace is steady (unverified against
+  the reference).
+
+## 2026-10-31 — The Tag menu
+
+- A right click on a note tag's icon opens the Tag menu (`context_menu::TAG_MENU`: Check,
+  Uncheck, Remove, Find Tags, Customize Tags, Add to Custom Tags) for that tag.
+  `ParaLayout.tag_icons` holds the icon areas, `ContextTarget::Tag` the target, and
+  `ViewState.context_tag` the clicked tag's key. tag.check, tag.uncheck and tag.remove use
+  that key when given none (tag.checkAll ignores it).
+- UI.Window.DragDrop wired, with notes (dropped text and dragged sections are still to do).
+## 2026-10-31 — M3/P1: keyboard rows (context menu, search preview and scope)
+
+- `ui.contextMenu` (Shift+F10, KB.General.ContextMenu): sets `ViewState.menu_request`;
+  `context_menu::show` opens the selection's menu (selected object, lasso, else the caret's
+  paragraph) as the same popup a right click opens, placed at the selection
+  (`CanvasState.keyboard_menu_at`).
+- `search.previewNext` (KB.Search.PreviewNext): Down/Up in the search box open the next/previous
+  result (words highlighted), the dropdown stays open and marks it (`ViewState.search_preview`).
+  `search.scope` (KB.Search.ChangeScope) sets or cycles the scope; Tab reaches the scope button
+  and Space opens it.
+- KB.Table.RowAboveEnter and KB.Notebooks.OpenSection were implemented and tested already;
+  their tests now carry the row ids. 5 rows wired.
+
+## 2026-10-31 — Opening files from the file manager
+
+- `Session::open_path` (file.openNotebook and the command line) now takes a single `.one`
+  section, copied into the current notebook or into a new in-memory "OneNote Sections"
+  notebook when none is open (D12). A NoteCraft `.ncraft` section file opens the notebook
+  folder it belongs to. The desktop file's MIME types already listed both.
+## 2026-10-31 — M3/P1: Info Settings menu, Account theme, Move or Copy rows
+
+- File › Info › Settings ▾ gains Sync This Notebook Now and Open Backups (BS.Info.Settings).
+  File › Account's Office Theme row is pinned by its test (BS.Account.Theme; a UI preference,
+  the row names no engine command now). The page menu's Move or Copy… is tested
+  (CM.Page.CopyOrMoveToSection).
+- `page.moveOrCopy {version}` copies a page version as a new page into a section; the version
+  menu has Move or Copy to Section › a section (CM.PageVersion.CopyOrMoveToSection). 4 rows wired.
+
+## 2026-10-31 — M3: drag and drop in the navigation
+
+- The notebook tree records its rows each frame (`nav::NavDrop`: section, section group,
+  notebook). A section dragged in the tree goes before the section it is dropped on, into a
+  section group, or to the end of a notebook (another notebook too), through
+  `section.moveOrCopy`, with an accent line where it would land. A page dragged from the page
+  list onto a section in the tree moves there (`page.moveOrCopy`). UI test drags all three.
+- Catalog: UI.Window.DragDrop note extended (not yet: dropped text, notebooks dragged).
+
+## 2026-10-31 — Spelling suggestions in the context menu
+
+- A right click on a misspelled word selects it and the Text menu begins with its
+  suggestions, then Ignore All and Add to Dictionary (`context_menu::spelling_rows`,
+  `Session::misspelled_at`, `Session::set_spelling_word`). CM.Text.NoSpellingSuggestions and
+  CM.MisspelledWord.NoSpellingSuggestions wired.
+- docs/parity.md gains the OneNote import fidelity table, construct by construct.

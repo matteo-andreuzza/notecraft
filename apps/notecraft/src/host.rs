@@ -1,8 +1,9 @@
-//! The desktop's platform services for the UI: the system clock, the system file dialogs, the
-//! backups folder and the desktop's light/dark preference.
+//! The desktop's platform services for the UI: the system clock, the system file dialogs, opening
+//! a file with the desktop's handler, printing (`craft-print`), the backups folder and the
+//! desktop's light/dark preference.
 
 use notecraft_engine::Clock;
-use notecraft_ui_egui::Host;
+use notecraft_ui_egui::{Host, RichClip};
 
 use crate::desktop_theme::DesktopTheme;
 
@@ -13,13 +14,27 @@ pub struct DesktopHost {
     theme: DesktopTheme,
     /// The desktop's last answer.
     dark: Option<bool>,
+    /// The system clipboard (`arboard`), opened on first use and kept: on X11 the copied
+    /// contents are served by this object, so it must outlive the copy.
+    clipboard: Option<arboard::Clipboard>,
+    /// A screen clipping waiting for the desktop's answer.
+    clip: Option<crate::screen_clip::Clip>,
+    /// To wake the UI when an answer comes from another thread.
+    ctx: egui::Context,
 }
 
 impl DesktopHost {
     /// A host whose theme watcher asks `ctx` for a repaint when the desktop's preference changes.
     pub fn new(ctx: &egui::Context) -> DesktopHost {
-        let ctx = ctx.clone();
-        DesktopHost { theme: DesktopTheme::start(move || ctx.request_repaint()), dark: None }
+        let waker = ctx.clone();
+        DesktopHost { theme: DesktopTheme::start(move || waker.request_repaint()), dark: None, clipboard: None, clip: None, ctx: ctx.clone() }
+    }
+
+    fn clipboard(&mut self) -> Option<&mut arboard::Clipboard> {
+        if self.clipboard.is_none() {
+            self.clipboard = arboard::Clipboard::new().map_err(|e| log::info!("clipboard: {e}")).ok();
+        }
+        self.clipboard.as_mut()
     }
 }
 
@@ -42,8 +57,97 @@ impl Host for DesktopHost {
         rfd::FileDialog::new().set_title(title).set_file_name(default_name).save_file().map(|p| p.display().to_string())
     }
 
+    fn pick_file(&mut self, title: &str, filters: &[(&str, &[&str])]) -> Option<String> {
+        let mut d = rfd::FileDialog::new().set_title(title);
+        for (name, exts) in filters {
+            d = d.add_filter(*name, exts);
+        }
+        d.pick_file().map(|p| p.display().to_string())
+    }
+
+    fn printers(&mut self) -> Vec<(String, bool)> {
+        craft_print::printers().into_iter().map(|p| (p.name, p.default)).collect()
+    }
+
+    fn print_pdf(&mut self, path: &str, printer: Option<&str>, copies: u32, title: &str) -> Result<String, String> {
+        let pdf = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
+        let job = craft_print::Job { printer: printer.map(str::to_string), copies: copies.max(1), title: title.to_string(), ..Default::default() };
+        craft_print::submit(&pdf, &job).map_err(|e| format!("Printing failed: {e}"))
+    }
+
+    fn open_path(&mut self, path: &str) -> Result<(), String> {
+        // The desktop's own opener, reaped on a thread so the window never waits for it.
+        let opener = if cfg!(target_os = "macos") {
+            "open"
+        } else if cfg!(windows) {
+            "explorer"
+        } else {
+            "xdg-open"
+        };
+        let mut child = std::process::Command::new(opener)
+            .arg(path)
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| format!("couldn't open {path}: {e}"))?;
+        std::thread::spawn(move || child.wait());
+        Ok(())
+    }
+
+    fn read_clipboard(&mut self, image: bool) -> RichClip {
+        let Some(c) = self.clipboard() else { return RichClip::default() };
+        let text = c.get_text().ok().filter(|t| !t.is_empty());
+        let html = c.get().html().ok().filter(|h| !h.trim().is_empty());
+        let image = if image {
+            c.get_image().ok().and_then(|im| {
+                // Another program's picture is hostile input: sized before it's copied.
+                let (w, h) = (u32::try_from(im.width).ok()?, u32::try_from(im.height).ok()?);
+                let limits = notecraft_codecs::Limits::PICTURE;
+                if w == 0 || h == 0 || w > limits.max_side || h > limits.max_side || u64::from(w) * u64::from(h) > limits.max_pixels {
+                    return None;
+                }
+                notecraft_codecs::Rgba8::new(w, h, im.bytes.into_owned()).ok()
+            })
+        } else {
+            None
+        };
+        // Files copied in a file manager; only regular files, and not too many of them.
+        let files = c.get().file_list().unwrap_or_default().into_iter().filter(|p| p.is_file()).take(notecraft_ui_egui::MAX_PASTED_FILES).collect();
+        RichClip { text, html, image, files }
+    }
+
+    fn write_clipboard(&mut self, text: &str, html: &str, image: Option<&notecraft_codecs::Rgba8>) -> bool {
+        let Some(c) = self.clipboard() else { return false };
+        let r = match image {
+            Some(img) => c.set_image(arboard::ImageData {
+                width: img.width as usize,
+                height: img.height as usize,
+                bytes: std::borrow::Cow::Borrowed(&img.pixels),
+            }),
+            None if !html.is_empty() => c.set_html(html, Some(text)),
+            None => c.set_text(text),
+        };
+        r.map_err(|e| log::info!("clipboard: {e}")).is_ok()
+    }
+
     fn backup_folder(&self) -> Option<String> {
         notecraft_automation::keyfile::data_dir().map(|d| d.join("backups").display().to_string())
+    }
+
+    fn start_screen_clip(&mut self) -> Result<(), String> {
+        if self.clip.is_some() {
+            return Err("A screen clipping is already in progress.".into());
+        }
+        let ctx = self.ctx.clone();
+        self.clip = Some(crate::screen_clip::Clip::start(move || ctx.request_repaint())?);
+        Ok(())
+    }
+
+    fn take_screen_clip(&mut self) -> Option<Result<Vec<u8>, String>> {
+        let answer = self.clip.as_ref()?.take()?;
+        self.clip = None;
+        Some(answer)
     }
 
     fn prefers_dark(&mut self) -> Option<bool> {
@@ -51,5 +155,19 @@ impl Host for DesktopHost {
             self.dark = Some(changed);
         }
         self.dark
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    /// UI.Window.FileDialogs: the desktop host's file dialogs are rfd's, built with its default
+    /// features, whose Linux backend is the XDG desktop portal (no GTK linked in).
+    #[test]
+    fn file_dialogs_go_through_the_desktop_portal() {
+        let workspace = include_str!("../../../Cargo.toml");
+        let line = workspace.lines().find(|l| l.trim_start().starts_with("rfd ")).unwrap_or_default();
+        assert!(line.contains("\"0.17\"") && !line.contains("default-features"), "UI.Window.FileDialogs: {line}");
+        let app = include_str!("../Cargo.toml");
+        assert!(app.contains("rfd = { workspace = true }") && !app.contains("gtk3"), "UI.Window.FileDialogs");
     }
 }

@@ -43,11 +43,6 @@ impl Dirty {
     pub fn everything() -> Dirty {
         Dirty { all: true, structure: true, recycle: true, ..Dirty::default() }
     }
-
-    /// Whether nothing is dirty.
-    pub fn is_clean(&self) -> bool {
-        !self.all && !self.structure && !self.recycle && self.sections.is_empty()
-    }
 }
 
 /// Result of a save: what was written and what failed (and stays dirty).
@@ -227,7 +222,6 @@ impl NotebookStore {
         (toc, children)
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn load_section(
         &mut self,
         rel: &Path,
@@ -424,11 +418,6 @@ impl NotebookStore {
         std::fs::create_dir_all(&dir).map_err(|e| io(&dir, e))?;
         let bytes = encode_recycle(bin)?;
         craft_atomic::atomic_write(&p, &bytes).map_err(|e| io(&p, e))
-    }
-
-    /// The file holding section `id`, if it has been saved.
-    pub fn section_path(&self, id: notecraft_doc::Id) -> Option<PathBuf> {
-        self.layout.get(&id).map(|p| self.root.join(p))
     }
 }
 

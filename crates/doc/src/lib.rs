@@ -5,7 +5,10 @@
 //!
 //! ```text
 //! Workspace ─ Notebook ─┬─ SectionGroup ─ (Sections and SectionGroups, nested)
-//!                       ├─ Section ─ Page ─ PageObject::Outline ─ Paragraph ─ Run
+//!                       ├─ Section ─ Page ─┬─ PageObject::Outline ─ Paragraph ─ Run
+//!                       │                  ├─ PageObject::Table ─ TableRow ─ TableCell ─ Paragraph
+//!                       │                  ├─ PageObject::Image / Attachment ─ Blob (Arc'd bytes)
+//!                       │                  └─ PageObject::Ink (one stroke: points with pressure)
 //!                       └─ RecycleBin
 //! ```
 //!
@@ -19,34 +22,26 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 pub mod id;
+pub mod ink;
+pub mod media;
 pub mod notebook;
 pub mod page;
+pub mod table;
 pub mod tags;
 pub mod text;
 pub mod time;
 
 pub use id::{Id, IdGen};
-pub use notebook::{DeletedPage, DeletedSection, NavNode, Notebook, RecycleBin, Section, SectionColor, SectionGroup, Workspace, clean_name};
-pub use page::{Outline, OutlineWidth, Page, PageObject, PageSetup, PaperSize, RuleLines};
+pub use ink::{Ink, InkPoint, InkTool};
+pub use media::{Attachment, Blob, Image};
+pub use notebook::{
+    DeletedPage, DeletedSection, NavNode, Notebook, Protection, RecycleBin, Section, SectionColor, SectionGroup, Workspace, clean_name,
+};
+pub use page::{MAX_VERSIONS, Outline, OutlineWidth, Page, PageObject, PageSetup, PageVersion, PaperSize, RuleLines};
+pub use table::{Table, TableCell, TableRow};
 pub use tags::{TagDef, TagSymbol, TagUse, builtin_tags};
-pub use text::{Align, Bullet, CharFormat, ListFormat, Numbering, ParaStyle, Paragraph, Run, Script, StyleDef, sanitize_text};
+pub use text::{Align, Bullet, CharFormat, ListFormat, MathView, Numbering, ParaStyle, Paragraph, Run, Script, StyleDef, sanitize_text};
 pub use time::{Civil, Timestamp};
 
 pub use notecraft_color as color;
 pub use notecraft_geom as geom;
-
-/// Errors from model operations.
-#[derive(Debug, thiserror::Error, Clone, PartialEq, Eq)]
-pub enum DocError {
-    /// No object with this id.
-    #[error("no {kind} with id {id}")]
-    NotFound {
-        /// What was looked for.
-        kind: &'static str,
-        /// The id.
-        id: Id,
-    },
-    /// The operation would break an invariant.
-    #[error("{0}")]
-    Invalid(String),
-}

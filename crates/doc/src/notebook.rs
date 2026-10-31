@@ -66,12 +66,39 @@ pub struct Section {
     /// When the section was created.
     #[serde(default)]
     pub created: Timestamp,
+    /// The template new pages of this section start from (Templates › Choose default template;
+    /// decision D10): `builtin:<slug>` or `my:<name>`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_template: Option<String>,
+    /// Password protection (decision D15). Never part of the section's own JSON: a protected
+    /// section is written as a sealed file whose clear header carries this.
+    #[serde(skip)]
+    pub protection: Option<Protection>,
+}
+
+/// How a password-protected section's key is derived, and its sealed file while locked
+/// (decision D15). The key itself is never stored here: the engine keeps it in memory while
+/// the section is unlocked.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Protection {
+    /// The Argon2id salt.
+    pub salt: Vec<u8>,
+    /// Argon2id memory cost (KiB), passes and lanes.
+    pub kdf: [u32; 3],
+    /// The sealed file, while the section is locked: its pages are then not in memory
+    /// (`pages` is empty) and saving writes these bytes back unchanged.
+    pub locked: Option<Arc<[u8]>>,
 }
 
 impl Section {
     /// A new empty section.
     pub fn new(id: Id, name: &str, color: SectionColor, now: Timestamp) -> Section {
-        Section { id, name: clean_name(name), color, pages: Vec::new(), created: now }
+        Section { id, name: clean_name(name), color, pages: Vec::new(), created: now, default_template: None, protection: None }
+    }
+
+    /// Whether the section has a password and is locked (its pages are not in memory).
+    pub fn is_locked(&self) -> bool {
+        self.protection.as_ref().is_some_and(|p| p.locked.is_some())
     }
 
     /// Index of the page with `id`.
@@ -92,21 +119,7 @@ impl Section {
 
     /// Whether page `i` is hidden in the page list because a parent page is collapsed.
     pub fn page_hidden(&self, i: usize) -> bool {
-        let Some(p) = self.pages.get(i) else { return true };
-        let mut need = p.level;
-        for j in (0..i).rev() {
-            let Some(q) = self.pages.get(j) else { break };
-            if q.level < need {
-                if q.collapsed {
-                    return true;
-                }
-                need = q.level;
-                if need == 0 {
-                    break;
-                }
-            }
-        }
-        false
+        crate::page::hidden_under_collapsed(&self.pages, i, |p| (p.level, p.collapsed))
     }
 
     /// Enforce invariants: the first page is top level and no page is more than one level
@@ -126,6 +139,39 @@ impl Section {
             }
             prev = Some(p.level);
         }
+    }
+}
+
+impl Section {
+    /// Normalise every page in full (outlines, tables, paragraphs, positions), not only the
+    /// page order: for data loaded from disk, which is hostile. `normalize` stays cheap for the
+    /// engine, which keeps pages normal as it edits them.
+    pub fn normalize_pages(&mut self) {
+        for p in &mut self.pages {
+            let pm = Arc::make_mut(p);
+            pm.normalize();
+            pm.sanitize_positions();
+        }
+        self.normalize();
+    }
+}
+
+impl Notebook {
+    /// [`Section::normalize_pages`] for every section, then [`Notebook::normalize`].
+    pub fn normalize_pages(&mut self) {
+        fn walk(nodes: &mut [NavNode], depth: usize) {
+            if depth > MAX_GROUP_DEPTH {
+                return;
+            }
+            for n in nodes {
+                match n {
+                    NavNode::Group(g) => walk(&mut g.children, depth + 1),
+                    NavNode::Section(s) => Arc::make_mut(s).normalize_pages(),
+                }
+            }
+        }
+        walk(&mut self.children, 0);
+        self.normalize();
     }
 }
 

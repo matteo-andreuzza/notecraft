@@ -24,7 +24,8 @@ fn present(h: &Harness<'static, NoteApp>, row: &str, label: &str) {
     assert!(h.query_by_label(label).is_some(), "{row}: no control labelled `{label}`");
 }
 
-fn harness(app: NoteApp) -> Harness<'static, NoteApp> {
+/// A 1280 × 800 harness running the whole window.
+pub(crate) fn harness(app: NoteApp) -> Harness<'static, NoteApp> {
     Harness::builder().with_size(egui::vec2(1280.0, 800.0)).build_ui_state(|ui, app: &mut NoteApp| app.ui(ui), app)
 }
 
@@ -295,6 +296,7 @@ fn highlighted_text_stays_readable_in_the_dark_theme() {
 
 #[test]
 fn the_office_theme_is_picked_in_the_account_page_and_follows_the_system() {
+    // parity: BS.Account.Theme
     // UI.Window.DarkMode: File › Account › Office Theme lists Colorful, Dark Gray, Black, White
     // and "Use system setting"; picking one restyles the window at once.
     let mut h = harness(app());
@@ -419,4 +421,1049 @@ fn the_notebook_tree_quick_notes_and_sort_work() {
     let mut sorted = titles.clone();
     sorted.sort();
     assert_eq!(titles, sorted, "UI.Nav.SortPages (was led by {first})");
+}
+
+#[test]
+fn insert_table_dialog_opens_from_the_ribbon_and_inserts() {
+    // parity: UI.Dialogs.InsertTable, R.Insert.Tables.TableInsert
+    let a = app();
+    assert_eq!(crate::ribbon::dialog_for(&a, "R.Insert.Tables.TableInsert"), Some(crate::dialogs::Dialog::InsertTable(2, 2)));
+    let mut a = a;
+    a.session.run("page.new", json!({})).unwrap();
+    a.ui.dialog = Some(crate::dialogs::Dialog::InsertTable(4, 3));
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Insert Table").is_some(), "UI.Dialogs.InsertTable shows");
+    h.get_by_label("OK").click();
+    h.run();
+    let page = h.state().session.page().unwrap().clone();
+    let t = page.objects.iter().find_map(|o| o.as_table()).expect("a table was inserted");
+    assert_eq!((t.n_rows(), t.n_cols()), (3, 4), "the dialog's rows/columns reached insert.tableDialog");
+    assert!(h.state().ui.dialog.is_none(), "OK closes the dialog");
+}
+
+#[test]
+fn paragraph_spacing_dialog_shows_the_paragraph_and_sets_it() {
+    // parity: UI.Dialogs.ParagraphSpacing
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 40.0, "y": 100.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "spaced"})).unwrap();
+    a.session.run("para.spacingDialog", json!({"before": 3, "after": 4, "line": 5})).unwrap();
+    // The dialog opens with the caret paragraph's before, after and at-least line spacing.
+    assert_eq!(crate::ribbon::dialog_for(&a, "R.Home.BasicText.ParagraphSpacingOptions"), Some(Dialog::Spacing(3.0, 4.0, 5.0)));
+    a.ui.dialog = Some(Dialog::Spacing(6.0, 12.0, 18.0));
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Paragraph Spacing").is_some(), "UI.Dialogs.ParagraphSpacing shows");
+    assert!(h.query_by_label("Line Spacing (at least):").is_some());
+    h.get_by_label("OK").click();
+    h.run();
+    let s = &h.state().session;
+    let r = s.text_range().unwrap();
+    let p = notecraft_engine::Session::block_paras(s.page().unwrap(), r.head.block).unwrap()[r.head.para].clone();
+    assert_eq!((p.space_before, p.space_after, p.line_spacing), (6.0, 12.0, 18.0), "OK applies the three values");
+    assert!(h.state().ui.dialog.is_none(), "OK closes the dialog");
+}
+
+#[test]
+fn notebook_properties_dialog_renames_the_notebook() {
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    let nb = a.session.notebook().unwrap().id;
+    a.ui.dialog = Some(Dialog::NotebookProperties(nb, "Field notes".into()));
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Notebook Properties").is_some(), "UI.Dialogs.NotebookProperties");
+    h.get_by_label("OK").click();
+    h.run();
+    assert_eq!(h.state().session.notebook().unwrap().name, "Field notes", "OK sets the display name");
+}
+
+#[test]
+fn the_sort_menu_and_dialog_sort_the_table() {
+    // parity: CT.TableLayout.Data.SortMenu
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 40.0, "y": 100.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "Fruit\tShop\npear\tB\napple\tA\nfig\tB"})).unwrap();
+    a.session.run("edit.selectAll", json!({})).unwrap();
+    a.session.run("edit.selectAll", json!({})).unwrap();
+    a.session.run("insert.convertTextToTable", json!({})).unwrap();
+    let table = |a: &NoteApp| a.session.page().unwrap().objects.iter().find_map(|o| o.as_table().cloned()).unwrap();
+    let c = table(&a).rows[1].cells[0].id;
+    a.session.run("caret.set", json!({"block": c.to_string(), "para": 0, "offset": 0})).unwrap();
+    a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    a.ui.tab = "Table Layout".into();
+    let mut h = harness(a);
+    h.run();
+    let fruit = |h: &Harness<'static, NoteApp>| table(h.state()).rows.iter().map(|r| r.cells[0].text()).collect::<Vec<_>>();
+    let from_menu = |h: &mut Harness<'static, NoteApp>, item: &str| {
+        h.get_by_label("Sort").click();
+        h.run();
+        h.get_by_label(item).click();
+        h.run();
+    };
+    from_menu(&mut h, "Header Row");
+    assert!(table(h.state()).header_row);
+    from_menu(&mut h, "Sort Descending");
+    assert_eq!(fruit(&h), vec!["Fruit", "pear", "fig", "apple"]);
+    // Sort… opens on the caret's column, ascending, with the table's header row setting.
+    from_menu(&mut h, "Sort…");
+    assert_eq!(h.state().ui.dialog, Some(Dialog::SortTable { by: [Some(0), None], descending: [false, false], header: true }));
+    // By shop, then by fruit falling; with a header row the columns go by its text.
+    h.state_mut().ui.dialog = Some(Dialog::SortTable { by: [Some(1), Some(0)], descending: [false, true], header: true });
+    h.run();
+    let combos: Vec<String> = h.query_all_by_role(egui::accesskit::Role::ComboBox).filter_map(|n| n.value()).collect();
+    assert_eq!(combos, vec!["Shop", "Fruit"], "columns named by the header row");
+    h.get_by_label("OK").click();
+    h.run();
+    assert_eq!(fruit(&h), vec!["Fruit", "apple", "pear", "fig"]);
+    assert!(h.state().ui.dialog.is_none(), "OK closes the dialog");
+}
+
+#[test]
+fn the_templates_pane_adds_pages_and_saves_the_current_one() {
+    // parity: UI.Panes.Templates, R.Insert.Pages.PageTemplatesTaskpane, R.Insert.Pages.StationeryMostRecentlyUsedList
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    a.ui.tab = "Insert".into();
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Page Templates").click();
+    h.run();
+    assert!(h.state().session.view.templates_pane, "Insert › Page Templates opens the pane");
+    h.get_by_label("Business").click();
+    h.run();
+    let pages = h.state().session.section().unwrap().pages.len();
+    h.get_by_label("Meeting notes").click();
+    h.run();
+    assert_eq!(h.state().session.section().unwrap().pages.len(), pages + 1, "a click adds a page from the template");
+    assert!(
+        h.state()
+            .session
+            .page()
+            .unwrap()
+            .objects
+            .iter()
+            .filter_map(|o| o.as_outline())
+            .any(|o| o.paragraphs.iter().any(|p| p.text() == "Action items"))
+    );
+    assert!(h.query_by_label("Recently Used Templates").is_some());
+    // Save current page as a template: a name, and it lists under My Templates.
+    h.get_by_label("Save current page as a template").click();
+    h.run();
+    assert!(matches!(h.state().ui.dialog, Some(Dialog::SaveTemplate { .. })));
+    h.state_mut().ui.dialog = Some(Dialog::SaveTemplate { name: "Standup".into(), default: true });
+    h.run();
+    h.get_by_label("Save").click();
+    h.run();
+    assert_eq!(h.state().session.prefs.templates.len(), 1);
+    assert_eq!(h.state().session.section().unwrap().default_template.as_deref(), Some("my:Standup"));
+    assert!(h.query_by_label("Standup").is_some(), "My Templates lists it");
+    // The split button's drop-down lists recently used templates by name.
+    h.get_by_label("Page Templates").click();
+    h.run();
+    h.get_by_label("Page Templates").click();
+    h.run();
+    assert!(h.state().session.view.templates_pane, "a second click on the icon half closes and a third reopens it");
+}
+
+#[test]
+fn the_paper_size_pane_sets_the_page_paper() {
+    // parity: UI.Panes.PaperSize, UI.Panes.PaperSize.SaveTemplate
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    a.ui.tab = "View".into();
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Paper Size").click();
+    h.run();
+    assert!(h.state().session.view.paper_pane, "View › Paper Size opens the pane");
+    assert!(h.state().session.page().unwrap().setup.paper.is_none());
+    let combo = |h: &Harness<'static, NoteApp>, value: &str| {
+        h.query_all_by_role(egui::accesskit::Role::ComboBox).find(|n| n.value().as_deref() == Some(value)).expect(value).click();
+    };
+    combo(&h, "Auto");
+    h.run();
+    h.get_by_label("A4").click();
+    h.run();
+    let ps = h.state().session.page().unwrap().setup.paper.expect("A4 sets a paper size");
+    assert!((ps.width - 595.3).abs() < 0.2, "{ps:?}");
+    combo(&h, "Portrait");
+    h.run();
+    h.get_by_label("Landscape").click();
+    h.run();
+    let ps = h.state().session.page().unwrap().setup.paper.unwrap();
+    assert!(ps.width > ps.height, "Landscape turns the paper: {ps:?}");
+    h.get_by_label("Save current page as a template").click();
+    h.run();
+    assert!(matches!(h.state().ui.dialog, Some(Dialog::SaveTemplate { .. })));
+}
+
+#[test]
+fn the_recycle_bin_lists_deleted_items_and_restores_them() {
+    // parity: UI.Panes.RecycleBin
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    // Delete "Handy shortcuts" and the Meetings section.
+    let nb = a.session.notebook().unwrap().clone();
+    let handy = nb.sections()[0].pages.iter().find(|p| p.display_title() == "Handy shortcuts").unwrap().id;
+    let meetings = nb.sections().iter().find(|s| s.name == "Meetings").unwrap().id;
+    a.session.run("page.delete", json!({"page": handy.to_string()})).unwrap();
+    a.session.run("section.delete", json!({"section": meetings.to_string()})).unwrap();
+    a.session.run("history.recycleBin", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    for l in ["Notebook Recycle Bin", "Deleted Pages", "Deleted Sections", "Handy shortcuts", "Meetings", "Empty Recycle Bin"] {
+        assert!(h.query_by_label(l).is_some(), "{l}");
+    }
+    assert!(h.query_by_label_contains("From Getting Started").is_none(), "the dim line is painted, not a widget");
+    // Right-click the page: Restore puts it back and opens it; the bin closes.
+    h.get_by_label("Handy shortcuts").click_secondary();
+    h.run();
+    h.get_by_label("Restore").click();
+    h.run();
+    let st = h.state();
+    assert_eq!(st.session.sel.page, Some(handy), "the restored page opens");
+    assert!(st.session.view.recycle_view.is_none(), "and the bin closes");
+    assert_eq!(st.session.notebook().unwrap().recycle.pages.len(), 0);
+    // The section, through the bin again.
+    h.state_mut().session.run("history.recycleBin", json!({})).unwrap();
+    h.run();
+    h.get_all_by_label("Meetings").last().unwrap().click_secondary();
+    h.run();
+    h.get_by_label("Restore").click();
+    h.run();
+    assert!(h.state().session.notebook().unwrap().sections().iter().any(|s| s.id == meetings), "the section is back");
+    // An empty bin says so and can't be emptied; ✕ closes it.
+    h.state_mut().session.run("history.recycleBin", json!({})).unwrap();
+    h.run();
+    assert!(h.query_by_label_contains("The Recycle Bin is empty").is_some());
+    h.get_by_label("✕").click();
+    h.run();
+    assert!(h.state().session.view.recycle_view.is_none());
+    // Empty Recycle Bin asks first.
+    h.state_mut().session.run("page.delete", json!({})).unwrap();
+    h.state_mut().session.run("history.recycleBin", json!({})).unwrap();
+    h.run();
+    h.get_by_label("Empty Recycle Bin").click();
+    h.run();
+    assert!(matches!(h.state().ui.dialog, Some(Dialog::ConfirmEmptyBin)));
+}
+
+#[test]
+fn file_exit_saves_and_asks_to_close() {
+    // parity: BS.Exit
+    let mut a = app();
+    a.ui.backstage = Some(crate::Backstage::Info);
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Exit").click();
+    h.run();
+    assert!(h.state().session.quit_request, "file.exit ran");
+    let ctx = h.ctx.clone();
+    h.state_mut().logic(&ctx);
+    assert!(h.state().quit_requested, "the shell is told to close");
+}
+
+#[test]
+fn recent_edits_lists_changed_pages_and_opens_them() {
+    // parity: UI.Panes.RecentEdits, R.History.Authors.FindLastMonth
+    let mut a = app();
+    a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    a.ui.tab = "History".into();
+    let mut h = harness(a);
+    h.run();
+    // The icon half runs Today; the lower half opens the periods.
+    let open_menu = |h: &mut Harness<'static, NoteApp>| {
+        let r = h.get_all_by_label("Recent Edits").next().unwrap().rect();
+        crate::tests_canvas::click(h, egui::pos2(r.center().x, r.max.y - 4.0));
+        h.run();
+    };
+    h.get_by_label("Recent Edits").click();
+    h.run();
+    assert_eq!(h.state().session.view.recent_edits.as_deref(), Some("today"), "the split button's main part");
+    open_menu(&mut h);
+    h.get_by_label("All Pages Sorted by Date").click();
+    h.run();
+    assert_eq!(h.state().session.view.recent_edits.as_deref(), Some("all"), "the menu row opens the pane on its period");
+    let shows =
+        |h: &Harness<'static, NoteApp>, v: &str| h.query_all_by_role(egui::accesskit::Role::ComboBox).any(|n| n.value().as_deref() == Some(v));
+    assert!(shows(&h, "All Pages Sorted by Date"), "the pane shows the period");
+    // A click on a listed page opens it.
+    let target = h.state().session.notebook().unwrap().sections()[1].pages[0].clone();
+    h.get_all_by_label(&target.display_title()).last().unwrap().click();
+    h.run();
+    assert_eq!(h.state().session.sel.page, Some(target.id));
+    // Another period from the ribbon; ✕ closes the pane.
+    open_menu(&mut h);
+    h.get_by_label("Last 30 Days").click();
+    h.run();
+    assert_eq!(h.state().session.view.recent_edits.as_deref(), Some("30d"));
+}
+
+#[test]
+fn page_versions_show_under_the_page_open_read_only_and_restore() {
+    // parity: UI.Panes.PageVersions, CM.Page.PageVersionsShow, CM.PageVersion.PageVersionRestore, NC.Versions.Open, NC.Versions.ClosePreview
+    let mut a = app();
+    let original = a.session.page().unwrap().objects.clone();
+    // An edit an hour after the last one keeps the previous state as a version.
+    a.session.clock.now_ms += 3_600_000;
+    a.session.run("text.insert", json!({"text": "CHANGED "})).unwrap();
+    let v = a.session.page().unwrap().versions[0].clone();
+    let off = a.session.clock.utc_offset_min;
+    let label = format!("{} {}  {}", v.at.short_date(off), v.at.short_time(off), v.author);
+    let title = a.session.page().unwrap().display_title();
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label(&label).is_none(), "versions are hidden until asked for");
+    h.get_by_label(&title).click_secondary();
+    h.run();
+    h.get_by_label("Show Page Versions").click();
+    h.run();
+    h.get_by_label(&label).click();
+    h.run();
+    assert!(h.state().session.view.preview.is_some(), "a click shows the version");
+    for l in ["Restore Version", "Delete Version", "Close"] {
+        assert!(h.query_by_label(l).is_some(), "{l}");
+    }
+    assert!(!h.state().canvas.focused, "the keyboard can't reach the page underneath");
+    h.get_by_label("Close").click();
+    h.run();
+    assert!(h.state().session.view.preview.is_none());
+    h.get_by_label(&label).click();
+    h.run();
+    h.get_by_label("Restore Version").click();
+    h.run();
+    assert_eq!(h.state().session.page().unwrap().objects, original, "the old content is back");
+    assert!(h.state().session.view.preview.is_none());
+    // parity: CM.PageVersion.DeleteAllPageVersionsInNotebook, CM.PageVersion.PageVersionsHide, CM.Page.PageVersionsHide, R.History.History.PageVersionSplitButton
+    // The replaced state is a version now; the version menu deletes every version.
+    assert_eq!(h.state().session.page().unwrap().versions.len(), 2);
+    h.get_by_label(&label).click_secondary();
+    h.run();
+    h.get_by_label("Delete All Versions in Notebook").click();
+    h.run();
+    assert!(h.state().session.page().unwrap().versions.is_empty());
+    // Hide from the page menu; the History tab's button shows them again.
+    h.get_by_label(&title).click_secondary();
+    h.run();
+    h.get_by_label("Hide Page Versions").click();
+    h.run();
+    assert!(!h.state().session.view.page_versions);
+    h.state_mut().session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    h.state_mut().ui.tab = "History".into();
+    h.run();
+    h.get_by_label("Page Versions").click();
+    h.run();
+    assert!(h.state().session.view.page_versions, "the icon half switches them");
+}
+
+#[test]
+fn a_deleted_page_opens_read_only_from_the_recycle_bin() {
+    // parity: NC.Recycle.Preview
+    let mut a = app();
+    let page = a.session.page().unwrap().clone();
+    a.session.run("page.delete", json!({})).unwrap();
+    a.session.run("history.recycleBin", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label(&page.display_title()).click();
+    h.run();
+    assert_eq!(h.state().session.view.preview, Some(notecraft_engine::Preview::Deleted { page: page.id }));
+    assert!(h.query_by_label_contains("in the Notebook Recycle Bin").is_some());
+    // The bar's Restore (the hovered row shows one too; the bar is drawn after the column).
+    h.get_all_by_label("Restore").last().unwrap().click();
+    h.run();
+    assert_eq!(h.state().session.sel.page, Some(page.id), "restored and opened");
+    assert!(h.state().session.view.preview.is_none());
+}
+
+#[test]
+fn f1_opens_help_which_finds_and_runs_commands() {
+    // parity: R.Help.Help.Help, KB.App.Help, NC.Help.Search
+    let mut h = harness(app());
+    h.run();
+    h.key_press(egui::Key::F1);
+    h.run();
+    assert!(h.state().session.view.help_pane, "F1 opens Help");
+    // The box is labelled by the text above it (the query skips the label itself).
+    h.get_by_label("Search commands and shortcuts").click();
+    h.run();
+    h.get_by_label("Search commands and shortcuts").type_text("full page view");
+    h.run();
+    assert!(h.query_by_label("F11").is_some(), "the command is listed with its shortcut");
+    // The ribbon has a Full Page View button too; the pane is drawn after it.
+    h.get_all_by_label("Full Page View").last().unwrap().click();
+    h.run();
+    assert!(h.state().session.view.full_page, "a click runs it");
+}
+
+#[test]
+fn about_shows_the_version_from_the_account_page() {
+    // parity: BS.Account.About
+    let mut a = app();
+    a.ui.backstage = Some(crate::Backstage::Account);
+    let mut h = harness(a);
+    h.run();
+    h.get_by_role_and_label(egui::accesskit::Role::Button, "About NoteCraft").click();
+    h.run();
+    assert!(h.state().session.view.about);
+    assert!(h.query_by_label_contains(&format!("Version {}", env!("CARGO_PKG_VERSION"))).is_some());
+    h.get_by_label("OK").click();
+    h.run();
+    assert!(!h.state().session.view.about);
+}
+
+#[test]
+fn a_quick_note_shrinks_the_window_to_the_page() {
+    // parity: UI.Window.QuickNote, KB.General.QuickNote
+    let mut h = harness(app());
+    h.run_steps(3);
+    assert!(h.query_by_label("Insert").is_some());
+    h.key_press_modifiers(egui::Modifiers::COMMAND | egui::Modifiers::SHIFT, egui::Key::M);
+    h.run_steps(3);
+    let st = h.state();
+    assert!(st.session.view.quick_note, "Ctrl+Shift+M");
+    assert_eq!(st.session.section().unwrap().name, "Quick Notes");
+    assert!(st.ui.quick_note_shown && st.ui.quick_note_restore.is_some(), "the window was resized, its size kept");
+    assert!(h.query_by_label("Insert").is_none(), "no ribbon tabs in a Quick Note");
+    h.get_by_label("Open in the full window").click();
+    h.run_steps(3);
+    assert!(!h.state().session.view.quick_note);
+    assert!(!h.state().ui.quick_note_shown);
+    assert!(h.query_by_label("Insert").is_some(), "the full window is back");
+}
+
+#[test]
+fn customize_tags_reorders_removes_and_adds_tags() {
+    // parity: UI.Panes.CustomizeTags
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.ui.dialog = Some(Dialog::CustomizeTags(String::new()));
+    let mut h = harness(a);
+    h.run();
+    let keys = |h: &Harness<'static, NoteApp>| h.state().session.tag_defs().into_iter().map(|d| d.key).collect::<Vec<_>>();
+    // Select Question, move it up, then remove it.
+    h.get_by_label("Question").click();
+    h.run();
+    h.get_by_label("Move Up").click();
+    h.run();
+    assert_eq!(&keys(&h)[..3], &["todo", "question", "important"]);
+    assert!(h.query_by_label("Modify Tag").is_some(), "the selected tag can be modified");
+    h.get_by_label("Remove Tag").click();
+    h.run();
+    assert!(!keys(&h).contains(&"question".to_string()));
+    // A new tag goes on top.
+    h.state_mut().ui.dialog = Some(Dialog::CustomizeTags("Recipe".into()));
+    h.run();
+    h.get_by_label("Add").click();
+    h.run();
+    assert_eq!(h.state().session.tag_defs()[0].name, "Recipe");
+    h.get_by_label("Reset Tags").click();
+    h.run();
+    assert_eq!(&keys(&h)[..3], &["todo", "important", "question"], "built-ins back in order");
+    h.get_by_label("Close").click();
+    h.run();
+    assert!(h.state().ui.dialog.is_none());
+}
+
+#[test]
+fn pointing_between_page_tabs_adds_a_page_there() {
+    // parity: BEH.Pages.NewPageInsertion
+    let mut a = app();
+    // Meetings: two pages without subpages.
+    let sid = a.session.notebook().unwrap().sections()[1].id;
+    a.session.goto_section(sid).unwrap();
+    let first = a.session.section().unwrap().pages[0].clone();
+    let n = a.session.section().unwrap().pages.len();
+    let mut h = harness(a);
+    h.run();
+    let r = h.get_by_label(&first.display_title()).rect();
+    crate::tests_canvas::click(&mut h, egui::pos2(r.center().x, r.max.y - 2.0));
+    let sec = h.state().session.section().unwrap().clone();
+    assert_eq!(sec.pages.len(), n + 1, "a page was added");
+    assert_eq!(sec.pages[0].id, first.id);
+    assert_eq!(Some(sec.pages[1].id), h.state().session.sel.page, "right after the page, and opened");
+    // The middle of a row still just opens the page.
+    let r = h.get_by_label(&first.display_title()).rect();
+    crate::tests_canvas::click(&mut h, r.center());
+    assert_eq!(h.state().session.section().unwrap().pages.len(), n + 1);
+    assert_eq!(h.state().session.sel.page, Some(first.id));
+}
+
+#[test]
+fn ribbon_screentips_name_the_command_and_its_shortcut() {
+    // parity: UI.Ribbon.Tooltips
+    let mut a = app();
+    a.session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    let r = h.get_by_label("Bold").rect();
+    h.hover_at(r.center());
+    h.run_steps(80);
+    assert!(h.query_by_label_contains("Bold (Ctrl+B)").is_some(), "name and shortcut");
+    // A control that can't run says why.
+    h.state_mut().ui.tab = "Review".into();
+    h.run();
+    let r = h.get_by_label("Translate").rect();
+    h.hover_at(r.center());
+    h.run_steps(80);
+    assert!(h.query_all_by_label_contains("Translate\n").next().is_some(), "the name, then the reason it is disabled");
+}
+
+#[test]
+fn display_options_containers_navigation_side_and_new_page_button() {
+    // parity: OPT.Display.ShowNoteContainers, OPT.Display.NavBarLeft, OPT.Display.FloatingNewPage
+    use crate::canvas::container_framed;
+    assert!(container_framed(true, true, false), "pointing at a container frames it");
+    assert!(!container_framed(false, true, false), "not with Show note containers off");
+    assert!(container_framed(false, false, true), "a selected container is always framed");
+    assert!(!container_framed(true, false, false));
+    // The navigation on the right of the page.
+    let mut a = app();
+    a.session.prefs.nav_left = false;
+    a.session.prefs.floating_new_page = false;
+    let sid = a.session.notebook().unwrap().sections()[1].id;
+    a.session.goto_section(sid).unwrap();
+    let first = a.session.section().unwrap().pages[0].clone();
+    let n = a.session.section().unwrap().pages.len();
+    let mut h = harness(a);
+    h.run();
+    let tree = h.get_by_label("Sample Notebook").rect();
+    let title = h.get_all_by_label(&first.display_title()).next().unwrap().rect();
+    assert!(tree.min.x > 640.0 && title.min.x > 640.0, "notebooks and pages on the right: {tree:?} {title:?}");
+    // No insertion point: the lower edge of a tab just opens the page.
+    crate::tests_canvas::click(&mut h, egui::pos2(title.center().x, title.max.y - 2.0));
+    assert_eq!(h.state().session.section().unwrap().pages.len(), n);
+}
+
+#[test]
+fn a_long_page_has_scroll_bars() {
+    // parity: UI.Canvas.Scrollbars
+    let bars = |long: bool| {
+        let mut a = app();
+        if long {
+            for _ in 0..80 {
+                a.session.run("text.insert", json!({"text": "A line of a long page\n"})).unwrap();
+            }
+        }
+        let mut h = harness(a);
+        h.run_steps(3);
+        h.query_all_by_role(egui::accesskit::Role::ScrollBar).count()
+    };
+    assert!(bars(true) > bars(false), "the page gets a vertical scroll bar when it outgrows the window");
+}
+
+#[test]
+fn shift_f10_opens_the_context_menu_of_the_selection() {
+    // parity: KB.General.ContextMenu
+    let mut a = app();
+    let o = a.session.page().unwrap().objects.iter().find_map(|o| o.as_outline().map(|x| x.id)).unwrap();
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 2})).unwrap();
+    let mut h = harness(a);
+    h.state_mut().canvas.focused = true;
+    h.run_steps(3);
+    assert!(h.query_by_label("Link to Page").is_none());
+    h.key_press_modifiers(egui::Modifiers::SHIFT, egui::Key::F10);
+    h.run_steps(3);
+    assert!(h.query_by_label("Link to Page").is_some(), "the text menu at the caret");
+    h.key_press(egui::Key::Escape);
+    h.run_steps(3);
+    // A selected container: its own menu.
+    h.state_mut().session.run("object.select", json!({"ids": [o.to_string()]})).unwrap();
+    h.state_mut().session.run("ui.contextMenu", json!({})).unwrap();
+    h.run_steps(3);
+    assert!(h.query_by_label_contains("Order").is_some(), "the container menu");
+}
+
+#[test]
+fn down_in_the_search_box_previews_results() {
+    // parity: KB.Search.PreviewNext, KB.Search.ChangeScope
+    let mut a = app();
+    a.session.run("search.scopeAll", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Search notebooks").click();
+    h.run();
+    h.get_by_label("Search notebooks").type_text("the");
+    h.run();
+    let before = h.state().session.sel.page;
+    h.key_press(egui::Key::ArrowDown);
+    h.run();
+    h.key_press(egui::Key::ArrowDown);
+    h.run();
+    let st = h.state();
+    assert_eq!(st.session.view.search_preview.as_ref().map(|x| x.1), Some(1), "two results down");
+    assert!(st.ui.search_open, "the results stay open");
+    assert!(st.session.sel.page.is_some() && st.session.sel.page != before || before.is_some());
+    // Tab moves to the scope button; Space opens its choices.
+    h.key_press(egui::Key::Tab);
+    h.run();
+    h.key_press(egui::Key::Space);
+    h.run();
+    assert!(h.query_by_label("This Section Group").is_some(), "the scope choices");
+}
+
+#[test]
+fn the_info_page_settings_menu_and_the_page_menu_move_or_copy() {
+    // parity: BS.Info.Settings, CM.Page.CopyOrMoveToSection
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.ui.backstage = Some(crate::Backstage::Info);
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Settings ▾").click();
+    h.run();
+    for l in ["Properties…", "Sync This Notebook Now", "Close"] {
+        assert!(h.query_by_label(l).is_some(), "{l}");
+    }
+    h.get_by_label("Properties…").click();
+    h.run();
+    assert!(matches!(h.state().ui.dialog, Some(Dialog::NotebookProperties(..))));
+    // The page menu's Move or Copy… opens the dialog for that page.
+    let mut h = harness(app());
+    h.run();
+    let page = h.state().session.page().unwrap().clone();
+    h.get_by_label(&page.display_title()).click_secondary();
+    h.run();
+    h.get_by_label("Move or Copy…").click();
+    h.run();
+    assert!(matches!(h.state().ui.dialog, Some(Dialog::MovePage(id, _)) if id == page.id));
+}
+
+#[test]
+fn sections_and_pages_drag_in_the_navigation() {
+    // parity: UI.Window.DragDrop, BEH.Pages.DragReorder
+    use crate::tests_canvas::drag;
+    let mut h = harness(app());
+    h.run();
+    let names = |h: &Harness<'static, NoteApp>| -> Vec<String> {
+        h.state().session.notebook().unwrap().children.iter().map(|n| n.name().to_string()).collect()
+    };
+    assert_eq!(names(&h), ["Getting Started", "Meetings", "Projects", "Quick Notes"]);
+    // Quick Notes dropped on Meetings goes before it.
+    let from = h.get_by_label("Quick Notes").rect().center();
+    let to = h.get_by_label("Meetings").rect().center();
+    drag(&mut h, from, to);
+    assert_eq!(names(&h), ["Getting Started", "Quick Notes", "Meetings", "Projects"]);
+    // Getting Started dropped on the Projects group goes into it.
+    let from = h.get_by_label("Getting Started").rect().center();
+    let to = h.get_by_label("Projects").rect().center();
+    drag(&mut h, from, to);
+    assert_eq!(names(&h), ["Quick Notes", "Meetings", "Projects"]);
+    let in_group = h.state().session.notebook().unwrap().sections().iter().any(|s| s.name == "Getting Started");
+    assert!(in_group, "still in the notebook, inside the group");
+    // A page dragged onto a section in the tree moves there.
+    let first_meeting = h.state().session.notebook().unwrap().sections().iter().find(|s| s.name == "Meetings").unwrap().pages[0].id.to_string();
+    h.state_mut().session.run("nav.goto", json!({"page": first_meeting})).unwrap();
+    h.run();
+    let page = h.state().session.page().unwrap().clone();
+    let from = h.get_by_label(&page.display_title()).rect().center();
+    let to = h.get_by_label("Quick Notes").rect().center();
+    drag(&mut h, from, to);
+    let sec = h.state().session.notebook().unwrap().sections().into_iter().find(|s| s.name == "Quick Notes").unwrap().clone();
+    assert!(sec.pages.iter().any(|p| p.id == page.id), "the page moved to Quick Notes");
+}
+
+#[test]
+fn link_dialog_searches_pages_and_sections() {
+    // parity: UI.Dialogs.Link
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.ui.dialog = Some(crate::dialogs::Dialog::Link { url: String::new(), text: String::new(), filter: "retrospective".into() });
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label_contains("Retrospective").is_some(), "the page search narrows to a matching page");
+    // "› Garden" (the dialog's breadcrumb row), not a bare "Garden" (also the nav tree's own
+    // section row, always on screen behind the modal).
+    assert!(h.query_by_label_contains("› Garden").is_none(), "and excludes a non-matching one");
+    h.get_by_label_contains("Retrospective").click();
+    h.run();
+    let dialog = h.state().ui.dialog.clone();
+    let Some(crate::dialogs::Dialog::Link { url, .. }) = dialog else { panic!("dialog closed unexpectedly") };
+    assert!(url.starts_with("notecraft:page/"), "picking a page sets a notecraft:page/ link: {url}");
+}
+
+#[test]
+fn move_or_copy_dialogs_search_sections_and_notebooks() {
+    // parity: UI.Dialogs.MoveCopyPage, UI.Dialogs.MoveCopySection
+    let mut a = app();
+    let pid = a.session.page().unwrap().id;
+    a.ui.dialog = Some(crate::dialogs::Dialog::MovePage(pid, "garden".into()));
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label_contains("› Garden").is_some(), "UI.Dialogs.MoveCopyPage: the search matches a section");
+    assert!(h.query_by_label_contains("› Meetings").is_none(), "and excludes a non-matching one");
+    let sid = h.state().session.section().unwrap().id;
+    h.state_mut().ui.dialog = Some(crate::dialogs::Dialog::MoveSection(sid, "sample".into()));
+    h.run();
+    // Ambiguous as an exact label (the nav tree has its own "Sample Notebook" row behind the
+    // modal), so count instead of a single query.
+    assert!(h.query_all_by_label("Sample Notebook").count() >= 1, "UI.Dialogs.MoveCopySection: the search matches a notebook");
+}
+
+#[test]
+fn notebook_list_dialog_switches_notebooks() {
+    // parity: UI.Nav.NotebookList
+    let mut a = app();
+    a.session.run("file.newNotebook", json!({"name": "Second"})).unwrap();
+    let first = a.session.ws.notebooks[0].id;
+    let second = a.session.ws.notebooks[1].id;
+    assert_eq!(a.session.sel.notebook, Some(second), "the new notebook is selected");
+    // The nav tree has its own row per notebook too: hide it so the dialog's labels are
+    // unambiguous (collapsing navigation is itself a normal, tested action — UI.Nav.Toggle).
+    a.session.view.notebook_pane_collapsed = true;
+    a.ui.dialog = Some(crate::dialogs::Dialog::NotebookList);
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Sample Notebook").is_some(), "UI.Nav.NotebookList (Ctrl+G) lists every open notebook");
+    h.get_by_label("Sample Notebook").click();
+    h.run();
+    assert_eq!(h.state().session.sel.notebook, Some(first), "picking one selects it");
+    assert!(h.state().ui.dialog.is_none(), "and closes the dialog");
+}
+
+#[test]
+fn recent_notebooks_show_in_the_open_backstage_page() {
+    // parity: BS.Open.RecentNotebooks
+    let mut a = app();
+    a.ui.recent_notebooks = vec!["/notebooks/Garden Club".into()];
+    a.ui.backstage = Some(crate::Backstage::Open);
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Garden Club").click();
+    h.run();
+    // The path doesn't exist in the test sandbox, so the open fails — but the click reached
+    // file.openRecent, which is what this row is about.
+    assert!(h.state().ui.status.is_some(), "clicking a recent notebook ran file.openRecent");
+}
+
+#[test]
+fn symbol_dialog_inserts_a_symbol_at_the_caret() {
+    // parity: UI.Dialogs.Symbol, R.Insert.Symbols.SymbolsDialog
+    let a = app();
+    assert_eq!(crate::ribbon::dialog_for(&a, "R.Insert.Symbols.SymbolsDialog"), Some(crate::dialogs::Dialog::Symbol));
+    // R.Insert.Symbols.SymbolInsertGallery: the gallery trigger opens the same dialog (a plain
+    // inline gallery would need its own popup; this is the simpler, still-honest choice).
+    assert_eq!(crate::ribbon::dialog_for(&a, "R.Insert.Symbols.SymbolInsertGallery"), Some(crate::dialogs::Dialog::Symbol));
+    let mut a = a;
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 40.0, "y": 100.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "Price: "})).unwrap();
+    a.ui.dialog = Some(crate::dialogs::Dialog::Symbol);
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("€").is_some(), "UI.Dialogs.Symbol shows the symbol grid");
+    h.get_by_label("€").click();
+    h.run();
+    assert_eq!(h.state().session.page().unwrap().plain_text().trim(), "Price: €");
+    assert!(h.state().ui.dialog.is_none(), "picking a symbol closes the dialog");
+}
+
+#[test]
+fn options_page_has_the_office_theme_too() {
+    // parity: UI.Dialogs.Options, OPT.General.OfficeTheme
+    let mut h = harness(app());
+    h.state_mut().ui.backstage = Some(crate::Backstage::Options);
+    h.run();
+    present(&h, "UI.Dialogs.Options", "Office Theme");
+    h.get_by_label("Black").click();
+    h.run();
+    assert_eq!(h.state().ui.theme, crate::ThemeKind::Black, "OPT.General.OfficeTheme: picked from the Options page too");
+}
+
+#[test]
+fn the_options_dialog_applies_on_ok_and_forgets_on_cancel() {
+    // parity: UI.Dialogs.Options
+    let mut h = harness(app());
+    h.state_mut().ui.backstage = Some(crate::Backstage::Options);
+    h.run();
+    for page in crate::options::OptionsPage::ALL {
+        present(&h, "UI.Dialogs.Options", page.label());
+    }
+    h.get_by_label("Advanced").click();
+    h.run();
+    h.get_by_label("Calculate mathematical expressions automatically").click();
+    h.run();
+    assert!(h.state().session.prefs.calculate_math, "nothing changes before OK");
+    h.get_by_label("OK").click();
+    h.run();
+    assert!(!h.state().session.prefs.calculate_math, "OPT.Advanced.CalculateMath");
+    assert_eq!(h.state().ui.backstage, None, "OK closes the dialog and the backstage");
+    // Cancel forgets.
+    h.state_mut().ui.backstage = Some(crate::Backstage::Options);
+    h.run();
+    h.get_by_label("Display").click();
+    h.run();
+    h.get_by_label("Show note containers on pages").click();
+    h.run();
+    h.get_by_label("Cancel").click();
+    h.run();
+    assert!(h.state().session.prefs.show_note_containers, "Cancel leaves the option as it was");
+    assert_eq!(h.state().ui.options_draft, None);
+}
+
+#[test]
+fn options_turn_off_the_mini_toolbar_and_the_paste_options_button() {
+    let mut a = app();
+    a.session.run("file.options", json!({"set": {"show_mini_toolbar": false, "show_paste_options": false}})).unwrap();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 60.0, "y": 120.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "Some words"})).unwrap();
+    let o = a.session.page().unwrap().objects[0].id();
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 0})).unwrap();
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 0, "offset": 4, "extend": true})).unwrap();
+    a.canvas.focused = true;
+    a.ui.tab = "View".into();
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Bold").is_none(), "OPT.General.ShowMiniToolbar");
+    let ctx = h.ctx.clone();
+    h.state_mut().run(&ctx, "edit.paste", json!({"text": "x"}));
+    assert_eq!(h.state().ui.paste_shown_at, None, "OPT.Advanced.ShowPasteOptions");
+}
+
+#[test]
+fn a_locked_section_asks_for_its_password_instead_of_showing_a_page() {
+    // parity: UI.Panes.Password
+    let mut a = app();
+    a.session.run("section.setPassword", json!({"password": "pw"})).unwrap();
+    a.session.run("review.password", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    present(&h, "UI.Panes.Password", "Password Protection");
+    present(&h, "UI.Panes.Password", "Change Password…");
+    h.get_by_label("Lock All  (Ctrl+Alt+L)").click();
+    h.run();
+    let sid = h.state().session.section().unwrap().id;
+    assert!(h.state().session.ws.section(sid).unwrap().is_locked(), "KB.Protect.LockAll from the pane");
+    present(&h, "BEH.Password.Lock", "Unlock");
+    h.state_mut().ui.password.unlock = "pw".into();
+    h.get_by_label("Unlock").click();
+    h.run();
+    assert!(!h.state().session.ws.section(sid).unwrap().is_locked(), "BEH.Password.Lock: unlocked from the prompt");
+    assert!(h.state().ui.password.unlock.is_empty(), "the typed password is cleared");
+}
+
+/// A small dictionary for spelling tests.
+pub(crate) fn test_dictionary() -> notecraft_spell::Dictionary {
+    let aff = "SET UTF-8\nTRY esianrtolcdugmphbyfvkwz\n";
+    let dic = "5\nthe\ncat\nsat\non\nmat\n";
+    notecraft_spell::Dictionary::load(aff.as_bytes(), dic.as_bytes()).unwrap()
+}
+
+#[test]
+fn the_spelling_pane_shows_the_word_and_fixes_it_with_a_suggestion() {
+    // parity: UI.Panes.Spelling
+    let mut a = app();
+    a.session.set_dictionary("en_US", test_dictionary());
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 60.0, "y": 120.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "the cta sat"})).unwrap();
+    assert_eq!(a.session.misspelled("the cta sat"), vec![4..7]);
+    a.ui.tab = "View".into();
+    let mut h = harness(a);
+    h.run();
+    let ctx = h.ctx.clone();
+    h.state_mut().run(&ctx, "review.spelling", json!({}));
+    h.run();
+    present(&h, "UI.Panes.Spelling", "Not in Dictionary");
+    h.get_by_label("cat").click();
+    h.run();
+    let o = h.state().session.page().unwrap().objects[0].as_outline().unwrap().paragraphs[0].text();
+    assert_eq!(o, "the cat sat");
+}
+
+#[test]
+fn the_paragraph_alignment_menu_aligns_the_paragraph() {
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 60.0, "y": 120.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "centre me"})).unwrap();
+    a.canvas.focused = true;
+    let mut h = harness(a);
+    h.run();
+    let menu = h.get_by_label_contains("Paragraph Alignment");
+    menu.click();
+    h.run();
+    for item in ["Align Left", "Center", "Align Right"] {
+        assert!(h.query_by_label_contains(item).is_some(), "R.Home.BasicText.ParagraphAlignmentMenu: {item}");
+    }
+    h.get_by_label_contains("Center").click();
+    h.run();
+    let p = h.state().session.page().unwrap().objects[0].as_outline().unwrap().paragraphs[0].clone();
+    assert_eq!(p.align, notecraft_engine::doc::Align::Center, "R.Home.BasicText.ParagraphAlignmentMenu");
+}
+
+#[test]
+fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
+    // parity: UI.Dialogs.CustomizeQAT
+    let mut h = harness(app());
+    h.run();
+    assert!(h.query_by_label("Redo").is_none(), "Redo is not on the toolbar by default");
+    h.get_by_label("Customize Quick Access Toolbar").click();
+    h.run();
+    h.get_by_label("Redo").click();
+    h.run();
+    assert!(h.state().ui.qat.contains(&"QAT.RedoButton".to_string()), "QAT.RedoButton: switched on from the menu");
+    // More Commands… opens the Options page, where any QAT command can be added.
+    if h.query_by_label("More Commands…").is_none() {
+        h.get_by_label("Customize Quick Access Toolbar").click();
+        h.run();
+    }
+    h.get_by_label("More Commands…").click();
+    h.run();
+    assert_eq!(h.state().ui.options_page, crate::options::OptionsPage::QuickAccessToolbar, "OPT.QuickAccessToolbar.CustomizeQAT");
+    for id in [
+        "QAT.FilePrint",
+        "QAT.FilePrintPreview",
+        "QAT.NR.PasteSourceFormatting",
+        "QAT.NR.PasteMergeFormatting",
+        "QAT.NR.PasteTextOnly",
+        "QAT.NR.OpenBackup",
+        "QAT.NR.JotOpenFile",
+        "QAT.NR.NotebookSaveAs",
+        "QAT.NR.ApplicationOptionsDialog",
+    ] {
+        assert!(crate::qat::available().iter().any(|a| a == id), "{id} can be added");
+    }
+    h.get_by_label("Print Preview").click();
+    h.run();
+    h.get_by_label("Add >>").click();
+    h.run();
+    assert!(h.state().ui.qat.contains(&"QAT.FilePrintPreview".to_string()), "QAT.FilePrintPreview: added from the Options page");
+    // A remembered list is cleaned: unknown and repeated ids go.
+    let mut list = vec!["QAT.UndoButton".to_string(), "nope".into(), "QAT.UndoButton".into()];
+    crate::qat::normalize(&mut list);
+    assert_eq!(list, ["QAT.UndoButton"]);
+}
+
+#[test]
+fn quick_access_buttons_run_their_commands() {
+    let mut a = app();
+    a.ui.qat = vec!["QAT.NR.ApplicationOptionsDialog".into(), "QAT.RedoButton".into()];
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Options").click();
+    h.run();
+    assert_eq!(h.state().ui.backstage, Some(crate::Backstage::Options), "QAT.NR.ApplicationOptionsDialog");
+}
+
+/// A host whose save dialog answers with a fixed path.
+struct SaveHost(String);
+
+impl crate::Host for SaveHost {
+    fn clock(&self) -> notecraft_engine::Clock {
+        notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 }
+    }
+    fn save_file(&mut self, _title: &str, _default_name: &str) -> Option<String> {
+        Some(self.0.clone())
+    }
+}
+
+#[test]
+fn the_export_page_exports_the_section_as_markdown() {
+    let dir = std::env::temp_dir().join(format!("notecraft-ui-export-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("section.md");
+    let mut s = notecraft_engine::Session::with_sample(notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 });
+    s.prefs.author = "Tester".into();
+    let first = s.section().unwrap().pages.first().unwrap().display_title();
+    let mut a = NoteApp::new(s, Box::new(SaveHost(path.to_string_lossy().into_owned())));
+    a.ui.backstage = Some(crate::Backstage::Export);
+    let mut h = harness(a);
+    h.run();
+    // Formats not written yet are listed, disabled (BS.Export.FormatXps).
+    assert!(h.query_by_label("XPS (*.xps)").is_some());
+    h.get_by_label("Section").click();
+    h.run();
+    assert_eq!(h.state().ui.export_scope, "section", "BS.Export.Section");
+    h.get_by_label("Markdown (*.md)").click();
+    h.run();
+    h.get_by_label("Export…").click();
+    h.run();
+    let text = std::fs::read_to_string(&path).unwrap_or_default();
+    assert!(text.starts_with(&format!("# {first}")), "{text}");
+    assert_eq!(h.state().ui.backstage, None, "the backstage closes after exporting");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A host with two printers that records what it was asked to print.
+struct PrintHost(std::rc::Rc<std::cell::RefCell<Vec<(String, Option<String>, u32)>>>);
+
+impl crate::Host for PrintHost {
+    fn clock(&self) -> notecraft_engine::Clock {
+        notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 }
+    }
+    fn printers(&mut self) -> Vec<(String, bool)> {
+        vec![("Office".into(), false), ("Desk".into(), true)]
+    }
+    fn print_pdf(&mut self, path: &str, printer: Option<&str>, copies: u32, _title: &str) -> Result<String, String> {
+        assert!(std::fs::read(path).unwrap().starts_with(b"%PDF-"), "a print-ready PDF");
+        self.0.borrow_mut().push((path.to_string(), printer.map(str::to_string), copies));
+        Ok("request id is Desk-1".into())
+    }
+}
+
+#[test]
+fn ctrl_p_opens_print_and_print_sends_the_pdf() {
+    if notecraft_fonts::page_fonts().regular.is_none() {
+        return;
+    }
+    let jobs = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let mut s = notecraft_engine::Session::with_sample(notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 });
+    s.prefs.author = "Tester".into();
+    let a = NoteApp::new(s, Box::new(PrintHost(jobs.clone())));
+    let mut h = harness(a);
+    h.run();
+    // KB.Pages.Print: Ctrl+P opens File › Print.
+    h.event(egui::Event::Key { key: egui::Key::P, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::COMMAND });
+    h.run();
+    assert_eq!(h.state().ui.backstage, Some(crate::Backstage::Print), "BS.Print.Print");
+    assert_eq!(h.state().ui.print_printer.as_deref(), Some("Desk"), "the default printer is chosen");
+    h.state_mut().ui.print_copies = 2;
+    h.get_by_label("Print  (Ctrl+P)").click();
+    h.run();
+    let jobs = jobs.borrow();
+    assert_eq!(jobs.len(), 1);
+    assert_eq!((jobs[0].1.as_deref(), jobs[0].2), (Some("Desk"), 2));
+    assert!(h.state().ui.status.as_ref().is_some_and(|(m, _)| m.contains("Desk-1")));
+    let _ = std::fs::remove_file(&jobs[0].0);
+}
+
+/// A host whose file picker answers with a fixed path.
+struct ImportHost(String);
+
+impl crate::Host for ImportHost {
+    fn clock(&self) -> notecraft_engine::Clock {
+        notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 }
+    }
+    fn pick_file(&mut self, _title: &str, filters: &[(&str, &[&str])]) -> Option<String> {
+        assert!(filters.first().is_some_and(|f| f.1.contains(&"md")));
+        Some(self.0.clone())
+    }
+}
+
+#[test]
+fn import_file_in_the_open_page_adds_a_page() {
+    let dir = std::env::temp_dir().join(format!("notecraft-ui-import-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("Ideas.md");
+    std::fs::write(&path, "# Ideas\n\n- one\n- two\n").unwrap();
+    let s = notecraft_engine::Session::with_sample(notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 });
+    let mut a = NoteApp::new(s, Box::new(ImportHost(path.to_string_lossy().into_owned())));
+    a.ui.backstage = Some(crate::Backstage::Open);
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label("Import File…").click();
+    h.run();
+    assert_eq!(h.state().session.page().unwrap().title.text(), "Ideas", "NC.File.Import");
+    assert_eq!(h.state().ui.backstage, None);
+    let _ = std::fs::remove_dir_all(&dir);
 }

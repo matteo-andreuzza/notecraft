@@ -53,7 +53,7 @@ pub struct Tab {
     pub groups: &'static [Group],
 }
 
-const STYLE_ITEMS: &[&str] = &[
+pub(crate) const STYLE_ITEMS: &[&str] = &[
     "R.Home.Styles.Heading1",
     "R.Home.Styles.Heading2",
     "R.Home.Styles.Heading3",
@@ -67,7 +67,7 @@ const STYLE_ITEMS: &[&str] = &[
     "R.Home.Styles.Normal",
 ];
 
-const TAG_ITEMS: &[&str] = &[
+pub(crate) const TAG_ITEMS: &[&str] = &[
     "R.Home.Tags.ToDo",
     "R.Home.Tags.Important",
     "R.Home.Tags.Question",
@@ -207,7 +207,7 @@ pub const TABS: &[Tab] = &[
                 name: "Tables",
                 items: &[Item::LargeMenu(
                     "R.Insert.Tables.TableInsertGallery",
-                    &["R.Insert.Tables.TableInsert", "R.Insert.Tables.InsertNewExcelSpreadsheetWithPreview"],
+                    &["R.Insert.Tables.TableInsert", "NC.Table.ConvertTextToTable", "R.Insert.Tables.InsertNewExcelSpreadsheetWithPreview"],
                 )],
             },
             Group {
@@ -619,7 +619,10 @@ pub const CONTEXTUAL: &[Tab] = &[
                     ],
                 )],
             },
-            Group { name: "Convert", items: &[Item::Large("CT.TableLayout.Convert.ConvertToExcelSpreadsheet")] },
+            Group {
+                name: "Convert",
+                items: &[Item::Large("NC.Table.ConvertToText"), Item::Large("CT.TableLayout.Convert.ConvertToExcelSpreadsheet")],
+            },
         ],
     },
     Tab {
@@ -637,7 +640,7 @@ pub const CONTEXTUAL: &[Tab] = &[
                     Item::Row(&["CT.Equation.Tools.EquationOptions"]),
                 ],
             },
-            Group { name: "Symbols", items: &[Item::Gallery("CT.Equation.Symbols.EquationSymbolsInsertGallery", &[], &[])] },
+            Group { name: "Symbols", items: &[Item::LargeMenu("CT.Equation.Symbols.EquationSymbolsInsertGallery", &[])] },
             Group {
                 name: "Structures",
                 items: &[

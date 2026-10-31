@@ -198,10 +198,37 @@ const SEPARATOR: f32 = 9.0;
 /// Width of the ▾ part of a split button.
 const ARROW: f32 = 13.0;
 
+/// Contextual tabs laid out by hand (the rest follow their classic layout).
+pub const SIMPLE_CONTEXTUAL: &[SimpleTab] = &[SimpleTab {
+    name: "Equation",
+    groups: &[
+        &[
+            E("CT.Equation.Tools.EquationInsertGallery", Kind::Label, 8),
+            E("CT.Equation.Tools.EquationProfessional", Kind::Label, 7),
+            E("CT.Equation.Tools.EquationLinearFormat", Kind::Label, 7),
+            E("CT.Equation.Tools.EquationNormalText", Kind::Icon, 3),
+        ],
+        &[E("CT.Equation.Symbols.EquationSymbolsInsertGallery", Kind::Label, 6)],
+        &[
+            E("CT.Equation.Structures.EquationFractionGallery", Kind::Label, 6),
+            E("CT.Equation.Structures.EquationScriptGallery", Kind::Label, 6),
+            E("CT.Equation.Structures.EquationRadicalGallery", Kind::Label, 6),
+            E("CT.Equation.Structures.EquationIntegralGallery", Kind::Icon, 5),
+            E("CT.Equation.Structures.EquationLargeOperatorGallery", Kind::Icon, 5),
+            E("CT.Equation.Structures.EquationDelimiterGallery", Kind::Icon, 5),
+            E("CT.Equation.Structures.EquationFunctionGallery", Kind::Icon, 4),
+            E("CT.Equation.Structures.EquationAccentGallery", Kind::Icon, 4),
+            E("CT.Equation.Structures.EquationLimitGallery", Kind::Icon, 4),
+            E("CT.Equation.Structures.EquationOperatorGallery", Kind::Icon, 3),
+            E("CT.Equation.Structures.EquationMatrixGallery", Kind::Icon, 4),
+        ],
+    ],
+}];
+
 /// The tab's simplified groups: its table, or one derived from the classic layout (large controls
 /// with their label, combos and galleries as they are, the rest as icons).
 pub fn groups(tab: &Tab) -> Vec<Vec<E>> {
-    if let Some(st) = SIMPLE_TABS.iter().find(|s| s.name == tab.name) {
+    if let Some(st) = SIMPLE_TABS.iter().chain(SIMPLE_CONTEXTUAL).find(|s| s.name == tab.name) {
         return st.groups.iter().map(|g| g.to_vec()).collect();
     }
     let mut out: Vec<Vec<E>> = Vec::new();
@@ -236,6 +263,9 @@ fn text(id: &str) -> String {
 
 /// The width an entry takes in the row.
 fn width(ui: &Ui, e: &E, c: Option<&Control>) -> f32 {
+    if e.0 == crate::ink::PENS_ID {
+        return crate::ink::gallery_width();
+    }
     let menu = if has_menu(c, e.0) { ARROW } else { 0.0 };
     let font = TypeRung::Body.font(ui.ctx(), Weight::Regular);
     let label_w = |s: String| ui.painter().layout_no_wrap(s, font.clone(), egui::Color32::PLACEHOLDER).size().x;
@@ -378,6 +408,10 @@ fn entry(app: &mut NoteApp, ui: &mut Ui, e: &E, c: Option<&Control>, t: Tokens) 
         rb::combo(app, ui, id, w, t);
         return;
     }
+    if id == crate::ink::PENS_ID {
+        crate::ink::gallery(app, ui, size::BUTTON, c.and_then(|c| c.gallery.map(|g| g.1)).unwrap_or(&[]), t);
+        return;
+    }
     let lab = text(id);
     let menu = has_menu(c, id);
     let w = width(ui, e, c);
@@ -388,7 +422,7 @@ fn entry(app: &mut NoteApp, ui: &mut Ui, e: &E, c: Option<&Control>, t: Tokens) 
         || c.is_some_and(|c| c.kids.iter().any(|k| rb::enabled(app, k)) || c.gallery.is_some()) && app.session.page().is_some()
         || rb::special_menu(id) && app.session.page().is_some();
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, &lab));
-    let is_checked = rb::command(id).is_some_and(|cmd| rb::checked(app, &cmd));
+    let is_checked = rb::command(id).is_some_and(|cmd| rb::checked(app, cmd));
     let p = ui.painter();
     if is_checked {
         p.rect_filled(rect, radius::CONTROL, t.checked);

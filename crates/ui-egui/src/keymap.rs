@@ -4,8 +4,10 @@
 //! keys, checked against the catalog's `KB.*` rows). A few keys depend on context, as in the
 //! reference, and are routed here first:
 //!
-//! - Enter on a link opens it (`KB.Format.OpenLink`), otherwise starts a paragraph;
-//! - Tab / Shift+Tab indent and outdent at the start of a paragraph (`KB.Outline.IndentTab`);
+//! - Enter on a link opens it (`KB.Format.OpenLink`), in a table cell adds a row
+//!   (`KB.Table.NewRowEnter`), otherwise starts a paragraph;
+//! - Tab / Shift+Tab move between table cells (a new row or column from the last cell), and
+//!   elsewhere indent and outdent at the start of a paragraph (`KB.Outline.IndentTab`);
 //! - Alt+Shift+Up/Down move paragraphs on the canvas but pages in the page list;
 //! - arrows, Home/End take their target from the canvas layout (visual lines);
 //! - Esc closes Find, then cancels the selection;
@@ -149,11 +151,20 @@ fn caret_on_link(app: &NoteApp) -> bool {
 }
 
 fn run(app: &mut NoteApp, ctx: &egui::Context, id: &str, params: Value) {
+    // Open Section's shortcut asks the host for the file first; Print's opens File › Print.
+    if matches!(id, "file.openSection" | "file.print") && crate::pictures::host_action(app, ctx, id) {
+        return;
+    }
     app.run(ctx, id, params);
     app.canvas.caret_moved(ctx);
 }
 
 /// Route a key that depends on context. Returns true when handled.
+/// Whether the caret is in a table cell (Tab, Enter and the arrows then move through cells).
+fn caret_in_cell(app: &NoteApp) -> bool {
+    app.session.text_range().is_some_and(|r| matches!(r.head.block, Block::Cell(_)))
+}
+
 fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) -> bool {
     let canvas = app.canvas.focused;
     let page_list = app.session.sel.focus == FocusArea::PageList;
@@ -172,6 +183,8 @@ fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) ->
         Key::Enter if canvas && plain && !m.shift => {
             if caret_on_link(app) {
                 run(app, ctx, "link.open", json!({}));
+            } else if caret_in_cell(app) {
+                run(app, ctx, "table.enter", json!({}));
             } else {
                 run(app, ctx, "text.newline", json!({}));
             }
@@ -179,6 +192,10 @@ fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) ->
         }
         Key::Enter if canvas && plain && m.shift => {
             run(app, ctx, "text.lineBreak", json!({}));
+            true
+        }
+        Key::Tab if canvas && plain && caret_in_cell(app) => {
+            run(app, ctx, if m.shift { "table.prevCell" } else { "table.nextCell" }, json!({}));
             true
         }
         Key::Tab if canvas && plain => {
@@ -195,6 +212,46 @@ fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) ->
         }
         Key::Delete if canvas && plain && !m.shift => {
             run(app, ctx, "text.deleteForward", json!({}));
+            true
+        }
+        // A selected container or table: arrows nudge it, Shift+Left/Right make a container
+        // narrower or wider (CM.NoteContainer.ObjectMove / ObjectResize; unverified step).
+        Key::ArrowLeft | Key::ArrowRight | Key::ArrowUp | Key::ArrowDown
+            if canvas && !m.alt && !media_selected(app) && block_selected(app).is_some() =>
+        {
+            let step = if m.command || m.ctrl { 10.0 } else { 1.0 };
+            let (dx, dy) = match key {
+                Key::ArrowLeft => (-step, 0.0),
+                Key::ArrowRight => (step, 0.0),
+                Key::ArrowUp => (0.0, -step),
+                _ => (0.0, step),
+            };
+            if !m.shift {
+                run(app, ctx, "object.move", json!({"dx": dx, "dy": dy}));
+            } else if let Some(o) = block_selected(app).filter(|o| !o.table)
+                && dx != 0.0
+            {
+                // The text column's width: from the text's left edge to the frame's right padding.
+                let w = (o.rect.max.x - 4.0 - o.left) / (crate::canvas::PT * app.canvas.zoom.max(0.1)) + dx;
+                run(app, ctx, "object.resize", json!({"id": o.id.to_string(), "width": w.max(notecraft_engine::doc::page::MIN_OUTLINE_WIDTH)}));
+            }
+            true
+        }
+        // A selected picture or attachment: arrows nudge it, Shift+arrows resize a picture
+        // (CM.Picture.ObjectMove / ObjectResize; unverified step: 1 pt, 10 with Ctrl).
+        Key::ArrowLeft | Key::ArrowRight | Key::ArrowUp | Key::ArrowDown if canvas && !m.alt && media_selected(app) => {
+            let step = if m.command || m.ctrl { 10.0 } else { 1.0 };
+            let (dx, dy) = match key {
+                Key::ArrowLeft => (-step, 0.0),
+                Key::ArrowRight => (step, 0.0),
+                Key::ArrowUp => (0.0, -step),
+                _ => (0.0, step),
+            };
+            if m.shift {
+                run(app, ctx, "object.resize", json!({"dw": dx, "dh": dy}));
+            } else {
+                run(app, ctx, "object.move", json!({"dx": dx, "dy": dy}));
+            }
             true
         }
         Key::ArrowLeft | Key::ArrowRight if canvas && !m.alt => {
@@ -267,13 +324,19 @@ fn contextual(app: &mut NoteApp, ctx: &egui::Context, key: Key, m: Modifiers) ->
             true
         }
         Key::K if (m.command || m.ctrl) && !m.alt && !m.shift => {
-            app.ui.dialog = Some(crate::dialogs::Dialog::Link { url: String::new(), text: selected_text(app) });
+            app.ui.dialog = Some(crate::dialogs::Dialog::Link { url: String::new(), text: selected_text(app), filter: String::new() });
             true
         }
         Key::M if (m.command || m.ctrl) && m.alt && !m.shift => {
             if let Some(p) = app.session.sel.page {
-                app.ui.dialog = Some(crate::dialogs::Dialog::MovePage(p));
+                app.ui.dialog = Some(crate::dialogs::Dialog::MovePage(p, String::new()));
             }
+            true
+        }
+        Key::G if (m.command || m.ctrl) && !m.alt && !m.shift => {
+            // UI.Nav.NotebookList: the notebook drop-down (every notebook is already in the
+            // nav tree in this UI, but the reference's quick switcher still gets its shortcut).
+            app.ui.dialog = Some(crate::dialogs::Dialog::NotebookList);
             true
         }
         _ => false,
@@ -304,6 +367,10 @@ pub fn handle_input(app: &mut NoteApp, ctx: &egui::Context) {
     }
     let text_widget_focused = ctx.memory(|m| m.focused().is_some()) && ctx.egui_wants_keyboard_input();
     let events = ctx.input(|i| i.events.clone());
+    // Ctrl+V with no text on the clipboard (a picture): see `clipboard.rs`.
+    if crate::clipboard::watch(app, ctx, &events) && app.canvas.focused && !text_widget_focused {
+        crate::clipboard::paste(app, ctx, "edit.paste", None);
+    }
     let mut consumed: Vec<(Modifiers, Key)> = Vec::new();
     for ev in events {
         match ev {
@@ -363,19 +430,35 @@ pub fn handle_input(app: &mut NoteApp, ctx: &egui::Context) {
             }
             Event::Paste(t) if (app.canvas.focused || app.session.sel.focus == FocusArea::PageList) && !text_widget_focused => {
                 let shift = ctx.input(|i| i.modifiers.shift);
-                run(app, ctx, if shift { "edit.pasteTextOnly" } else { "edit.paste" }, json!({"text": t}));
+                crate::clipboard::paste(app, ctx, if shift { "edit.pasteTextOnly" } else { "edit.paste" }, Some(t));
             }
             _ => {}
         }
     }
     if !consumed.is_empty() {
+        // egui also reads Tab as "focus the next widget" at the end of the frame; a Tab the page
+        // used (indent, next cell) must not hand the keyboard to the search box.
+        if consumed.iter().any(|(_, k)| *k == Key::Tab) {
+            ctx.memory_mut(|m| m.move_focus(egui::FocusDirection::None));
+        }
         ctx.input_mut(|i| {
             for (m, k) in consumed {
                 i.consume_key(m, k);
             }
         });
     }
-    let _ = Block::Title;
+}
+
+/// The layout of the note container or table selected as an object, if one is.
+fn block_selected(app: &NoteApp) -> Option<crate::canvas::OutlineLayout> {
+    let notecraft_engine::selection::PageSel::Objects { ids } = &app.session.sel.on_page else { return None };
+    app.canvas.outlines.iter().find(|o| ids.contains(&o.id)).copied()
+}
+
+/// Whether the page selection holds a picture or attachment (arrows move it then).
+fn media_selected(app: &NoteApp) -> bool {
+    let (Some(page), notecraft_engine::selection::PageSel::Objects { ids }) = (app.session.page(), &app.session.sel.on_page) else { return false };
+    ids.iter().any(|id| page.image(*id).is_some() || page.attachment(*id).is_some() || page.ink(*id).is_some())
 }
 
 #[cfg(test)]

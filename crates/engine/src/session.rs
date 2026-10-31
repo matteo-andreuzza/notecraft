@@ -44,41 +44,137 @@ pub struct Clock {
 pub struct Prefs {
     /// Author name stamped on edits (Options › General › User name).
     pub author: String,
-    /// Default font (Options › Advanced).
+    /// The author's initials (`OPT.General.Initials`).
+    pub initials: String,
+    /// Show the Mini Toolbar on a selection (`OPT.General.ShowMiniToolbar`; the UI reads it).
+    pub show_mini_toolbar: bool,
+    /// Show note container frames on pages (`OPT.Display.ShowNoteContainers`; the UI reads it).
+    pub show_note_containers: bool,
+    /// The navigation (notebooks and pages) on the left of the page, else on the right
+    /// (`OPT.Display.NavBarLeft`; the UI reads it).
+    pub nav_left: bool,
+    /// Pointing between page tabs offers to add a page there (`OPT.Display.FloatingNewPage`).
+    pub floating_new_page: bool,
+    /// Default font of new text (`OPT.Advanced.DefaultFont`).
     pub default_font: String,
     /// Default size in points.
     pub default_size: f32,
+    /// Default colour of new text (`None`: automatic).
+    pub default_color: Option<notecraft_doc::color::Rgba>,
+    /// Show the Paste Options button after a paste (`OPT.Advanced.ShowPasteOptions`; the UI
+    /// reads it).
+    pub show_paste_options: bool,
+    /// Tab after text makes a table (`OPT.Advanced.CreateTableOnTab`, decision D6).
+    pub create_table_on_tab: bool,
     /// Auto-bulleting (catalog `OPT.Advanced.AutoBulleting`).
     pub auto_bullets: bool,
     /// Auto-numbering (`OPT.Advanced.AutoNumbering`).
     pub auto_numbering: bool,
     /// Wiki links `[[Page]]` (`OPT.Advanced.WikiLinks`).
     pub wiki_links: bool,
+    /// Work out `2+3=` when Space or Enter follows (`OPT.Advanced.CalculateMath`).
+    pub calculate_math: bool,
     /// Create new pages with rule lines (View › Rule Lines › Always Create Pages with Rule Lines).
     pub new_pages_rule_lines: Option<RuleLines>,
     /// Custom tags (Customize Tags).
     pub custom_tags: Vec<TagDef>,
+    /// The whole tag list in order once Customize Tags has reordered, modified or removed a
+    /// tag (built-ins and custom tags together); `None` = the built-ins, then `custom_tags`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tag_list: Option<Vec<TagDef>>,
     /// Default search scope (Set This Scope as Default).
     pub default_scope: ScopeKind,
     /// Backups to keep per notebook.
     pub backup_copies: usize,
+    /// Where backups go (`OPT.SaveBackup.BackupFolder`; empty: the app's own folder).
+    pub backup_folder: String,
+    /// Back up automatically this often, in minutes (`OPT.SaveBackup.AutoBackup`; 0: never).
+    pub auto_backup_minutes: u32,
+    /// When the last backup ran (Unix ms; 0: never).
+    pub last_backup_ms: i64,
+    /// Lock protected sections after this many idle minutes (`OPT.Advanced.LockAfterIdle`;
+    /// 0: never).
+    pub lock_after_minutes: u32,
+    /// Lock a protected section as soon as another section is opened
+    /// (`OPT.Advanced.LockOnLeave`).
+    pub lock_on_leave: bool,
+    /// Underline misspelled words while typing (`OPT.Proofing.CheckAsYouType`).
+    pub check_as_you_type: bool,
+    /// Hide the underlines (`OPT.Proofing.HideSpellingErrors`).
+    pub hide_spelling_errors: bool,
+    /// Don't check words in capitals (`OPT.Proofing.IgnoreUppercase`).
+    pub ignore_uppercase: bool,
+    /// Don't check words with digits (`OPT.Proofing.IgnoreNumbers`).
+    pub ignore_numbers: bool,
+    /// Don't check web and mail addresses (`OPT.Proofing.IgnoreUrls`).
+    pub ignore_urls: bool,
+    /// The proofing language: an installed dictionary's name (`R.Review.Language.SetLanguage`).
+    pub proofing_language: String,
+    /// Words added to the dictionary (`OPT.Proofing.CustomDictionaries`).
+    pub custom_words: Vec<String>,
+    /// Where new notebooks go (`OPT.SaveBackup.DefaultNotebookLocation`; empty: ask).
+    pub default_notebook_location: String,
+    /// The notebook whose Quick Notes section takes quick notes
+    /// (`OPT.SaveBackup.QuickNotesSection`; empty: the first open notebook).
+    pub quick_notes_notebook: String,
+    /// Page templates of the user's own (decision D10).
+    pub templates: Vec<crate::template_cmds::SavedTemplate>,
+    /// Recently used templates, latest first.
+    pub recent_templates: Vec<String>,
 }
 
 impl Default for Prefs {
     fn default() -> Prefs {
         Prefs {
             author: String::new(),
+            initials: String::new(),
+            show_mini_toolbar: true,
+            show_note_containers: true,
+            nav_left: true,
+            floating_new_page: true,
             default_font: notecraft_doc::text::DEFAULT_FONT.to_string(),
             default_size: notecraft_doc::text::DEFAULT_SIZE,
+            default_color: None,
+            show_paste_options: true,
+            create_table_on_tab: true,
             auto_bullets: true,
             auto_numbering: true,
             wiki_links: true,
+            calculate_math: true,
             new_pages_rule_lines: None,
             custom_tags: Vec::new(),
+            tag_list: None,
             default_scope: ScopeKind::AllNotebooks,
             backup_copies: 2,
+            backup_folder: String::new(),
+            // The reference backs up once a day by default (unverified).
+            auto_backup_minutes: 24 * 60,
+            last_backup_ms: 0,
+            // The reference locks after 10 idle minutes by default (unverified).
+            lock_after_minutes: 10,
+            lock_on_leave: false,
+            check_as_you_type: true,
+            hide_spelling_errors: false,
+            ignore_uppercase: true,
+            ignore_numbers: true,
+            ignore_urls: true,
+            proofing_language: "en_US".into(),
+            custom_words: Vec::new(),
+            default_notebook_location: String::new(),
+            quick_notes_notebook: String::new(),
+            templates: Vec::new(),
+            recent_templates: Vec::new(),
         }
     }
+}
+
+/// The misspelled word the Spelling pane shows.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct SpellingState {
+    /// The word as written.
+    pub word: String,
+    /// Corrections, best first.
+    pub suggestions: Vec<String>,
 }
 
 /// The search scope choices (the search box drop-down).
@@ -139,12 +235,54 @@ pub struct ViewState {
     pub notebook_pane_collapsed: bool,
     /// Scope of the search box.
     pub scope: ScopeKind,
+    /// The search result being previewed with Down/Up while searching: the query and the index.
+    #[serde(default)]
+    pub search_preview: Option<(String, usize)>,
+    /// The UI should open the context menu of the selection (Shift+F10); it clears the flag.
+    #[serde(default)]
+    pub menu_request: bool,
     /// Find on page.
     pub find: FindState,
     /// Page list width in points (Ctrl+Shift+[ / ]).
     pub page_list_width: f32,
     /// Find Tags pane open.
     pub tags_pane: bool,
+    /// Templates pane open (Insert › Page Templates).
+    pub templates_pane: bool,
+    /// Paper Size pane open (View › Paper Size).
+    pub paper_pane: bool,
+    /// Password Protection pane open (Review › Password).
+    #[serde(default)]
+    pub password_pane: bool,
+    /// The tag whose icon was right-clicked (its key): the Tag menu's commands act on it when
+    /// they get no `key` (`CM.Tag.*`).
+    #[serde(default)]
+    pub context_tag: Option<String>,
+    /// Ink Replay is playing the page's strokes back (Draw › Ink Replay; the UI animates it).
+    #[serde(default)]
+    pub ink_replay: bool,
+    /// Spelling pane open (Review › Spelling).
+    #[serde(default)]
+    pub spelling_pane: bool,
+    /// The word the Spelling pane shows, with its suggestions.
+    #[serde(default)]
+    pub spelling: Option<SpellingState>,
+    /// The Recent Edits pane's period (`history_cmds::RECENT_RANGES`), `None` = closed.
+    #[serde(default)]
+    pub recent_edits: Option<String>,
+    /// Page versions shown under the pages in the page list (History › Page Versions).
+    pub page_versions: bool,
+    /// Help pane open (F1).
+    pub help_pane: bool,
+    /// The window is a small Quick Note window showing only the page (View › New Quick Note).
+    pub quick_note: bool,
+    /// The Help pane lists keyboard shortcuts only.
+    pub help_shortcuts: bool,
+    /// About NoteCraft shown.
+    pub about: bool,
+    /// A version or a deleted page shown read-only instead of the canvas.
+    #[serde(default)]
+    pub preview: Option<crate::versions_cmds::Preview>,
     /// The recycle bin of this notebook is being viewed.
     pub recycle_view: Option<Id>,
 }
@@ -159,9 +297,25 @@ impl Default for ViewState {
             ribbon_mode: RibbonMode::Simplified,
             notebook_pane_collapsed: false,
             scope: ScopeKind::AllNotebooks,
+            search_preview: None,
+            menu_request: false,
             find: FindState::default(),
             page_list_width: 200.0,
             tags_pane: false,
+            templates_pane: false,
+            paper_pane: false,
+            password_pane: false,
+            spelling_pane: false,
+            ink_replay: false,
+            context_tag: None,
+            spelling: None,
+            recent_edits: None,
+            page_versions: false,
+            help_pane: false,
+            quick_note: false,
+            help_shortcuts: false,
+            about: false,
+            preview: None,
             recycle_view: None,
         }
     }
@@ -193,6 +347,10 @@ pub struct Clipboard {
     pub text: String,
     /// Copied or cut pages (page list Cut/Copy).
     pub pages: Vec<Arc<Page>>,
+    /// Copied or cut pictures, attachments and whole tables (bytes shared, not copied).
+    pub objects: Vec<notecraft_doc::PageObject>,
+    /// The copied notes as HTML, for other applications (empty when there is none).
+    pub html: String,
 }
 
 /// What changed in one notebook since its last save.
@@ -227,6 +385,8 @@ pub struct Session {
     pub view: ViewState,
     /// Preferences.
     pub prefs: Prefs,
+    /// The Draw tab's tool and pens (decision D4; not notebook data, never an undo step).
+    pub draw: crate::DrawState,
     /// The host's clock.
     pub clock: Clock,
     /// Formatting to apply to the next typed text at the caret (set by toggling Bold with no
@@ -242,6 +402,9 @@ pub struct Session {
     pub pending_outline: Option<notecraft_doc::geom::Point>,
     /// A scroll request for the UI (Page Up/Down, Ctrl+Home/End), consumed by the canvas.
     pub scroll_request: Option<ScrollRequest>,
+    /// File › Exit ran and everything saved: the desktop shell closes the window (headless
+    /// hosts ignore it).
+    pub quit_request: bool,
     /// What needs saving, per notebook.
     pub dirty: HashMap<Id, NbDirty>,
     /// Increments whenever the workspace changes (UI caches layout by it).
@@ -259,6 +422,16 @@ pub struct Session {
     pub(crate) last_sel: HashMap<Id, PageSel>,
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) stores: HashMap<Id, notecraft_format::store::NotebookStore>,
+    /// The keys of unlocked password-protected sections (decision D15), only in memory and
+    /// zeroed when dropped.
+    pub(crate) keys: HashMap<Id, notecraft_format::protect::Key>,
+    /// Set by a command whose undo history must not survive it (locking a section: earlier
+    /// steps hold its notes in the clear).
+    pub(crate) forget_history: bool,
+    /// Key derivation costs for new passwords (tests use cheap ones).
+    pub(crate) kdf: notecraft_format::protect::KdfParams,
+    /// The spelling dictionary and Ignore All words.
+    pub(crate) speller: crate::spell_cmds::Speller,
 }
 
 impl Default for Session {
@@ -276,6 +449,7 @@ impl Session {
             ids: IdGen::from_entropy(),
             clipboard: Clipboard::default(),
             view: ViewState::default(),
+            draw: crate::DrawState::default(),
             prefs: Prefs::default(),
             clock,
             pending_fmt: None,
@@ -283,6 +457,7 @@ impl Session {
             messages: Vec::new(),
             pending_outline: None,
             scroll_request: None,
+            quit_request: false,
             dirty: HashMap::new(),
             revision: 0,
             last_change_ms: 0,
@@ -297,6 +472,10 @@ impl Session {
             last_sel: HashMap::new(),
             #[cfg(not(target_arch = "wasm32"))]
             stores: HashMap::new(),
+            keys: HashMap::new(),
+            forget_history: false,
+            kdf: notecraft_format::protect::KdfParams::DEFAULT,
+            speller: crate::spell_cmds::Speller::default(),
         }
     }
 
@@ -356,6 +535,11 @@ impl Session {
                 },
                 None => (None, false),
             };
+            // Page versions (D14): the previous state of a page edited after a pause, kept in the
+            // same undo step. Version commands themselves never make one.
+            if !id.starts_with("history.") {
+                crate::versions_cmds::snapshot(self, &before_ws, &before_sel);
+            }
             let merge = key.is_some() && key == self.last_coalesce && !self.undo.is_empty();
             if !merge {
                 self.undo.push(HistoryEntry { label: spec.label.to_string(), ws: before_ws, sel: before_sel });
@@ -369,17 +553,18 @@ impl Session {
             // A caret move or other non-editing command ends a typing burst.
             self.last_coalesce = None;
         }
+        // Locking a section: no undo or redo step may bring its notes back.
+        if std::mem::take(&mut self.forget_history) {
+            self.undo.clear();
+            self.redo.clear();
+            self.last_coalesce = None;
+        }
         result
     }
 
     /// Labels of the undo stack, newest first (the Undo drop-down).
     pub fn undo_labels(&self) -> Vec<String> {
         self.undo.iter().rev().map(|e| e.label.clone()).collect()
-    }
-
-    /// Labels of the redo stack, newest first.
-    pub fn redo_labels(&self) -> Vec<String> {
-        self.redo.iter().rev().map(|e| e.label.clone()).collect()
     }
 
     pub(crate) fn undo_step(&mut self) -> bool {
@@ -441,6 +626,9 @@ impl Session {
 
     /// All tag definitions: built-ins, then custom tags.
     pub fn tag_defs(&self) -> Vec<TagDef> {
+        if let Some(list) = &self.prefs.tag_list {
+            return list.clone();
+        }
         let mut v = builtin_tags();
         v.extend(self.prefs.custom_tags.iter().cloned());
         v
@@ -472,6 +660,7 @@ impl Session {
         match block {
             Block::Title => Some(std::slice::from_ref(&page.title)),
             Block::Outline(id) => page.outline(id).map(|o| o.paragraphs.as_slice()),
+            Block::Cell(id) => page.cell(id).map(|c| c.paragraphs.as_slice()),
         }
     }
 
@@ -480,6 +669,7 @@ impl Session {
         match block {
             Block::Title => None,
             Block::Outline(id) => page.outline_mut(id).map(|o| &mut o.paragraphs),
+            Block::Cell(id) => page.cell_mut(id).map(|c| &mut c.paragraphs),
         }
     }
 
@@ -488,6 +678,7 @@ impl Session {
         match block {
             Block::Title => (para == 0).then_some(&mut page.title),
             Block::Outline(id) => page.outline_mut(id)?.paragraphs.get_mut(para),
+            Block::Cell(id) => page.cell_mut(id)?.paragraphs.get_mut(para),
         }
     }
 
@@ -498,7 +689,7 @@ impl Session {
         let paras = Session::block_paras(page, pos.block)?;
         let last = paras.len().checked_sub(1)?;
         let para = pos.para.min(last);
-        let text = paras.get(para)?.text();
+        let text = paras.get(para)?.text_cow();
         Some(Pos { block: pos.block, para, offset: notecraft_text::snap(&text, pos.offset) })
     }
 
@@ -529,18 +720,23 @@ impl Session {
     pub fn goto_page(&mut self, page: Id) -> Result<(), CmdError> {
         let (sid, _) = self.ws.locate_page(page).ok_or_else(|| CmdError::Failed("that page no longer exists".into()))?;
         let nb = self.ws.notebook_of(sid).map(|n| n.id);
-        if let Some(cur) = self.sel.page
-            && cur != page
-        {
-            self.last_sel.insert(cur, self.sel.on_page.clone());
-            self.nav_back.push(cur);
-            if self.nav_back.len() > 200 {
-                self.nav_back.remove(0);
-            }
-            self.nav_forward.clear();
+        if self.sel.page != Some(page) {
+            self.leave_page();
         }
         self.show_page(nb, sid, page);
         Ok(())
+    }
+
+    /// Leaving the current page for another: remember its selection and push it on the Back
+    /// stack (capped at 200; a new visit clears Forward).
+    fn leave_page(&mut self) {
+        let Some(cur) = self.sel.page else { return };
+        self.last_sel.insert(cur, self.sel.on_page.clone());
+        self.nav_back.push(cur);
+        if self.nav_back.len() > 200 {
+            self.nav_back.remove(0);
+        }
+        self.nav_forward.clear();
     }
 
     /// Show a page without touching the Back/Forward stacks.
@@ -556,6 +752,8 @@ impl Session {
         self.pending_fmt = None;
         self.view.find.matches.clear();
         self.view.recycle_view = None;
+        self.view.preview = None;
+        self.view.ink_replay = false;
     }
 
     /// Select a section (its first visible page, or none).
@@ -564,10 +762,7 @@ impl Session {
         match s.pages.first().map(|p| p.id) {
             Some(p) => self.goto_page(p),
             None => {
-                if let Some(cur) = self.sel.page {
-                    self.last_sel.insert(cur, self.sel.on_page.clone());
-                    self.nav_back.push(cur);
-                }
+                self.leave_page();
                 self.sel.notebook = self.ws.notebook_of(section).map(|n| n.id);
                 self.sel.section = Some(section);
                 self.sel.page = None;
@@ -609,7 +804,7 @@ impl Session {
     }
 
     /// The search index, refreshed for pages that changed since the last query. Pages of
-    /// locked sections are never indexed (none exist in M1: passwords come in M4).
+    /// locked sections are never indexed (none exist yet: passwords come in M4).
     pub fn index(&mut self) -> &Index {
         let mut seen: HashSet<Id> = HashSet::new();
         let mut updates: Vec<(PageMeta, String, String)> = Vec::new();
@@ -732,12 +927,10 @@ pub(crate) fn walk_pages(nb: &Notebook, f: &mut dyn FnMut(PageMeta, &Arc<Page>))
 pub(crate) fn page_search_text(p: &Page) -> String {
     let mut s = p.plain_text();
     for o in &p.objects {
-        if let Some(ol) = o.as_outline() {
-            for para in &ol.paragraphs {
-                for t in &para.tags {
-                    s.push(' ');
-                    s.push_str(&t.name);
-                }
+        for para in o.paragraphs() {
+            for t in &para.tags {
+                s.push(' ');
+                s.push_str(&t.name);
             }
         }
     }

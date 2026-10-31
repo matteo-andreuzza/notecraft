@@ -34,13 +34,34 @@ allow-wildcard-paths = true
 unknown-registry = "deny"
 unknown-git = "deny"
 # Shared Craft libraries; Cargo.toml pins the immutable revision.
-allow-git = ["https://github.com/storytold/craft-libs"]
+# craft-print reaches the Windows print APIs through storytold's maintained winprint fork.
+allow-git = ["https://github.com/storytold/craft-libs", "https://github.com/storytold/winprint.rs"]
 
 [advisories]
 yanked = "warn"
+# zbus 5.19 folded these helper crates into itself and marked the standalone crates unmaintained
+# (2026-10); they reach us only through zbus (accesskit's AT-SPI bridge, the desktop theme
+# watcher) and no zbus release without them exists yet. Drop these when zbus 6 lands.
+ignore = [
+    { id = "RUSTSEC-2026-0370", reason = "zvariant: unmaintained as a standalone crate, only via zbus; no safe upgrade" },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names: unmaintained as a standalone crate, only via zbus; no safe upgrade" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive: unmaintained as a standalone crate, only via zbus; no safe upgrade" },
+    # proc-macro-error is unmaintained (no vulnerability). It reaches the tree as a proc macro of
+    # winprint's fmt-derive (craft-print's Windows spooler), so it runs at compile time on
+    # Windows and is not in the binary. PdfCraft carries the same exception.
+    { id = "RUSTSEC-2024-0370", reason = "compile-time proc macro of winprint's fmt-derive (craft-print Windows printing)" },
+]
 
 # egui's default UI fonts (Ubuntu-Light, Hack, emoji-icon-font): font licences that the
 # siblings also accept for this one crate (they ship inside epaint, not in this repository).
 [[licenses.exceptions]]
 crate = "epaint_default_fonts"
 allow = ["OFL-1.1", "Ubuntu-font-1.0"]
+
+# winprint (craft-print's Windows spooler) lists reqwest as a build-dependency for its PDFium
+# download, which only runs with its `pdfium` feature; craft-print turns that off. The CA bundle
+# reqwest brings is CDLA-Permissive-2.0 data compiled into winprint's build script only, never
+# into NoteCraft. Remove when winprint makes those build-dependencies optional (as PdfCraft).
+[[licenses.exceptions]]
+crate = "webpki-root-certs"
+allow = ["CDLA-Permissive-2.0"]

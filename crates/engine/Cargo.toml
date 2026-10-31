@@ -16,10 +16,22 @@ notecraft-doc = { workspace = true }
 notecraft-text = { workspace = true }
 notecraft-search = { workspace = true }
 notecraft-format = { workspace = true }
+notecraft-codecs = { workspace = true }
+notecraft-import-export = { workspace = true }
+notecraft-fonts = { workspace = true }
+notecraft-ink = { workspace = true }
+notecraft-ink-geom = { workspace = true }
+notecraft-math = { workspace = true }
+notecraft-spell = { workspace = true }
+notecraft-onestore = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
+zeroize = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+getrandom = { workspace = true }
 
 [dev-dependencies]
-proptest = { workspace = true }
+notecraft-onestore = { workspace = true, features = ["fixtures"] }

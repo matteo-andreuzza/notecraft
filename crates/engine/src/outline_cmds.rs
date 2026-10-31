@@ -81,21 +81,103 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         .when(need_outline_caret),
         // BEH.Canvas.ContainerMove / ContainerResize.
         CommandSpec::new("outline.move", "BEH.Canvas.ContainerMove", "Move Note Container", "Behaviour/Canvas", move_outline)
-            .params(r#"{"id": outline id, "x": pt, "y": pt}"#)
+            .params(r#"{"id": outline or table id, "x": pt, "y": pt}"#)
             .when(need_page),
         CommandSpec::new("outline.resize", "BEH.Canvas.ContainerResize", "Resize Note Container", "Behaviour/Canvas", resize_outline)
             .params(r#"{"id": outline id, "width": pt | null (auto)}"#)
             .when(need_page),
         // BEH.Outline.DragParagraph — drop a paragraph (with children) elsewhere.
         CommandSpec::new("outline.moveParagraph", "BEH.Outline.DragParagraph", "Move Paragraph", "Behaviour/Outline", move_paragraph)
-            .params(r#"{"from": outline id, "para": int, "to": outline id, "index": int, "level"?: int}"#)
+            .params(r#"{"from": outline id, "para": int, "to": outline id, "index": int, "level"?: int} | {"from", "para", "x": pt, "y": pt} (a new container there)"#)
             .when(need_page),
         // NC.Object.Select — click a container's top bar.
         CommandSpec::new("object.select", "NC.Object.Select", "Select Note Container", "Mouse/Select container", select_object)
             .params(r#"{"ids": [outline id], "add"?: bool}"#)
             .pure()
             .when(need_page),
+        // CM.NoteContainer.Order* — z-order of the selected object among the page's objects
+        // (`Page::objects` is already back-to-front; no model change). Acts on the first
+        // selected object (unverified: the reference's exact rule for several at once).
+        CommandSpec::new(
+            "object.bringForward",
+            "CM.NoteContainer.ObjectBringForward",
+            "Bring Forward",
+            "Context/Note Container/Order/Bring Forward",
+            |s, _| reorder(s, bring_forward_target),
+        )
+        .when(need_object_selected),
+        CommandSpec::new(
+            "object.bringToFront",
+            "CM.NoteContainer.ObjectBringToFront",
+            "Bring to Front",
+            "Context/Note Container/Order/Bring to Front",
+            |s, _| reorder(s, bring_to_front_target),
+        )
+        .when(need_object_selected),
+        CommandSpec::new(
+            "object.sendBackward",
+            "CM.NoteContainer.ObjectSendBackward",
+            "Send Backward",
+            "Context/Note Container/Order/Send Backward",
+            |s, _| reorder(s, send_backward_target),
+        )
+        .when(need_object_selected),
+        CommandSpec::new(
+            "object.sendToBack",
+            "CM.NoteContainer.ObjectSendToBack",
+            "Send to Back",
+            "Context/Note Container/Order/Send to Back",
+            |s, _| reorder(s, send_to_back_target),
+        )
+        .when(need_object_selected),
     ]
+}
+
+fn need_object_selected(s: &Session) -> Option<&'static str> {
+    if let Some(w) = need_page(s) {
+        return Some(w);
+    }
+    match &s.sel.on_page {
+        PageSel::Objects { ids } if !ids.is_empty() => None,
+        _ => Some("Select a note container or table first"),
+    }
+}
+
+/// The new index for an object currently at `i` of `len`, or `None` at the boundary (already
+/// frontmost/backmost: a no-op). Kept apart from the actual move so `reorder` can tell a no-op
+/// without ever calling `page_mut` for one — `Arc::make_mut`'s copy-on-write would otherwise
+/// record an undo step for a command that changed nothing (`before_ws`, Session::run's
+/// snapshot, still holds the old `Arc`, so any `page_mut` call clones, pointer-unequal or not).
+fn bring_forward_target(len: usize, i: usize) -> Option<usize> {
+    (i + 1 < len).then_some(i + 1)
+}
+
+fn send_backward_target(_len: usize, i: usize) -> Option<usize> {
+    (i > 0).then_some(i - 1)
+}
+
+fn bring_to_front_target(len: usize, i: usize) -> Option<usize> {
+    (i + 1 < len).then_some(len - 1)
+}
+
+fn send_to_back_target(_len: usize, i: usize) -> Option<usize> {
+    (i > 0).then_some(0)
+}
+
+/// Move the first selected object to a new index in `page.objects`'s z-order (back to front).
+/// `target` is one of the four functions above; removing index `i` and inserting at the target
+/// index it returns (computed against the length *before* removal) swaps, promotes to the
+/// front or demotes to the back, with no special-casing needed between the four.
+fn reorder(s: &mut Session, target: fn(usize, usize) -> Option<usize>) -> CmdResult {
+    let PageSel::Objects { ids } = &s.sel.on_page else { return Err(CmdError::Disabled("select a note container or table first".into())) };
+    let id = *ids.first().ok_or_else(|| CmdError::Disabled("select a note container or table first".into()))?;
+    let page = s.page().ok_or_else(no_page)?;
+    let Some(i) = page.object_index(id) else { return Ok(Value::Null) };
+    let Some(at) = target(page.objects.len(), i) else { return Ok(Value::Null) };
+    let page = s.page_mut().ok_or_else(no_page)?;
+    let obj = page.objects.remove(i);
+    page.objects.insert(at, obj);
+    Ok(Value::Null)
 }
 
 /// The outlines a whole-outline command applies to: the caret's, the selected containers, or
@@ -226,14 +308,14 @@ fn move_outline(s: &mut Session, v: &Value) -> CmdResult {
     let x = p::req_f32(v, "x")?;
     let y = p::req_f32(v, "y")?;
     let page = s.page_mut().ok_or_else(no_page)?;
-    let o = page.outline_mut(id).ok_or_else(|| CmdError::Params("no such note container".into()))?;
-    // Containers can't be dragged above or left of the page origin.
-    o.pos = Point::new(x.max(0.0), y.max(0.0)).sanitized();
+    let o = page.objects.iter_mut().find(|o| o.id() == id).ok_or_else(|| CmdError::Params("no such note container or table".into()))?;
+    // Containers (and tables) can't be dragged above or left of the page origin.
+    o.set_pos(Point::new(x.max(0.0), y.max(0.0)));
     s.coalesce = Some(format!("move:{id}"));
     Ok(Value::Null)
 }
 
-fn resize_outline(s: &mut Session, v: &Value) -> CmdResult {
+pub(crate) fn resize_outline(s: &mut Session, v: &Value) -> CmdResult {
     let id = p::req_id(v, "id")?;
     let width = match v.get("width") {
         None | Some(Value::Null) => OutlineWidth::Auto,
@@ -252,30 +334,57 @@ fn resize_outline(s: &mut Session, v: &Value) -> CmdResult {
 fn move_paragraph(s: &mut Session, v: &Value) -> CmdResult {
     let from = p::req_id(v, "from")?;
     let para = p::req_usize(v, "para")?;
-    let to = p::req_id(v, "to")?;
-    let index = p::req_usize(v, "index")?;
+    let to = p::id(v, "to")?;
+    // Without a target container the paragraph is dropped on empty canvas: a new container
+    // appears there (unverified: the reference's exact drop rule).
+    let at_point = match to {
+        Some(_) => None,
+        None => Some(Point::new(p::req_f32(v, "x")?.max(0.0), p::req_f32(v, "y")?.max(0.0)).sanitized()),
+    };
+    let index = if to.is_some() { p::req_usize(v, "index")? } else { 0 };
     let level = p::usize(v, "level");
+    let new_id = at_point.map(|_| s.new_id());
     let page = s.page_mut().ok_or_else(no_page)?;
     let src = page.outline_mut(from).ok_or_else(|| CmdError::Params("no such source container".into()))?;
     if para >= src.paragraphs.len() {
         return Err(CmdError::Params("no such paragraph".into()));
     }
     let r = src.subtree(para);
-    let mut block: Vec<_> = src.paragraphs.drain(r.clone()).collect();
+    let mut block: Vec<_> = src.paragraphs.drain(r).collect();
     let base = block.first().map(|p| p.level).unwrap_or(0);
-    if let Some(l) = level {
-        let l = l.min(notecraft_doc::text::MAX_LEVEL as usize) as u8;
+    let target_level = match (level, at_point) {
+        (Some(l), _) => Some(l.min(notecraft_doc::text::MAX_LEVEL as usize) as u8),
+        (None, Some(_)) => Some(0),
+        (None, None) => None,
+    };
+    if let Some(l) = target_level {
         for p in &mut block {
             p.level = (l as i16 + p.level as i16 - base as i16).clamp(0, notecraft_doc::text::MAX_LEVEL as i16) as u8;
         }
     }
-    let dst = page.outline_mut(to).ok_or_else(|| CmdError::Params("no such target container".into()))?;
-    // Moving within the same container: the index refers to the list after removal.
-    let at = index.min(dst.paragraphs.len());
-    for (k, p) in block.into_iter().enumerate() {
-        dst.paragraphs.insert(at + k, p);
+    if src.paragraphs.is_empty() {
+        page.objects.retain(|o| o.id() != from);
     }
-    dst.normalize();
+    let (to, at) = match (to, at_point, new_id) {
+        (Some(to), _, _) => {
+            let dst = page.outline_mut(to).ok_or_else(|| CmdError::Params("no such target container".into()))?;
+            // Moving within the same container: the index refers to the list after removal.
+            let at = index.min(dst.paragraphs.len());
+            for (k, p) in block.into_iter().enumerate() {
+                dst.paragraphs.insert(at + k, p);
+            }
+            dst.normalize();
+            (to, at)
+        }
+        (None, Some(pt), Some(id)) => {
+            let mut o = notecraft_doc::Outline::new(id, pt, notecraft_doc::Id::NIL);
+            o.paragraphs = block;
+            o.normalize();
+            page.objects.push(notecraft_doc::PageObject::Outline(o));
+            (id, 0)
+        }
+        _ => return Err(CmdError::Params("`to` or `x` and `y` are required".into())),
+    };
     s.set_caret(Pos::new(Block::Outline(to), at, 0));
     Ok(Value::Null)
 }

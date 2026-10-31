@@ -26,11 +26,27 @@ fn registry() -> &'static Registry {
         specs.extend(crate::para_cmds::specs());
         specs.extend(crate::tag_cmds::specs());
         specs.extend(crate::outline_cmds::specs());
+        specs.extend(crate::table_cmds::specs());
+        specs.extend(crate::math_cmds::specs());
+        specs.extend(crate::picture_cmds::specs());
+        specs.extend(crate::draw_cmds::specs());
+        specs.extend(crate::printout_cmds::specs());
         specs.extend(crate::page_cmds::specs());
+        specs.extend(crate::paper_cmds::specs());
+        specs.extend(crate::template_cmds::specs());
         specs.extend(crate::section_cmds::specs());
+        specs.extend(crate::protect_cmds::specs());
+        specs.extend(crate::spell_cmds::specs());
         specs.extend(crate::file_cmds::specs());
+        specs.extend(crate::export_cmds::specs());
+        specs.extend(crate::import_cmds::specs());
+        specs.extend(crate::onenote_cmds::specs());
         specs.extend(crate::nav_cmds::specs());
         specs.extend(crate::search_cmds::specs());
+        specs.extend(crate::history_cmds::specs());
+        specs.extend(crate::versions_cmds::specs());
+        specs.extend(crate::help_cmds::specs());
+        specs.extend(crate::window_cmds::specs());
         specs.extend(crate::view_cmds::specs());
         let by_id = specs.iter().enumerate().map(|(i, s)| (s.id, i)).collect();
         Registry { specs, by_id }

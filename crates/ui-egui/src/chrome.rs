@@ -100,35 +100,9 @@ pub fn title_bar(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         });
 }
 
-/// Back, Undo and the ▾ customize menu (the reference shows Back and Undo by default; Redo is
-/// in the menu).
+/// The Quick Access Toolbar (`qat`): Back and Undo by default, and the ▾ customize menu.
 fn quick_access(app: &mut NoteApp, ui: &mut Ui, t: &Tokens) {
-    let ctx = ui.ctx().clone();
-    for (id, catalog, tip) in [("nav.back", "QAT.ViewGoBack", "Back (Alt+Left)"), ("edit.undo", "QAT.UndoButton", "Undo (Ctrl+Z)")] {
-        let enabled = app.disabled_reason(id).is_none();
-        let (resp, rect, color) = icon_button(ui, size::BUTTON, tip, enabled, t);
-        let glyph = Rect::from_center_size(rect.center(), vec2(size::ICON + 2.0, size::ICON + 2.0));
-        if id == "nav.back" {
-            icons::back(ui.painter(), glyph, color);
-        } else {
-            icons::undo(ui.painter(), glyph, false, color);
-        }
-        if resp.on_hover_text(format!("{tip}\n{catalog}")).clicked() && enabled {
-            app.run(&ctx, id, json!({}));
-        }
-    }
-    let (rect, resp) = ui.allocate_exact_size(vec2(16.0, size::BUTTON), Sense::click());
-    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Customize Quick Access Toolbar"));
-    if resp.hovered() {
-        ui.painter().rect_filled(rect, radius::CONTROL, t.hover);
-    }
-    icons::chevron(ui.painter(), Rect::from_center_size(rect.center(), vec2(12.0, 12.0)), Dir::Down, t.icon);
-    let resp = resp.on_hover_text("Customize Quick Access Toolbar");
-    egui::Popup::menu(&resp).show(|ui| {
-        crate::nav::cmd_item(app, ui, "Redo (Ctrl+Y)", "edit.redo", json!({}));
-        ui.separator();
-        ui.add_enabled(false, egui::Button::new("More Commands…")).on_disabled_hover_text("Customizing the toolbar is not implemented yet");
-    });
+    crate::qat::toolbar(app, ui, t);
 }
 
 /// The account circle: the author's initials. Signing in needs a Microsoft account, so it is
@@ -146,11 +120,11 @@ fn account(app: &NoteApp, ui: &mut Ui, t: &Tokens) {
     resp.on_hover_text(format!("{name}\nSigning in needs a Microsoft account; set your name in File › Options."));
 }
 
-/// The title-bar Search: type a command name, pick it to run it; the last row hands the text to
-/// Search notebooks (catalog `UI.Window.SearchBox`, `UI.Window.TellMe`).
-fn search(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: &Tokens) {
+/// The rounded frame of a search box (accent when focused, darker when hovered); the whole box
+/// is the click target that focuses the field `id`, and the `label` a screen reader announces.
+/// Shared by the title-bar Search and Search notebooks. Returns whether the field has focus.
+pub(crate) fn search_frame(ui: &mut Ui, r: Rect, t: &Tokens, id: egui::Id, label: &str) -> bool {
     let ctx = ui.ctx().clone();
-    let id = egui::Id::new(SEARCH_ID);
     let focused = ctx.memory(|m| m.has_focus(id));
     let hovered = ui.rect_contains_pointer(r);
     let stroke = if focused {
@@ -161,13 +135,21 @@ fn search(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: &Tokens) {
         Stroke::new(1.0, t.card_border)
     };
     ui.painter().rect(r, radius::SEARCH, t.input, stroke, egui::StrokeKind::Inside);
-    icons::search(ui.painter(), Rect::from_center_size(pos2(r.min.x + 16.0, r.center().y), vec2(size::ICON, size::ICON)), t.icon);
-    // The whole box is the click target (and the "Search" a screen reader announces).
     let area = ui.interact(r, id.with("area"), Sense::click());
-    area.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, "Search"));
+    area.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::TextEdit, true, label));
     if area.clicked() {
         ctx.memory_mut(|m| m.request_focus(id));
     }
+    focused
+}
+
+/// The title-bar Search: type a command name, pick it to run it; the last row hands the text to
+/// Search notebooks (catalog `UI.Window.SearchBox`, `UI.Window.TellMe`).
+fn search(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: &Tokens) {
+    let ctx = ui.ctx().clone();
+    let id = egui::Id::new(SEARCH_ID);
+    search_frame(ui, r, t, id, "Search");
+    icons::search(ui.painter(), Rect::from_center_size(pos2(r.min.x + 16.0, r.center().y), vec2(size::ICON, size::ICON)), t.icon);
     let mut text: String = ctx.data_mut(|d| d.get_temp::<String>(id).unwrap_or_default());
     let edit = Rect::from_min_max(pos2(r.min.x + 30.0, r.min.y + 1.0), pos2(r.max.x - 8.0, r.max.y - 1.0));
     let resp = ui.put(
@@ -175,7 +157,7 @@ fn search(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: &Tokens) {
         egui::TextEdit::singleline(&mut text)
             .id(id)
             .frame(Frame::NONE)
-            .hint_text(egui::RichText::new("Search").color(t.text_dim))
+            .hint_text(egui::RichText::new(crate::i18n::tr("Search")).color(t.text_dim))
             .text_color(t.text)
             .font(TypeRung::Body.font(&ctx, Weight::Regular))
             .vertical_align(Align::Center),
@@ -231,12 +213,14 @@ fn search(app: &mut NoteApp, ui: &mut Ui, r: Rect, t: &Tokens) {
     }
 }
 
-/// The contextual tabs for the current selection (Table Layout, Equation, Audio & Video). The
-/// objects they act on arrive in M2, so none is shown yet; a contextual tab named in the view state
-/// without its selection falls back to Home rather than showing tools for nothing.
-pub fn contextual_tabs(_app: &NoteApp) -> Vec<&'static Tab> {
-    let _ = CONTEXTUAL;
-    Vec::new()
+/// The contextual tabs for the current selection (catalog `UI.Ribbon.ContextualTabs`): Table
+/// Layout while the caret or the selection is in a table. Equation and Audio & Video follow
+/// with their objects. A contextual tab named in the UI state without its selection falls back
+/// to Home rather than showing tools for nothing.
+pub fn contextual_tabs(app: &NoteApp) -> Vec<&'static Tab> {
+    let live = |id: &str| notecraft_engine::commands::find(id).is_some_and(|c| (c.enabled)(&app.session).is_none());
+    let (in_table, in_equation) = (live("table.selectTable"), live("equation.linear"));
+    CONTEXTUAL.iter().filter(|t| t.name == "Table Layout" && in_table || t.name == "Equation" && in_equation).collect()
 }
 
 /// The tab whose body the ribbon shows: the selected one if visible, else Home.
@@ -263,7 +247,7 @@ pub fn tab_row(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 let selected = current_tab(app).map(|x| x.name).unwrap_or("Home");
                 for (x, is_ctx) in TABS.iter().map(|x| (x, false)).chain(contextual.iter().map(|x| (*x, true))) {
                     let sel = selected == x.name && !app.session.view.ribbon_collapsed;
-                    let r = tab(ui, x.name, sel, is_ctx, &t);
+                    let r = tab(ui, &crate::i18n::tr(x.name), sel, is_ctx, &t);
                     if r.clicked() {
                         app.session.view.ribbon_collapsed = false;
                         app.ui.tab = x.name.to_string();
@@ -312,13 +296,13 @@ fn tab(ui: &mut Ui, name: &str, selected: bool, contextual: bool, t: &Tokens) ->
 /// Share: accent-filled, disabled (sharing needs OneDrive; catalog `UI.Window.Share`).
 fn share(ui: &mut Ui, t: &Tokens) {
     let font = crate::theme::font(ui.ctx(), TypeRung::Body.size(), Weight::Medium);
-    let w = ui.painter().layout_no_wrap("Share".into(), font.clone(), t.on_accent).size().x + 36.0;
+    let w = ui.painter().layout_no_wrap(crate::i18n::tr("Share"), font.clone(), t.on_accent).size().x + 36.0;
     let (r, resp) = ui.allocate_exact_size(vec2(w, 26.0), Sense::hover());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, false, "Share"));
     let fill = t.accent.gamma_multiply(0.55);
     ui.painter().rect_filled(r, radius::CONTROL, fill);
     icons::share(ui.painter(), Rect::from_center_size(pos2(r.min.x + 14.0, r.center().y), vec2(14.0, 14.0)), t.on_accent);
-    ui.painter().text(pos2(r.min.x + 25.0, r.center().y), Align2::LEFT_CENTER, "Share", font, t.on_accent);
+    ui.painter().text(pos2(r.min.x + 25.0, r.center().y), Align2::LEFT_CENTER, crate::i18n::tr("Share"), font, t.on_accent);
     resp.on_hover_text("Sharing needs OneDrive, a Microsoft service; not available in NoteCraft");
 }
 
@@ -349,7 +333,7 @@ pub fn card_header(ui: &mut Ui, title: &str, t: &Tokens) -> bool {
     let ctx = ui.ctx().clone();
     let mut closed = false;
     ui.horizontal(|ui| {
-        ui.label(egui::RichText::new(title).font(TypeRung::Heading.font(&ctx, Weight::Semibold)).color(t.text));
+        ui.label(egui::RichText::new(crate::i18n::tr(title)).font(TypeRung::Heading.font(&ctx, Weight::Semibold)).color(t.text));
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             let (resp, rect, color) = icon_button(ui, 24.0, "Close", true, t);
             icons::cross(ui.painter(), rect.shrink(3.0), color);

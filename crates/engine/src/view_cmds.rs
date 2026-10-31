@@ -1,12 +1,12 @@
 //! View (zoom, page setup, full page, window) and Insert (time stamps, links) commands.
 
 use notecraft_doc::color::Rgba;
-use notecraft_doc::{CharFormat, RuleLines};
+use notecraft_doc::{CharFormat, Id, PageObject, RuleLines};
 use notecraft_text as t;
 use serde_json::{Value, json};
 
 use crate::ops::{self, need_page, need_text, no_page};
-use crate::selection::{Block, Pos};
+use crate::selection::{Block, PageSel, Pos};
 use crate::session::{RibbonMode, ScrollRequest};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
 
@@ -14,7 +14,46 @@ use crate::{CmdError, CmdResult, CommandSpec, Session, p};
 pub const ZOOM_STOPS: [f32; 13] = [0.1, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 3.5, 4.0];
 
 fn need_link(s: &Session) -> Option<&'static str> {
-    if link_range(s).is_some() { None } else { Some("The caret is not on a link") }
+    if link_range(s).is_some() || object_link(s).is_some() { None } else { Some("The caret is not on a link") }
+}
+
+/// The selected pictures, attachments and ink strokes (the objects that carry a link of their
+/// own; a container's or a table's links are in its text).
+fn linkable(s: &Session) -> Vec<Id> {
+    let (Some(page), PageSel::Objects { ids }) = (s.page(), &s.sel.on_page) else { return Vec::new() };
+    ids.iter()
+        .copied()
+        .filter(|id| page.objects.iter().any(|o| o.id() == *id && matches!(o, PageObject::Image(_) | PageObject::Attachment(_) | PageObject::Ink(_))))
+        .collect()
+}
+
+/// The link of the first selected object that has one.
+pub(crate) fn object_link(s: &Session) -> Option<String> {
+    let (Some(page), PageSel::Objects { ids }) = (s.page(), &s.sel.on_page) else { return None };
+    ids.iter().find_map(|id| page.objects.iter().find(|o| o.id() == *id).and_then(|o| o.link().map(str::to_string)))
+}
+
+/// Set (or clear) the link on the selected objects; false when none is selected.
+fn set_object_link(s: &mut Session, url: Option<String>) -> Result<bool, CmdError> {
+    let ids = linkable(s);
+    if ids.is_empty() {
+        return Ok(false);
+    }
+    let page = s.page_mut().ok_or_else(no_page)?;
+    for o in page.objects.iter_mut().filter(|o| ids.contains(&o.id())) {
+        if let Some(slot) = o.link_mut() {
+            *slot = url.clone();
+        }
+    }
+    Ok(true)
+}
+
+impl Session {
+    /// The link under the selection: the text link at the caret, or the selected object's
+    /// (what Edit Link… starts from).
+    pub fn current_link(&self) -> Option<String> {
+        link_range(self).map(|(_, _, _, url)| url).or_else(|| object_link(self))
+    }
 }
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
@@ -67,6 +106,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("view.normal", "R.View.Views.NormalViewOneNote", "Normal View", "View/Views/Normal View", |s, _| {
             s.view.full_page = false;
             s.view.docked = false;
+            s.view.quick_note = false;
             Ok(Value::Null)
         })
         .pure(),
@@ -181,6 +221,10 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("link.remove", "CM.Text.LinkRemove", "Remove Link", "Context/Text/Remove Link", remove_link).when(need_link),
         CommandSpec::new("link.copy", "CM.Text.LinkCopyOneNote", "Copy Link", "Context/Text/Copy Link", copy_link).pure().when(need_link),
         CommandSpec::new("link.select", "CM.Text.LinkSelect", "Select Link", "Context/Text/Select Link", select_link).pure().when(need_link),
+        // CM.Text.ToPageLink — the selected words become a link to the page of that title,
+        // created in this section when there is none (as a [[wiki link]] would).
+        CommandSpec::new("link.toPage", "CM.Text.ToPageLink", "Link to Page", "Context/Text/Link to Page (wiki link)", link_to_page)
+            .when(|s| if s.selected_text().is_some_and(|t| !t.trim().is_empty()) { None } else { Some("Select the words to link first") }),
         // BEH.Links.CopyLink — Copy Link to Paragraph (paragraph context menu).
         CommandSpec::new("para.copyLink", "BEH.Links.CopyLink", "Copy Link to Paragraph", "Behaviour/Links", copy_para_link).pure().when(need_text),
     ]
@@ -314,8 +358,29 @@ fn validate_url(url: &str) -> Result<String, CmdError> {
     Ok(u.to_string())
 }
 
+fn link_to_page(s: &mut Session, _: &Value) -> CmdResult {
+    let name = s.selected_text().map(|t| t.trim().to_string()).unwrap_or_default();
+    if name.is_empty() || name.chars().count() > 255 || name.contains('\n') {
+        return Err(CmdError::Params("select a short piece of text on one line".into()));
+    }
+    let target = crate::page_cmds::page_by_title_or_create(s, &name)?;
+    let url = format!("notecraft:page/{target}");
+    let segs = ops::segments(s);
+    let page = s.page_mut().ok_or_else(no_page)?;
+    for (b, i, r) in segs {
+        if let Some(p) = Session::para_mut(page, b, i) {
+            t::apply_format(p, r, &|f| f.link = Some(url.clone()));
+        }
+    }
+    Ok(json!({"page": target.to_string(), "link": url}))
+}
+
 fn insert_link(s: &mut Session, v: &Value) -> CmdResult {
     let url = validate_url(p::req_str(v, "url")?)?;
+    // Selected pictures, attachments or ink get the link themselves (their Link… menu items).
+    if set_object_link(s, Some(url.clone()))? {
+        return Ok(Value::Null);
+    }
     let text = p::str(v, "text").map(str::to_string);
     let has_selection = s.text_range().is_some_and(|r| !r.is_caret());
     if has_selection && text.is_none() {
@@ -384,6 +449,10 @@ fn link_range(s: &Session) -> Option<(Block, usize, std::ops::Range<usize>, Stri
 
 fn edit_link(s: &mut Session, v: &Value) -> CmdResult {
     let url = validate_url(p::req_str(v, "url")?)?;
+    if link_range(s).is_none() && object_link(s).is_some() {
+        set_object_link(s, Some(url))?;
+        return Ok(Value::Null);
+    }
     let (b, i, r, _) = link_range(s).ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?;
     let text = p::str(v, "text").map(str::to_string);
     let page = s.page_mut().ok_or_else(no_page)?;
@@ -400,6 +469,10 @@ fn edit_link(s: &mut Session, v: &Value) -> CmdResult {
 }
 
 fn remove_link(s: &mut Session, _: &Value) -> CmdResult {
+    if link_range(s).is_none() && object_link(s).is_some() {
+        set_object_link(s, None)?;
+        return Ok(Value::Null);
+    }
     let (b, i, r, _) = link_range(s).ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?;
     let page = s.page_mut().ok_or_else(no_page)?;
     if let Some(p) = Session::para_mut(page, b, i) {
@@ -409,8 +482,8 @@ fn remove_link(s: &mut Session, _: &Value) -> CmdResult {
 }
 
 fn copy_link(s: &mut Session, _: &Value) -> CmdResult {
-    let (_, _, _, url) = link_range(s).ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?;
-    s.clipboard = crate::session::Clipboard { paragraphs: Vec::new(), text: url.clone(), pages: Vec::new() };
+    let url = s.current_link().ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?;
+    s.clipboard = crate::session::Clipboard { text: url.clone(), ..Default::default() };
     Ok(json!({"text": url}))
 }
 
@@ -427,8 +500,6 @@ fn copy_para_link(s: &mut Session, _: &Value) -> CmdResult {
     let para = Session::block_paras(page, c.block).and_then(|ps| ps.get(c.para)).ok_or_else(no_page)?;
     let link = format!("notecraft:para/{pid}/{}", para.id);
     let text = para.text();
-    let mut q = ops::new_para(s);
-    q.runs.push(notecraft_doc::Run::new(if text.is_empty() { &link } else { &text }, CharFormat { link: Some(link.clone()), ..Default::default() }));
-    s.clipboard = crate::session::Clipboard { paragraphs: vec![q], text: link.clone(), pages: Vec::new() };
+    ops::set_link_clipboard(s, if text.is_empty() { &link } else { &text }, &link);
     Ok(json!({"link": link}))
 }

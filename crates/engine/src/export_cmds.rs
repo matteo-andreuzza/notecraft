@@ -1,0 +1,307 @@
+//! File › Export of a page or a section to other applications (catalog `BS.Export.Page`,
+//! `BS.Export.Section`, `BS.Export.FormatMht`; formats `FMT.Export.Html`,
+//! `FMT.Export.Markdown`). The notebook archive is `file.exportNotebook` in `file_cmds`.
+//!
+//! The format comes from `format` or, without it, from the file's extension: Single File Web
+//! Page (`.mht`, the reference's web format), Word Document (`.docx`), PDF (`.pdf`, decision
+//! D13), HTML (`.html`,
+//! pictures inline) or Markdown (`.md`, pictures and attachments written to a `<name>_files`
+//! folder beside it). The other formats of the reference's Export page (`.one`, `.doc`, `.pdf`,
+//! `.xps`) are refused with a clear message until they exist. The result reports what was written and what was left out
+//! (ink has no form in these formats).
+
+use notecraft_doc::Page;
+use notecraft_import_export::{docx, export, markdown, pdf};
+use serde_json::{Value, json};
+
+use crate::ops::{need_page, need_section, no_page};
+use crate::{CmdError, CmdResult, CommandSpec, Session, p};
+
+pub(crate) fn specs() -> Vec<CommandSpec> {
+    vec![
+        // BS.Export.Page — the current page (or `page`).
+        CommandSpec::new("file.exportPage", "BS.Export.Page", "Export Page", "File/Export/Page", export_page)
+            .params(r#"{"path": file, "format"?: "mht"|"docx"|"pdf"|"png"|"svg"|"html"|"md", "page"?: id}"#)
+            .pure()
+            .when(need_page),
+        // BS.Export.Section and CM.Section.FileSaveAsContextualItem — every page of the
+        // current section (or `section`), in page-list order.
+        CommandSpec::new("file.exportSection", "BS.Export.Section", "Export Section", "File/Export/Section", export_section)
+            .params(r#"{"path": file, "format"?: "mht"|"docx"|"pdf"|"html"|"md", "section"?: id}"#)
+            .pure()
+            .when(need_section),
+        // BS.Export.FormatMht — Single File Web Page, of the page (default) or the section.
+        CommandSpec::new(
+            "file.exportMht",
+            "BS.Export.FormatMht",
+            "Export as Single File Web Page",
+            "File/Export/Single File Web Page (.mht)",
+            export_mht,
+        )
+        .params(r#"{"path": file, "scope"?: "page"|"section"}"#)
+        .pure()
+        .when(need_page),
+        // BS.Print.Print — Ctrl+P (KB.Pages.Print, QAT.FilePrint): the print-ready PDF of the
+        // current page (or section); the UI hands it to the system's print spooler.
+        CommandSpec::new("file.print", "BS.Print.Print", "Print", "File/Print/Print", print)
+            .key("Mod+P")
+            .params(r#"{"scope"?: "page"|"section", "dir"?: folder}"#)
+            .pure()
+            .when(need_page),
+        // BS.Print.Preview — the same PDF, which the UI opens in the system's viewer.
+        CommandSpec::new("file.printPreview", "BS.Print.Preview", "Print Preview", "File/Print/Print Preview", print)
+            .params(r#"{"scope"?: "page"|"section", "dir"?: folder}"#)
+            .pure()
+            .when(need_page),
+    ]
+}
+
+/// The print-ready PDF of the page or section in `dir` (default: a `notecraft-print` folder in
+/// the temporary directory), named after it.
+fn print(s: &mut Session, v: &Value) -> CmdResult {
+    let section = match p::str(v, "scope").unwrap_or("page") {
+        "page" => false,
+        "section" => true,
+        other => return Err(CmdError::Params(format!("unknown scope `{other}` (page or section)"))),
+    };
+    let (title, pages): (String, Vec<std::sync::Arc<Page>>) = if section {
+        let sec = s.section().ok_or_else(|| CmdError::Disabled("open a section first".into()))?;
+        (sec.name.clone(), sec.pages.clone())
+    } else {
+        let page = s.page().ok_or_else(no_page)?;
+        (page.display_title(), vec![page.clone()])
+    };
+    let dir = match p::str(v, "dir").filter(|d| !d.is_empty()) {
+        Some(d) => std::path::PathBuf::from(d),
+        None => std::env::temp_dir().join("notecraft-print"),
+    };
+    print_dir(&dir)?;
+    let path = dir.join(format!("{}.pdf", notecraft_doc::media::safe_file_name(&title)));
+    let path = path.to_string_lossy().into_owned();
+    let refs: Vec<&Page> = pages.iter().map(|p| p.as_ref()).collect();
+    let mut r = write_pdf(s, &path, &title, &refs)?;
+    if let Some(o) = r.as_object_mut() {
+        o.insert("path".into(), json!(path));
+        o.insert("title".into(), json!(title));
+    }
+    Ok(r)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn print_dir(dir: &std::path::Path) -> Result<(), CmdError> {
+    std::fs::create_dir_all(dir).map_err(|e| CmdError::Failed(format!("{}: {e}", dir.display())))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn print_dir(_: &std::path::Path) -> Result<(), CmdError> {
+    Err(CmdError::Disabled("the web version prints from the browser".into()))
+}
+
+/// An export format of this module.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Format {
+    Mht,
+    Docx,
+    Pdf,
+    Png,
+    Svg,
+    Html,
+    Markdown,
+}
+
+/// The format asked for, or the one the path's extension names (`.mht` when it names none).
+fn format(v: &Value, path: &str) -> Result<Format, CmdError> {
+    let name = match p::str(v, "format") {
+        Some(f) => f.to_ascii_lowercase(),
+        None => std::path::Path::new(path).extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).unwrap_or_else(|| "mht".into()),
+    };
+    match name.as_str() {
+        "mht" | "mhtml" => Ok(Format::Mht),
+        "docx" => Ok(Format::Docx),
+        "pdf" => Ok(Format::Pdf),
+        "png" => Ok(Format::Png),
+        "svg" => Ok(Format::Svg),
+        "html" | "htm" => Ok(Format::Html),
+        "md" | "markdown" => Ok(Format::Markdown),
+        "one" | "onepkg" | "doc" | "xps" => {
+            Err(CmdError::Disabled(format!("export to .{name} is not available yet (M3: web page, Word, PDF and Markdown first)")))
+        }
+        other => Err(CmdError::Params(format!("unknown export format `{other}` (mht, docx, pdf, png, svg, html or md)"))),
+    }
+}
+
+fn export_page(s: &mut Session, v: &Value) -> CmdResult {
+    let path = p::req_str(v, "path")?;
+    let page = match p::id(v, "page")? {
+        Some(id) => s.ws.page(id).ok_or_else(|| CmdError::Params("no such page".into()))?.clone(),
+        None => s.page().ok_or_else(no_page)?.clone(),
+    };
+    let fmt = format(v, path)?;
+    let title = page.display_title();
+    write(s, path, fmt, &title, &[&page])
+}
+
+fn export_section(s: &mut Session, v: &Value) -> CmdResult {
+    let path = p::req_str(v, "path")?;
+    let section = match p::id(v, "section")? {
+        Some(id) => s.ws.section(id).ok_or_else(|| CmdError::Params("no such section".into()))?.clone(),
+        None => s.section().ok_or_else(|| CmdError::Disabled("open a section first".into()))?.clone(),
+    };
+    let fmt = format(v, path)?;
+    let pages: Vec<&Page> = section.pages.iter().map(|p| p.as_ref()).collect();
+    write(s, path, fmt, &section.name, &pages)
+}
+
+fn export_mht(s: &mut Session, v: &Value) -> CmdResult {
+    let mut v = v.clone();
+    if let Some(o) = v.as_object_mut() {
+        o.insert("format".into(), json!("mht"));
+    }
+    match p::str(&v, "scope").unwrap_or("page") {
+        "page" => export_page(s, &v),
+        "section" => export_section(s, &v),
+        other => Err(CmdError::Params(format!("unknown scope `{other}` (page or section)"))),
+    }
+}
+
+/// The folder Markdown's files go to: `<stem>_files` beside `path`.
+fn files_dir(path: &str) -> (std::path::PathBuf, String) {
+    let p = std::path::Path::new(path);
+    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("export");
+    let name = format!("{stem}_files");
+    (p.with_file_name(&name), name)
+}
+
+fn write(s: &Session, path: &str, fmt: Format, title: &str, pages: &[&Page]) -> CmdResult {
+    let e = export::collect(pages, s.clock.utc_offset_min);
+    let mut written = vec![path.to_string()];
+    let mut dropped = docx::DocxReport::default();
+    let bytes = match fmt {
+        Format::Pdf => return write_pdf(s, path, title, pages),
+        Format::Png => return write_png(s, path, title, pages),
+        Format::Svg => return write_svg(s, path, title, pages),
+        Format::Mht => export::mht(&e, title),
+        Format::Docx => {
+            let (bytes, r) = docx::write(&e, title).map_err(CmdError::Failed)?;
+            dropped = r;
+            bytes
+        }
+        Format::Html => export::html_document(&e, title, export::Links::Inline).into_bytes(),
+        Format::Markdown => {
+            let (dir, name) = files_dir(path);
+            if !e.resources.is_empty() {
+                written.extend(write_files(&dir, &e.resources)?);
+            }
+            markdown::write(&e, &name).into_bytes()
+        }
+    };
+    write_file(path, &bytes)?;
+    let r = e.report;
+    Ok(json!({
+        "bytes": bytes.len(),
+        "pages": r.pages,
+        "pictures": r.pictures,
+        "files": r.files,
+        "tables": r.tables,
+        "inkLost": r.ink_lost,
+        "filesLost": r.files_lost + dropped.files_dropped + dropped.pictures_dropped,
+        "written": written,
+    }))
+}
+
+/// A page as a PNG picture (FMT.Export.Images): its content on one PDF sheet, rendered at
+/// 144 dpi (less for a page so large it would pass the picture limits).
+fn write_png(s: &Session, path: &str, title: &str, pages: &[&Page]) -> CmdResult {
+    let [page] = pages else { return Err(CmdError::Disabled("a picture holds one page: export a page".into())) };
+    let img = picture(s, page, title)?;
+    let (w, h) = (img.width, img.height);
+    let png = notecraft_codecs::encode_png(&img, &notecraft_codecs::Limits::PICTURE).map_err(|e| CmdError::Failed(e.to_string()))?;
+    write_file(path, &png)?;
+    Ok(json!({"bytes": png.len(), "pages": 1, "width": w, "height": h, "inkLost": 0, "written": [path]}))
+}
+
+/// A page drawn as pixels: its content on one PDF sheet rendered at 144 dpi (less for a page
+/// so large it would pass the picture limits). The PNG export and read-only previews use it.
+fn picture(s: &Session, page: &Page, title: &str) -> Result<notecraft_codecs::Rgba8, CmdError> {
+    let opts =
+        pdf::PdfOptions { title: title.to_string(), author: s.prefs.author.clone(), utc_offset_min: s.clock.utc_offset_min, fit_content: true };
+    let (doc, _) = pdf::write(&[page], notecraft_fonts::page_fonts(), &opts).map_err(CmdError::Failed)?;
+    let limits = notecraft_codecs::pdf::PdfLimits { max_bytes: 1 << 30, max_pages: 1, max_side: 16_000, max_pixels: 64 << 20, scale: 2.0 };
+    let (img, _) = notecraft_codecs::pdf::render(&doc, &limits)
+        .map_err(|e| CmdError::Failed(e.to_string()))?
+        .into_iter()
+        .next()
+        .ok_or_else(|| CmdError::Failed("nothing to draw".into()))?;
+    Ok(img)
+}
+
+impl Session {
+    /// The read-only preview (a page version or a deleted page) drawn as pixels at 144 dpi, as
+    /// the PNG export draws a page; `None` without a preview.
+    pub fn preview_picture(&self) -> Option<Result<notecraft_codecs::Rgba8, CmdError>> {
+        let page = self.preview_page()?;
+        Some(picture(self, &page, &page.display_title()))
+    }
+}
+
+/// A page as an SVG picture (FMT.Export.Images): the same drawing as the PNG picture, as
+/// vectors (text as glyph outlines, pictures embedded).
+fn write_svg(s: &Session, path: &str, title: &str, pages: &[&Page]) -> CmdResult {
+    let [page] = pages else { return Err(CmdError::Disabled("a picture holds one page: export a page".into())) };
+    let opts =
+        pdf::PdfOptions { title: title.to_string(), author: s.prefs.author.clone(), utc_offset_min: s.clock.utc_offset_min, fit_content: true };
+    let (svg, _) = pdf::svg::write(page, notecraft_fonts::page_fonts(), &opts).map_err(CmdError::Failed)?;
+    write_file(path, svg.as_bytes())?;
+    Ok(json!({"bytes": svg.len(), "pages": 1, "inkLost": 0, "written": [path]}))
+}
+
+/// The pages as PDF (decision D13), with the system's page fonts.
+pub(crate) fn write_pdf(s: &Session, path: &str, title: &str, pages: &[&Page]) -> CmdResult {
+    let opts =
+        pdf::PdfOptions { title: title.to_string(), author: s.prefs.author.clone(), utc_offset_min: s.clock.utc_offset_min, fit_content: false };
+    let (bytes, r) = pdf::write(pages, notecraft_fonts::page_fonts(), &opts).map_err(CmdError::Failed)?;
+    write_file(path, &bytes)?;
+    Ok(json!({
+        "bytes": bytes.len(),
+        "pages": r.pages,
+        "sheets": r.sheets,
+        "files": r.files,
+        "filesLost": r.pictures_lost,
+        // Ink is drawn.
+        "inkLost": 0,
+        "equationsAsText": r.equations,
+        "written": [path],
+    }))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn write_file(path: &str, bytes: &[u8]) -> Result<(), CmdError> {
+    std::fs::write(path, bytes).map_err(|e| CmdError::Failed(format!("{path}: {e}")))
+}
+
+#[cfg(target_arch = "wasm32")]
+fn write_file(_: &str, _: &[u8]) -> Result<(), CmdError> {
+    Err(CmdError::Disabled("the web version downloads exports instead".into()))
+}
+
+/// Write the resources into `dir` (created; never through a link). Returns the paths.
+#[cfg(not(target_arch = "wasm32"))]
+fn write_files(dir: &std::path::Path, files: &[export::Resource]) -> Result<Vec<String>, CmdError> {
+    let fail = |e: std::io::Error| CmdError::Failed(format!("{}: {e}", dir.display()));
+    if dir.symlink_metadata().is_ok_and(|m| m.file_type().is_symlink()) {
+        return Err(CmdError::Failed(format!("{}: is a link; not writing through it", dir.display())));
+    }
+    std::fs::create_dir_all(dir).map_err(fail)?;
+    let mut out = Vec::new();
+    for r in files {
+        let p = dir.join(&r.name);
+        std::fs::write(&p, &r.bytes).map_err(fail)?;
+        out.push(p.display().to_string());
+    }
+    Ok(out)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn write_files(_: &std::path::Path, _: &[export::Resource]) -> Result<Vec<String>, CmdError> {
+    Err(CmdError::Disabled("the web version downloads exports instead".into()))
+}

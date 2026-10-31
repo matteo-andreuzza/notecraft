@@ -13,14 +13,20 @@ workspace = true
 
 [dependencies]
 notecraft-engine = { workspace = true }
+notecraft-math = { workspace = true }
+notecraft-codecs = { workspace = true }
+notecraft-ink = { workspace = true }
+notecraft-ink-geom = { workspace = true }
 egui = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
 # Font parser egui's epaint uses; system font files are validated with it before they reach
 # egui (which can't handle a file it fails to parse). Same version as epaint's: no second copy.
-skrifa = { version = "0.44", default-features = false, features = ["std"] }
+notecraft-fonts = { workspace = true }
 
 [dev-dependencies]
+notecraft-spell = { workspace = true }
+notecraft-onestore = { workspace = true, features = ["fixtures"] }
 egui_kittest = { workspace = true, features = ["wgpu", "snapshot"] }
 image = { version = "0.25", default-features = false, features = ["png"] }

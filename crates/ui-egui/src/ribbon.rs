@@ -9,7 +9,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use egui::{Color32, Frame, Margin, Popup, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
+use egui::{Align2, Color32, Frame, Margin, Popup, Rect, RichText, Sense, Stroke, Ui, pos2, vec2};
 use notecraft_engine::catalog::{self, Row};
 use notecraft_engine::doc::color::{FONT_THEME, HIGHLIGHT_COLORS, PAGE_COLORS, STANDARD_COLORS, font_grid};
 use notecraft_engine::doc::{ParaStyle, RuleLines};
@@ -41,25 +41,47 @@ pub(crate) fn label(id: &str) -> String {
     let l = row(id).map(|r| r.label.clone()).unwrap_or_else(|| id.to_string());
     let l = l.trim_start_matches("Tag: ").trim_start_matches("Style: ").trim_start_matches("Recent Edits: ");
     // "Navigation Panes (show/hide)": the parenthetical explains the row, it isn't the label.
-    match l.find(" (") {
-        Some(i) if l.ends_with(')') => l[..i].to_string(),
-        _ => l.to_string(),
-    }
+    let l = match l.find(" (") {
+        Some(i) if l.ends_with(')') => &l[..i],
+        _ => l,
+    };
+    // OPT.Language.DisplayLanguage: in the chosen language when a translation is known.
+    crate::i18n::tr(l)
 }
 
 /// The params a control passes to its command (gallery items carry their value).
 pub(crate) fn params_for(id: &str) -> Value {
-    let k = id.rsplit('.').next().unwrap_or("");
-    match k {
-        "FindToday" => json!({"range": "today"}),
-        "PasteText" => json!({}),
+    match id.rsplit('.').next() {
+        Some("FindToday") => json!({"range": "today"}),
+        Some("FindSinceYesterday") => json!({"range": "yesterday"}),
+        Some("FindSinceSevenDays") => json!({"range": "7d"}),
+        Some("FindLastTwoWeeks") => json!({"range": "14d"}),
+        Some("FindLastMonth") => json!({"range": "30d"}),
+        Some("FindLastThreeMonths") => json!({"range": "3m"}),
+        Some("FindLasteSixMonths") => json!({"range": "6m"}),
+        Some("FindAllChangesByDate") => json!({"range": "all"}),
         _ => json!({}),
     }
 }
 
 /// Command id for a control, if any.
-pub(crate) fn command(id: &str) -> Option<String> {
-    row(id).map(|r| r.command.clone()).filter(|c| !c.is_empty())
+pub(crate) fn command(id: &str) -> Option<&'static str> {
+    row(id).map(|r| r.command.as_str()).filter(|c| !c.is_empty())
+}
+
+/// The table the selection is in (the caret's cell, selected cells or a selected table).
+pub(crate) fn current_table(app: &NoteApp) -> Option<&notecraft_engine::doc::Table> {
+    use notecraft_engine::selection::{Block, PageSel};
+    let page = app.session.page()?;
+    match &app.session.sel.on_page {
+        PageSel::Text(r) => match r.head.block {
+            Block::Cell(c) => page.table_of_cell(c).map(|(t, _, _)| t),
+            _ => None,
+        },
+        PageSel::Cells { table, .. } => page.table(*table),
+        PageSel::Objects { ids } => ids.iter().find_map(|id| page.table(*id)),
+        PageSel::None => None,
+    }
 }
 
 /// Whether a toggle control is currently on.
@@ -91,6 +113,34 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "view.newPagesWithRuleLines" => s.prefs.new_pages_rule_lines.is_some(),
         "tag.findTags" => s.view.tags_pane,
         "view.navigationPanes" => !s.view.notebook_pane_collapsed,
+        "table.hideBorders" => current_table(app).is_some_and(|t| !t.borders),
+        "table.headerRow" => current_table(app).is_some_and(|t| t.header_row),
+        "draw.type" => s.draw.tool == notecraft_engine::DrawTool::Type,
+        "insert.space" => s.draw.tool == notecraft_engine::DrawTool::Space,
+        "draw.shapes" => s.draw.tool == notecraft_engine::DrawTool::Shape,
+        "draw.lockDrawingMode" => s.draw.lock_shapes,
+        "draw.ruler" => s.draw.ruler.is_some(),
+        "insert.pageTemplates" => s.view.templates_pane,
+        "view.paperSize" => s.view.paper_pane,
+        "history.pageVersions" => s.view.page_versions,
+        "help.help" => s.view.help_pane,
+        "draw.snapToGrid" => s.draw.snap_to_grid,
+        "draw.inkToShape" => s.draw.ink_to_shape,
+        "draw.replay" => s.view.ink_replay,
+        "review.password" => s.view.password_pane,
+        "review.spelling" => s.view.spelling_pane,
+        "draw.withTouch" => s.draw.with_touch,
+        "draw.lasso" => s.draw.tool == notecraft_engine::DrawTool::Lasso,
+        "draw.pan" => s.draw.tool == notecraft_engine::DrawTool::Pan,
+        "draw.eraser" => s.draw.tool == notecraft_engine::DrawTool::Eraser,
+        "draw.eraserSmall" => s.draw.eraser == notecraft_engine::EraserKind::Small,
+        "draw.eraserMedium" => s.draw.eraser == notecraft_engine::EraserKind::Medium,
+        "draw.eraserLarge" => s.draw.eraser == notecraft_engine::EraserKind::Large,
+        "draw.eraserStroke" => s.draw.eraser == notecraft_engine::EraserKind::Stroke,
+        "object.setAsBackground" => match (&s.sel.on_page, s.page()) {
+            (notecraft_engine::selection::PageSel::Objects { ids }, Some(p)) => ids.iter().any(|id| p.image(*id).is_some_and(|im| im.background)),
+            _ => false,
+        },
         _ => false,
     }
 }
@@ -192,7 +242,13 @@ fn group(app: &mut NoteApp, ui: &mut Ui, g: &Group, t: Tokens) {
         });
         let w = ui.min_rect().width().max(40.0);
         let (lr, _) = ui.allocate_exact_size(vec2(w, LABEL_H), Sense::hover());
-        ui.painter().text(lr.center(), egui::Align2::CENTER_CENTER, g.name, egui::FontId::proportional(TypeRung::Caption.size()), t.text_dim);
+        ui.painter().text(
+            lr.center(),
+            egui::Align2::CENTER_CENTER,
+            crate::i18n::tr(g.name),
+            egui::FontId::proportional(TypeRung::Caption.size()),
+            t.text_dim,
+        );
     });
     let end = ui.cursor().min;
     let x = end.x + 1.0;
@@ -228,6 +284,7 @@ fn item(app: &mut NoteApp, ui: &mut Ui, it: &Item, t: Tokens) {
             small(app, ui, id, kids, false, t);
         }
         Item::Combo(id, w) => combo(app, ui, id, w, t),
+        Item::Gallery(id, _, extra) if id == crate::ink::PENS_ID => crate::ink::gallery(app, ui, CONTENT_H, extra, t),
         Item::Gallery(id, items, extra) => gallery(app, ui, id, items, extra, t),
         Item::Column(items) => {
             ui.vertical(|ui| {
@@ -265,7 +322,7 @@ pub(crate) fn tooltip(app: &NoteApp, id: &str) -> String {
         s.push_str(&format!(" ({})", r.shortcut.replace("Mod", "Ctrl")));
     }
     let reason = match command(id) {
-        Some(c) => app.disabled_reason(&c),
+        Some(c) => app.disabled_reason(c),
         None => {
             if row(id).is_some_and(|r| r.status == "out-of-scope") {
                 Some("Needs a Microsoft service; not available in NoteCraft".into())
@@ -280,9 +337,13 @@ pub(crate) fn tooltip(app: &NoteApp, id: &str) -> String {
     s
 }
 
+/// The fonts the Font box and the Options' default font offer.
+pub(crate) const FONT_CHOICES: [&str; 10] =
+    ["Calibri", "Calibri Light", "Arial", "Cambria", "Consolas", "Courier New", "Georgia", "Segoe UI", "Times New Roman", "Verdana"];
+
 pub(crate) fn enabled(app: &NoteApp, id: &str) -> bool {
     match command(id) {
-        Some(c) => app.disabled_reason(&c).is_none(),
+        Some(c) => app.disabled_reason(c).is_none(),
         None => false,
     }
 }
@@ -291,7 +352,25 @@ pub(crate) fn enabled(app: &NoteApp, id: &str) -> bool {
 pub(crate) fn dialog_for(app: &NoteApp, id: &str) -> Option<crate::dialogs::Dialog> {
     use crate::dialogs::Dialog;
     match id.rsplit('.').next()? {
-        "HyperlinkCreateHere" | "HyperlinkCreate" => Some(Dialog::Link { url: String::new(), text: String::new() }),
+        "HyperlinkCreateHere" | "HyperlinkCreate" => Some(Dialog::Link { url: String::new(), text: String::new(), filter: String::new() }),
+        // Edit Link… starts from the link under the caret or on the selected object.
+        "LinkEdit" => Some(Dialog::Link { url: app.session.current_link().unwrap_or_default(), text: String::new(), filter: String::new() }),
+        "TableInsert" => Some(Dialog::InsertTable(2, 2)),
+        // Sort… starts from the caret's column, ascending.
+        "ShowSortTableRowsDialog" => {
+            use notecraft_engine::selection::{Block, PageSel};
+            let t = current_table(app)?;
+            let col = match &app.session.sel.on_page {
+                PageSel::Text(r) => match r.head.block {
+                    Block::Cell(c) => app.session.page().and_then(|p| p.table_of_cell(c)).map_or(0, |(_, _, c)| c),
+                    _ => 0,
+                },
+                PageSel::Cells { cols, .. } => cols.0,
+                _ => 0,
+            };
+            Some(Dialog::SortTable { by: [Some(col), None], descending: [false, false], header: t.header_row })
+        }
+        "SymbolInsertGallery" | "SymbolsDialog" => Some(Dialog::Symbol),
         "ParagraphSpacingOptions" => {
             let p = app.session.text_range().and_then(|r| {
                 app.session.page().and_then(|pg| notecraft_engine::Session::block_paras(pg, r.head.block).and_then(|ps| ps.get(r.head.para).cloned()))
@@ -299,7 +378,27 @@ pub(crate) fn dialog_for(app: &NoteApp, id: &str) -> Option<crate::dialogs::Dial
             Some(p.map(|p| Dialog::Spacing(p.space_before, p.space_after, p.line_spacing)).unwrap_or(Dialog::Spacing(0.0, 0.0, 0.0)))
         }
         "TagsCustomize" => Some(Dialog::CustomizeTags(String::new())),
+        "AlternativeText" => {
+            let page = app.session.page()?;
+            let notecraft_engine::selection::PageSel::Objects { ids } = &app.session.sel.on_page else { return None };
+            let text =
+                ids.iter().find_map(|id| page.image(*id).map(|im| im.alt_text.clone()).or_else(|| page.attachment(*id).map(|a| a.alt_text.clone())));
+            Some(Dialog::AltText(text.unwrap_or_default()))
+        }
+        "RenameSelected" => {
+            let page = app.session.page()?;
+            let notecraft_engine::selection::PageSel::Objects { ids } = &app.session.sel.on_page else { return None };
+            ids.iter().find_map(|id| page.attachment(*id)).map(|a| Dialog::RenameAttachment(a.name.clone()))
+        }
         "EmptyRecycleBin" => Some(Dialog::ConfirmEmptyBin),
+        "MoreColorAndThicknessOptions" => {
+            let pen = app.session.draw.current_pen();
+            Some(Dialog::ColorThickness {
+                highlighter: pen.tool == notecraft_engine::doc::InkTool::Highlighter,
+                color: pen.color.to_hex(),
+                width: pen.width,
+            })
+        }
         _ => None,
     }
 }
@@ -311,7 +410,10 @@ pub(crate) fn fire(app: &mut NoteApp, ui: &Ui, id: &str) {
     }
     if let Some(c) = command(id) {
         let ctx = ui.ctx().clone();
-        app.run(&ctx, &c, params_for(id));
+        if crate::pictures::host_action(app, &ctx, c) {
+            return;
+        }
+        app.run(&ctx, c, params_for(id));
     }
 }
 
@@ -323,7 +425,7 @@ fn large(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], t: Tokens) {
     let (rect, resp) = ui.allocate_exact_size(vec2(w, CONTENT_H), Sense::click());
     let on = enabled(app, id) || !kids.is_empty() && kids.iter().any(|k| enabled(app, k)) || special_menu(id);
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, &lab));
-    let is_checked = command(id).is_some_and(|c| checked(app, &c));
+    let is_checked = command(id).is_some_and(|c| checked(app, c));
     let p = ui.painter();
     if is_checked {
         p.rect_filled(rect, crate::theme::radius::CONTROL, t.checked);
@@ -386,14 +488,157 @@ pub(crate) fn special_menu(id: &str) -> bool {
                 | "NumberingGallery"
                 | "ParagraphAlignmentMenu"
                 | "ExtendedTextFormattingMenu"
+                | "TableInsertGallery"
+                | "ShadingColorPicker"
+                | "InkShapeGallery"
+                | "InsertBuildingBlocksEquationsGallery"
+                | "EquationInsertGallery"
+                | "EquationSymbolsInsertGallery"
+                | "EquationFractionGallery"
+                | "EquationScriptGallery"
+                | "EquationRadicalGallery"
+                | "EquationIntegralGallery"
+                | "EquationLargeOperatorGallery"
+                | "EquationDelimiterGallery"
+                | "EquationFunctionGallery"
+                | "EquationAccentGallery"
+                | "EquationLimitGallery"
+                | "EquationOperatorGallery"
+                | "EquationMatrixGallery"
         )
     )
 }
 
+/// Columns × rows of the Insert › Table size grid (unverified: the reference's grid size).
+const TABLE_GRID: (usize, usize) = (10, 8);
+
+/// The Insert › Table size grid: hover picks columns × rows, a click inserts the table below the
+/// caret's container (catalog `R.Insert.Tables.TableInsertGallery`).
+fn table_grid(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    let cell = 18.0;
+    let (cols, rows) = TABLE_GRID;
+    let label_h = 20.0;
+    let size = vec2(cols as f32 * cell + 4.0, rows as f32 * cell + label_h + 4.0);
+    let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
+    let grid = Rect::from_min_size(rect.min + vec2(2.0, label_h + 2.0), vec2(cols as f32 * cell, rows as f32 * cell));
+    let pick = resp.hover_pos().filter(|p| grid.contains(*p)).map(|p| {
+        let c = (((p.x - grid.min.x) / cell) as usize).min(cols - 1) + 1;
+        let r = (((p.y - grid.min.y) / cell) as usize).min(rows - 1) + 1;
+        (c, r)
+    });
+    let painter = ui.painter();
+    let caption = match pick {
+        Some((c, r)) => format!("{c}x{r} Table"),
+        None => "Insert Table".to_string(),
+    };
+    painter.text(
+        rect.min + vec2(4.0, 2.0),
+        Align2::LEFT_TOP,
+        caption,
+        crate::theme::TypeRung::Body.font(&ctx, crate::theme::Weight::Regular),
+        t.text,
+    );
+    for r in 0..rows {
+        for c in 0..cols {
+            let sq = Rect::from_min_size(grid.min + vec2(c as f32 * cell, r as f32 * cell), vec2(cell - 3.0, cell - 3.0));
+            let on = pick.is_some_and(|(pc, pr)| c < pc && r < pr);
+            painter.rect_filled(sq, 1.0, if on { t.accent.gamma_multiply(0.25) } else { t.page });
+            painter.rect_stroke(sq, 1.0, Stroke::new(1.0, if on { t.accent } else { t.border }), egui::StrokeKind::Inside);
+        }
+    }
+    let resp = resp.on_hover_text("Insert a table of this size");
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Table size grid"));
+    if resp.clicked()
+        && let Some((c, r)) = pick
+    {
+        let mut params = json!({"rows": r, "cols": c});
+        if let Some(pt) = table_spot(app) {
+            params["x"] = json!(pt.x);
+            params["y"] = json!(pt.y);
+        }
+        app.run(&ctx, "insert.table", params);
+        app.canvas.focused = true;
+        ui.close();
+    }
+}
+
+/// Where a new table goes when the caret is in a container: below the container as last laid
+/// out (the engine has no layout and only estimates).
+pub(crate) fn table_spot(app: &NoteApp) -> Option<notecraft_engine::doc::geom::Point> {
+    let c = app.session.sel.caret()?;
+    let notecraft_engine::selection::Block::Outline(id) = c.block else { return None };
+    let o = app.canvas.outlines.iter().find(|o| o.id == id)?;
+    let pos = app.session.page()?.outline(id)?.pos;
+    let bottom = app.canvas.to_page(o.rect.max).y;
+    Some(notecraft_engine::doc::geom::Point::new(pos.x, bottom + 8.0))
+}
+
 /// Draw the special drop-down content; returns true when drawn.
-pub(crate) fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, _t: Tokens) -> bool {
+pub(crate) fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) -> bool {
     let ctx = ui.ctx().clone();
     match id.rsplit('.').next() {
+        // Equations (decision D11): the built-in equations, symbols and structures, previewed
+        // built up.
+        Some("InsertBuildingBlocksEquationsGallery" | "EquationInsertGallery") => {
+            ui.label(RichText::new("Built-in").color(t.text_dim));
+            for (i, (name, text)) in notecraft_engine::EQUATIONS.iter().enumerate() {
+                if crate::math_ui::preview(ui, name, text, 15.0, true, &t).on_hover_text(*text).clicked() {
+                    app.run(&ctx, "insert.equation", json!({"equation": i}));
+                    ui.close();
+                }
+            }
+            ui.separator();
+            if id.starts_with("CT.") {
+                menu_item(app, ui, "R.Insert.Symbols.EquationInsertNew", t);
+            }
+            false
+        }
+        Some("EquationSymbolsInsertGallery") => {
+            let syms: Vec<char> = notecraft_engine::EQUATION_SYMBOLS.chars().collect();
+            egui::Grid::new("equation_symbols").spacing(vec2(2.0, 2.0)).show(ui, |ui| {
+                for (i, c) in syms.iter().enumerate() {
+                    if ui.add(egui::Button::new(RichText::new(c.to_string()).size(15.0)).min_size(vec2(26.0, 26.0))).clicked() {
+                        app.run(&ctx, "equation.symbol", json!({"symbol": c.to_string()}));
+                        ui.close();
+                    }
+                    if i % 10 == 9 {
+                        ui.end_row();
+                    }
+                }
+            });
+            false
+        }
+        Some(k) if k.starts_with("Equation") && k.ends_with("Gallery") => {
+            if let Some((cmd, _, _, _, items)) = notecraft_engine::EQUATION_STRUCTURES.iter().find(|x| x.1 == id) {
+                for (i, (name, text)) in items.iter().enumerate() {
+                    if crate::math_ui::preview(ui, name, text, 15.0, false, &t).on_hover_text(*name).clicked() {
+                        app.run(&ctx, cmd, json!({"item": i}));
+                        ui.close();
+                    }
+                }
+            }
+            false
+        }
+        Some("InkShapeGallery") => {
+            crate::ink::shape_gallery(app, ui, t);
+            false
+        }
+        Some("TableInsertGallery") => {
+            table_grid(app, ui, t);
+            ui.separator();
+            false
+        }
+        Some("ShadingColorPicker") => {
+            if ui.button("No Color").clicked() {
+                app.run(&ctx, "table.shading", json!({"color": null}));
+                ui.close();
+            }
+            swatch_grid(ui, &PAGE_COLORS.iter().map(|s| (s.name, s.color)).collect::<Vec<_>>(), 4, |c| {
+                app.run(&ctx, "table.shading", json!({"color": c.to_hex()}));
+            });
+            true
+        }
         Some("PageColorGallery") => {
             if ui.button("No Color").clicked() {
                 app.run(&ctx, "view.pageColor", json!({"color": null}));
@@ -495,7 +740,7 @@ pub(crate) fn special(app: &mut NoteApp, ui: &mut Ui, id: &str, _t: Tokens) -> b
     }
 }
 
-fn swatch_grid(
+pub(crate) fn swatch_grid(
     ui: &mut Ui,
     colors: &[(&str, notecraft_engine::doc::color::Rgba)],
     per_row: usize,
@@ -519,12 +764,29 @@ fn swatch_grid(
 }
 
 pub(crate) fn menu_item(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) {
+    // Recently Used Templates: the templates themselves, latest first.
+    if id.ends_with(".StationeryMostRecentlyUsedList") {
+        let recent = app.session.prefs.recent_templates.clone();
+        ui.label(RichText::new(label(id)).color(t.text_dim));
+        if recent.is_empty() {
+            ui.add_enabled(false, egui::Button::new(RichText::new("(none yet)").color(t.text_disabled)).frame(false));
+        }
+        for (i, tpl) in recent.iter().enumerate() {
+            if ui.add(egui::Button::new(crate::panes::template_name(tpl)).frame(false).min_size(vec2(170.0, 22.0))).clicked() {
+                let ctx = ui.ctx().clone();
+                app.run(&ctx, "insert.recentTemplate", json!({"index": i}));
+                ui.close();
+            }
+        }
+        ui.separator();
+        return;
+    }
     let on = enabled(app, id);
     let mut text = RichText::new(label(id));
     if !on {
         text = text.color(t.text_disabled);
     }
-    let is_checked = command(id).is_some_and(|c| checked(app, &c));
+    let is_checked = command(id).is_some_and(|c| checked(app, c));
     let btn = egui::Button::new(text).selected(is_checked).frame(false).min_size(vec2(170.0, 22.0));
     let resp = ui.add_enabled(on, btn).on_hover_text(tooltip(app, id)).on_disabled_hover_text(tooltip(app, id));
     if resp.clicked() {
@@ -533,7 +795,7 @@ pub(crate) fn menu_item(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) {
     }
 }
 
-fn small(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], with_label: bool, t: Tokens) {
+pub(crate) fn small(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], with_label: bool, t: Tokens) {
     let lab = label(id);
     let font = egui::FontId::proportional(11.5);
     let tw = if with_label { ui.fonts_mut(|f| f.layout_no_wrap(lab.clone(), font.clone(), Color32::WHITE).size().x) + 6.0 } else { 0.0 };
@@ -542,7 +804,7 @@ fn small(app: &mut NoteApp, ui: &mut Ui, id: &str, kids: &[&str], with_label: bo
     let (rect, resp) = ui.allocate_exact_size(vec2(w, 22.0), Sense::click());
     let on = enabled(app, id) || kids.iter().any(|k| enabled(app, k)) || special_menu(id) && app.session.page().is_some();
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, &lab));
-    let is_checked = command(id).is_some_and(|c| checked(app, &c));
+    let is_checked = command(id).is_some_and(|c| checked(app, c));
     let p = ui.painter();
     if is_checked {
         p.rect_filled(rect, crate::theme::radius::CONTROL, t.checked);
@@ -594,9 +856,7 @@ pub(crate) fn combo(app: &mut NoteApp, ui: &mut Ui, id: &str, w: f32, t: Tokens)
     let resp = ui.add_enabled_ui(on, |ui| {
         egui::ComboBox::from_id_salt(id).width(w).selected_text(RichText::new(value).size(12.0)).show_ui(ui, |ui| match key {
             "Font" => {
-                for f in
-                    ["Calibri", "Calibri Light", "Arial", "Cambria", "Consolas", "Courier New", "Georgia", "Segoe UI", "Times New Roman", "Verdana"]
-                {
+                for f in FONT_CHOICES {
                     if ui.selectable_label(false, f).clicked() {
                         app.run(&ctx, "format.font", json!({"font": f}));
                     }
@@ -648,7 +908,7 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
     };
     let frame_rect = ui.allocate_exact_size(vec2(width, CONTENT_H), Sense::hover()).0;
     ui.painter().rect_stroke(frame_rect, 2.0, Stroke::new(1.0, t.border), egui::StrokeKind::Inside);
-    let on = app.disabled_reason(command(id).as_deref().unwrap_or("")).is_none();
+    let on = app.disabled_reason(command(id).unwrap_or("")).is_none();
     let inner = frame_rect.shrink(2.0);
     let visible = if is_tags {
         4
@@ -659,10 +919,28 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
     };
     let row_h = (inner.height() / visible.max(1) as f32).floor();
     let defs = app.session.tag_defs();
-    for (i, item) in items.iter().take(visible).enumerate() {
+    if is_tags {
+        // The tags in the list's order (Customize Tags can rename, reorder, add and remove).
+        let on = app.disabled_reason("tag.toggle").is_none();
+        for (i, def) in defs.iter().take(visible).enumerate() {
+            let r = Rect::from_min_size(pos2(inner.min.x, inner.min.y + i as f32 * row_h), vec2(inner.width() - 16.0, row_h));
+            let resp = ui.interact(r, ui.id().with((id, i)), Sense::click());
+            resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, on, &def.name));
+            if resp.hovered() && on {
+                ui.painter().rect_filled(r, 1.0, t.hover);
+            }
+            let color = if on { t.text } else { t.text_disabled };
+            icons::tag(ui.painter(), Rect::from_min_size(r.min + vec2(3.0, (row_h - 13.0) / 2.0), vec2(13.0, 13.0)), def.symbol, false, color);
+            ui.painter().text(r.left_center() + vec2(21.0, 0.0), egui::Align2::LEFT_CENTER, &def.name, egui::FontId::proportional(11.5), color);
+            if resp.clicked() && on {
+                app.run(&ctx, "tag.toggle", json!({"key": def.key}));
+            }
+        }
+    }
+    for (i, item) in items.iter().take(if is_tags { 0 } else { visible }).enumerate() {
         let r = Rect::from_min_size(pos2(inner.min.x, inner.min.y + i as f32 * row_h), vec2(inner.width() - 16.0, row_h));
         let resp = ui.interact(r, ui.id().with((id, i)), Sense::click());
-        let enabled_item = command(item).map(|c| app.disabled_reason(&c).is_none()).unwrap_or(on);
+        let enabled_item = command(item).map(|c| app.disabled_reason(c).is_none()).unwrap_or(on);
         if resp.hovered() && enabled_item {
             ui.painter().rect_filled(r, 1.0, t.hover);
         }
@@ -706,13 +984,33 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
 pub(crate) fn gallery_menu(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&str], t: Tokens) {
     let ctx = ui.ctx().clone();
     let is_tags = id.ends_with("TagsGallery");
-    let on = app.disabled_reason(command(id).as_deref().unwrap_or("")).is_none();
+    let on = app.disabled_reason(command(id).unwrap_or("")).is_none();
     let defs = app.session.tag_defs();
     ui.set_min_width(220.0);
     egui::ScrollArea::vertical().max_height(420.0).show(ui, |ui| {
-        for item in items {
+        if is_tags {
+            let on = app.disabled_reason("tag.toggle").is_none();
+            for def in &defs {
+                // A built-in keeps its shortcut (Ctrl+1…9) wherever it moved.
+                let shortcut = tag_item(&def.key).and_then(row).map(|r| r.shortcut.replace("Mod", "Ctrl")).unwrap_or_default();
+                let resp = ui.horizontal(|ui| {
+                    let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
+                    icons::tag(ui.painter(), r, def.symbol, false, t.text);
+                    ui.add_enabled(
+                        on,
+                        egui::Button::new(format!("{}{}", def.name, if shortcut.is_empty() { String::new() } else { format!("    {shortcut}") }))
+                            .frame(false),
+                    )
+                });
+                if resp.inner.clicked() {
+                    app.run(&ctx, "tag.toggle", json!({"key": def.key}));
+                    ui.close();
+                }
+            }
+        }
+        for item in items.iter().filter(|_| !is_tags) {
             let lab = label(item);
-            let enabled_item = command(item).map(|c| app.disabled_reason(&c).is_none()).unwrap_or(on);
+            let enabled_item = command(item).map(|c| app.disabled_reason(c).is_none()).unwrap_or(on);
             let resp = ui.horizontal(|ui| {
                 if is_tags && let Some(def) = defs.iter().find(|d| d.name == lab) {
                     let (r, _) = ui.allocate_exact_size(vec2(14.0, 14.0), Sense::hover());
@@ -738,9 +1036,14 @@ pub(crate) fn gallery_menu(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&s
     });
 }
 
+/// The ribbon row of the built-in tag `key` (the Tags gallery's items follow the built-ins).
+fn tag_item(key: &str) -> Option<&'static str> {
+    notecraft_engine::doc::builtin_tags().iter().position(|d| d.key == key).and_then(|i| crate::ribbon_layout::TAG_ITEMS.get(i).copied())
+}
+
 pub(crate) fn gallery_pick(app: &mut NoteApp, ctx: &egui::Context, gallery_id: &str, item: &str) {
     if let Some(c) = command(item) {
-        app.run(ctx, &c, json!({}));
+        app.run(ctx, c, json!({}));
         return;
     }
     // Gallery items without a dedicated command go through the gallery's command with a value.

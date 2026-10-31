@@ -1,8 +1,9 @@
 //! Pages and what is on them: note containers (outlines) on a free-form canvas.
 //!
 //! A page is a free-form canvas in page space (points, origin top-left; see `notecraft-geom`).
-//! Everything on it is a [`PageObject`] with a position; in M1 the only kind is the
-//! [`Outline`] (a "note container"), M2 adds pictures, ink, files, printouts and media.
+//! Everything on it is a [`PageObject`] with a position: an [`Outline`] (a "note container"),
+//! a [`Table`], a picture ([`Image`], printouts included), an attached file ([`Attachment`]) or
+//! an ink stroke ([`Ink`]).
 //!
 //! **Outlines are flat.** The reference stores a tree of outline elements ([MS-ONE]
 //! `jcidOutlineElementNode` with `ElementChildNodes`); NoteCraft stores the same structure as a
@@ -16,6 +17,9 @@ use notecraft_geom::{Point, finite, length};
 use serde::{Deserialize, Serialize};
 
 use crate::id::Id;
+use crate::ink::Ink;
+use crate::media::{Attachment, Blob, Image, MAX_PAGE_OBJECTS};
+use crate::table::{Table, TableCell};
 use crate::text::{MAX_LEVEL, ParaStyle, Paragraph};
 use crate::time::Timestamp;
 
@@ -91,21 +95,7 @@ impl Outline {
 
     /// Whether paragraph `i` is hidden because an ancestor is collapsed.
     pub fn is_hidden(&self, i: usize) -> bool {
-        let Some(p) = self.paragraphs.get(i) else { return true };
-        let mut need = p.level;
-        for j in (0..i).rev() {
-            let Some(q) = self.paragraphs.get(j) else { break };
-            if q.level < need {
-                if q.collapsed {
-                    return true;
-                }
-                need = q.level;
-                if need == 0 {
-                    break;
-                }
-            }
-        }
-        false
+        hidden_under_collapsed(&self.paragraphs, i, |p| (p.level, p.collapsed))
     }
 
     /// Whether every paragraph is empty (an empty container disappears when the caret leaves
@@ -126,6 +116,14 @@ impl Outline {
 pub enum PageObject {
     /// A note container.
     Outline(Outline),
+    /// A table (`.ncraft` format 2 and later).
+    Table(Table),
+    /// A picture (format 3 and later; decision D3).
+    Image(Image),
+    /// An attached file (format 3 and later; decision D3).
+    Attachment(Attachment),
+    /// An ink stroke (format 4 and later; decision D4).
+    Ink(Ink),
 }
 
 impl PageObject {
@@ -133,6 +131,10 @@ impl PageObject {
     pub fn id(&self) -> Id {
         match self {
             PageObject::Outline(o) => o.id,
+            PageObject::Table(t) => t.id,
+            PageObject::Image(i) => i.id,
+            PageObject::Attachment(a) => a.id,
+            PageObject::Ink(k) => k.id,
         }
     }
 
@@ -140,6 +142,21 @@ impl PageObject {
     pub fn pos(&self) -> Point {
         match self {
             PageObject::Outline(o) => o.pos,
+            PageObject::Table(t) => t.pos,
+            PageObject::Image(i) => i.pos,
+            PageObject::Attachment(a) => a.pos,
+            PageObject::Ink(k) => k.pos,
+        }
+    }
+
+    /// Move the object (the position is sanitized).
+    pub fn set_pos(&mut self, pos: Point) {
+        match self {
+            PageObject::Outline(o) => o.pos = pos.sanitized(),
+            PageObject::Table(t) => t.pos = pos.sanitized(),
+            PageObject::Image(i) => i.pos = pos.sanitized(),
+            PageObject::Attachment(a) => a.pos = pos.sanitized(),
+            PageObject::Ink(k) => k.pos = pos.sanitized(),
         }
     }
 
@@ -147,6 +164,7 @@ impl PageObject {
     pub fn as_outline(&self) -> Option<&Outline> {
         match self {
             PageObject::Outline(o) => Some(o),
+            _ => None,
         }
     }
 
@@ -154,6 +172,110 @@ impl PageObject {
     pub fn as_outline_mut(&mut self) -> Option<&mut Outline> {
         match self {
             PageObject::Outline(o) => Some(o),
+            _ => None,
+        }
+    }
+
+    /// The table, if this is one.
+    pub fn as_table(&self) -> Option<&Table> {
+        match self {
+            PageObject::Table(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    /// The table, mutably, if this is one.
+    pub fn as_table_mut(&mut self) -> Option<&mut Table> {
+        match self {
+            PageObject::Table(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    /// Every paragraph in the object (a container's, or each cell's in reading order).
+    pub fn paragraphs(&self) -> Box<dyn Iterator<Item = &Paragraph> + '_> {
+        match self {
+            PageObject::Outline(o) => Box::new(o.paragraphs.iter()),
+            PageObject::Table(t) => Box::new(t.rows.iter().flat_map(|r| r.cells.iter()).flat_map(|c| c.paragraphs.iter())),
+            PageObject::Image(_) | PageObject::Attachment(_) | PageObject::Ink(_) => Box::new(std::iter::empty()),
+        }
+    }
+
+    /// The picture, if this is one.
+    pub fn as_image(&self) -> Option<&Image> {
+        match self {
+            PageObject::Image(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    /// The picture, mutably, if this is one.
+    pub fn as_image_mut(&mut self) -> Option<&mut Image> {
+        match self {
+            PageObject::Image(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    /// The attachment, if this is one.
+    pub fn as_attachment(&self) -> Option<&Attachment> {
+        match self {
+            PageObject::Attachment(a) => Some(a),
+            _ => None,
+        }
+    }
+
+    /// The attachment, mutably, if this is one.
+    pub fn as_attachment_mut(&mut self) -> Option<&mut Attachment> {
+        match self {
+            PageObject::Attachment(a) => Some(a),
+            _ => None,
+        }
+    }
+
+    /// The ink stroke, if this is one.
+    pub fn as_ink(&self) -> Option<&Ink> {
+        match self {
+            PageObject::Ink(k) => Some(k),
+            _ => None,
+        }
+    }
+
+    /// The ink stroke, mutably, if this is one.
+    pub fn as_ink_mut(&mut self) -> Option<&mut Ink> {
+        match self {
+            PageObject::Ink(k) => Some(k),
+            _ => None,
+        }
+    }
+
+    /// The hyperlink on a picture, attachment or ink stroke (`None` for containers and tables,
+    /// whose links live in their text).
+    pub fn link(&self) -> Option<&str> {
+        match self {
+            PageObject::Image(i) => i.link.as_deref(),
+            PageObject::Attachment(a) => a.link.as_deref(),
+            PageObject::Ink(k) => k.link.as_deref(),
+            PageObject::Outline(_) | PageObject::Table(_) => None,
+        }
+    }
+
+    /// The link slot of a picture, attachment or ink stroke.
+    pub fn link_mut(&mut self) -> Option<&mut Option<String>> {
+        match self {
+            PageObject::Image(i) => Some(&mut i.link),
+            PageObject::Attachment(a) => Some(&mut a.link),
+            PageObject::Ink(k) => Some(&mut k.link),
+            PageObject::Outline(_) | PageObject::Table(_) => None,
+        }
+    }
+
+    /// The stored bytes of a picture or attachment.
+    pub fn blob(&self) -> Option<&Blob> {
+        match self {
+            PageObject::Image(i) => Some(&i.blob),
+            PageObject::Attachment(a) => Some(&a.blob),
+            _ => None,
         }
     }
 }
@@ -277,6 +399,30 @@ pub struct Page {
     /// Whether its subpages are collapsed in the page list.
     #[serde(default)]
     pub collapsed: bool,
+    /// Earlier states, oldest first (History › Page Versions; decision D14).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub versions: Vec<PageVersion>,
+}
+
+/// Most versions a page keeps (the oldest go first).
+pub const MAX_VERSIONS: usize = 50;
+
+/// An earlier state of a page (decision D14): its title, objects and page setup.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PageVersion {
+    /// When that state was last edited.
+    pub at: Timestamp,
+    /// Who was editing then.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub author: String,
+    /// The title then.
+    pub title: Paragraph,
+    /// The objects then.
+    #[serde(default)]
+    pub objects: Vec<PageObject>,
+    /// The appearance then.
+    #[serde(default)]
+    pub setup: PageSetup,
 }
 
 /// What an untitled page is called in the page list (catalog `BEH.Pages.Title`).
@@ -298,6 +444,7 @@ impl Page {
             objects: Vec::new(),
             setup: PageSetup::default(),
             collapsed: false,
+            versions: Vec::new(),
         }
     }
 
@@ -319,23 +466,102 @@ impl Page {
         self.shown_time.unwrap_or(self.created)
     }
 
-    /// Enforce invariants: level clamped, title normalised and styled, every outline
-    /// normalised, empty outlines removed.
+    /// Enforce invariants: level clamped, title normalised and styled, every object
+    /// normalised, empty outlines and tables removed, at most [`MAX_PAGE_OBJECTS`] objects.
     pub fn normalize(&mut self) {
         self.level = self.level.min(MAX_PAGE_LEVEL);
-        self.title.normalize();
-        self.title.style = ParaStyle::PageTitle;
-        self.title.level = 0;
-        for o in &mut self.objects {
-            match o {
-                PageObject::Outline(ol) => ol.normalize(),
-            }
+        normalize_title(&mut self.title);
+        normalize_objects(&mut self.objects);
+        // Versions: the newest [`MAX_VERSIONS`], oldest first, each normalised like the page.
+        self.versions.sort_by_key(|v| v.at);
+        let extra = self.versions.len().saturating_sub(MAX_VERSIONS);
+        self.versions.drain(..extra);
+        for v in &mut self.versions {
+            normalize_title(&mut v.title);
+            normalize_objects(&mut v.objects);
         }
-        self.objects.retain(|o| match o {
-            PageObject::Outline(ol) => !ol.paragraphs.is_empty(),
-        });
     }
 
+    /// The page's current state as a version by `author`.
+    pub fn snapshot(&self, author: &str) -> PageVersion {
+        PageVersion {
+            at: self.modified,
+            author: author.to_string(),
+            title: self.title.clone(),
+            objects: self.objects.clone(),
+            setup: self.setup.clone(),
+        }
+    }
+
+    /// Keep `v` as the newest version (dropping the oldest past [`MAX_VERSIONS`]).
+    pub fn push_version(&mut self, v: PageVersion) {
+        self.versions.push(v);
+        let extra = self.versions.len().saturating_sub(MAX_VERSIONS);
+        self.versions.drain(..extra);
+    }
+
+    /// Version `i` as a page of its own (same id, no versions), for showing it.
+    pub fn version_page(&self, i: usize) -> Option<Page> {
+        let v = self.versions.get(i)?;
+        Some(Page {
+            title: v.title.clone(),
+            objects: v.objects.clone(),
+            setup: v.setup.clone(),
+            modified: v.at,
+            versions: Vec::new(),
+            ..self.clone_without_versions()
+        })
+    }
+
+    /// A copy of the page without its versions (copies, templates and exports leave history
+    /// behind).
+    pub fn clone_without_versions(&self) -> Page {
+        Page {
+            id: self.id,
+            title: self.title.clone(),
+            level: self.level,
+            created: self.created,
+            modified: self.modified,
+            shown_time: self.shown_time,
+            author: self.author.clone(),
+            objects: self.objects.clone(),
+            setup: self.setup.clone(),
+            collapsed: self.collapsed,
+            versions: Vec::new(),
+        }
+    }
+}
+
+/// A title paragraph's invariants.
+fn normalize_title(title: &mut Paragraph) {
+    title.normalize();
+    title.style = ParaStyle::PageTitle;
+    title.level = 0;
+}
+
+/// Every object normalised, empty outlines and tables removed, at most [`MAX_PAGE_OBJECTS`].
+fn normalize_objects(objects: &mut Vec<PageObject>) {
+    {
+        for o in objects.iter_mut() {
+            match o {
+                PageObject::Outline(ol) => ol.normalize(),
+                PageObject::Table(t) => t.normalize(),
+                PageObject::Image(i) => i.normalize(),
+                PageObject::Attachment(a) => a.normalize(),
+                PageObject::Ink(k) => k.normalize(),
+            }
+        }
+        objects.retain(|o| match o {
+            PageObject::Outline(ol) => !ol.paragraphs.is_empty(),
+            PageObject::Table(t) => !t.is_empty(),
+            PageObject::Image(_) | PageObject::Attachment(_) => true,
+            PageObject::Ink(k) => !k.points.is_empty(),
+        });
+        objects.truncate(MAX_PAGE_OBJECTS);
+    }
+}
+
+impl Page {
     /// Index of the object with `id`.
     pub fn object_index(&self, id: Id) -> Option<usize> {
         self.objects.iter().position(|o| o.id() == id)
@@ -351,7 +577,64 @@ impl Page {
         self.objects.iter_mut().find_map(|o| o.as_outline_mut().filter(|ol| ol.id == id))
     }
 
-    /// All plain text on the page (title first), for search and exports.
+    /// The table with `id`.
+    pub fn table(&self, id: Id) -> Option<&Table> {
+        self.objects.iter().find_map(|o| o.as_table().filter(|t| t.id == id))
+    }
+
+    /// The table with `id`, mutably.
+    pub fn table_mut(&mut self, id: Id) -> Option<&mut Table> {
+        self.objects.iter_mut().find_map(|o| o.as_table_mut().filter(|t| t.id == id))
+    }
+
+    /// The table holding the cell `cell`, with the cell's row and column.
+    pub fn table_of_cell(&self, cell: Id) -> Option<(&Table, usize, usize)> {
+        self.objects.iter().filter_map(PageObject::as_table).find_map(|t| t.locate(cell).map(|(r, c)| (t, r, c)))
+    }
+
+    /// The cell with `id` in any table on the page.
+    pub fn cell(&self, id: Id) -> Option<&TableCell> {
+        self.objects.iter().filter_map(PageObject::as_table).find_map(|t| t.cell_by_id(id))
+    }
+
+    /// The cell with `id`, mutably.
+    pub fn cell_mut(&mut self, id: Id) -> Option<&mut TableCell> {
+        self.objects.iter_mut().filter_map(PageObject::as_table_mut).find_map(|t| t.cell_by_id_mut(id))
+    }
+
+    /// The picture with `id`.
+    pub fn image(&self, id: Id) -> Option<&Image> {
+        self.objects.iter().find_map(|o| o.as_image().filter(|i| i.id == id))
+    }
+
+    /// The picture with `id`, mutably.
+    pub fn image_mut(&mut self, id: Id) -> Option<&mut Image> {
+        self.objects.iter_mut().find_map(|o| o.as_image_mut().filter(|i| i.id == id))
+    }
+
+    /// The attachment with `id`.
+    pub fn attachment(&self, id: Id) -> Option<&Attachment> {
+        self.objects.iter().find_map(|o| o.as_attachment().filter(|a| a.id == id))
+    }
+
+    /// The ink stroke with `id`.
+    pub fn ink(&self, id: Id) -> Option<&Ink> {
+        self.objects.iter().find(|o| o.id() == id).and_then(PageObject::as_ink)
+    }
+
+    /// The ink stroke with `id`, mutably.
+    pub fn ink_mut(&mut self, id: Id) -> Option<&mut Ink> {
+        self.objects.iter_mut().find(|o| o.id() == id).and_then(PageObject::as_ink_mut)
+    }
+
+    /// The attachment with `id`, mutably.
+    pub fn attachment_mut(&mut self, id: Id) -> Option<&mut Attachment> {
+        self.objects.iter_mut().find_map(|o| o.as_attachment_mut().filter(|a| a.id == id))
+    }
+
+    /// All plain text on the page (title first), for search and exports. A table's cells are
+    /// separated by tabs, its rows by line breaks; an attachment contributes its file name
+    /// (pictures and ink contribute nothing until OCR and handwriting recognition exist).
     pub fn plain_text(&self) -> String {
         let mut s = self.title_text();
         for o in &self.objects {
@@ -362,6 +645,15 @@ impl Page {
                         s.push_str(&p.text());
                     }
                 }
+                PageObject::Table(t) => {
+                    s.push('\n');
+                    s.push_str(&t.plain_text());
+                }
+                PageObject::Attachment(a) => {
+                    s.push('\n');
+                    s.push_str(&a.name);
+                }
+                PageObject::Image(_) | PageObject::Ink(_) => {}
             }
         }
         s
@@ -370,11 +662,31 @@ impl Page {
     /// Clamp every coordinate so a hostile file can't place objects at ±∞.
     pub fn sanitize_positions(&mut self) {
         for o in &mut self.objects {
-            match o {
-                PageObject::Outline(ol) => ol.pos = Point::new(finite(ol.pos.x), finite(ol.pos.y)),
+            let p = o.pos();
+            o.set_pos(Point::new(finite(p.x), finite(p.y)));
+        }
+    }
+}
+
+/// Whether item `i` of a levelled list (paragraphs of an outline, pages of a section) is hidden
+/// because an ancestor — the nearest earlier item at each lower level — is collapsed. An index
+/// past the end counts as hidden.
+pub(crate) fn hidden_under_collapsed<T>(items: &[T], i: usize, level_collapsed: impl Fn(&T) -> (u8, bool)) -> bool {
+    let Some(item) = items.get(i) else { return true };
+    let mut need = level_collapsed(item).0;
+    for q in items.get(..i).unwrap_or_default().iter().rev() {
+        let (level, collapsed) = level_collapsed(q);
+        if level < need {
+            if collapsed {
+                return true;
+            }
+            need = level;
+            if need == 0 {
+                break;
             }
         }
     }
+    false
 }
 
 #[cfg(test)]

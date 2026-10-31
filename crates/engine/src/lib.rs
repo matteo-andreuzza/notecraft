@@ -12,6 +12,8 @@
 //! autosave) and is the seam every front end (L6) uses; it never draws anything.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+/// Base64 for binary command parameters (moved to `notecraft-codecs`, which export also uses).
+pub use notecraft_codecs::b64;
 pub mod catalog;
 pub mod commands;
 pub mod sample;
@@ -19,32 +21,69 @@ pub mod selection;
 pub mod session;
 
 mod caret_cmds;
+mod draw_cmds;
 mod edit_cmds;
+mod export_cmds;
 mod file_cmds;
 mod format_cmds;
+mod help_cmds;
+mod history_cmds;
+mod import_cmds;
+mod math_cmds;
 mod nav_cmds;
+mod onenote_cmds;
 mod ops;
 mod outline_cmds;
 mod page_cmds;
+mod paper_cmds;
 mod para_cmds;
+mod picture_cmds;
+mod printout_cmds;
+mod protect_cmds;
 mod search_cmds;
 mod section_cmds;
+mod spell_cmds;
+mod table_cmds;
 mod tag_cmds;
+mod template_cmds;
 mod text_cmds;
+mod versions_cmds;
 mod view_cmds;
+mod window_cmds;
 
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+mod tests_behaviour;
+#[cfg(test)]
 mod tests_cmds;
+#[cfg(test)]
+mod tests_draw;
+#[cfg(test)]
+mod tests_export;
+#[cfg(test)]
+mod tests_picture;
+#[cfg(test)]
+mod tests_table;
 
 use serde_json::Value;
 
+pub use draw_cmds::{DrawState, DrawTool, EraserKind, MAX_PATH as MAX_DRAW_PATH, PenStyle};
+pub use help_cmds::{MAX_HELP_RESULTS, about};
+pub use history_cmds::{MAX_RECENT, RECENT_RANGES};
+pub use import_cmds::PICTURE_EXTENSIONS as IMPORT_PICTURE_EXTENSIONS;
+pub use math_cmds::{EQUATIONS, STRUCTURES as EQUATION_STRUCTURES, SYMBOLS as EQUATION_SYMBOLS};
 pub use notecraft_doc as doc;
 pub use notecraft_search as search;
 pub use notecraft_text as text;
+pub use paper_cmds::{
+    DEFAULT_MARGINS as DEFAULT_PAPER_MARGINS, PAPER_SIZES, PaperPreset, describe as describe_paper, is_landscape, preset_of as paper_preset,
+};
 pub use selection::{Block, Pos, Selection, TextRange};
-pub use session::{Clock, FindState, NbDirty, Prefs, RibbonMode, ScopeKind, ScrollRequest, Session, ViewState};
+pub use session::{Clock, FindState, NbDirty, Prefs, RibbonMode, ScopeKind, ScrollRequest, Session, SpellingState, ViewState};
+pub use spell_cmds::installed_languages;
+pub use template_cmds::{BUILT_IN as BUILT_IN_TEMPLATES, BuiltIn, MY_TEMPLATES, SavedTemplate};
+pub use versions_cmds::{Preview, VERSION_GAP_MS};
 
 /// Errors a command can return. Commands never panic; bad input is `Params`, an unavailable
 /// command is `Disabled`, everything else `Failed`.

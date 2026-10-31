@@ -24,7 +24,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
         // NC.Caret.Set — a click in text (the UI resolves the click to a position).
         CommandSpec::new("caret.set", "NC.Caret.Set", "Place Caret", "Mouse/Click in text", set)
-            .params(r#"{"block": "title" | outline id, "para": int, "offset": int, "extend"?: bool}"#)
+            .params(r#"{"block": "title" | outline id | cell id, "para": int, "offset": int, "extend"?: bool}"#)
             .pure()
             .when(need_page),
         // NC.Caret.Left / Right / Up / Down — arrow keys (Shift extends).
@@ -173,12 +173,15 @@ fn parse_block(s: &Session, v: &Value) -> Result<Block, CmdError> {
     match v.get("block") {
         Some(Value::String(b)) if b == "title" => Ok(Block::Title),
         Some(Value::String(b)) => {
-            let id = notecraft_doc::Id::parse(b).ok_or_else(|| CmdError::Params("`block` must be \"title\" or an outline id".into()))?;
+            let id = notecraft_doc::Id::parse(b).ok_or_else(|| CmdError::Params("`block` must be \"title\", an outline id or a cell id".into()))?;
             let page = s.page().ok_or_else(no_page)?;
-            if page.outline(id).is_none() {
-                return Err(CmdError::Params("no such note container on this page".into()));
+            if page.outline(id).is_some() {
+                Ok(Block::Outline(id))
+            } else if page.cell(id).is_some() {
+                Ok(Block::Cell(id))
+            } else {
+                Err(CmdError::Params("no such note container or table cell on this page".into()))
             }
-            Ok(Block::Outline(id))
         }
         Some(Value::Object(_)) => {
             serde_json::from_value(v.get("block").cloned().unwrap_or_default()).map_err(|e| CmdError::Params(format!("block: {e}")))
@@ -219,8 +222,22 @@ fn para_count(s: &Session, block: Block) -> usize {
 
 fn hidden(s: &Session, block: Block, para: usize) -> bool {
     match block {
-        Block::Title => false,
         Block::Outline(id) => s.page().and_then(|p| p.outline(id)).is_some_and(|o| o.is_hidden(para)),
+        Block::Title | Block::Cell(_) => false,
+    }
+}
+
+/// Across a table cell's edge: the neighbouring cell's start (`forward`) or end, or `None`
+/// outside tables and at the table's edge.
+fn across_cell(s: &Session, block: Block, dr: i8, dc: i8, forward: bool) -> Option<Pos> {
+    let Block::Cell(cell) = block else { return None };
+    let next = crate::table_cmds::neighbour_cell(s, cell, dr, dc)?;
+    let paras = s.page().and_then(|p| p.cell(next))?.paragraphs.clone();
+    if forward {
+        Some(Pos::new(Block::Cell(next), 0, 0))
+    } else {
+        let last = paras.len().checked_sub(1)?;
+        Some(Pos::new(Block::Cell(next), last, paras.get(last).map(|p| p.len()).unwrap_or(0)))
     }
 }
 
@@ -255,6 +272,8 @@ fn left(s: &mut Session, v: &Value) -> CmdResult {
         Pos { offset: t::prev_grapheme(&text, c.offset), ..c }
     } else if let Some(prev) = step_para(s, c.block, c.para, false) {
         Pos::new(c.block, prev, para_text(s, c.block, prev).map(|t| t.len()).unwrap_or(0))
+    } else if !extend && let Some(p) = across_cell(s, c.block, 0, -1, false) {
+        p
     } else {
         c
     };
@@ -275,6 +294,8 @@ fn right(s: &mut Session, v: &Value) -> CmdResult {
         Pos { offset: t::next_grapheme(&text, c.offset), ..c }
     } else if let Some(next) = step_para(s, c.block, c.para, true) {
         Pos::new(c.block, next, 0)
+    } else if !extend && let Some(p) = across_cell(s, c.block, 0, 1, true) {
+        p
     } else {
         c
     };
@@ -300,6 +321,8 @@ fn vertical(s: &mut Session, v: &Value, forward: bool, extend: bool) -> CmdResul
         } else if let Some(next) = step_para(s, c.block, c.para, true) {
             let nt = para_text(s, c.block, next).unwrap_or_default();
             Pos::new(c.block, next, t::snap(&nt, col.min(t::line_end(&nt, 0))))
+        } else if !extend && let Some(p) = across_cell(s, c.block, 1, 0, true) {
+            p
         } else {
             Pos { offset: text.len(), ..c }
         }
@@ -312,6 +335,8 @@ fn vertical(s: &mut Session, v: &Value, forward: bool, extend: bool) -> CmdResul
             let pt = para_text(s, c.block, prev).unwrap_or_default();
             let ls = t::line_start(&pt, pt.len());
             Pos::new(c.block, prev, t::snap(&pt, (ls + col).min(pt.len())))
+        } else if !extend && let Some(p) = across_cell(s, c.block, -1, 0, false) {
+            p
         } else {
             Pos { offset: 0, ..c }
         }

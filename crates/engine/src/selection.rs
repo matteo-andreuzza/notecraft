@@ -1,10 +1,10 @@
 //! Where the user is: the current notebook/section/page, and the caret or selection on the
 //! page.
 //!
-//! Text positions are `(block, paragraph index, byte offset)`. A *block* is either the page
-//! title or one note container (outline); a text selection stays inside one block, as in the
-//! reference, where a drag across two containers selects the containers as objects rather than
-//! a text range. Positions are always validated against the page before use
+//! Text positions are `(block, paragraph index, byte offset)`. A *block* is the page title, one
+//! note container (outline) or one table cell; a text selection stays inside one block, as in
+//! the reference, where a drag across two containers selects the containers as objects rather
+//! than a text range, and a drag across table cells selects the cells. Positions are always validated against the page before use
 //! ([`Session::clamp_pos`](crate::Session::clamp_pos)), because commands arrive with stale or
 //! hostile values.
 
@@ -19,6 +19,8 @@ pub enum Block {
     Title,
     /// A note container.
     Outline(Id),
+    /// A table cell (the cell's id; its table is found on the page).
+    Cell(Id),
 }
 
 /// A caret position.
@@ -81,6 +83,15 @@ pub enum PageSel {
     Objects {
         /// The selected objects.
         ids: Vec<Id>,
+    },
+    /// A rectangle of table cells (Table Layout › Select, or a drag across cells).
+    Cells {
+        /// The table.
+        table: Id,
+        /// First and last selected row (inclusive).
+        rows: (usize, usize),
+        /// First and last selected column (inclusive).
+        cols: (usize, usize),
     },
 }
 

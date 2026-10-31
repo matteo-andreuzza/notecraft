@@ -212,10 +212,11 @@ fn indent_outdent_alignment_spacing_direction() {
     assert!(para(&s, o, 1).rtl);
     run(&mut s, "para.ltr", json!({}));
     assert!(!para(&s, o, 1).rtl);
-    // Tab inside text inserts a tab character instead of indenting.
+    // Tab after the text makes a table instead of indenting (BEH.Table.TabToCreate; the tab
+    // character typed inside text is pinned in tests_table.rs).
     caret(&mut s, o, 0, 1);
     run(&mut s, "para.indent", json!({"key": "tab"}));
-    assert_eq!(para(&s, o, 0).text(), "a\t");
+    assert!(s.page().unwrap().objects.iter().any(|x| x.as_table().is_some()));
 }
 
 #[test]
@@ -292,7 +293,7 @@ fn tag_summary_page_and_custom_tags() {
     assert!(s.tag_defs().iter().any(|d| d.name == "Recipe idea"));
     run(&mut s, "tag.customize", json!({"action": "remove", "key": key}));
     assert!(!s.tag_defs().iter().any(|d| d.name == "Recipe idea"));
-    assert!(s.run("tag.customize", json!({"action": "modify", "key": "todo"})).is_err(), "built-ins can't be modified");
+    assert!(s.run("tag.customize", json!({"action": "modify", "key": "no-such-tag"})).is_err(), "unknown tags are an error");
 }
 
 #[test]
@@ -360,6 +361,65 @@ fn containers_move_resize_and_paragraph_drag() {
     assert_eq!(body_texts(&s), vec!["two", "one"]);
     run(&mut s, "object.select", json!({"ids": [o.to_string()]}));
     assert!(matches!(&s.sel.on_page, PageSel::Objects { ids } if ids == &vec![o]));
+    // Dropped on empty canvas: a new container at the point, one undo step; the last
+    // paragraph leaving a container takes the container with it.
+    let undo_before = s.undo_labels().len();
+    run(&mut s, "outline.moveParagraph", json!({"from": o.to_string(), "para": 1, "x": 300.0, "y": 400.0}));
+    assert_eq!(s.undo_labels().len(), undo_before + 1);
+    let page = s.page().unwrap();
+    assert_eq!(page.objects.len(), 2);
+    let new = page.objects[1].as_outline().unwrap();
+    assert_eq!((new.pos.x, new.pos.y, new.paragraphs[0].text()), (300.0, 400.0, "one".to_string()));
+    let n = new.id;
+    run(&mut s, "outline.moveParagraph", json!({"from": n.to_string(), "para": 0, "to": o.to_string(), "index": 1}));
+    assert_eq!(s.page().unwrap().objects.len(), 1, "the emptied container is gone");
+    assert!(s.run("outline.moveParagraph", json!({"from": o.to_string(), "para": 0})).is_err(), "a target is required");
+}
+
+#[test]
+fn object_z_order_commands() {
+    // parity: CM.NoteContainer.ObjectBringForward, CM.NoteContainer.ObjectBringToFront, CM.NoteContainer.ObjectSendBackward, CM.NoteContainer.ObjectSendToBack
+    let (mut s, a) = page_with("a");
+    run(&mut s, "outline.new", json!({"x": 40.0, "y": 300.0}));
+    run(&mut s, "text.insert", json!({"text": "b"}));
+    let b = match s.sel.caret().unwrap().block {
+        Block::Outline(id) => id,
+        _ => panic!("expected a new container"),
+    };
+    run(&mut s, "outline.new", json!({"x": 40.0, "y": 500.0}));
+    run(&mut s, "text.insert", json!({"text": "c"}));
+    let c = match s.sel.caret().unwrap().block {
+        Block::Outline(id) => id,
+        _ => panic!("expected a new container"),
+    };
+    let order = |s: &Session| s.page().unwrap().objects.iter().map(|x| x.id()).collect::<Vec<_>>();
+    assert_eq!(order(&s), vec![a, b, c], "z-order is page creation order (back to front)");
+
+    run(&mut s, "object.select", json!({"ids": [a.to_string()]}));
+    let undo = s.undo_labels().len();
+    run(&mut s, "object.bringForward", json!({}));
+    assert_eq!(order(&s), vec![b, a, c]);
+    assert_eq!(s.undo_labels().len(), undo + 1, "one undo step");
+
+    // Already at the front: a no-op, no undo step.
+    run(&mut s, "object.select", json!({"ids": [c.to_string()]}));
+    let undo = s.undo_labels().len();
+    run(&mut s, "object.bringForward", json!({}));
+    assert_eq!(order(&s), vec![b, a, c]);
+    assert_eq!(s.undo_labels().len(), undo, "no-op at the boundary records nothing");
+
+    run(&mut s, "object.sendToBack", json!({}));
+    assert_eq!(order(&s), vec![c, b, a]);
+
+    run(&mut s, "object.select", json!({"ids": [b.to_string()]}));
+    run(&mut s, "object.bringToFront", json!({}));
+    assert_eq!(order(&s), vec![c, a, b]);
+    run(&mut s, "object.sendBackward", json!({}));
+    assert_eq!(order(&s), vec![c, b, a]);
+
+    // Disabled without a selected note container or table.
+    run(&mut s, "nav.pageTitle", json!({}));
+    assert!(s.run("object.bringForward", json!({})).is_err());
 }
 
 #[test]
@@ -483,6 +543,30 @@ fn notebook_operations() {
     assert_eq!(prefs["author"], "Ada");
     assert!(!s.prefs.auto_bullets);
     assert!(s.run("file.options", json!({"set": {"nope": 1}})).is_err());
+}
+
+#[test]
+fn exit_saves_first_and_stays_open_when_it_cannot() {
+    // parity: BS.Exit, QAT.NR.FileExit
+    let mut s = sample();
+    assert_eq!(run(&mut s, "file.exit", json!({}))["quit"], true);
+    assert!(s.quit_request, "the shell closes the window");
+    // A notebook on disk whose folder became a file: saving fails, so Exit refuses.
+    let d = std::env::temp_dir().join(format!("notecraft-exit-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    let nb = d.join("Exit test");
+    let mut s = sample();
+    run(&mut s, "file.newNotebook", json!({"name": "Exit test", "path": nb.to_str().unwrap()}));
+    let _ = s.save_dirty();
+    run(&mut s, "text.insert", json!({"text": "unsaved"}));
+    std::fs::remove_dir_all(&nb).unwrap();
+    std::fs::write(&nb, b"in the way").unwrap();
+    s.quit_request = false;
+    let e = s.run("file.exit", json!({})).unwrap_err();
+    assert!(e.to_string().contains("not closing"), "{e}");
+    assert!(!s.quit_request, "the change would be lost: the window stays");
+    let _ = std::fs::remove_dir_all(&d);
 }
 
 #[test]

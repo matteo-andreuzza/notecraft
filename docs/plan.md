@@ -1,6 +1,6 @@
 # NoteCraft plan
 
-> **Last reviewed:** 2026-10-15 · **Last updated:** 2026-10-15 · **Change:** major (decision D1: the 2024 UI; M1.5 and M5 added) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the 2024 UI)
+> **Last reviewed:** 2026-10-20 · **Last updated:** 2026-10-20 · **Change:** major (decision D4: ink) · **Target:** Microsoft OneNote for Microsoft 365, desktop for Windows (the 2024 UI)
 
 How NoteCraft gets from nothing to a OneNote replacement a typical user could switch to. The
 inventory of what "OneNote" means is [`parity-catalog.md`](parity-catalog.md) (1,291 rows); the
@@ -81,6 +81,67 @@ reference screenshots (kept locally, never committed: clean room, we only observ
 8. **A7** Tests (ribbon modes, Simplified coverage, contrast, tree, Quick notes, sort, settings)
    and screenshots (every tab in both modes, every theme, narrow window, 2×).
 9. **A8** Parity, docs, devlog; tag `m1.5-modern-ui`.
+
+### M2 increments (in order)
+
+Everything new is built in the 2024 look of M1.5 (tokens, cards, the simplified and classic
+ribbon; [`ui-parity.md`](ui-parity.md)).
+
+1. **Canvas details (done):** paragraph handle (`UI.Canvas.ParagraphHandle`), containers that
+   grow with their text, a page that grows right and down, the mini toolbar as a card, text,
+   container and paragraph-handle context menus (`CM.Text.*`, `CM.NoteContainer.*`,
+   `CM.ParagraphHandle.*`, generated from the catalog's own `Path` column), Paste Options.
+2. **Tables (done, decision D2 / §4.8):** a `PageObject::Table` in `notecraft-doc`, its `.ncraft`
+   schema (format 2), commands, the Table Layout contextual tab in both ribbon layouts
+   (`chrome::contextual_tabs`), sort, borders, convert to/from text, the Insert Table dialog,
+   `KB.Table.DeleteEmptyRow`. Left for later: Tab-after-text table creation, merged cells.
+3. **Pictures, attachments, printouts (decision D3 / §4.9; pictures, attachments, clipboard and
+   drag and drop done):** crate `codecs` (PNG/JPEG/GIF/BMP/WebP through `image` without default
+   features), `PageObject::Image`/`Attachment` with `Arc`-shared blobs in `media/` zip entries
+   (`.ncraft` format 3), Insert › Pictures and File Attachment, the picture and attachment
+   context menus (rotate 90°, flip, move, resize by handles and keys, restore size, background,
+   alt text, save as, open, rename); the rich clipboard (crate `import-export`: a bounded HTML
+   reader and writer; pictures and HTML through `arboard` on the desktop host; tables paste as
+   tables); dropping files on the page; file printouts (PDF pages through `hayro` 0.7.1 from
+   crates.io, the user's choice of 2026-10-20). Screen clipping through the XDG Screenshot
+   portal (Linux; a background thread, the result polled by the UI). Left: screen clipping on
+   Windows/macOS, 45° rotation of pictures, cropping, copying text from printout pages.
+4. **Ink (decision D4 / §4.10; done):** crates `ink-geom` and `ink`, `PageObject::Ink` (`.ncraft`
+   format 4), the Draw tab's tools (Type, Lasso Select, Panning Hand, the four erasers, the pen
+   gallery, Add Pen, Color & Thickness), strokes with pressure from egui touch force, the ink
+   and lasso context menus, 45°/90° turns and flips of ink, the ruler (D7 / §4.12), Snap to
+   Grid, Draw with Touch and two fingers on the ruler (D8 / §4.13). Left: recognition (Ink to
+   Text/Math), Ink Replay, tablet pressure on Linux (PhotoCraft's XInput2 `tablet` crate), and
+   crate `render` (CPU oracle for thumbnails and export).
+5. **Dialogs (done):** Insert Table, Link with page search, Move/Copy as a flat searchable list
+   (not a tree — simplest compatible choice, noted in the catalog), Options (with the Office
+   Theme), Recent Notebooks, the notebook list (Ctrl+G), Symbol, Sort…, Save As Template; page
+   templates (D10 / §4.15) and equations with crate `math` (D11 / §4.16) are done too. Left for
+   later: asynchronous file dialogs, window geometry, web persistence (IndexedDB) and exports as
+   downloads.
+6. **Audio** recording in pure Rust where possible; video stays a documented gap. Not done in
+   M2: its rows are P2, outside the exit criteria, and the user set it aside; it follows M3.
+
+Exit (met 2026-10-24, tag `m2-insert-draw`): the P0/P1 rows of `R.Insert.*`, `R.Draw.*`,
+`CT.TableLayout.*`, object `CM.*` and `BEH.Ink/Table/Paste.*` wired; headless workflows "page with a
+table and pictures" and "handwritten notes"; tag `m2-insert-draw`.
+
+### M3–M5 increments
+
+- **M3 Interop:** crate `onestore` ([MS-ONESTORE]/[MS-ONE], every structure cited, limits against
+  hostile input, fuzzing): read `.one` (pages, outlines, rich text, lists, tags, pictures, tables,
+  ink), `.onetoc2`, `.onepkg` ([MS-CAB]); `.one` export where the specs allow; crate
+  `import-export`: PDF, HTML, Markdown, DOCX, PNG/SVG out; Markdown, HTML, text, ENEX, PDF, pictures
+  in. A fidelity table per construct (kept, degraded, lost) in `parity.md`; tag `m3-interop`.
+- **M4 History, Review, View, power:** page versions with diff, authors, unread; spelling (open
+  dictionaries, licences checked); protected sections (XChaCha20-Poly1305 + Argon2id, with a
+  threat model); full Options; ribbon and QAT customization; keytips (WordCraft's `keytips.rs`);
+  AccessKit tried with a screen reader; en + it; optional sync (folder/WebDAV, CRDT); WASM
+  plug-ins; more MCP tools; drawn window buttons where the compositor draws none; tag `m4-power`.
+- **M5 Release:** Flatpak/AppImage/deb and `craft-launcher`; Windows/macOS builds; the
+  performance budgets (10,000 pages < 2 s, typing < 16 ms, search over 100k pages < 50 ms, 500+
+  ink strokes); 50 real workflows with a measured success rate in `parity.md`; user guide; tag
+  `v1.0`.
 
 ## 3. Crate graph
 
@@ -168,6 +229,325 @@ The engine never reads the clock itself (wasm traps on `SystemTime::now`): the h
 (milliseconds since the Unix epoch) and the local UTC offset. Dates are formatted by the engine
 from civil-date arithmetic (no time-zone database needed beyond the host's offset).
 
+### 4.8 Tables (decision D2, 2026-10-15)
+
+- **A table is its own page object**, `PageObject::Table { id, pos, columns: [width pt], rows:
+  [{ id, cells: [{ id, paragraphs, shading }] }], borders, header_row }`, positioned and moved
+  like a note container. In the reference a table is an outline element inside a container
+  ([MS-ONE] `jcidTableNode` as content of `jcidOutlineElementNode`); keeping it beside the
+  containers leaves every text command untouched. **M3 import:** a container holding a table is
+  split into container, table, container, stacked at the positions the layout gives them
+  (containment is the only thing lost; rows, cells, column widths, borders and shading map 1:1
+  to `RowCount`/`ColumnCount`, `TableColumnWidths`, `TableBordersVisible`, `CellShadingColor`).
+- **Cells are text blocks.** `Block::Cell(cell id)` joins `Title` and `Outline(id)`; a cell holds
+  a flat paragraph list with levels like a container, so typing, formatting, find and the caret
+  commands work in cells unchanged. A drag across cells selects a rectangle
+  (`PageSel::Cells { table, rows, cols }`); paragraph and character commands apply to every
+  selected cell.
+- **Columns have fixed widths** (default 96 pt, unverified), changed by dragging a border; rows
+  are as tall as their tallest cell. No merged cells (Merge/Split stay disabled).
+- **Limits** against hostile input: 5,000 rows, 64 columns, 50,000 cells, widths 18–2,000 pt;
+  `Table::normalize` repairs ragged rows, empty cells and bad widths on load.
+- **Keys:** Tab/Shift+Tab move between cells (the last cell adds a row, or a column in a one-row
+  table), Enter adds a row (on an empty last row it ends the table), Alt+Enter a paragraph in the
+  cell, Ctrl+Enter a row below; arrows cross cell edges.
+- **Format:** `.ncraft` version 2 (version 1 files open unchanged; older builds refuse version 2).
+  Loaded pages are now normalised in full (`Section::normalize_pages`), tables included.
+- **Insert position:** below the caret's container (the UI passes the laid-out bottom; the
+  engine alone estimates 20 pt per line), or where the user clicked, or below everything.
+- **Tab after text (decision D6, 2026-10-21).** Tab with the caret at the end of a paragraph's
+  text in a container turns that paragraph into a one-row, two-column table: its text (and
+  formatting and tags) in the first cell, the caret in the empty second one. Because a table
+  is its own object (D2), the table takes the paragraph's place: the container keeps the
+  paragraphs before it, those after it move to a new container below the table, and a container
+  left with nothing goes. **No "creating a table" state:** the next Tabs add columns and Enter
+  adds rows through the table's own keys (`KB.Table.NewColumnTab`, `KB.Table.NewRowEnter`),
+  which already behave so on a one-row table. A caret inside the text still types a tab
+  character, a list item still indents, and an empty paragraph still indents (unverified: the
+  reference's behaviour for list items and for Tab in the middle of text). One undo step.
+
+### 4.9 Pictures and attachments (decision D3, 2026-10-19)
+
+- **Two new page objects**, beside containers and tables (the D2 precedent):
+  `PageObject::Image(Image { id, pos, size, blob, pixels, quarter_turns, flip_h, flip_v,
+  alt_text, background })` and `PageObject::Attachment(Attachment { id, pos, name, blob,
+  alt_text })`. `size` is the drawn size in points (after rotation), `pixels` the decoded size
+  of the stored picture. In the reference a picture or an embedded file is either directly on
+  the page or the content of an outline element ([MS-ONE] `jcidImageNode`,
+  `jcidEmbeddedFileNode`); **M3 import** splits a container around an inline one exactly as for
+  tables (only containment is lost). The size, alt text, background flag, file name and file
+  data map to the node's picture size, alt text, background, embedded-file name and file data
+  store reference (property names to be pinned against [MS-ONE] in M3).
+- **Bytes live in a `Blob { id, kind, bytes: Arc<[u8]> }`.** The id is a fresh 128-bit `Id`
+  minted on insert: it plays the role of the reference's file-data-store GUID and keys the zip
+  entry. Bytes are shared by `Arc`, so undo snapshots, copy/paste and duplicated pages never copy
+  them. `section.json` stores only the blob's id, kind and length; the bytes are zip entries
+  `media/<id>` beside it, **stored uncompressed** (pictures are already compressed and autosave
+  rewrites the section), one entry per distinct id. Sections, the recycle bin (a deleted page
+  keeps its pictures) and notebook archives all carry their media. On load a missing, oversize
+  or mismatched entry leaves that object with empty bytes, drawn as a "can't show this picture"
+  placeholder: one damaged picture never costs the section.
+- **Format 3.** `.ncraft` version 3; files of versions 1 and 2 open unchanged (tests keep a
+  byte-exact v1 file and a v2 table file); older builds refuse version 3 rather than drop media.
+- **Limits against hostile input:** a picture file ≤ 64 MiB and ≤ 16,384 px per side and
+  64 Mpx; an attachment ≤ 256 MiB; ≤ 1 GiB of media per section file; ≤ 10,000 objects per page;
+  drawn sizes 4–16,000 pt; alt text ≤ 4,096 characters; attachment names are single safe file
+  names ≤ 255 bytes. The `codecs` crate decodes with these caps (an error, never a panic or an
+  unbounded allocation); the canvas downscales textures to ≤ 4,096 px per side and keeps a
+  bounded, least-recently-used texture cache keyed by blob id.
+- **Stacking (2026-10-21):** a picture or attachment is drawn over the text of the containers
+  and tables it overlaps, and takes clicks there, only when it comes after every one of them in
+  the page's order (Order › Bring to Front, or moved onto older text); otherwise it stays under
+  the text, which stays readable and clickable. Two layers approximate the full order (a
+  picture between two overlapping containers is drawn over both; unverified).
+- **Insert:** a picture comes in at its pixel size at 96 dpi (1 px = 0.75 pt), scaled down to at
+  most 468 pt wide (unverified), at the same place a table goes (§4.8). Rotation and flips are
+  view properties applied when drawing (the stored bytes never change); 90° turns swap the drawn
+  width and height. Free 45° rotation and cropping stay disabled (P2, not in the M365 context
+  menu's P0/P1).
+- **Attachments** draw as an icon card with the file name. Open writes the bytes to a private
+  temporary folder and asks the host to open the file with the system's handler; Save As writes
+  them to a path the host's file dialog returns. The web build disables both until downloads
+  exist.
+- **File printouts (done 2026-10-20):** an attachment plus one picture per printed page, each
+  linked to it (`Image::printout`), stacked below it at the page's print size. PDF pages are
+  rendered by `hayro` 0.7 from crates.io (pure Rust, PdfCraft's renderer; `codecs::pdf`) at
+  108 dpi, at most 200 pages, 3,000 px a side and 8 Mpx a page, under the codecs' panic guard;
+  a picture file prints as itself; other formats are refused (no printer driver). Insert
+  Printout on an attachment replaces its earlier pages; Delete Printout Pages and Open Original
+  complete the menus. Rendering runs inside the command (a large PDF blocks for a moment; async
+  later). **Later:** the `render` crate draws pictures from the same blobs for page export and
+  printing; text from printout pages (Copy Text) waits for OCR or a PDF text layer.
+
+### 4.10 Ink (decision D4, 2026-10-20)
+
+- **One stroke is one page object**, `PageObject::Ink(Ink { id, pos, points: [[x, y,
+  pressure]], color, width, tool })`, beside containers, tables and pictures (the D2/D3
+  precedent). Points are in page points relative to `pos` (the top-left of the points' box), so
+  moving a stroke is one assignment; `tool` is `Pen` or `Highlighter`; `width` is the nominal tip
+  width in points; pressure is 0–1 per point (0.5 when the device reports none). Strokes being
+  objects means the lasso, Delete, Cut/Copy/Paste, the arrow keys, Order and the Rotate commands
+  work on them through the existing object selection (`PageSel::Objects`), and Undo removes one
+  stroke at a time. In the reference ink is `jcidInkNode` content holding `InkData` with one or
+  more strokes ([MS-ONE]); **M3 import** makes one object per stroke (only the grouping is lost;
+  path, pressure, colour, width and the highlighter flag map to the stroke properties, names to
+  be pinned against [MS-ONE] in M3), export groups the strokes of a page into one ink node.
+- **Width follows pressure** for pens: drawn width = `width × (0.4 + 1.2 × pressure)`, so the
+  constant 0.5 of a mouse draws exactly `width` (curve unverified). Highlighters ignore pressure
+  and draw translucent. Pressure comes from egui's touch force where winit reports it; mouse
+  strokes get 0.5 (PhotoCraft's XInput2 `tablet` crate is the path to real tablets on X11).
+- **Geometry** lives in `notecraft-ink-geom` (L0: simplification, distances, polygon tests,
+  circle cuts, outlines for drawing) and the stroke operations in `notecraft-ink` (L2: building
+  a stroke from samples, partial and whole-stroke erasing, lasso picks, 45°/90° turns, flips).
+  A finished stroke is simplified (Ramer–Douglas–Peucker, 0.2 pt) before it is stored.
+- **Erasers:** the Stroke Eraser removes every stroke it touches; Small, Medium and Large
+  (radius 2.5, 6 and 12 pt, unverified) cut strokes and keep the pieces outside the eraser
+  (each piece a new stroke). One drag is one undo step (the commands coalesce by gesture).
+- **Lasso:** a stroke is picked when at least three quarters of its points are inside the loop;
+  any other object when the centre of its box is (unverified).
+- **Tools** (Type, Lasso Select, Panning Hand, Eraser, the pens) and the pen gallery are session
+  state (`Session::draw`), not notebook data: choosing a tool never adds an undo step. The
+  default pens are black, red and blue pens of 0.5 mm and yellow and green highlighters of
+  5 mm (unverified); Add Pen appends one (at most 32).
+- **Format 4.** `.ncraft` version 4; files of versions 1–3 open unchanged; older builds refuse
+  version 4 rather than drop ink.
+- **Limits against hostile input:** ≤ 20,000 points per stroke (longer input is simplified,
+  then cut), coordinates through `geom::finite`, pressure clamped to 0–1 (NaN → 0.5), widths
+  0.1–72 pt, a stroke without points is dropped on load, and strokes count against the
+  10,000-objects-per-page cap of D3.
+- **Later:** Ink to Shape, Ink to Text/Math (recognition), Ink Replay,
+  touch-only drawing, resizing ink by handles, the `render` crate drawing ink for export.
+
+### 4.11 Tags on ink (decision D5, 2026-10-21)
+
+- **A stroke carries tags** like a paragraph: `Ink.tags: Vec<TagUse>` (the same name, symbol
+  and checked snapshot). The field is optional in `section.json` (absent when empty), so
+  `.ncraft` stays at version 4 and older files open unchanged; at most 32 tags per stroke, one
+  per tag key (hostile files are cut there).
+- **A drawing is several strokes, but a tag is applied once.** With strokes one object each
+  (D4), the tag commands (the gallery, Ctrl+1…9, Remove Tag, Check/Clear All, the checkbox
+  click) act on the selected strokes as one drawing: the drawing *has* a tag when any of its
+  strokes has it; applying puts the tag on the **leftmost** selected stroke (then the topmost)
+  unless one already has it; removing, checking and clearing touch every selected stroke. So
+  Find Tags lists a tagged drawing once, not once per stroke. A selection that mixes containers
+  and ink tags both.
+- **Placement:** the icons sit in a row just left of the tagged stroke's box, level with its
+  top; a checkbox there toggles on click. Find Tags and summary pages show a tagged stroke as
+  "Ink drawing", and clicking it in the pane selects the stroke (placement and wording
+  unverified).
+- Pictures and attachments take no tags (their reference menus have no Tags).
+- **M3:** [MS-ONE] note tags hang off the ink node; import puts them on the node's leftmost
+  stroke, export on the node that groups the page's strokes.
+
+### 4.12 The ruler (decision D7, 2026-10-23)
+
+- **Session state, not notebook data.** Draw › Ruler shows a straightedge lying over the page:
+  `DrawState.ruler: Option<Ruler { center, angle }>` (`notecraft_ink::ruler`), in page points so
+  it scrolls and zooms with the page. Showing, moving and turning it never add an undo step and
+  nothing of it is saved, in the notebook or in the settings (a run starts without it).
+- **Geometry:** 54 × 900 pt (longer than most windows are wide), centred where the page's view
+  is when shown, turned `angle` degrees clockwise on screen (0–360); it reads its angle as a
+  protractor does, 0–179° counterclockwise from horizontal. Millimetre ticks along the top edge,
+  centimetres numbered (metric scale and look unverified).
+- **Drawing along it:** a stroke whose first sample lies within 12 pt of a long edge (inside or
+  outside) is laid along that edge: every sample moves onto the line half the pen's width outside
+  it, within the ruler's length, keeping its pressure (`Ruler::snap`). The engine does it in
+  `draw.stroke` (so headless clients get it; `"free": true` opts out) and the canvas shows the
+  same while the stroke is drawn.
+- **Moving and turning:** `draw.rulerPlace` (`NC.Draw.RulerPlace`) moves it to or by a point and
+  turns it to or by an angle. On the canvas a drag that starts on the ruler moves it (with the
+  pen, only away from its edges, where it draws instead); the mouse wheel over it turns it a
+  degree a notch, up counterclockwise, and doesn't scroll the page (unverified).
+- **Later:** snapping the angle to 0/45/90°, the erasers and the Shape tool against its edge,
+  measuring. (Two-finger moving and turning: §4.13.)
+
+### 4.13 Snap to Grid, Draw with Touch, two fingers on the ruler (decision D8, 2026-10-24)
+
+- **Session settings, like the pens.** `DrawState.snap_to_grid` (off) and `DrawState.with_touch`
+  (on) are switched by `draw.snapToGrid` and `draw.withTouch` (`{"on"?: bool}`), never undone,
+  and remembered in the desktop settings with the pens (starting values unverified).
+- **Snap to Grid** moves the two points a shape is drawn between onto the nearest grid
+  crossing: the page's own grid when it shows one (View › Rule Lines › a grid), else 1/8 in
+  (9 pt, the small grid's spacing), counted from the page's top-left corner where grid lines
+  start. The engine does it in `draw.shape`; the canvas previews the same. Freehand strokes,
+  moving and resizing don't snap (what the reference snaps beyond shapes is unverified).
+- **Draw with Touch off:** a finger dragged with Pen, Eraser, Shape, Insert Space or Lasso
+  moves the page instead (the Panning Hand's gesture); the mouse and pens keep drawing. egui
+  doesn't say whether a touch is a pen or a finger, so a finger is a touch that reports no
+  pressure (winit gives pressure for pens where the platform does; a finger with pressure would
+  draw).
+- **Two fingers on the ruler** (their midpoint on it) move it with them and turn it about that
+  midpoint by the angle the fingers turn (egui's multi-touch rotation), without scrolling the
+  page. The first finger's drag (egui-winit also sends it as the pointer) becomes a drag of the
+  ruler, and a stroke, shape or lasso it had begun is dropped.
+
+### 4.14 Merged cells (decision D9, 2026-10-24)
+
+- **Model.** `TableCell` gains `row_span` and `col_span` (1 by default, omitted when 1). A
+  merged cell covers the grid places to its right and below; the covered cells stay in their
+  rows, empty and hidden, so every row still has one cell per column and every row/column
+  command keeps its indices ([MS-ONE] keeps the full grid the same way). `Table::normalize`
+  keeps spans ≥ 1, inside the table and apart (row by row, an earlier cell wins; a span that
+  would reach a covered place stops short). `.ncraft` version 5; older files open unchanged.
+- **Merge Cells** (`table.merge`) joins the selected rectangle — grown to whole merged cells it
+  touches — into its top-left cell: the text of the non-empty cells in reading order, the
+  others left empty. **Split Cells** (`table.split`) returns the merged cells in the selection
+  to single cells, the text staying in the first (unverified: the reference may offer a rows ×
+  columns split for an ordinary cell).
+- **Everything else.** A caret in a merged cell selects all of its rows and columns, so Insert
+  Below/Right go past it and Delete Rows/Columns take all of them; a row or column inserted
+  inside a merged cell joins it; deleting a merged cell's own first row or column moves it, text
+  included, to the first one left; Tab, Shift+Tab and the arrows count a merged cell once; Sort
+  refuses a table with cells merged across rows (split them first). The canvas lays a merged
+  cell over its columns' widths, a tall one stretches the last of its rows, and borders are
+  drawn cell by cell. `notebook.inspect` gives `rowSpan`/`colSpan`, and `covered` for hidden
+  places. HTML copied out writes a merged cell as `colspan`/`rowspan` and leaves out the places
+  it covers; HTML pasted in is laid out on the grid as browsers do (a cell takes the first
+  place no `rowspan` above covers; spans clamped to the table limits and its rows), so its
+  merged cells survive (2026-10-25).
+
+### 4.15 Page templates (decision D10, 2026-10-24)
+
+- **NoteCraft's own templates.** No reference screenshots were available and the reference's
+  templates are its content, so the built-in set is NoteCraft's: Academic (Lecture notes, Study
+  plan), Blank (Blank, Lined, Small grid, Large grid), Business (Meeting notes, Project
+  overview), Decorative (Sky, Sand, Mint page colours) and Planners (To-do list, Weekly
+  planner), built in code from headings, To Do/Question tags, tables with a header row, rule
+  lines and page colours (`template_cmds.rs`). Their look can be matched later from screenshots.
+- **The user's own** ("My Templates"): Save current page as a template keeps the page's text,
+  tables, ink and page setup under a name in the preferences (with the desktop settings);
+  pictures and attachments are left out, since the settings file holds no media. A page from a
+  template gets fresh ids (`ops::clone_page_fresh`); the template's title is kept when it has
+  one, built-ins leave it empty.
+- **Ids and defaults.** Templates are `builtin:<slug>` or `my:<name>`. A section can name a
+  default template (`Section.default_template`, format 5); New Page, New Page Below and New
+  Subpage in that section start from it (a deleted template falls back to a blank page). The
+  last five used are remembered for Recently Used Templates.
+- **Surfaces.** Insert › Page Templates opens the Templates pane (categories, Recently Used, My
+  Templates with Delete, Always use a specific template, Save current page as a template with a
+  Save As Template dialog). Commands: `insert.pageTemplates`, `page.newFromTemplate`,
+  `insert.recentTemplate`, `template.list`, `template.setDefault`, `template.save`,
+  `template.delete`. The Paper Size pane (View, M4) will offer the same Save link.
+
+### 4.16 Equations (decision D11, 2026-10-24)
+
+- **An equation is a paragraph** whose text is its linear format, UnicodeMath (`x=(−b±√(b^2−4ac))/2a`,
+  the notation the reference also accepts when typing), marked `Paragraph::math` = Professional
+  or Linear (`.ncraft` version 5). Every text command works on it unchanged: typing, the caret,
+  selection, undo, copy and paste (a pasted equation stays one), search, tags. Enter never
+  splits an equation: it starts a plain paragraph after it. Equations are not inline inside a
+  line of text (the reference allows that): a whole-paragraph equation needs no inline objects
+  in the text layout, which egui's galleys don't offer.
+- **Crate `math` (L2, no dependencies)** parses the subset listed in its docs — fractions,
+  scripts, radicals, large operators with limits, stretchy brackets, matrices, accents,
+  function names, `\alpha`-style control words, `⬚` slots — and lays it out built up from a
+  caller-supplied text measure; the large signs (∑ ∏ ∫ √, brackets, bars) are line paths, so no
+  math font is needed. Input is capped (4,000 characters, nesting 48) and never panics.
+- **Showing and editing.** Professional shows the equation built up; while the selection is in
+  it, its linear text is edited in place in a light box (simplified: the reference edits built
+  up). Linear always shows the text.
+- **Surfaces.** Insert › Equation (Alt+=) with a gallery of built-in equations (NoteCraft's set
+  of common results); the contextual Equation tab while the caret is in an equation: Equation,
+  Professional, Linear, a Symbols grid and the eleven Structures galleries, each item a linear
+  template with its first `⬚` selected so typing fills it; the equation's context menu (Cut,
+  Copy, Paste Options, Professional, Linear; a right click selects the whole equation). Left
+  for later: Ink Equation and Ink to Math, Normal Text, Equation Options, the structure-editing
+  rows of the context menu, MathML in HTML.
+
+### 4.17 Reading OneNote's files (decision D12, 2026-10-27)
+
+- **Crate `onestore` (L4, depends on `doc` only, works on `&[u8]`, builds for wasm)** reads the
+  revision store of [MS-ONESTORE] — header (§2.3.1), transaction log (§2.3.3), file node list
+  fragments (§2.4), the file nodes of §2.5, object spaces, revision manifests with their
+  dependencies, roles and contexts, object groups and global identification tables (§2.1),
+  property sets (§2.6) and file data store objects (§2.6.13) — and walks the [MS-ONE] content
+  on top: section → page series → page object spaces → page, title, outlines, outline
+  elements, rich text. Every structure cites its section; the public specifications are the
+  only source (clean room).
+- **Read-only in M3.** `.one` export is decided later, after measuring real files; the reader
+  never writes the user's file. A `.one` is **imported as a copy**: File › Open › Open Section
+  (`file.openSection`, Ctrl+Alt+Shift+O) adds it to the current notebook as a new section and
+  opens its first page (one undo step). The reference opens the file in place; that is a
+  documented difference.
+- **Every byte is hostile.** Bounds-checked reads, chunk references checked against the file,
+  visited sets on fragment chains and revision dependencies, caps on file size, fragments,
+  file nodes and nesting (`onestore::Limits`); a damaged object is skipped and reported, a
+  damaged structure is an error, never a panic. Tests truncate and flip bytes of synthetic
+  files and feed random tails.
+- **Fixtures are synthetic.** A test writer (`onestore::writer`, tests and the `fixtures`
+  feature only) builds files from the same structures; no Microsoft file is ever committed.
+  Fidelity on real files is measured by the user locally and recorded as numbers only.
+- **The report.** Each import lists what was kept, what is not imported yet (pictures, tables,
+  attachments…) and how many damaged objects were skipped, in the notice and the command's
+  result: the per-construct fidelity table of `parity.md` comes from it.
+- **Order of work.** (1) structures, revisions, pages with titles and plain text — done;
+  (2) text formats, lists, tags, tables, pictures, attachments — done (ink and merged cells are
+  not in the public [MS-ONE] rev 13.3, so they stay reported lost); (3) `.onetoc2` (notebook
+  structure) — done as a folder import: the TOC's PropertyIDs are not published, so Open
+  Notebook on a OneNote folder imports every `.one` by file name and every subfolder as a
+  group, and reports order and colours lost; (4) `.onepkg` ([MS-CAB]) — done: `onestore::cab`
+  (stored and MSZIP; LZX/Quantum refused) unpacks into the same notebook import. Password-protected sections are refused with a clear
+  message (M4).
+
+### 4.18 Export (decision D13, 2026-10-29)
+
+- **Format-neutral first.** `import-export::export::collect` turns pages into a flow (objects
+  read top to bottom, then left to right; title and date per page; pictures and attachments as
+  resources, each blob once) for the flow formats: Single File Web Page (`.mht`, RFC 2557),
+  HTML, Markdown (CommonMark + GFM) and Word (`.docx`, our own WordprocessingML writer from
+  ECMA-376). Ink has no form there and is reported.
+- **PDF is drawn, not flowed** (`import-export::pdf`, `krilla`): each page laid out like the
+  canvas (same indents, list and tag columns, table layout, title area), on the page setup's
+  paper or US Letter, scaled to fit the width; a tall page continues on more sheets, breaking
+  between text lines and table rows. Ink is drawn. Text is real text with the page fonts
+  embedded and subsetted.
+- **Fonts come from `notecraft-fonts` (L0)**, which both the canvas and the PDF use, so the
+  two measure the same faces. NoteCraft still bundles none; without any (the web build), PDF
+  export says so.
+- Commands: `file.exportPage`, `file.exportSection` (`format` or the path's extension),
+  `file.exportMht`, and `file.exportNotebook` with `format: "pdf"`. `.one`, `.doc` and `.xps`
+  are listed in File › Export and refused until they exist.
+
 ## 5. Risks
 
 | Risk | Impact | Mitigation |
@@ -185,6 +565,20 @@ from civil-date arithmetic (no time-zone database needed beyond the host's offse
 | # | Date | Decision | Overrides | Why |
 |---|---|---|---|---|
 | D1 | 2026-10-15 | The visual model is the current OneNote for Microsoft 365 desktop app (the 2024 UI): neutral title bar with a centred Search box; a tab row whose active tab is semibold with an accent underline; the ribbon in a floating rounded card, **Simplified (one row) by default** with a ▾ chevron to the **Classic** ribbon (both in the modern style, the choice remembered); navigation on the left (a tree of every notebook with coloured section bars, + New section, Quick notes pinned at the bottom; the page column with Add page and sort); **no section tabs above the page**; panes as cards. Surfaces that only exist in the 2016 layout become `out-of-scope` rows that name their replacement. | The window layout of the original brief (OneNote 2016-style: section tabs across the top, page list on the right) | The user's directive: like the other ArtCraft apps follow the latest Office. The brief is kept verbatim; this table records the override. The command set, menu paths, shortcuts and behaviour mandate are unchanged. |
+| D2 | 2026-10-15 | Tables are their own page object (`PageObject::Table`) with cells as text blocks (`Block::Cell`) and fixed column widths; `.ncraft` version 2 (§4.8). | — (the plan named `PageObject::Table`; the containment detail was open) | The simplest model compatible with M3: [MS-ONE] tables map 1:1 except that a table inside a container becomes a neighbour of it; no existing text command changes. |
+| D3 | 2026-10-19 | Pictures and attachments are page objects (`PageObject::Image`, `PageObject::Attachment`) whose bytes are `Arc`-shared blobs keyed by a 128-bit id and stored as uncompressed `media/<id>` entries in the section zip; `.ncraft` version 3; explicit size, pixel, byte and object-count limits (§4.9). | — (the plan named `media/` in the section zip; the object shape and limits were open) | Undo and copy/paste stay pointer copies; blob ids map to [MS-ONE]'s file-data-store GUIDs; a damaged picture degrades to a placeholder instead of failing the section; printouts and export reuse the same blobs. |
+| D4 | 2026-10-20 | Ink strokes are page objects, one stroke per object (`PageObject::Ink`, points relative to the object's position with per-point pressure, colour, width, pen or highlighter); `.ncraft` version 4; geometry in `ink-geom` (L0), stroke operations in `ink` (L2); tools are session state (§4.10). | — (the plan named the crates; the object shape was open) | Every object command (select, lasso, delete, clipboard, order, rotate, move, undo) works on ink unchanged; [MS-ONE] ink nodes map stroke by stroke, losing only their grouping. |
+| D5 | 2026-10-21 | Tags on ink: a stroke carries `tags` like a paragraph (optional field, format 4 unchanged); the tag commands treat the selected strokes as one drawing, putting a new tag on its leftmost stroke and removing or checking it on all (§4.11). | — | Strokes are separate objects (D4), so tagging each would list one drawing many times in Find Tags; one anchor stroke keeps one entry per tag and maps to [MS-ONE]'s tag on the ink node. |
+| D6 | 2026-10-21 | Tab after a paragraph's text makes it a one-row, two-column table that takes the paragraph's place (the container splits around it); no session state, later Tabs and Enters use the table's own keys (§4.8). | — | Tables are separate objects (D2), so the paragraph must leave its container; the one-row table's existing Tab/Enter behaviour already covers "keep creating". |
+| D14 | 2026-10-31 | Page versions are kept inside the page (`Page::versions`, format 6): after any editing command, a page whose previous state was last changed at least 5 minutes earlier keeps that state as a version (author = the user name, at most 50, never an empty state), inside the same undo step; a version or a deleted page is shown read-only as a picture of the page (the PNG export's drawing) in place of the canvas. | The plan listed page history without a policy; the reference's interval is not documented | Snapshots on a pause need no timer and no extra files (versions save and seal with their section); a picture can't be edited by accident, which a second live canvas could. |
+| D13 | 2026-10-29 | Export: a format-neutral page flow for .mht/HTML/Markdown/.docx (own writers from RFC 2557, CommonMark, ECMA-376); PDF drawn like the canvas with `krilla` (MIT/Apache, as WordCraft) and page fonts found by a new L0 crate `notecraft-fonts` shared with the canvas (§4.18). | The plan named WordCraft crates for DOCX and a renderer for PDF | WordCraft's docx crate brings its own model and crypto stack for what is ~600 lines here; the canvas lays out with egui, which can't run in the engine, so the PDF mirrors its layout rules on shared font files. |
+| D15 | 2026-10-31 | Password-protected sections: the section file is sealed (`notecraft_format::protect`: a clear header with id, name, colour and the Argon2id salt and costs, then XChaCha20-Poly1305 of the ordinary section file with the header as associated data). The key is derived from the password (64 MiB, 3 passes) and kept only in memory while the section is unlocked; locking seals the pages, drops them and the key, and clears the undo history. Pages deleted from a protected section skip the unsealed Recycle Bin, and a protected section can't be deleted or copied until its password is removed. | The plan named XChaCha20-Poly1305 + Argon2id for M4 | Threat model: a copied folder, backup or disk without the password reveals only the section's name. It does not protect an unlocked section in a running app. No recovery is possible (BEH.Password.NoRecovery). |
+| D12 | 2026-10-27 | OneNote's `.one` files are read by a new crate `onestore` (L4) from the public [MS-ONESTORE]/[MS-ONE] specifications, read-only, and imported as a copy into the current notebook (File › Open › Open Section); synthetic fixtures from its own test writer; a per-construct report of what was kept (§4.17). | The plan listed `.one` export "where the specs allow" in M3 | The user approved the proposal on 2026-10-27: read-only first, real-file fidelity measured locally by the user (never committed), copy rather than open in place. |
+| D11 | 2026-10-24 | Equations are paragraphs of UnicodeMath linear text (`Paragraph::math`), laid out built up by a new pure crate `math` with line-drawn large signs; edited as linear text while the caret is in them (§4.16). | The plan named a `math` crate; inline math was open | The user asked for equations in M2; whole-paragraph equations reuse every text command and need no inline objects in egui's text layout. |
+| D10 | 2026-10-24 | Page templates: NoteCraft's own built-in set (five categories, built in code), the user's own saved in the preferences without pictures, a default template per section (`Section.default_template`), the Templates pane (§4.15). | The plan waited for reference screenshots | The user chose NoteCraft's own templates over waiting; the reference's templates are its content, so a clean-room set is needed anyway. |
+| D9 | 2026-10-24 | Merged table cells: `row_span`/`col_span` on the top-left cell, covered cells kept in the grid empty and hidden; `table.merge`/`table.split`; `.ncraft` version 5 (§4.14). | Merging was left out of D2 ("needs a model change") | The full grid keeps every row/column command and the format's row/cell lists unchanged; [MS-ONE] stores tables the same way. The user approved the change. |
+| D8 | 2026-10-24 | Snap to Grid puts shapes' end points on the page's grid (1/8 in without one); Draw with Touch off turns a pressureless touch into panning; two fingers on the ruler move and turn it (§4.13). | — | Settings only, no format change; snapping lives in the engine's `draw.shape`, so headless clients get it too. |
+| D7 | 2026-10-23 | The Draw tab's ruler is session state (`DrawState.ruler`: centre and angle in page space), never saved or undone; a stroke that starts near one of its long edges is laid along it by the engine's `draw.stroke` (§4.12). | — | No document change and no format bump; the engine owns the snapping, so the canvas, the control channel and MCP draw the same lines. |
 
 ## 7. Assumptions
 

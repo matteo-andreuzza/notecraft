@@ -65,6 +65,37 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         )
         .params(r#"{"page": id, "query"?: string}"#)
         .pure(),
+        CommandSpec::new(
+            "search.previewNext",
+            "KB.Search.PreviewNext",
+            "Preview Next Result",
+            "Keyboard/Search/While searching, preview the next result (Down)",
+            preview_next,
+        )
+        .params(r#"{"query": string, "back"?: bool (the previous result, Up)}"#)
+        .pure(),
+        CommandSpec::new(
+            "search.scope",
+            "KB.Search.ChangeScope",
+            "Change Search Scope",
+            "Keyboard/Search/Change the search scope (Ctrl+E, Tab, Space)",
+            |s, v| {
+                let next = match parse_scope(v)? {
+                    Some(k) => k,
+                    None => match s.view.scope {
+                        ScopeKind::Page => ScopeKind::Section,
+                        ScopeKind::Section => ScopeKind::SectionGroup,
+                        ScopeKind::SectionGroup => ScopeKind::Notebook,
+                        ScopeKind::Notebook => ScopeKind::AllNotebooks,
+                        ScopeKind::AllNotebooks => ScopeKind::Page,
+                    },
+                };
+                s.view.scope = next;
+                Ok(json!({"scope": format!("{next:?}")}))
+            },
+        )
+        .params(r#"{"scope"?: "page"|"section"|"sectionGroup"|"notebook"|"all"} (default: the next one)"#)
+        .pure(),
         CommandSpec::new("search.scopePage", "CM.SearchScope.SearchScopePage", "This Page", "Context/Search Scope/This Page", |s, _| {
             set_scope(s, ScopeKind::Page)
         })
@@ -156,12 +187,24 @@ pub(crate) fn find_on_page(s: &mut Session, query: &str) -> usize {
             matches.push((Block::Title, 0, r.start, r.end));
         }
         for o in &page.objects {
-            if let Some(ol) = o.as_outline() {
-                for (i, p) in ol.paragraphs.iter().enumerate() {
-                    for r in find_all(&p.text(), query) {
-                        matches.push((Block::Outline(ol.id), i, r.start, r.end));
+            match o {
+                notecraft_doc::PageObject::Outline(ol) => {
+                    for (i, p) in ol.paragraphs.iter().enumerate() {
+                        for r in find_all(&p.text(), query) {
+                            matches.push((Block::Outline(ol.id), i, r.start, r.end));
+                        }
                     }
                 }
+                notecraft_doc::PageObject::Table(t) => {
+                    for c in t.rows.iter().flat_map(|r| r.cells.iter()) {
+                        for (i, p) in c.paragraphs.iter().enumerate() {
+                            for r in find_all(&p.text(), query) {
+                                matches.push((Block::Cell(c.id), i, r.start, r.end));
+                            }
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -218,7 +261,78 @@ fn open_result(s: &mut Session, v: &Value) -> CmdResult {
     Ok(Value::Null)
 }
 
+/// Down (or Up with `back`) while searching: open the next (previous) result of `query` in
+/// the scope, its words highlighted, keeping the search open. A new query starts at the first.
+fn preview_next(s: &mut Session, v: &Value) -> CmdResult {
+    let q = p::req_str(v, "query")?.to_string();
+    if q.len() > 4096 {
+        return Err(CmdError::Params("query is too long".into()));
+    }
+    let back = p::bool(v, "back").unwrap_or(false);
+    let scope = s.scope(s.view.scope);
+    let pages: Vec<notecraft_doc::Id> = s.index().search(&q, scope).into_iter().map(|h| h.page).collect();
+    if pages.is_empty() {
+        s.view.search_preview = None;
+        return Ok(json!({"index": null, "total": 0}));
+    }
+    let last = pages.len() - 1;
+    let i = match &s.view.search_preview {
+        Some((pq, i)) if *pq == q => {
+            if back {
+                i.saturating_sub(1)
+            } else {
+                (*i + 1).min(last)
+            }
+        }
+        _ => 0,
+    };
+    let page = *pages.get(i).ok_or_else(|| CmdError::Failed("no such result".into()))?;
+    s.goto_page(page)?;
+    let first_word = q.trim_matches('"').split_whitespace().next().unwrap_or("").to_string();
+    find_on_page(s, &first_word);
+    s.view.search_preview = Some((q, i));
+    Ok(json!({"index": i, "total": pages.len(), "page": page.to_string()}))
+}
+
 fn set_scope(s: &mut Session, k: ScopeKind) -> CmdResult {
     s.view.scope = k;
     Ok(Value::Null)
+}
+
+#[cfg(test)]
+mod keyboard_tests {
+    use super::*;
+    use crate::tests::{run, sample};
+
+    #[test]
+    fn down_previews_the_next_result_and_up_the_previous() {
+        // parity: KB.Search.PreviewNext
+        let mut s = sample();
+        run(&mut s, "search.scopeAll", json!({}));
+        let total = run(&mut s, "search.all", json!({"query": "the"}))["total"].as_u64().unwrap();
+        assert!(total >= 2, "the sample has several pages with `the`");
+        let a = run(&mut s, "search.previewNext", json!({"query": "the"}));
+        assert_eq!(a["index"], 0);
+        assert_eq!(s.sel.page.map(|p| p.to_string()).as_deref(), a["page"].as_str(), "the result is open");
+        let b = run(&mut s, "search.previewNext", json!({"query": "the"}));
+        assert_eq!(b["index"], 1);
+        assert_ne!(a["page"], b["page"]);
+        assert_eq!(run(&mut s, "search.previewNext", json!({"query": "the", "back": true}))["index"], 0);
+        assert_eq!(run(&mut s, "search.previewNext", json!({"query": "the", "back": true}))["index"], 0, "stays on the first");
+        // A new query starts over; nothing found leaves the page alone.
+        assert_eq!(run(&mut s, "search.previewNext", json!({"query": "shortcuts"}))["index"], 0);
+        let here = s.sel.page;
+        assert_eq!(run(&mut s, "search.previewNext", json!({"query": "zzzqqq"}))["total"], 0);
+        assert_eq!(s.sel.page, here);
+    }
+
+    #[test]
+    fn the_scope_cycles_or_is_set() {
+        // parity: KB.Search.ChangeScope
+        let mut s = sample();
+        run(&mut s, "search.scope", json!({"scope": "page"}));
+        let order: Vec<String> = (0..5).map(|_| run(&mut s, "search.scope", json!({}))["scope"].as_str().unwrap().to_string()).collect();
+        assert_eq!(order, ["Section", "SectionGroup", "Notebook", "AllNotebooks", "Page"]);
+        assert!(s.run("search.scope", json!({"scope": "moon"})).is_err());
+    }
 }
