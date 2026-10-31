@@ -1035,3 +1035,12 @@ were certain landed, behaviour unchanged (every test green after each commit).
   shows the page's scroll bars. Catalog: OPT.Display.ShowNoteContainers, NavBarLeft,
   FloatingNewPage, UI.Canvas.Scrollbars wired. Not done: the vertical bar on the left
   (OPT.Display.ScrollBarLeft, P3: egui draws it on the right edge of its area).
+
+## 2026-10-31 — M2 leftover: Ink Replay
+
+- Engine `draw.replay` (R.Draw.Replay.InkReplay): a toggle on `ViewState.ink_replay`,
+  enabled when the page has ink, no undo step; changing page stops it.
+- UI: `ink::Replay` draws the page's strokes progressively in page order, at 150 points a
+  second, with partial strokes. A bar over the page has Play/Pause, Rewind, the progress
+  and Close. Real drawing times aren't stored, so the pace is steady (unverified against
+  the reference).

@@ -126,6 +126,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "help.help" => s.view.help_pane,
         "draw.snapToGrid" => s.draw.snap_to_grid,
         "draw.inkToShape" => s.draw.ink_to_shape,
+        "draw.replay" => s.view.ink_replay,
         "review.password" => s.view.password_pane,
         "review.spelling" => s.view.spelling_pane,
         "draw.withTouch" => s.draw.with_touch,

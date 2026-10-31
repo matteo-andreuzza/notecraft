@@ -420,3 +420,17 @@ fn ink_to_shape_turns_a_drawn_box_into_a_rectangle_in_the_same_pen() {
     assert!(r.get("shape").is_none(), "writing is not a shape");
     assert_eq!(run(&mut s, "draw.inkToShape", json!({"on": false}))["inkToShape"], false);
 }
+
+#[test]
+fn ink_replay_toggles_on_a_page_with_ink_and_stops_on_another_page() {
+    // parity: R.Draw.Replay.InkReplay
+    let mut s = sample();
+    blank_page(&mut s);
+    assert!(s.run("draw.replay", json!({})).is_err(), "no ink, nothing to replay");
+    run(&mut s, "draw.stroke", json!({"points": [[10, 10], [60, 40], [90, 20]]}));
+    let undo = s.undo_labels().len();
+    assert_eq!(run(&mut s, "draw.replay", json!({}))["replay"], true);
+    assert_eq!(s.undo_labels().len(), undo, "not an undo step");
+    blank_page(&mut s);
+    assert!(!s.view.ink_replay, "another page stops the replay");
+}

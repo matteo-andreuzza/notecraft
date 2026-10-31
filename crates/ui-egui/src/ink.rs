@@ -7,7 +7,7 @@
 //! `PointerMoved` event of a frame (not just the last position), so a fast stroke keeps its
 //! shape at any frame rate; pressure is egui's touch force where winit reports one, else 0.5.
 
-use egui::{Color32, CursorIcon, Event, Mesh, Painter, Pos2, Rect, Response, Sense, Shape, Stroke, Ui, pos2, vec2};
+use egui::{Color32, CursorIcon, Event, Mesh, Painter, Pos2, Rect, Response, RichText, Sense, Shape, Stroke, Ui, pos2, vec2};
 use notecraft_engine::doc::geom::Point;
 use notecraft_engine::doc::ink::DEFAULT_PRESSURE;
 use notecraft_engine::doc::{Id, Ink, InkTool, Page, PageObject, TagUse};
@@ -219,7 +219,21 @@ pub(crate) fn inspect(app: &NoteApp) -> serde_json::Value {
 pub(crate) fn draw(app: &NoteApp, painter: &Painter, page: &Page, t: Tokens, page_text: Color32) {
     let view = app.canvas.viewport.expand(40.0);
     let mut defs = None;
+    // R.Draw.Replay.InkReplay: only the points drawn so far, in page order.
+    let mut budget = app.canvas.replay.as_ref().map(|r| r.shown_points(painter.ctx().input(|i| i.time)));
     for (k, l) in page.objects.iter().filter_map(PageObject::as_ink).zip(&app.canvas.ink.layout) {
+        if let Some(left) = budget.as_mut() {
+            if *left == 0 {
+                continue;
+            }
+            if *left < k.points.len() {
+                let part = Ink { points: k.points.get(..*left).unwrap_or_default().to_vec(), ..k.clone() };
+                paint_ink(app, painter, &part, page_text);
+                *left = 0;
+                continue;
+            }
+            *left -= k.points.len();
+        }
         if l.rect.intersects(view) {
             paint_ink(app, painter, k, page_text);
         }
@@ -819,6 +833,83 @@ pub(crate) fn gallery(app: &mut NoteApp, ui: &mut Ui, h: f32, extra: &[&str], t:
             for k in extra {
                 crate::ribbon::menu_item(app, ui, k, t);
             }
+        });
+    });
+}
+
+/// Ink Replay's progress (`R.Draw.Replay.InkReplay`): strokes come back at a steady pace, in
+/// the order they were drawn (the page's order; real drawing times aren't stored, unverified).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Replay {
+    /// When playing started, adjusted for pauses (seconds, egui time).
+    start: f64,
+    /// Points shown when paused (`None`: playing).
+    paused: Option<usize>,
+    /// Points on the page.
+    total: usize,
+}
+
+/// Points replayed per second.
+const REPLAY_RATE: f64 = 150.0;
+
+impl Replay {
+    fn new(now: f64, total: usize) -> Replay {
+        Replay { start: now, paused: None, total }
+    }
+
+    /// Points visible at `now`.
+    pub(crate) fn shown_points(&self, now: f64) -> usize {
+        match self.paused {
+            Some(n) => n,
+            None => (((now - self.start).max(0.0) * REPLAY_RATE) as usize).min(self.total),
+        }
+    }
+
+    fn done(&self, now: f64) -> bool {
+        self.shown_points(now) >= self.total
+    }
+}
+
+/// The replay bar over the bottom of the page while Ink Replay plays: Play/Pause, Rewind and
+/// Close, with the progress. Keeps the replay state in step with the command's toggle.
+pub(crate) fn replay_bar(app: &mut NoteApp, ui: &mut Ui, area: Rect, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    let now = ctx.input(|i| i.time);
+    if !app.session.view.ink_replay {
+        app.canvas.replay = None;
+        return;
+    }
+    let total: usize = app.session.page().map_or(0, |p| p.objects.iter().filter_map(PageObject::as_ink).map(|k| k.points.len()).sum());
+    let replay = *app.canvas.replay.get_or_insert_with(|| Replay::new(now, total));
+    if !replay.done(now) && replay.paused.is_none() {
+        ctx.request_repaint();
+    }
+    let bar = Rect::from_center_size(egui::pos2(area.center().x, area.max.y - 36.0), vec2(320.0, 40.0));
+    ui.scope_builder(egui::UiBuilder::new().max_rect(bar), |ui| {
+        crate::chrome::card_frame(&t).show(ui, |ui| {
+            ui.horizontal(|ui| {
+                let playing = replay.paused.is_none() && !replay.done(now);
+                if ui.button(if playing { "Pause" } else { "Play" }).clicked() {
+                    let r = app.canvas.replay.get_or_insert(replay);
+                    match r.paused {
+                        Some(n) => {
+                            r.start = now - n as f64 / REPLAY_RATE;
+                            r.paused = None;
+                        }
+                        None if r.done(now) => *r = Replay::new(now, total),
+                        None => r.paused = Some(r.shown_points(now)),
+                    }
+                }
+                if ui.button("Rewind").clicked() {
+                    app.canvas.replay = Some(Replay::new(now, total));
+                }
+                let pct = (replay.shown_points(now) * 100).checked_div(total).unwrap_or(100);
+                ui.label(RichText::new(format!("{pct}%")).color(t.page_meta));
+                if ui.button("Close").clicked() {
+                    app.run(&ctx, "draw.replay", serde_json::json!({"on": false}));
+                    app.canvas.replay = None;
+                }
+            });
         });
     });
 }

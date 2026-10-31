@@ -580,6 +580,7 @@ impl NoteApp {
             } else if !password_ui::locked_view(self, ui, t) {
                 canvas::show(self, ui, t);
             }
+            ink::replay_bar(self, ui, area, t);
             mini_toolbar::show(self, ui, area, t);
             paste_options::show(self, ui, area, t);
             if self.session.view.find.active {

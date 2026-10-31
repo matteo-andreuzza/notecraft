@@ -234,6 +234,20 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             Ok(json!({"locked": s.draw.lock_shapes}))
         })
         .pure(),
+        // R.Draw.Replay.InkReplay — play the page's strokes back in the order they were drawn.
+        CommandSpec::new("draw.replay", "R.Draw.Replay.InkReplay", "Ink Replay", "Draw/Replay/Ink Replay", |s, v| {
+            s.view.ink_replay = p::bool(v, "on").unwrap_or(!s.view.ink_replay);
+            Ok(json!({"replay": s.view.ink_replay}))
+        })
+        .params(r#"{"on"?: bool}"#)
+        .pure()
+        .when(|s| {
+            if s.page().is_some_and(|p| p.objects.iter().any(|o| matches!(o, notecraft_doc::PageObject::Ink(_)))) {
+                None
+            } else {
+                Some("This page has no ink to replay")
+            }
+        }),
         // R.Draw.Convert.InkToShape — strokes drawn from now on that look like shapes become them.
         CommandSpec::new("draw.inkToShape", "R.Draw.Convert.InkToShape", "Ink to Shape", "Draw/Convert/Ink to Shape", |s, v| {
             s.draw.ink_to_shape = p::bool(v, "on").unwrap_or(!s.draw.ink_to_shape);

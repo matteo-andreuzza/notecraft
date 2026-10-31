@@ -422,3 +422,23 @@ fn with_draw_with_touch_off_a_finger_moves_the_page_instead_of_drawing() {
     finger_drag(&mut h);
     assert_eq!(strokes(&h).len(), 2);
 }
+
+#[test]
+fn ink_replay_shows_the_strokes_little_by_little_and_closes() {
+    let mut a = crate::tests::app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("draw.stroke", json!({"points": [[10, 10], [60, 40], [90, 20], [120, 60]]})).unwrap();
+    a.session.run("draw.stroke", json!({"points": [[10, 100], [80, 140]]})).unwrap();
+    a.session.run("draw.replay", json!({})).unwrap();
+    a.ui.tab = "View".into();
+    let mut h = crate::tests::harness(a);
+    h.run();
+    let r = h.state().canvas.replay.expect("R.Draw.Replay.InkReplay: replaying");
+    assert!(h.query_by_label("Pause").is_some() || h.query_by_label("Play").is_some(), "the replay bar");
+    assert!(h.query_by_label("Rewind").is_some());
+    // Points appear over time, never more than the page has.
+    assert_eq!(r.shown_points(f64::MAX), 6);
+    h.get_by_label("Close").click();
+    h.run();
+    assert!(!h.state().session.view.ink_replay && h.state().canvas.replay.is_none());
+}

@@ -248,6 +248,9 @@ pub struct ViewState {
     /// Password Protection pane open (Review › Password).
     #[serde(default)]
     pub password_pane: bool,
+    /// Ink Replay is playing the page's strokes back (Draw › Ink Replay; the UI animates it).
+    #[serde(default)]
+    pub ink_replay: bool,
     /// Spelling pane open (Review › Spelling).
     #[serde(default)]
     pub spelling_pane: bool,
@@ -291,6 +294,7 @@ impl Default for ViewState {
             paper_pane: false,
             password_pane: false,
             spelling_pane: false,
+            ink_replay: false,
             spelling: None,
             recent_edits: None,
             page_versions: false,
@@ -736,6 +740,7 @@ impl Session {
         self.view.find.matches.clear();
         self.view.recycle_view = None;
         self.view.preview = None;
+        self.view.ink_replay = false;
     }
 
     /// Select a section (its first visible page, or none).

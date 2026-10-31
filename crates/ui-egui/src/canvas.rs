@@ -216,6 +216,8 @@ pub struct CanvasState {
     pub paras: Vec<ParaLayout>,
     /// Misspelled words per paragraph text (`spell_ui`).
     pub(crate) spell: crate::spell_ui::SpellCache,
+    /// Ink Replay's progress, while it plays.
+    pub(crate) replay: Option<crate::ink::Replay>,
     /// Container layouts of the last frame (tables included, for their move bar).
     pub outlines: Vec<OutlineLayout>,
     /// Table layouts of the last frame.
@@ -257,6 +259,7 @@ impl Default for CanvasState {
         CanvasState {
             paras: Vec::new(),
             spell: Default::default(),
+            replay: None,
             outlines: Vec::new(),
             tables: Vec::new(),
             media: Vec::new(),
