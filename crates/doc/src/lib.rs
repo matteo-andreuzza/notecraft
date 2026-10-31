@@ -37,7 +37,7 @@ pub use media::{Attachment, Blob, Image};
 pub use notebook::{
     DeletedPage, DeletedSection, NavNode, Notebook, Protection, RecycleBin, Section, SectionColor, SectionGroup, Workspace, clean_name,
 };
-pub use page::{Outline, OutlineWidth, Page, PageObject, PageSetup, PaperSize, RuleLines};
+pub use page::{MAX_VERSIONS, Outline, OutlineWidth, Page, PageObject, PageSetup, PageVersion, PaperSize, RuleLines};
 pub use table::{Table, TableCell, TableRow};
 pub use tags::{TagDef, TagSymbol, TagUse, builtin_tags};
 pub use text::{Align, Bullet, CharFormat, ListFormat, MathView, Numbering, ParaStyle, Paragraph, Run, Script, StyleDef, sanitize_text};

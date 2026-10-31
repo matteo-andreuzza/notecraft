@@ -399,6 +399,30 @@ pub struct Page {
     /// Whether its subpages are collapsed in the page list.
     #[serde(default)]
     pub collapsed: bool,
+    /// Earlier states, oldest first (History › Page Versions; decision D14).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub versions: Vec<PageVersion>,
+}
+
+/// Most versions a page keeps (the oldest go first).
+pub const MAX_VERSIONS: usize = 50;
+
+/// An earlier state of a page (decision D14): its title, objects and page setup.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PageVersion {
+    /// When that state was last edited.
+    pub at: Timestamp,
+    /// Who was editing then.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub author: String,
+    /// The title then.
+    pub title: Paragraph,
+    /// The objects then.
+    #[serde(default)]
+    pub objects: Vec<PageObject>,
+    /// The appearance then.
+    #[serde(default)]
+    pub setup: PageSetup,
 }
 
 /// What an untitled page is called in the page list (catalog `BEH.Pages.Title`).
@@ -420,6 +444,7 @@ impl Page {
             objects: Vec::new(),
             setup: PageSetup::default(),
             collapsed: false,
+            versions: Vec::new(),
         }
     }
 
@@ -445,10 +470,79 @@ impl Page {
     /// normalised, empty outlines and tables removed, at most [`MAX_PAGE_OBJECTS`] objects.
     pub fn normalize(&mut self) {
         self.level = self.level.min(MAX_PAGE_LEVEL);
-        self.title.normalize();
-        self.title.style = ParaStyle::PageTitle;
-        self.title.level = 0;
-        for o in &mut self.objects {
+        normalize_title(&mut self.title);
+        normalize_objects(&mut self.objects);
+        // Versions: the newest [`MAX_VERSIONS`], oldest first, each normalised like the page.
+        self.versions.sort_by_key(|v| v.at);
+        let extra = self.versions.len().saturating_sub(MAX_VERSIONS);
+        self.versions.drain(..extra);
+        for v in &mut self.versions {
+            normalize_title(&mut v.title);
+            normalize_objects(&mut v.objects);
+        }
+    }
+
+    /// The page's current state as a version by `author`.
+    pub fn snapshot(&self, author: &str) -> PageVersion {
+        PageVersion {
+            at: self.modified,
+            author: author.to_string(),
+            title: self.title.clone(),
+            objects: self.objects.clone(),
+            setup: self.setup.clone(),
+        }
+    }
+
+    /// Keep `v` as the newest version (dropping the oldest past [`MAX_VERSIONS`]).
+    pub fn push_version(&mut self, v: PageVersion) {
+        self.versions.push(v);
+        let extra = self.versions.len().saturating_sub(MAX_VERSIONS);
+        self.versions.drain(..extra);
+    }
+
+    /// Version `i` as a page of its own (same id, no versions), for showing it.
+    pub fn version_page(&self, i: usize) -> Option<Page> {
+        let v = self.versions.get(i)?;
+        Some(Page {
+            title: v.title.clone(),
+            objects: v.objects.clone(),
+            setup: v.setup.clone(),
+            modified: v.at,
+            versions: Vec::new(),
+            ..self.clone_without_versions()
+        })
+    }
+
+    /// A copy of the page without its versions (copies, templates and exports leave history
+    /// behind).
+    pub fn clone_without_versions(&self) -> Page {
+        Page {
+            id: self.id,
+            title: self.title.clone(),
+            level: self.level,
+            created: self.created,
+            modified: self.modified,
+            shown_time: self.shown_time,
+            author: self.author.clone(),
+            objects: self.objects.clone(),
+            setup: self.setup.clone(),
+            collapsed: self.collapsed,
+            versions: Vec::new(),
+        }
+    }
+}
+
+/// A title paragraph's invariants.
+fn normalize_title(title: &mut Paragraph) {
+    title.normalize();
+    title.style = ParaStyle::PageTitle;
+    title.level = 0;
+}
+
+/// Every object normalised, empty outlines and tables removed, at most [`MAX_PAGE_OBJECTS`].
+fn normalize_objects(objects: &mut Vec<PageObject>) {
+    {
+        for o in objects.iter_mut() {
             match o {
                 PageObject::Outline(ol) => ol.normalize(),
                 PageObject::Table(t) => t.normalize(),
@@ -457,15 +551,17 @@ impl Page {
                 PageObject::Ink(k) => k.normalize(),
             }
         }
-        self.objects.retain(|o| match o {
+        objects.retain(|o| match o {
             PageObject::Outline(ol) => !ol.paragraphs.is_empty(),
             PageObject::Table(t) => !t.is_empty(),
             PageObject::Image(_) | PageObject::Attachment(_) => true,
             PageObject::Ink(k) => !k.points.is_empty(),
         });
-        self.objects.truncate(MAX_PAGE_OBJECTS);
+        objects.truncate(MAX_PAGE_OBJECTS);
     }
+}
 
+impl Page {
     /// Index of the object with `id`.
     pub fn object_index(&self, id: Id) -> Option<usize> {
         self.objects.iter().position(|o| o.id() == id)

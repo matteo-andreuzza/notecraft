@@ -245,6 +245,11 @@ pub struct ViewState {
     /// The Recent Edits pane's period (`history_cmds::RECENT_RANGES`), `None` = closed.
     #[serde(default)]
     pub recent_edits: Option<String>,
+    /// Page versions shown under the pages in the page list (History › Page Versions).
+    pub page_versions: bool,
+    /// A version or a deleted page shown read-only instead of the canvas.
+    #[serde(default)]
+    pub preview: Option<crate::versions_cmds::Preview>,
     /// The recycle bin of this notebook is being viewed.
     pub recycle_view: Option<Id>,
 }
@@ -268,6 +273,8 @@ impl Default for ViewState {
             spelling_pane: false,
             spelling: None,
             recent_edits: None,
+            page_versions: false,
+            preview: None,
             recycle_view: None,
         }
     }
@@ -487,6 +494,11 @@ impl Session {
                 },
                 None => (None, false),
             };
+            // Page versions (D14): the previous state of a page edited after a pause, kept in the
+            // same undo step. Version commands themselves never make one.
+            if !id.starts_with("history.") {
+                crate::versions_cmds::snapshot(self, &before_ws, &before_sel);
+            }
             let merge = key.is_some() && key == self.last_coalesce && !self.undo.is_empty();
             if !merge {
                 self.undo.push(HistoryEntry { label: spec.label.to_string(), ws: before_ws, sel: before_sel });
@@ -696,6 +708,7 @@ impl Session {
         self.pending_fmt = None;
         self.view.find.matches.clear();
         self.view.recycle_view = None;
+        self.view.preview = None;
     }
 
     /// Select a section (its first visible page, or none).

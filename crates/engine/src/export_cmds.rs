@@ -213,6 +213,16 @@ fn write(s: &Session, path: &str, fmt: Format, title: &str, pages: &[&Page]) -> 
 /// 144 dpi (less for a page so large it would pass the picture limits).
 fn write_png(s: &Session, path: &str, title: &str, pages: &[&Page]) -> CmdResult {
     let [page] = pages else { return Err(CmdError::Disabled("a picture holds one page: export a page".into())) };
+    let img = picture(s, page, title)?;
+    let (w, h) = (img.width, img.height);
+    let png = notecraft_codecs::encode_png(&img, &notecraft_codecs::Limits::PICTURE).map_err(|e| CmdError::Failed(e.to_string()))?;
+    write_file(path, &png)?;
+    Ok(json!({"bytes": png.len(), "pages": 1, "width": w, "height": h, "inkLost": 0, "written": [path]}))
+}
+
+/// A page drawn as pixels: its content on one PDF sheet rendered at 144 dpi (less for a page
+/// so large it would pass the picture limits). The PNG export and read-only previews use it.
+fn picture(s: &Session, page: &Page, title: &str) -> Result<notecraft_codecs::Rgba8, CmdError> {
     let opts =
         pdf::PdfOptions { title: title.to_string(), author: s.prefs.author.clone(), utc_offset_min: s.clock.utc_offset_min, fit_content: true };
     let (doc, _) = pdf::write(&[page], notecraft_fonts::page_fonts(), &opts).map_err(CmdError::Failed)?;
@@ -222,10 +232,16 @@ fn write_png(s: &Session, path: &str, title: &str, pages: &[&Page]) -> CmdResult
         .into_iter()
         .next()
         .ok_or_else(|| CmdError::Failed("nothing to draw".into()))?;
-    let (w, h) = (img.width, img.height);
-    let png = notecraft_codecs::encode_png(&img, &notecraft_codecs::Limits::PICTURE).map_err(|e| CmdError::Failed(e.to_string()))?;
-    write_file(path, &png)?;
-    Ok(json!({"bytes": png.len(), "pages": 1, "width": w, "height": h, "inkLost": 0, "written": [path]}))
+    Ok(img)
+}
+
+impl Session {
+    /// The read-only preview (a page version or a deleted page) drawn as pixels at 144 dpi, as
+    /// the PNG export draws a page; `None` without a preview.
+    pub fn preview_picture(&self) -> Option<Result<notecraft_codecs::Rgba8, CmdError>> {
+        let page = self.preview_page()?;
+        Some(picture(self, &page, &page.display_title()))
+    }
 }
 
 /// A page as an SVG picture (FMT.Export.Images): the same drawing as the PNG picture, as

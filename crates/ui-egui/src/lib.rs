@@ -28,6 +28,7 @@ pub mod panes;
 pub mod password_ui;
 pub mod paste_options;
 pub mod pictures;
+pub mod preview;
 pub mod ribbon;
 pub mod ribbon_layout;
 pub mod ribbon_simplified;
@@ -549,7 +550,10 @@ impl NoteApp {
                 nav::empty_state(self, ui, t);
             }
             // A locked section shows its unlock prompt instead of a page (BEH.Password.Lock).
-            if !password_ui::locked_view(self, ui, t) {
+            if self.session.view.preview.is_some() {
+                // A version or a deleted page, read-only (decision D14).
+                preview::show(self, ui, t);
+            } else if !password_ui::locked_view(self, ui, t) {
                 canvas::show(self, ui, t);
             }
             mini_toolbar::show(self, ui, area, t);

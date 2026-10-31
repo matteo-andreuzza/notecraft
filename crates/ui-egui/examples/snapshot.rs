@@ -351,6 +351,15 @@ fn main() {
         a.session.run("history.recentEdits", json!({"range": "all"})).unwrap();
         a.ui.tab = "History".into();
     });
+    // History › Page Versions (decision D14): the versions under the page, one shown read-only.
+    shot("page-version", &out, 1.0, |a| {
+        a.session.clock.now_ms += 3_600_000;
+        a.session.run("text.insert", json!({"text": "Edited later. "})).unwrap();
+        let at = a.session.page().unwrap().versions[0].at.0;
+        a.session.run("history.pageVersions", json!({"on": true})).unwrap();
+        a.session.run("history.openVersion", json!({"at": at})).unwrap();
+        a.ui.tab = "History".into();
+    });
     // Merged cells (decision D9): the header across all three columns, a cell over two rows.
     shot("table-merged", &out, 1.0, |a| {
         table_page(a);

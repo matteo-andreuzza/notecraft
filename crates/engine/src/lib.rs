@@ -46,6 +46,7 @@ mod table_cmds;
 mod tag_cmds;
 mod template_cmds;
 mod text_cmds;
+mod versions_cmds;
 mod view_cmds;
 
 #[cfg(test)]
@@ -79,6 +80,7 @@ pub use selection::{Block, Pos, Selection, TextRange};
 pub use session::{Clock, FindState, NbDirty, Prefs, RibbonMode, ScopeKind, ScrollRequest, Session, SpellingState, ViewState};
 pub use spell_cmds::installed_languages;
 pub use template_cmds::{BUILT_IN as BUILT_IN_TEMPLATES, BuiltIn, MY_TEMPLATES, SavedTemplate};
+pub use versions_cmds::{Preview, VERSION_GAP_MS};
 
 /// Errors a command can return. Commands never panic; bad input is `Params`, an unavailable
 /// command is `Disabled`, everything else `Failed`.

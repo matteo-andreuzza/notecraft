@@ -707,6 +707,83 @@ fn recent_edits_lists_changed_pages_and_opens_them() {
 }
 
 #[test]
+fn page_versions_show_under_the_page_open_read_only_and_restore() {
+    // parity: UI.Panes.PageVersions, CM.Page.PageVersionsShow, CM.PageVersion.PageVersionRestore, NC.Versions.Open, NC.Versions.ClosePreview
+    let mut a = app();
+    let original = a.session.page().unwrap().objects.clone();
+    // An edit an hour after the last one keeps the previous state as a version.
+    a.session.clock.now_ms += 3_600_000;
+    a.session.run("text.insert", json!({"text": "CHANGED "})).unwrap();
+    let v = a.session.page().unwrap().versions[0].clone();
+    let off = a.session.clock.utc_offset_min;
+    let label = format!("{} {}  {}", v.at.short_date(off), v.at.short_time(off), v.author);
+    let title = a.session.page().unwrap().display_title();
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label(&label).is_none(), "versions are hidden until asked for");
+    h.get_by_label(&title).click_secondary();
+    h.run();
+    h.get_by_label("Show Page Versions").click();
+    h.run();
+    h.get_by_label(&label).click();
+    h.run();
+    assert!(h.state().session.view.preview.is_some(), "a click shows the version");
+    for l in ["Restore Version", "Delete Version", "Close"] {
+        assert!(h.query_by_label(l).is_some(), "{l}");
+    }
+    assert!(!h.state().canvas.focused, "the keyboard can't reach the page underneath");
+    h.get_by_label("Close").click();
+    h.run();
+    assert!(h.state().session.view.preview.is_none());
+    h.get_by_label(&label).click();
+    h.run();
+    h.get_by_label("Restore Version").click();
+    h.run();
+    assert_eq!(h.state().session.page().unwrap().objects, original, "the old content is back");
+    assert!(h.state().session.view.preview.is_none());
+    // parity: CM.PageVersion.DeleteAllPageVersionsInNotebook, CM.PageVersion.PageVersionsHide, CM.Page.PageVersionsHide, R.History.History.PageVersionSplitButton
+    // The replaced state is a version now; the version menu deletes every version.
+    assert_eq!(h.state().session.page().unwrap().versions.len(), 2);
+    h.get_by_label(&label).click_secondary();
+    h.run();
+    h.get_by_label("Delete All Versions in Notebook").click();
+    h.run();
+    assert!(h.state().session.page().unwrap().versions.is_empty());
+    // Hide from the page menu; the History tab's button shows them again.
+    h.get_by_label(&title).click_secondary();
+    h.run();
+    h.get_by_label("Hide Page Versions").click();
+    h.run();
+    assert!(!h.state().session.view.page_versions);
+    h.state_mut().session.run("ui.ribbonMode", json!({"mode": "classic"})).unwrap();
+    h.state_mut().ui.tab = "History".into();
+    h.run();
+    h.get_by_label("Page Versions").click();
+    h.run();
+    assert!(h.state().session.view.page_versions, "the icon half switches them");
+}
+
+#[test]
+fn a_deleted_page_opens_read_only_from_the_recycle_bin() {
+    // parity: NC.Recycle.Preview
+    let mut a = app();
+    let page = a.session.page().unwrap().clone();
+    a.session.run("page.delete", json!({})).unwrap();
+    a.session.run("history.recycleBin", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    h.get_by_label(&page.display_title()).click();
+    h.run();
+    assert_eq!(h.state().session.view.preview, Some(notecraft_engine::Preview::Deleted { page: page.id }));
+    assert!(h.query_by_label_contains("in the Notebook Recycle Bin").is_some());
+    // The bar's Restore (the hovered row shows one too; the bar is drawn after the column).
+    h.get_all_by_label("Restore").last().unwrap().click();
+    h.run();
+    assert_eq!(h.state().session.sel.page, Some(page.id), "restored and opened");
+    assert!(h.state().session.view.preview.is_none());
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();

@@ -56,10 +56,11 @@ pub const RECYCLE_FILE: &str = "recycle.ncraft-bin";
 /// History: 1 = M1 (outlines); 2 = M2 tables (`PageObject::Table`); 3 = M2 pictures and
 /// attachments (`PageObject::Image`/`Attachment`, bytes in `media/` entries; decision D3); 4 = M2
 /// ink (`PageObject::Ink`, one stroke per object; decision D4); 5 = M2 merged table cells
-/// (`TableCell::row_span`/`col_span`; decision D9) and equations (decision D11).
+/// (`TableCell::row_span`/`col_span`; decision D9) and equations (decision D11); 6 = M3 page
+/// versions (`Page::versions`; decision D14).
 /// Each version reads every older one unchanged; older builds refuse newer files rather than
 /// drop objects they don't know.
-pub const VERSION: u32 = 5;
+pub const VERSION: u32 = 6;
 
 /// Largest decompressed JSON entry accepted (1 GiB): a 2 GB notebook spreads over many
 /// sections, so one section beyond this is corrupt or hostile.
@@ -514,6 +515,37 @@ mod tests {
 
     fn picture(id: u128, blob: &notecraft_doc::Blob) -> PageObject {
         PageObject::Image(notecraft_doc::Image::new(Id(id), Point::new(40.0, 300.0), blob.clone(), (8, 4), 60.0, 30.0))
+    }
+
+    #[test]
+    fn page_versions_round_trip_with_their_pictures() {
+        // Format 6 (decision D14): a version keeps a picture the page no longer has.
+        let mut s = sample_section();
+        let only_in_version = notecraft_doc::Blob::new(Id(80), Arc::from(&b"\x89PNG old picture"[..]));
+        {
+            let p = Arc::make_mut(&mut s.pages[0]);
+            p.objects.push(picture(81, &only_in_version));
+            let v = p.snapshot("Ada");
+            p.objects.retain(|o| o.id() != Id(81));
+            p.push_version(v);
+        }
+        let back = decode_section(&encode_section(&s).unwrap()).unwrap();
+        assert_eq!(back.pages[0].versions[0].objects, s.pages[0].versions[0].objects);
+        assert_eq!(back.pages[0].versions[0].title.text(), "Kickoff");
+        assert_eq!(back.pages[0].versions[0].author, "Ada");
+        let PageObject::Image(im) = back.pages[0].versions[0].objects.iter().find(|o| o.id() == Id(81)).unwrap() else { panic!("a picture") };
+        assert_eq!(&im.blob.bytes[..], b"\x89PNG old picture", "the version's picture bytes were saved");
+        // Too many versions on disk: the newest MAX_VERSIONS stay.
+        let mut many = s.clone();
+        {
+            let p = Arc::make_mut(&mut many.pages[0]);
+            p.versions = (0..notecraft_doc::MAX_VERSIONS as i64 + 7)
+                .map(|i| notecraft_doc::PageVersion { at: notecraft_doc::Timestamp(i), ..p.snapshot("") })
+                .collect();
+        }
+        let back = decode_section(&encode_section(&many).unwrap()).unwrap();
+        assert_eq!(back.pages[0].versions.len(), notecraft_doc::MAX_VERSIONS);
+        assert_eq!(back.pages[0].versions[0].at, notecraft_doc::Timestamp(7), "the oldest went");
     }
 
     #[test]

@@ -326,7 +326,8 @@ pub(crate) fn new_para(s: &mut Session) -> Paragraph {
 /// Deep-copy a page with fresh ids for the page and everything on it (Copy page, Move or Copy
 /// with Copy).
 pub(crate) fn clone_page_fresh(s: &mut Session, page: &notecraft_doc::Page, now: Timestamp) -> notecraft_doc::Page {
-    let mut p = page.clone();
+    // A copy starts its own history (decision D14).
+    let mut p = page.clone_without_versions();
     p.id = s.new_id();
     p.title.id = s.new_id();
     p.created = now;
