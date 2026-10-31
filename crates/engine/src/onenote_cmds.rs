@@ -30,6 +30,13 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
     ]
 }
 
+impl Session {
+    /// Open Section on the `.one` file at `path` into `notebook` (from `open_path`).
+    pub(crate) fn run_nested_open_section(&mut self, path: &str, notebook: Option<String>) -> CmdResult {
+        open_section(self, &json!({"path": path, "notebook": notebook}))
+    }
+}
+
 fn open_section(s: &mut Session, v: &Value) -> CmdResult {
     let nb_id = match p::id(v, "notebook")? {
         Some(id) => id,
@@ -343,7 +350,7 @@ mod tests {
 
     use crate::tests::{run, sample};
 
-    fn fixture() -> Vec<u8> {
+    pub(super) fn fixture() -> Vec<u8> {
         write(&[
             FixturePage {
                 title: "Trip".into(),
@@ -524,5 +531,34 @@ mod tests {
         std::fs::write(&pkg, b"not a cabinet").unwrap();
         assert!(matches!(s.run("file.openNotebook", json!({"path": pkg.to_str().unwrap()})), Err(crate::CmdError::Failed(_))));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod open_file_tests {
+    use serde_json::json;
+
+    use crate::tests::{clock, run};
+
+    #[test]
+    fn a_one_file_or_a_section_file_opens_from_the_file_manager() {
+        let d = std::env::temp_dir().join(format!("notecraft-open-file-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+        // A lone .one with nothing open: a new in-memory notebook holds the copy.
+        let one = d.join("Travel.one");
+        std::fs::write(&one, super::tests::fixture()).unwrap();
+        let mut s = crate::Session::new(clock());
+        run(&mut s, "file.openNotebook", json!({"path": one.to_str().unwrap()}));
+        assert_eq!(s.notebook().unwrap().name, "OneNote Sections", "FMT.One.Read from a file");
+        assert_eq!(s.section().unwrap().name, "Travel");
+        // A NoteCraft section file: its notebook folder opens.
+        let root = d.join("Work");
+        run(&mut s, "file.newNotebook", json!({"name": "Work", "path": root.to_str().unwrap()}));
+        assert!(s.save_dirty().is_empty());
+        let mut fresh = crate::Session::new(clock());
+        run(&mut fresh, "file.openNotebook", json!({"path": root.join("New Section 1.ncraft").to_str().unwrap()}));
+        assert_eq!(fresh.notebook().unwrap().name, "Work");
+        let _ = std::fs::remove_dir_all(&d);
     }
 }

@@ -1065,3 +1065,10 @@ were certain landed, behaviour unchanged (every test green after each commit).
   and Space opens it.
 - KB.Table.RowAboveEnter and KB.Notebooks.OpenSection were implemented and tested already;
   their tests now carry the row ids. 5 rows wired.
+
+## 2026-10-31 — Opening files from the file manager
+
+- `Session::open_path` (file.openNotebook and the command line) now takes a single `.one`
+  section, copied into the current notebook or into a new in-memory "OneNote Sections"
+  notebook when none is open (D12). A NoteCraft `.ncraft` section file opens the notebook
+  folder it belongs to. The desktop file's MIME types already listed both.

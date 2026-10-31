@@ -236,8 +236,22 @@ impl Session {
             Some("onetoc2") => root.parent().unwrap_or(root),
             Some("onepkg") => return self.import_onepkg(root),
             Some("ncraft-archive") => return self.open_archive(root),
+            // A single OneNote section (opened from a file manager): a copy into the current
+            // notebook, or into a new in-memory one when none is open (D12).
+            Some("one") => {
+                if self.notebook().is_none() {
+                    let nb = Notebook::new(self.new_id(), "OneNote Sections", SectionColor::index(0));
+                    self.add_notebook(nb);
+                }
+                let notebook = self.notebook().map(|n| n.id.to_string());
+                return self.run_nested_open_section(path, notebook);
+            }
             _ => root,
         };
+        // A NoteCraft section file opens the notebook folder it belongs to.
+        let root =
+            if crate::onenote_cmds::extension(root).as_deref() == Some(notecraft_format::SECTION_EXT) { root.parent().unwrap_or(root) } else { root };
+        let folder = if folder.extension().is_some_and(|e| e == notecraft_format::SECTION_EXT) { root } else { folder };
         if crate::onenote_cmds::is_onenote_folder(folder) {
             return self.import_onenote_folder(folder);
         }
