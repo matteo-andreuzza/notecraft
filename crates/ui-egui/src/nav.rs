@@ -610,6 +610,7 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                     if app.session.view.page_versions {
                         version_rows(app, ui, page, t);
                     }
+                    insertion_point(app, ui, r, page.id, i, &section, t);
                 }
                 ui.allocate_space(vec2(ui.available_width(), 60.0))
             });
@@ -727,6 +728,33 @@ fn bin_row(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, id: Id, name: &s
             });
         }
     });
+}
+
+/// The insertion point under a page tab (BEH.Pages.NewPageInsertion): pointing at the lower
+/// edge of a row shows a line with a ⊕ at its left; a click adds a page right after it. The band
+/// is the row's last few pixels, so the rest of the row still selects the page; a page with
+/// subpages has none (a page there would split the family).
+fn insertion_point(app: &mut NoteApp, ui: &mut Ui, row: Rect, pid: Id, i: usize, section: &notecraft_engine::doc::Section, t: Tokens) {
+    // Between a page and its own subpages a new page would split the family: only after it.
+    if section.page_family(i).end > i + 1 {
+        return;
+    }
+    let band = Rect::from_min_max(pos2(row.min.x, row.max.y - 4.0), pos2(row.max.x, row.max.y));
+    let resp = ui.interact(band, ui.id().with(("insert_page", pid)), Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, "Add page here"));
+    if !resp.hovered() {
+        return;
+    }
+    let y = row.max.y;
+    let plus = pos2(row.min.x + 9.0, y);
+    ui.painter().line_segment([pos2(row.min.x + 16.0, y), pos2(row.max.x - 4.0, y)], Stroke::new(2.0, t.accent));
+    ui.painter().circle(plus, 7.0, t.page_list, Stroke::new(1.5, t.accent));
+    ui.painter().line_segment([plus - vec2(3.5, 0.0), plus + vec2(3.5, 0.0)], Stroke::new(1.5, t.accent));
+    ui.painter().line_segment([plus - vec2(0.0, 3.5), plus + vec2(0.0, 3.5)], Stroke::new(1.5, t.accent));
+    if resp.on_hover_text("Add a page here").clicked() {
+        let ctx = ui.ctx().clone();
+        app.run(&ctx, "page.new", json!({"after": pid.to_string()}));
+    }
 }
 
 /// Add page (outlined, with the page-and-pencil icon) and the sort button.

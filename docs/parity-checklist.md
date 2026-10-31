@@ -9,7 +9,7 @@ In-scope only (excluding 81 rows that need Microsoft cloud services or Outlook):
 | Area | Rows | Wired | Verified | Disabled | Out of scope | Wiring | Behaviour |
 |---|---|---|---|---|---|---|---|
 | Backstage (File) | 42 | 17 | 2 | 0 | 9 | 40.5% | 4.8% |
-| Behaviour | 70 | 63 | 25 | 0 | 0 | 90.0% | 35.7% |
+| Behaviour | 70 | 64 | 25 | 0 | 0 | 91.4% | 35.7% |
 | Context menus | 427 | 228 | 27 | 0 | 25 | 53.4% | 6.3% |
 | Contextual tab › Audio & Video | 12 | 0 | 0 | 0 | 0 | 0.0% | 0.0% |
 | Contextual tab › Equation | 18 | 15 | 2 | 0 | 0 | 83.3% | 11.1% |
@@ -36,7 +36,6 @@ In-scope only (excluding 81 rows that need Microsoft cloud services or Outlook):
 | P0 | CM.OutlookTask.TagsRemove | Remove Tag | Context/Outlook Task/Remove Tag | `tag.remove` |
 | P0 | CM.Tag.FindTaggedNotes | Find Tags | Context/Tag/Find Tags | `tag.findTags` |
 | P1 | BEH.Links.PageRenameTracking | Links to pages keep working after the page is renamed or moved | Behaviour/Links | — |
-| P1 | BEH.Pages.NewPageInsertion | Hovering between page tabs shows an insertion point to add a page there | Behaviour/Pages | — |
 | P1 | BEH.Text.HeadingSizes | Built-in styles: Heading 1 16pt blue, Heading 2 14pt blue bold, Heading 3 12pt blue bold, Heading 4 12pt blue bold italic, Heading 5 11pt blue bold, Heading 6 11pt blue italic, Page Title 20pt, Citation 9pt grey, Quote 11pt italic grey, Code Consolas 10pt, Normal 11pt | Behaviour/Text | — |
 | P1 | BEH.View.PageColor | Page colour: a palette of 16 light colours plus No Color | Behaviour/View | — |
 | P1 | BEH.View.RuleLines | Rule lines: Narrow, College, Standard, Wide ruled; Small, Medium, Large, Very Large grid; None; colour; optional margin line | Behaviour/View | — |
@@ -74,5 +73,4 @@ In-scope only (excluding 81 rows that need Microsoft cloud services or Outlook):
 | P1 | R.View.Window.WindowNew | New Window | View/Window/New Window | `window.new` |
 | P1 | UI.Canvas.Scrollbars | Vertical and horizontal scroll bars; option to put the vertical bar on the left | Window/Canvas/Scroll Bars | — |
 | P1 | UI.Ribbon.Galleries | In-ribbon galleries with live preview (Styles, Tags, Pens) | Window/Ribbon/Galleries | — |
-| P1 | UI.Ribbon.Tooltips | ScreenTips with the command name, shortcut and description | Window/Ribbon/ScreenTips | — |
 | P1 | UI.Window.DragDrop | Drag & drop of files, images and text onto the page; pages/sections in the navigation | Window/Drag and Drop | — |

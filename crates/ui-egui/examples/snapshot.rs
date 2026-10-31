@@ -370,6 +370,22 @@ fn main() {
         a.session.run("window.quickNote", json!({})).unwrap();
         a.session.run("text.insert", json!({"text": "Call the plumber"})).unwrap();
     });
+    // BEH.Pages.NewPageInsertion: the pointer on the lower edge of a page tab.
+    shot_then(
+        "page-insertion",
+        &out,
+        1.0,
+        egui::vec2(1280.0, 800.0),
+        |a| {
+            let sid = a.session.notebook().unwrap().sections()[1].id;
+            a.session.goto_section(sid).unwrap();
+        },
+        |h| {
+            let title = h.state().session.section().unwrap().pages[0].display_title();
+            let r = egui_kittest::kittest::Queryable::get_by_label(&*h, &title).rect();
+            h.hover_at(egui::pos2(r.center().x, r.max.y - 2.0));
+        },
+    );
     // Merged cells (decision D9): the header across all three columns, a cell over two rows.
     shot("table-merged", &out, 1.0, |a| {
         table_page(a);

@@ -1006,3 +1006,12 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Tests: every one of the 29 gallery rows applies its tag (the 20 "Tag: …" P1 rows were missing
   only for lack of a test). Help and page-version rows say "unverified" (our own designs).
 - Catalog: UI.Panes.CustomizeTags + 20 R.Home.Tags.* rows wired.
+
+## 2026-10-31 — M3/P1: add a page between page tabs
+
+- `nav::insertion_point`: pointing at the lower edge of a page tab (its last 4 px) draws an
+  accent line with ⊕ at its left; a click runs `page.new {after}` (a page right after it, opened).
+  Not offered between a page and its own subpages. Snapshot `page-insertion`.
+- Catalog: BEH.Pages.NewPageInsertion wired (unverified details).
+- Also: UI.Ribbon.Tooltips wired with a UI test (name and shortcut, or the reason a control
+  is disabled; no description line yet).
