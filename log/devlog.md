@@ -821,3 +821,15 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Engine: `format: "svg"` on `file.exportPage` (a section is refused, one page per picture).
   UI: SVG Picture in File › Export for pages. Checked by eye with rsvg-convert against the PNG.
 - Catalog: FMT.Export.Images notes (PNG and SVG). Numbers unchanged (a format of an existing row).
+
+## 2026-10-31 — M3/P0: the Notebook Recycle Bin in the page column
+
+- History › Notebook Recycle Bin (and the notebook's context menu) already ran
+  `history.recycleBin`, but nothing showed the bin: deleted pages and sections could not be
+  found again from the UI. `nav::recycle_bin` now takes over the page column while
+  `ViewState.recycle_view` is set: Deleted Pages (title, from section, date) and Deleted
+  Sections (page count, date), Restore on hover and on right click, Move to › a section for
+  pages (`history.restore` with `section`), Empty Recycle Bin (asks first), ✕ to leave.
+  Restoring opens the item, which leaves the bin. Snapshot `recycle-bin`; UI test.
+- Catalog: UI.Panes.RecycleBin wired (P0). Not yet: a read-only preview of a deleted page, the
+  60-day purge (BEH.Recycle.DeletedPages).

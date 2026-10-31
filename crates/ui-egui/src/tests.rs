@@ -605,6 +605,57 @@ fn the_paper_size_pane_sets_the_page_paper() {
 }
 
 #[test]
+fn the_recycle_bin_lists_deleted_items_and_restores_them() {
+    // parity: UI.Panes.RecycleBin
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    // Delete "Handy shortcuts" and the Meetings section.
+    let nb = a.session.notebook().unwrap().clone();
+    let handy = nb.sections()[0].pages.iter().find(|p| p.display_title() == "Handy shortcuts").unwrap().id;
+    let meetings = nb.sections().iter().find(|s| s.name == "Meetings").unwrap().id;
+    a.session.run("page.delete", json!({"page": handy.to_string()})).unwrap();
+    a.session.run("section.delete", json!({"section": meetings.to_string()})).unwrap();
+    a.session.run("history.recycleBin", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    for l in ["Notebook Recycle Bin", "Deleted Pages", "Deleted Sections", "Handy shortcuts", "Meetings", "Empty Recycle Bin"] {
+        assert!(h.query_by_label(l).is_some(), "{l}");
+    }
+    assert!(h.query_by_label_contains("From Getting Started").is_none(), "the dim line is painted, not a widget");
+    // Right-click the page: Restore puts it back and opens it; the bin closes.
+    h.get_by_label("Handy shortcuts").click_secondary();
+    h.run();
+    h.get_by_label("Restore").click();
+    h.run();
+    let st = h.state();
+    assert_eq!(st.session.sel.page, Some(handy), "the restored page opens");
+    assert!(st.session.view.recycle_view.is_none(), "and the bin closes");
+    assert_eq!(st.session.notebook().unwrap().recycle.pages.len(), 0);
+    // The section, through the bin again.
+    h.state_mut().session.run("history.recycleBin", json!({})).unwrap();
+    h.run();
+    h.get_all_by_label("Meetings").last().unwrap().click_secondary();
+    h.run();
+    h.get_by_label("Restore").click();
+    h.run();
+    assert!(h.state().session.notebook().unwrap().sections().iter().any(|s| s.id == meetings), "the section is back");
+    // An empty bin says so and can't be emptied; ✕ closes it.
+    h.state_mut().session.run("history.recycleBin", json!({})).unwrap();
+    h.run();
+    assert!(h.query_by_label_contains("The Recycle Bin is empty").is_some());
+    h.get_by_label("✕").click();
+    h.run();
+    assert!(h.state().session.view.recycle_view.is_none());
+    // Empty Recycle Bin asks first.
+    h.state_mut().session.run("page.delete", json!({})).unwrap();
+    h.state_mut().session.run("history.recycleBin", json!({})).unwrap();
+    h.run();
+    h.get_by_label("Empty Recycle Bin").click();
+    h.run();
+    assert!(matches!(h.state().ui.dialog, Some(Dialog::ConfirmEmptyBin)));
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();

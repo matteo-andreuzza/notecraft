@@ -537,6 +537,10 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         .show_separator_line(true)
         .frame(Frame::NONE.fill(t.page_list).inner_margin(Margin { left: 4, right: 4, top: 6, bottom: 4 }))
         .show(ui, |ui| {
+            if let Some(nb) = app.session.view.recycle_view {
+                recycle_bin(app, ui, nb, t);
+                return;
+            }
             let Some(section) = app.session.section().cloned() else {
                 ui.add_space(10.0);
                 ui.label(RichText::new("No section").color(t.text_disabled));
@@ -616,6 +620,100 @@ pub fn page_list(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     if h.dragged() {
         app.session.view.page_list_width = (width + h.drag_delta().x).clamp(120.0, 480.0);
     }
+}
+
+/// The Notebook Recycle Bin in the page column (History › Notebook Recycle Bin; catalog
+/// `UI.Panes.RecycleBin`): the notebook's deleted pages and deleted sections, each with Restore
+/// (back where it came from) and Move to (another section) on a right click and a button on
+/// hover, and Empty Recycle Bin. Restoring opens the item and leaves the bin; ✕ leaves it too.
+fn recycle_bin(app: &mut NoteApp, ui: &mut Ui, nb_id: Id, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    let Some(nb) = app.session.ws.notebook(nb_id).cloned() else {
+        app.session.view.recycle_view = None;
+        return;
+    };
+    ui.horizontal(|ui| {
+        ui.add_space(6.0);
+        ui.label(RichText::new("Notebook Recycle Bin").strong().color(t.text));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            if ui.add(egui::Button::new("✕").frame(false)).on_hover_text("Close the Recycle Bin").clicked() {
+                app.session.view.recycle_view = None;
+            }
+        });
+    });
+    ui.add_space(4.0);
+    let empty = nb.recycle.is_empty();
+    ui.horizontal(|ui| {
+        ui.add_space(6.0);
+        if ui.add_enabled(!empty, egui::Button::new("Empty Recycle Bin")).clicked() {
+            app.ui.dialog = Some(crate::dialogs::Dialog::ConfirmEmptyBin);
+        }
+    });
+    ui.add_space(6.0);
+    let off = app.session.clock.utc_offset_min;
+    let sections: Vec<(Id, String)> = nb.sections().iter().map(|s| (s.id, s.name.clone())).collect();
+    egui::ScrollArea::vertical().id_salt("recycle_scroll").auto_shrink([false, false]).show(ui, |ui| {
+        if empty {
+            ui.add_space(8.0);
+            ui.label(
+                RichText::new("The Recycle Bin is empty. Deleted pages and sections wait here until you empty it.").size(12.0).color(t.text_dim),
+            );
+            return;
+        }
+        let heading = |ui: &mut Ui, text: &str| {
+            ui.add_space(6.0);
+            ui.label(RichText::new(text).size(12.0).strong().color(t.page_meta));
+            ui.add_space(2.0);
+        };
+        if !nb.recycle.pages.is_empty() {
+            heading(ui, "Deleted Pages");
+        }
+        for d in &nb.recycle.pages {
+            let about = format!("From {} · deleted {}", d.from_section_name, d.deleted.short_date(off));
+            bin_row(app, ui, &ctx, d.page.id, &d.page.display_title(), &about, &sections, t);
+        }
+        if !nb.recycle.sections.is_empty() {
+            heading(ui, "Deleted Sections");
+        }
+        for d in &nb.recycle.sections {
+            let n = d.section.pages.len();
+            let about = format!("{n} page{} · deleted {}", if n == 1 { "" } else { "s" }, d.deleted.short_date(off));
+            bin_row(app, ui, &ctx, d.section.id, &d.section.name, &about, &[], t);
+        }
+    });
+}
+
+/// One item of the Recycle Bin: its name and a dim line under it; Restore on hover and in the
+/// context menu, and for pages Move to › a section.
+#[allow(clippy::too_many_arguments)]
+fn bin_row(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, id: Id, name: &str, about: &str, sections: &[(Id, String)], t: Tokens) {
+    let (r, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::click());
+    resp.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, true, name));
+    row_bg(ui, r, false, resp.hovered(), &t);
+    let font = TypeRung::Body.font(ctx, Weight::Regular);
+    let button = Rect::from_min_size(pos2(r.max.x - 66.0, r.center().y - 12.0), vec2(60.0, 24.0));
+    let hot = resp.hovered() || ui.rect_contains_pointer(button);
+    // The text runs to the edge, leaving room for Restore only while it shows.
+    let clip = Rect::from_min_max(r.min, pos2(r.max.x - if hot { 70.0 } else { 6.0 }, r.max.y));
+    ui.painter().with_clip_rect(clip).text(pos2(r.min.x + 10.0, r.min.y + 13.0), Align2::LEFT_CENTER, name, font, t.text);
+    ui.painter().with_clip_rect(clip).text(pos2(r.min.x + 10.0, r.min.y + 29.0), Align2::LEFT_CENTER, about, FontId::proportional(11.0), t.page_meta);
+    let item = id.to_string();
+    if hot {
+        let b = ui.put(button, egui::Button::new("Restore").small());
+        if b.on_hover_text("Put it back where it was").clicked() {
+            app.run(ctx, "history.restore", json!({"item": item}));
+        }
+    }
+    resp.context_menu(|ui| {
+        cmd_item(app, ui, "Restore", "history.restore", json!({"item": item}));
+        if !sections.is_empty() {
+            ui.menu_button("Move to", |ui| {
+                for (sid, sname) in sections {
+                    cmd_item(app, ui, sname, "history.restore", json!({"item": item, "section": sid.to_string()}));
+                }
+            });
+        }
+    });
 }
 
 /// Add page (outlined, with the page-and-pencil icon) and the sort button.
