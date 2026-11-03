@@ -51,7 +51,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Ribbon.Simplified | Simplified ribbon: one row of 16 px icons with labels only where needed, font and size boxes, split ▾ buttons, separators and an overflow … menu with what doesn't fit | Window/Ribbon/Simplified | surface |  |  | P0 | wired | M365-2024 | The default ribbon in the 2024 UI. Placements follow the reference screenshots; controls not placed are listed in the … menu under their classic group. |
 | UI.Ribbon.ModeSwitch | Switch between the simplified and the classic ribbon (▾ chevron at the ribbon's bottom right); the choice is remembered | Window/Ribbon/Mode Switch | surface |  | ui.ribbonMode | P0 | wired | M365-2024 | Remembered in the desktop settings. |
 | UI.Ribbon.ContextualTabs | Contextual tabs appear with the selection (Table, Equation, Audio & Video) | Window/Ribbon/Contextual Tabs | surface |  |  | P1 | wired | FLUENT19:TabSet* | Table Layout while the selection is in a table; Equation and Audio & Video come with their objects. |
-| UI.Ribbon.Keytips | Access keys (Alt / F10 show keytips; Alt+N, F etc.) | Window/Ribbon/Keytips | surface |  |  | P2 | missing | KBD365 (Alt+N sequences) |  |
+| UI.Ribbon.Keytips | Access keys (Alt / F10 show keytips; Alt+N, F etc.) | Window/Ribbon/Keytips | surface |  |  | P2 | wired | KBD365 (Alt+N sequences) |  |
 | UI.Ribbon.Galleries | In-ribbon galleries with live preview (Styles, Tags, Pens) | Window/Ribbon/Galleries | surface |  |  | P1 | wired | FLUENT19 (gallery controls) || Styles, Tags and Pens galleries in the ribbon; live preview for Styles (the selected paragraphs drawn in the hovered style; unverified for Tags and Pens) |
 | UI.Ribbon.Tooltips | ScreenTips with the command name, shortcut and description | Window/Ribbon/ScreenTips | surface |  |  | P1 | wired | GK | The name and shortcut ("Bold (Ctrl+B)"), and for a control that can't run the reason; no description line yet |
 | UI.Nav.NotebookPane | Notebook pane on the left: notebooks, their section groups and sections in a tree | Window/Navigation/Notebook Pane | surface |  |  | P0 | wired | GK; FLUENT19:ContextMenuNotebook |  |
@@ -1165,10 +1165,10 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Format.GrowFont | Increase the font size | Keyboard/Format notes/Increase the font size | shortcut | `Mod+Shift+>` | format.growFont | P0 | wired | KBD365 |  |
 | KB.Format.ShrinkFont | Decrease the font size | Keyboard/Format notes/Decrease the font size | shortcut | `Mod+Shift+<` | format.shrinkFont | P0 | wired | KBD365 |  |
 | KB.Format.RuleLines | Show or hide rule lines on the current page | Keyboard/Format notes/Show or hide rule lines on the current page | shortcut | `Mod+Shift+R` | view.ruleLines | P1 | verified | KBD365 |  |
-| KB.Insert.FileKeytip | Insert a document or file (Alt+N, F) | Keyboard/Insert items/Insert a document or file (Alt+N, F) | key-behaviour |  | insert.file | P2 | missing | KBD365 | keytip sequence Alt+N, F |
-| KB.Insert.PrintoutKeytip | Insert a file as a printout (Alt+N, O) | Keyboard/Insert items/Insert a file as a printout (Alt+N, O) | key-behaviour |  | insert.printout | P2 | missing | KBD365 | keytip sequence Alt+N, O |
+| KB.Insert.FileKeytip | Insert a document or file (Alt+N, F) | Keyboard/Insert items/Insert a document or file (Alt+N, F) | key-behaviour |  | insert.file | P2 | wired | KBD365 | keytip sequence Alt+N, F |
+| KB.Insert.PrintoutKeytip | Insert a file as a printout (Alt+N, O) | Keyboard/Insert items/Insert a file as a printout (Alt+N, O) | key-behaviour |  | insert.printout | P2 | wired | KBD365 | keytip sequence Alt+N, O |
 | KB.Insert.TogglePrintouts | Show or hide document printouts (high contrast) | Keyboard/Insert items/Show or hide document printouts (high contrast) | shortcut | `Alt+Shift+P` | view.togglePrintouts | P3 | missing | KBD365 |  |
-| KB.Insert.PictureKeytip | Insert a picture from a file (Alt+N, P) | Keyboard/Insert items/Insert a picture from a file (Alt+N, P) | key-behaviour |  | insert.picture | P2 | missing | KBD365 | keytip sequence Alt+N, P |
+| KB.Insert.PictureKeytip | Insert a picture from a file (Alt+N, P) | Keyboard/Insert items/Insert a picture from a file (Alt+N, P) | key-behaviour |  | insert.picture | P2 | wired | KBD365 | keytip sequence Alt+N, P |
 | KB.Insert.StickerKeytip | Insert a sticker (Alt+N, S) | Keyboard/Insert items/Insert a sticker (Alt+N, S) | key-behaviour |  | insert.sticker | P3 | missing | KBD365 | keytip sequence Alt+N, S |
 | KB.Insert.ScreenClipping | Insert a screen clipping (platform screenshot, then paste) | Keyboard/Insert items/Insert a screen clipping (platform screenshot, then paste) | key-behaviour |  | insert.screenClipping | P2 | missing | KBD365 | Win+Shift+S is the Windows snipping hotkey; on Linux the portal screenshot API |
 | KB.Insert.Date | Insert the current date | Keyboard/Insert items/Insert the current date | shortcut | `Alt+Shift+D` | insert.date | P1 | wired | KBD365 |  |
@@ -1288,7 +1288,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Protect.LockAll | Lock all password-protected sections | Keyboard/Protect/Lock all password-protected sections | shortcut | `Mod+Alt+L` | protect.lockAll | P1 | wired | KBD365 |  |
 | KB.App.Help | Help | Keyboard/Application/Help | shortcut | `F1` | help.help | P1 | wired | KBD365 | unverified: NoteCraft's help is a local command search, not the reference's online help; standard Office key |
 | KB.App.Ribbon | Collapse or expand the ribbon | Keyboard/Application/Collapse or expand the ribbon | shortcut | `Mod+F1` | ui.collapseRibbon | P1 | wired | KBD365 | standard Office key; unverified for OneNote |
-| KB.App.Keytips | Show keytips | Keyboard/Application/Show keytips | shortcut | `F10` | ui.keytips | P2 | missing | KBD365 | Alt alone too |
+| KB.App.Keytips | Show keytips | Keyboard/Application/Show keytips | shortcut | `F10` | ui.keytips | P2 | wired | KBD365 | Alt alone too |
 
 ## Options
 

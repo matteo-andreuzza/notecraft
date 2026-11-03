@@ -1518,6 +1518,34 @@ fn ctrl_alt_d_docks_the_window_to_the_page_and_back() {
 }
 
 #[test]
+fn f10_and_alt_show_keytips_that_open_a_tab_and_run_a_command() {
+    // parity: UI.Ribbon.Keytips KB.App.Keytips KB.Insert.FileKeytip KB.Insert.PrintoutKeytip KB.Insert.PictureKeytip
+    let key = |h: &mut Harness<'static, NoteApp>, k: egui::Key| {
+        h.event(egui::Event::Key { key: k, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::NONE });
+        h.run();
+    };
+    let mut h = harness(app());
+    h.run();
+    key(&mut h, egui::Key::F10);
+    assert_eq!(h.state().ui.keytips.as_deref(), Some(""), "F10 shows the tabs' letters");
+    key(&mut h, egui::Key::N);
+    assert_eq!((h.state().ui.tab.as_str(), h.state().ui.keytips.as_deref()), ("Insert", Some("Insert")), "N opens Insert");
+    assert!(h.query_by_label_contains("P  Picture").is_some(), "the strip lists the letters");
+    let before = h.state().session.page().map(|p| p.plain_text());
+    key(&mut h, egui::Key::P);
+    assert_eq!(h.state().ui.keytips, None, "a command's letter runs it and leaves");
+    assert_eq!(h.state().session.page().map(|p| p.plain_text()), before, "no letter was typed into the page");
+    // Alt pressed and released on its own, then Esc.
+    h.event(egui::Event::ModifiersChanged(egui::Modifiers::ALT));
+    h.run();
+    h.event(egui::Event::ModifiersChanged(egui::Modifiers::NONE));
+    h.run();
+    assert_eq!(h.state().ui.keytips.as_deref(), Some(""), "Alt alone shows them");
+    key(&mut h, egui::Key::Escape);
+    assert_eq!(h.state().ui.keytips, None);
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

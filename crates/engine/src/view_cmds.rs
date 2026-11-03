@@ -115,6 +115,11 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         })
         .key("Mod+Alt+D")
         .pure(),
+        // KB.App.Keytips: F10 shows the KeyTips (the UI draws and follows them).
+        CommandSpec::new("ui.keytips", "KB.App.Keytips", "Show KeyTips", "Keyboard/Application/Show keytips", |_, _| Ok(json!({"keytips": true})))
+            .key("F10")
+            .params(r#"{} → {"keytips": true} for the UI"#)
+            .pure(),
         CommandSpec::new("view.normal", "R.View.Views.NormalViewOneNote", "Normal View", "View/Views/Normal View", |s, _| {
             s.view.full_page = false;
             s.view.docked = false;

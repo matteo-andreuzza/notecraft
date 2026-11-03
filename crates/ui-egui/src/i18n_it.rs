@@ -237,6 +237,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
     ("Next Unread", "Successivo da leggere"),
     ("No Color", "Nessun colore"),
     ("No accessibility issues found on this page.", "Nessun problema di accessibilità in questa pagina."),
+    ("No key tips on this tab yet (Esc to leave)", "Nessun tasto di scelta rapida in questa scheda (Esc per uscire)"),
     ("No synonyms found.", "Nessun sinonimo trovato."),
     (
         "No thesaurus is installed for the proofing language (MyThes files in /usr/share/mythes).",
@@ -377,6 +378,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
     ("Shapes", "Forme"),
     ("Share", "Condividi"),
     ("Show All Levels", "Mostra tutti i livelli"),
+    ("Show KeyTips", "Mostra suggerimenti tasti"),
     ("Show Page Versions", "Mostra versioni pagina"),
     ("Show Training", "Mostra formazione"),
     ("Show authors", "Mostra autori"),

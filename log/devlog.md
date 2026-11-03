@@ -1244,3 +1244,11 @@ were certain landed, behaviour unchanged (every test green after each commit).
   right edge, always on top, showing the ribbon and the page (no notebook pane or page
   list); again (or Normal View) puts the old position, size and level back
   (`NoteApp::dock_window`; on Wayland the compositor places the window).
+
+## 2026-11-03 — KeyTips
+
+- `keytips.rs`: F10 (`ui.keytips`) or Alt pressed and released alone shows a letter on each
+  tab (F, H, N, D, S, R, W, Y; unverified except N); a tab's letter opens it and a strip
+  under the ribbon lists its commands' letters (Insert: F File, O Printout, P Picture, the
+  documented Alt+N sequences); a command's letter fires it like a click. Esc or a click
+  leaves; letters never reach the page meanwhile. Other tabs' command letters: to do.

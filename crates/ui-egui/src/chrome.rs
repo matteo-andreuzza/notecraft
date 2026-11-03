@@ -241,13 +241,20 @@ pub fn tab_row(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         .show(ui, |ui| {
             ui.horizontal_centered(|ui| {
                 ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-                if tab(ui, "File", false, false, &t).clicked() {
+                let file = tab(ui, "File", false, false, &t);
+                if let Some(l) = crate::keytips::tab_letter(app, "File") {
+                    crate::keytips::badge(ui, file.rect, l, &t);
+                }
+                if file.clicked() {
                     app.ui.backstage = Some(crate::Backstage::Info);
                 }
                 let selected = current_tab(app).map(|x| x.name).unwrap_or("Home");
                 for (x, is_ctx) in TABS.iter().map(|x| (x, false)).chain(contextual.iter().map(|x| (*x, true))) {
                     let sel = selected == x.name && !app.session.view.ribbon_collapsed;
                     let r = tab(ui, &crate::i18n::tr(x.name), sel, is_ctx, &t);
+                    if let Some(l) = crate::keytips::tab_letter(app, x.name) {
+                        crate::keytips::badge(ui, r.rect, l, &t);
+                    }
                     if r.clicked() {
                         app.session.view.ribbon_collapsed = false;
                         app.ui.tab = x.name.to_string();

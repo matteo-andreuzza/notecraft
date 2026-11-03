@@ -23,6 +23,7 @@ pub mod icons;
 pub mod icons_set;
 pub mod ink;
 pub mod keymap;
+mod keytips;
 mod math_ui;
 pub mod mini_toolbar;
 pub mod nav;
@@ -195,6 +196,15 @@ pub struct UiState {
     pub search_pane: bool,
     /// The window size before it became a Quick Note window (restored after).
     pub quick_note_restore: Option<[f32; 2]>,
+    /// KeyTips: `None` off, `""` the tabs' letters, else the tab whose command letters show.
+    #[serde(skip)]
+    pub keytips: Option<String>,
+    /// Alt is held on its own, and nothing was pressed since (KeyTips start on its release).
+    #[serde(skip)]
+    pub alt_alone: bool,
+    /// Alt (alone) was down last frame.
+    #[serde(skip)]
+    pub alt_down: bool,
     /// The window's position and size before it was docked (restored after).
     #[serde(default)]
     pub dock_restore: Option<[f32; 4]>,
@@ -286,6 +296,9 @@ impl Default for UiState {
             search_open: false,
             search_pane: false,
             quick_note_restore: None,
+            keytips: None,
+            alt_alone: false,
+            alt_down: false,
             dock_restore: None,
             dock_shown: false,
             quick_note_shown: false,
@@ -419,6 +432,9 @@ impl NoteApp {
         }
         if let Some(url) = v.get("open_url").and_then(Value::as_str) {
             ctx.open_url(egui::OpenUrl::new_tab(url));
+        }
+        if v.get("keytips").and_then(Value::as_bool) == Some(true) {
+            self.ui.keytips = if self.ui.keytips.is_some() { None } else { Some(String::new()) };
         }
         if v.get("options").and_then(Value::as_str) == Some("language") {
             self.ui.options_page = crate::options::OptionsPage::Language;
@@ -591,6 +607,7 @@ impl NoteApp {
             theme::apply(&ctx, &t);
             self.applied_theme = Some(self.resolved_theme());
         }
+        keytips::handle(self, ui);
         keymap::handle_input(self, &ctx);
         if self.ui.backstage.is_some() {
             backstage::show(self, ui, t);
@@ -604,6 +621,7 @@ impl NoteApp {
             if !self.session.view.ribbon_hidden {
                 chrome::tab_row(self, ui, t);
                 ribbon::show(self, ui, t);
+                keytips::strip(self, ui, t);
             }
             // Docked, the window shows the page: no notebook pane or page list.
             if !self.session.view.docked {
