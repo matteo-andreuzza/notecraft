@@ -1255,3 +1255,6 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - The docked window's narrow ribbon (`ribbon_layout::DOCK_TABS`, catalog `DOCK.*`, 20 rows):
   Home, Insert, Draw, View and Pages with small groups, laid out as classic groups while
   docked (`chrome::shown_tabs`). Their contents are NoteCraft's choice (unverified).
+- The docked Draw tab's Tools (touch) group holds the touch layout of Draw › Tools
+  (`R.Draw.Toolstouch.*`: Type, Lasso, Draw with Touch, the Eraser and Pens menus with Ink
+  Mode, Color & Thickness); 15 rows wired (Use Pen as Pointer has no command yet).

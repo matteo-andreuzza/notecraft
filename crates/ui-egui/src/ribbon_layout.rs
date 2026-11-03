@@ -155,10 +155,33 @@ pub const DOCK_TABS: &[Tab] = &[
                 name: "Tools",
                 items: &[Item::Stack(&["R.Draw.Tools.SelectAndTypeMode", "R.Draw.Tools.LassoSelect", "R.Draw.Tools.EraserLastUsed"])],
             },
-            // DOCK.Draw.GroupWriteOnTouch
+            // DOCK.Draw.GroupWriteOnTouch: the touch layout of Draw › Tools (`R.Draw.Toolstouch.*`).
             Group {
                 name: "Tools (touch)",
-                items: &[Item::Stack(&["R.Draw.Tools.FingerPaintingMode", "R.Draw.Tools.PanningHand", "R.Draw.Tools.MoreColorAndThicknessOptions"])],
+                items: &[
+                    Item::Stack(&["R.Draw.Toolstouch.SelectAndTypeMode", "R.Draw.Toolstouch.LassoSelect", "R.Draw.Toolstouch.FingerPaintingMode"]),
+                    Item::LargeMenu(
+                        "R.Draw.Toolstouch.EraserMenu",
+                        &[
+                            "R.Draw.Toolstouch.EraserLastUsed",
+                            "R.Draw.Toolstouch.SmallEraser",
+                            "R.Draw.Toolstouch.MediumEraser",
+                            "R.Draw.Toolstouch.LargeEraser",
+                            "R.Draw.Toolstouch.StrokeEraserOneNote",
+                        ],
+                    ),
+                    Item::LargeMenu(
+                        "R.Draw.Toolstouch.InkStylesGallery",
+                        &[
+                            "R.Draw.Toolstouch.InkBiasMenu",
+                            "R.Draw.Toolstouch.InkingBiasAuto",
+                            "R.Draw.Toolstouch.InkingBiasDraw",
+                            "R.Draw.Toolstouch.InkingBiasWrite",
+                            "R.Draw.Toolstouch.PenAsPointerMode",
+                        ],
+                    ),
+                    Item::Large("R.Draw.Toolstouch.MoreColorAndThicknessOptions"),
+                ],
             },
             // DOCK.Draw.GroupInkEditNarrow
             Group { name: "Ink Edit", items: &[Item::Stack(&["R.Draw.Edit.PenInsertSpace", "R.Draw.Edit.Delete", "R.Draw.Convert.InkToShape"])] },

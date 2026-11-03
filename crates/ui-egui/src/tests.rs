@@ -1580,6 +1580,39 @@ fn the_docked_window_shows_its_narrow_ribbon() {
 }
 
 #[test]
+fn the_docked_draw_tab_has_the_touch_tools() {
+    // parity: R.Draw.Toolstouch.SelectAndTypeMode R.Draw.Toolstouch.LassoSelect R.Draw.Toolstouch.EraserMenu R.Draw.Toolstouch.EraserLastUsed R.Draw.Toolstouch.SmallEraser
+    // parity: R.Draw.Toolstouch.MediumEraser R.Draw.Toolstouch.LargeEraser R.Draw.Toolstouch.StrokeEraserOneNote R.Draw.Toolstouch.InkStylesGallery R.Draw.Toolstouch.InkBiasMenu
+    // parity: R.Draw.Toolstouch.InkingBiasAuto R.Draw.Toolstouch.InkingBiasDraw R.Draw.Toolstouch.InkingBiasWrite R.Draw.Toolstouch.MoreColorAndThicknessOptions R.Draw.Toolstouch.FingerPaintingMode
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    for id in [
+        "R.Draw.Toolstouch.SelectAndTypeMode",
+        "R.Draw.Toolstouch.LassoSelect",
+        "R.Draw.Toolstouch.EraserLastUsed",
+        "R.Draw.Toolstouch.SmallEraser",
+        "R.Draw.Toolstouch.MediumEraser",
+        "R.Draw.Toolstouch.LargeEraser",
+        "R.Draw.Toolstouch.StrokeEraserOneNote",
+        "R.Draw.Toolstouch.InkStylesGallery",
+        "R.Draw.Toolstouch.InkingBiasAuto",
+        "R.Draw.Toolstouch.InkingBiasDraw",
+        "R.Draw.Toolstouch.InkingBiasWrite",
+        "R.Draw.Toolstouch.MoreColorAndThicknessOptions",
+        "R.Draw.Toolstouch.FingerPaintingMode",
+    ] {
+        assert!(crate::ribbon::enabled(&a, id), "{id}");
+    }
+    a.session.run("view.dock", json!({})).unwrap();
+    a.ui.tab = "Draw".into();
+    let mut h = harness(a);
+    h.run();
+    h.query_all_by_label("Lasso Select").last().expect("the touch Lasso Select").click();
+    h.run();
+    assert_eq!(h.state().session.draw.tool, notecraft_engine::DrawTool::Lasso);
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());
