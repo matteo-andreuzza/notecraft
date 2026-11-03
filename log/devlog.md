@@ -1305,3 +1305,6 @@ were certain landed, behaviour unchanged (every test green after each commit).
   another notebook or an imported file) joins it with its name and icon.
 - The Subscript / Superscript menu's first row applies the script used last
   (`UiState::last_superscript`, `ribbon::recent_script`).
+- Ctrl+Shift+W (`ui.infoBarAction`) performs the Information Bar's action: over a page
+  version, Restore Version; over a deleted page, Restore. The bar above previews is the
+  Information Bar (UI.Canvas.InfoBar).

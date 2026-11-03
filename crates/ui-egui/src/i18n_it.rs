@@ -175,6 +175,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
     ("Info", "Informazioni"),
     ("Info: Notebook Information", "Informazioni sul blocco appunti"),
     ("Info: Open Backups", "Apri backup"),
+    ("Information Bar Action", "Azione barra informazioni"),
     ("Ink Edit", "Modifica input penna"),
     ("Ink Mode", "Modalità input penna"),
     ("Ink Replay", "Riproduci input penna"),

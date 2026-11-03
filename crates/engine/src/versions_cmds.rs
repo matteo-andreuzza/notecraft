@@ -41,6 +41,21 @@ pub enum Preview {
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
+        // KB.General.InfoBarAction (Ctrl+Shift+W): the Information Bar's action — over a page
+        // version, Restore Version; over a deleted page, Restore (UI.Canvas.InfoBar).
+        CommandSpec::new(
+            "ui.infoBarAction",
+            "KB.General.InfoBarAction",
+            "Information Bar Action",
+            "Keyboard/General/Perform the action suggested on the Information Bar",
+            |s, _| match s.view.preview {
+                Some(Preview::Version { .. }) => restore_version(s, &json!({})),
+                Some(Preview::Deleted { page }) => crate::file_cmds::restore(s, &json!({"item": page.to_string()})),
+                None => Err(CmdError::Disabled("No Information Bar is shown".into())),
+            },
+        )
+        .key("Mod+Shift+W")
+        .when(|s| if s.view.preview.is_some() { None } else { Some("No Information Bar is shown") }),
         CommandSpec::new("history.pageVersions", "R.History.History.PageVersions", "Page Versions", "History/Page Versions", |s, v| {
             s.view.page_versions = p::bool(v, "on").unwrap_or(!s.view.page_versions);
             if !s.view.page_versions && matches!(s.view.preview, Some(Preview::Version { .. })) {
@@ -227,7 +242,7 @@ fn preview_deleted(s: &mut Session, v: &Value) -> CmdResult {
     Ok(Value::Null)
 }
 
-fn restore_version(s: &mut Session, v: &Value) -> CmdResult {
+pub(crate) fn restore_version(s: &mut Session, v: &Value) -> CmdResult {
     let pid = page_id(s, v)?;
     let at = version_at(s, v, pid)?;
     let now = s.now();
@@ -352,6 +367,19 @@ mod tests {
 
     fn versions(s: &Session) -> usize {
         s.page().unwrap().versions.len()
+    }
+
+    #[test]
+    fn ctrl_shift_w_restores_what_the_information_bar_shows() {
+        // parity: KB.General.InfoBarAction UI.Canvas.InfoBar
+        let mut s = crate::tests::sample();
+        assert!(s.run("ui.infoBarAction", json!({})).is_err(), "no bar, nothing to do");
+        let page = s.sel.page.unwrap().to_string();
+        crate::tests::run(&mut s, "page.delete", json!({"page": page}));
+        crate::tests::run(&mut s, "history.previewDeleted", json!({"item": page}));
+        assert!(s.view.preview.is_some());
+        crate::tests::run(&mut s, "ui.infoBarAction", json!({}));
+        assert!(s.notebook().unwrap().recycle.pages.is_empty(), "the deleted page is restored");
     }
 
     #[test]

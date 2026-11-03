@@ -686,7 +686,7 @@ fn empty_bin(s: &mut Session, _: &Value) -> CmdResult {
     Ok(Value::Null)
 }
 
-fn restore(s: &mut Session, v: &Value) -> CmdResult {
+pub(crate) fn restore(s: &mut Session, v: &Value) -> CmdResult {
     let item = p::req_id(v, "item")?;
     let nb_id = s.sel.notebook.ok_or_else(no_page)?;
     let nb = s.ws.notebook(nb_id).ok_or_else(no_page)?.clone();
