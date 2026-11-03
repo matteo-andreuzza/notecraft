@@ -424,6 +424,26 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 app.run(ctx, cmd, json!({}));
             }
         }
+        "printout.copyPageText" | "printout.copyAllText" => {
+            let keep = app.session.sel.on_page.clone();
+            for id in notecraft_engine::printout_pages(&app.session, cmd == "printout.copyAllText") {
+                let bytes = app.session.page().and_then(|p| p.image(id)).filter(|im| im.ocr_text.is_empty()).map(|im| im.blob.bytes.clone());
+                let Some(bytes) = bytes else { continue };
+                match app.host.ocr(&bytes, "eng") {
+                    Ok(text) => {
+                        app.run(ctx, "object.select", json!({"ids": [id.to_string()]}));
+                        app.run(ctx, "object.ocrLanguage", json!({"text": text, "lang": "eng"}));
+                    }
+                    Err(e) => {
+                        app.ui.status = Some((e, ctx.input(|i| i.time)));
+                        app.session.sel.on_page = keep;
+                        return true;
+                    }
+                }
+            }
+            app.session.sel.on_page = keep;
+            app.run(ctx, cmd, json!({}));
+        }
         "attachment.open" | "printout.openOriginal" | "attachment.openOriginal" => {
             if let Some(path) = app.run(ctx, cmd, json!({})).and_then(|v| v.get("path").and_then(|p| p.as_str()).map(str::to_string))
                 && let Err(e) = app.host.open_path(&path)

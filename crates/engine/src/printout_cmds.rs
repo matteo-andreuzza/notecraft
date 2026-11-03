@@ -53,6 +53,29 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             delete_pages,
         )
         .when(need_printed),
+        // CM.Picture.PrintoutPageTextCopy, CM.Picture.CopyTextFromPrintoutPages: the text
+        // recognised in the selected printout page, or in all the printout's pages in order
+        // (the UI recognises the pages that have none first).
+        CommandSpec::new(
+            "printout.copyPageText",
+            "CM.Picture.PrintoutPageTextCopy",
+            "Copy Text from This Page of the Printout",
+            "Context/Picture/Copy Text from This Page of the Printout",
+            |s, _| printout_text(s, false),
+        )
+        .params(r#"{} → {"text"}"#)
+        .pure()
+        .when(need_printout_page),
+        CommandSpec::new(
+            "printout.copyAllText",
+            "CM.Picture.CopyTextFromPrintoutPages",
+            "Copy Text from All Pages of the Printout",
+            "Context/Picture/Copy Text from All Pages of the Printout",
+            |s, _| printout_text(s, true),
+        )
+        .params(r#"{} → {"text"}"#)
+        .pure()
+        .when(need_printout_page),
         CommandSpec::new("printout.openOriginal", "CM.Picture.ViewOriginalPrintout", "Open Original", "Context/Picture/Open Original", open_original)
             .params(r#"{"dir"?: folder for the copy} → {"path"} for the host to open"#)
             .pure()
@@ -96,6 +119,35 @@ fn need_printed(s: &Session) -> Option<&'static str> {
 fn original_of_selection(s: &Session) -> Option<Id> {
     let (Some(page), PageSel::Objects { ids }) = (s.page(), &s.sel.on_page) else { return None };
     ids.iter().find_map(|id| page.image(*id).and_then(|im| im.printout)).filter(|a| page.attachment(*a).is_some())
+}
+
+/// The printout pages a text copy reads: the selected page, or every page of its printout in
+/// page order (top to bottom).
+pub fn printout_pages(s: &Session, all: bool) -> Vec<Id> {
+    let (Some(page), PageSel::Objects { ids }) = (s.page(), &s.sel.on_page) else { return Vec::new() };
+    let Some(first) = ids.iter().find(|id| page.image(**id).is_some_and(|im| im.printout.is_some())) else { return Vec::new() };
+    if !all {
+        return vec![*first];
+    }
+    let att = page.image(*first).and_then(|im| im.printout);
+    let mut pages: Vec<&notecraft_doc::Image> = page
+        .objects
+        .iter()
+        .filter_map(|o| if let notecraft_doc::PageObject::Image(im) = o { Some(im) } else { None })
+        .filter(|im| im.printout == att)
+        .collect();
+    pages.sort_by(|a, b| a.pos.y.total_cmp(&b.pos.y));
+    pages.into_iter().map(|im| im.id).collect()
+}
+
+fn printout_text(s: &mut Session, all: bool) -> CmdResult {
+    let page = s.page().ok_or_else(no_page)?;
+    let parts: Vec<String> =
+        printout_pages(s, all).iter().filter_map(|id| page.image(*id)).map(|im| im.ocr_text.clone()).filter(|t| !t.is_empty()).collect();
+    if parts.is_empty() {
+        return Err(CmdError::Disabled("No text was found in the printout".into()));
+    }
+    Ok(json!({"text": parts.join("\n\n")}))
 }
 
 fn need_printout_page(s: &Session) -> Option<&'static str> {

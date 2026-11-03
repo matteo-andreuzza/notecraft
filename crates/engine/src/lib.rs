@@ -81,6 +81,7 @@ pub use notecraft_text as text;
 pub use paper_cmds::{
     DEFAULT_MARGINS as DEFAULT_PAPER_MARGINS, PAPER_SIZES, PaperPreset, describe as describe_paper, is_landscape, preset_of as paper_preset,
 };
+pub use printout_cmds::printout_pages;
 pub use selection::{Block, Pos, Selection, TextRange};
 pub use session::{AutoCorrect, Clock, FindState, NbDirty, Prefs, RibbonMode, ScopeKind, ScrollRequest, Session, SpellingState, ViewState};
 pub use spell_cmds::installed_languages;

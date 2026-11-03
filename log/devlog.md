@@ -1282,3 +1282,6 @@ were certain landed, behaviour unchanged (every test green after each commit).
   to recognise it (`Host::ocr`; the desktop runs Tesseract when installed, English) and keeps
   it (`lang: "none"` forgets it); Copy Text from Picture (`object.copyTextFromPicture`)
   recognises first when needed and copies the text.
+- Copy Text from This Page / All Pages of the Printout (`printout.copyPageText`,
+  `printout.copyAllText`): the printout pages' recognised text, recognising the pages that
+  have none first; all pages join top to bottom.

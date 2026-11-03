@@ -469,6 +469,8 @@ impl NoteApp {
                 | "link.copy"
                 | "attachment.copyLink"
                 | "object.copyTextFromPicture"
+                | "printout.copyPageText"
+                | "printout.copyAllText"
                 | "para.copyLink"
                 | "sectionGroup.copyLink"
         ) && let Some(t) = v.get("text").or_else(|| v.get("link")).and_then(Value::as_str)

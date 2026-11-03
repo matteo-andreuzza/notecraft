@@ -516,3 +516,23 @@ fn recognised_picture_text_is_searchable_and_copied() {
     run(&mut s, "object.ocrLanguage", json!({"lang": "none"}));
     assert!(image(&s, id).ocr_text.is_empty(), "Disable forgets it");
 }
+
+#[test]
+fn printout_text_copies_one_page_or_all_in_order() {
+    // parity: CM.Picture.PrintoutPageTextCopy CM.Picture.CopyTextFromPrintoutPages
+    // parity: CM.Text.PrintoutPageTextCopy CM.Text.CopyTextFromPrintoutPages
+    let mut s = sample();
+    blank_page(&mut s);
+    let pdf = notecraft_codecs::pdf::sample_pdf(&[(200.0, 100.0, [255, 0, 0]), (100.0, 300.0, [0, 0, 255])]);
+    let r = run(&mut s, "insert.printout", json!({"data": data(&pdf), "name": "Report.pdf", "x": 40.0, "y": 150.0}));
+    let att = Id::parse(r["attachment"].as_str().unwrap()).unwrap();
+    let pages = printout_pages(&s, att);
+    assert_eq!(pages.len(), 2);
+    for (i, im) in pages.iter().enumerate() {
+        run(&mut s, "object.select", json!({"ids": [im.id.to_string()]}));
+        run(&mut s, "object.ocrLanguage", json!({"text": format!("page {}", i + 1)}));
+    }
+    run(&mut s, "object.select", json!({"ids": [pages[1].id.to_string()]}));
+    assert_eq!(run(&mut s, "printout.copyPageText", json!({}))["text"], "page 2");
+    assert_eq!(run(&mut s, "printout.copyAllText", json!({}))["text"], "page 1\n\npage 2", "all pages, top to bottom");
+}
