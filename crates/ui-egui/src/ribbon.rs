@@ -132,6 +132,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "history.disable" => s.notebook().is_some_and(|nb| nb.history_disabled),
         "draw.snapToGrid" => s.draw.snap_to_grid,
         "draw.inkToShape" => s.draw.ink_to_shape,
+        "draw.penAsPointer" | "draw.pointerMode" => s.draw.pen_as_pointer,
         "draw.inkModeAuto" => s.draw.ink_mode == notecraft_engine::InkMode::Auto,
         "draw.inkModeDraw" => s.draw.ink_mode == notecraft_engine::InkMode::Draw,
         "draw.inkModeWrite" => s.draw.ink_mode == notecraft_engine::InkMode::Write,

@@ -139,7 +139,7 @@ Controls that can sit in the Quick Access Toolbar by default or from its customi
 | QAT.FavoritePen3 | Favorite Pen 3 | Quick Access Toolbar/Favorite Pen 3 | toggle |  | draw.favoritePen3 | P2 | wired | FLUENT19:FavoritePen3 |  |
 | QAT.FavoritePen4 | Favorite Pen 4 | Quick Access Toolbar/Favorite Pen 4 | toggle |  | draw.favoritePen4 | P2 | wired | FLUENT19:FavoritePen4 |  |
 | QAT.FavoriteHighlighter1 | Favorite Highlighter 1 | Quick Access Toolbar/Favorite Highlighter 1 | toggle |  | draw.favoriteHighlighter1 | P2 | wired | FLUENT19:FavoriteHighlighter1 |  |
-| QAT.PointerModeOptions | Pen and Pointer Modes | Quick Access Toolbar/Pen and Pointer Modes | gallery |  | draw.pointerMode | P2 | missing | FLUENT19:PointerModeOptions |  |
+| QAT.PointerModeOptions | Pen and Pointer Modes | Quick Access Toolbar/Pen and Pointer Modes | gallery |  | draw.pointerMode | P2 | wired | FLUENT19:PointerModeOptions |  |
 | QAT.ShapeSmileyFace | Shapes | Quick Access Toolbar/Shapes | menu |  | draw.shapes | P2 | missing | FLUENT19:ShapeSmileyFace |  |
 
 ## Ribbon › Home
@@ -315,7 +315,7 @@ The Draw tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Draw.Tools.InkingBiasAuto | Create Both Handwriting and Drawings | Draw/Tools/Pens/Ink Mode/Create Both Handwriting and Drawings | toggle |  | draw.inkModeAuto | P2 | wired | FLUENT19:InkingBiasAuto |  |
 | R.Draw.Tools.InkingBiasDraw | Create Drawings Only | Draw/Tools/Pens/Ink Mode/Create Drawings Only | toggle |  | draw.inkModeDraw | P2 | wired | FLUENT19:InkingBiasDraw |  |
 | R.Draw.Tools.InkingBiasWrite | Create Handwriting Only | Draw/Tools/Pens/Ink Mode/Create Handwriting Only | toggle |  | draw.inkModeWrite | P2 | wired | FLUENT19:InkingBiasWrite |  |
-| R.Draw.Tools.PenAsPointerMode | Use Pen as Pointer | Draw/Tools/Pens/Ink Mode/Use Pen as Pointer | toggle |  | draw.penAsPointer | P2 | missing | FLUENT19:PenAsPointerMode |  |
+| R.Draw.Tools.PenAsPointerMode | Use Pen as Pointer | Draw/Tools/Pens/Ink Mode/Use Pen as Pointer | toggle |  | draw.penAsPointer | P2 | wired | FLUENT19:PenAsPointerMode |  |
 | R.Draw.Tools.MoreColorAndThicknessOptions | Color & Thickness | Draw/Tools/Color & Thickness | button |  | draw.colorThickness | P1 | wired | FLUENT19:MoreColorAndThicknessOptions |  |
 | R.Draw.Tools.FingerPaintingMode | Draw with Touch | Draw/Tools/Draw with Touch | toggle |  | draw.withTouch | P2 | wired | FLUENT19:FingerPaintingMode | Decision D8: on by default; off, a touch without pressure (a finger) pans with the drawing tools while mice and pens draw (egui can't tell pens from fingers otherwise; default unverified) |
 | R.Draw.Toolstouch.SelectAndTypeMode | Type | Draw/Tools (touch)/Type | toggle |  | draw.type | P3 | wired | FLUENT19:SelectAndTypeMode | touch-mode layout of the Tools group (same commands) |
@@ -331,7 +331,7 @@ The Draw tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Draw.Toolstouch.InkingBiasAuto | Create Both Handwriting and Drawings | Draw/Tools (touch)/Pens/Ink Mode/Create Both Handwriting and Drawings | toggle |  | draw.inkModeAuto | P3 | wired | FLUENT19:InkingBiasAuto | touch-mode layout of the Tools group (same commands) |
 | R.Draw.Toolstouch.InkingBiasDraw | Create Drawings Only | Draw/Tools (touch)/Pens/Ink Mode/Create Drawings Only | toggle |  | draw.inkModeDraw | P3 | wired | FLUENT19:InkingBiasDraw | touch-mode layout of the Tools group (same commands) |
 | R.Draw.Toolstouch.InkingBiasWrite | Create Handwriting Only | Draw/Tools (touch)/Pens/Ink Mode/Create Handwriting Only | toggle |  | draw.inkModeWrite | P3 | wired | FLUENT19:InkingBiasWrite | touch-mode layout of the Tools group (same commands) |
-| R.Draw.Toolstouch.PenAsPointerMode | Use Pen as Pointer | Draw/Tools (touch)/Pens/Ink Mode/Use Pen as Pointer | toggle |  | draw.penAsPointer | P3 | missing | FLUENT19:PenAsPointerMode | touch-mode layout of the Tools group (same commands) |
+| R.Draw.Toolstouch.PenAsPointerMode | Use Pen as Pointer | Draw/Tools (touch)/Pens/Ink Mode/Use Pen as Pointer | toggle |  | draw.penAsPointer | P3 | wired | FLUENT19:PenAsPointerMode | touch-mode layout of the Tools group (same commands) |
 | R.Draw.Toolstouch.MoreColorAndThicknessOptions | Color & Thickness | Draw/Tools (touch)/Color & Thickness | button |  | draw.colorThickness | P3 | wired | FLUENT19:MoreColorAndThicknessOptions | touch-mode layout of the Tools group (same commands) |
 | R.Draw.Toolstouch.FingerPaintingMode | Draw with Touch | Draw/Tools (touch)/Draw with Touch | toggle |  | draw.withTouch | P3 | wired | FLUENT19:FingerPaintingMode | touch-mode layout of the Tools group (same commands) |
 | R.Draw.Shapes.InkShapeGallery | Shapes | Draw/Shapes | gallery |  | draw.shapes | P1 | wired | FLUENT19:InkShapeGallery | line, arrow, double arrow, rectangle, oval, triangle, right triangle, diamond, parallelogram, drawn as ink with the selected pen; graph axes and 3-D shapes not yet (unverified list) |

@@ -131,6 +131,10 @@ pub struct DrawState {
     /// Draw › Ink Mode: what new strokes are treated as.
     #[serde(default)]
     pub ink_mode: InkMode,
+    /// Use Pen as Pointer: a pen (a contact that reports pressure) selects and types instead
+    /// of drawing; mice and fingers keep the tool.
+    #[serde(default)]
+    pub pen_as_pointer: bool,
 }
 
 /// Draw › Pens › Ink Mode (`R.Draw.Tools.InkingBias*`).
@@ -163,6 +167,7 @@ impl Default for DrawState {
             with_touch: true,
             ink_to_shape: false,
             ink_mode: InkMode::Auto,
+            pen_as_pointer: false,
         }
     }
 }
@@ -348,6 +353,31 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             "Draw/Tools/Pens/Ink Mode/Create Handwriting Only",
             |s, _| ink_mode(s, InkMode::Write),
         )
+        .pure(),
+        // R.Draw.Tools.PenAsPointerMode: switch Use Pen as Pointer.
+        CommandSpec::new(
+            "draw.penAsPointer",
+            "R.Draw.Tools.PenAsPointerMode",
+            "Use Pen as Pointer",
+            "Draw/Tools/Pens/Ink Mode/Use Pen as Pointer",
+            |s, v| {
+                s.draw.pen_as_pointer = p::bool(v, "on").unwrap_or(!s.draw.pen_as_pointer);
+                Ok(json!({"on": s.draw.pen_as_pointer}))
+            },
+        )
+        .params(r#"{"on"?: bool}"#)
+        .pure(),
+        // QAT.PointerModeOptions: the pen draws ("pen") or points ("pointer").
+        CommandSpec::new("draw.pointerMode", "QAT.PointerModeOptions", "Pen and Pointer Modes", "Quick Access Toolbar/Pen and Pointer Modes", |s, v| {
+            s.draw.pen_as_pointer = match p::str(v, "mode") {
+                None => !s.draw.pen_as_pointer,
+                Some("pen") => false,
+                Some("pointer") => true,
+                Some(o) => return Err(CmdError::Params(format!("`mode` is \"pen\" or \"pointer\", not {o:?}"))),
+            };
+            Ok(json!({"mode": if s.draw.pen_as_pointer { "pointer" } else { "pen" }}))
+        })
+        .params(r#"{"mode"?: "pen" | "pointer" (default: switch)}"#)
         .pure(),
         // CM.*.TreatInkAs*: the selected strokes become writing or drawing (undoable).
         CommandSpec::new(

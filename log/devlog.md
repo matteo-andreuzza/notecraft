@@ -1258,3 +1258,7 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - The docked Draw tab's Tools (touch) group holds the touch layout of Draw › Tools
   (`R.Draw.Toolstouch.*`: Type, Lasso, Draw with Touch, the Eraser and Pens menus with Ink
   Mode, Color & Thickness); 15 rows wired (Use Pen as Pointer has no command yet).
+- Use Pen as Pointer (`draw.penAsPointer`, Draw › Pens › Ink Mode, and its touch twin) and
+  Pen and Pointer Modes (`draw.pointerMode`, QAT): a pen — a contact that reports pressure —
+  types and selects instead of drawing or erasing (`ink::effective_tool`); mice and fingers
+  keep the tool.

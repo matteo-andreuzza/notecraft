@@ -296,6 +296,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
     ("Paste: Merge Formatting", "Incolla: unisci formattazione"),
     ("Paste: Picture", "Incolla: immagine"),
     ("Pen Mode", "Modalità penna"),
+    ("Pen and Pointer Modes", "Modalità penna e puntatore"),
     ("Pens", "Penne"),
     ("Phone number", "Numero di telefono"),
     ("Pictures", "Immagini"),

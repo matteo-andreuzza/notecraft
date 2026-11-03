@@ -502,11 +502,19 @@ fn pressure(app: &mut NoteApp, ui: &Ui) -> f32 {
     app.canvas.ink.force.unwrap_or(DEFAULT_PRESSURE)
 }
 
+/// The tool a contact uses: with Use Pen as Pointer on, a pen (`pen`: the contact reports
+/// pressure) types and selects instead of drawing or erasing.
+pub(crate) fn effective_tool(app: &NoteApp, pen: bool) -> DrawTool {
+    let tool = app.session.draw.tool;
+    if app.session.draw.pen_as_pointer && pen && matches!(tool, DrawTool::Pen | DrawTool::Shape | DrawTool::Eraser) { DrawTool::Type } else { tool }
+}
+
 /// Pointer handling for ink: the gestures of the Draw tools, and — with the Type tool — a click
 /// on a stroke (selects it) or a drag of selected ink (moves it). Returns true when the event
 /// was ink's, so the canvas doesn't also treat it as a click on text.
 pub(crate) fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &Response) -> bool {
-    let tool = app.session.draw.tool;
+    let pen = app.canvas.ink.force.is_some() || ui.input(|i| i.events.iter().any(|e| matches!(e, Event::Touch { force: Some(_), .. })));
+    let tool = effective_tool(app, pen);
     if resp.hovered() {
         match tool {
             DrawTool::Pen | DrawTool::Lasso | DrawTool::Shape => ctx.set_cursor_icon(CursorIcon::Crosshair),

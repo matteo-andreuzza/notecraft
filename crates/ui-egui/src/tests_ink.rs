@@ -461,3 +461,19 @@ fn ink_replay_shows_the_strokes_little_by_little_and_closes() {
     h.run();
     assert!(!h.state().session.view.ink_replay && h.state().canvas.replay.is_none());
 }
+
+#[test]
+fn use_pen_as_pointer_makes_a_pen_type_while_the_mouse_still_draws() {
+    // parity: R.Draw.Tools.PenAsPointerMode R.Draw.Toolstouch.PenAsPointerMode QAT.PointerModeOptions
+    use notecraft_engine::DrawTool;
+    let mut a = app();
+    a.session.run("draw.pen", json!({})).unwrap();
+    assert_eq!(crate::ink::effective_tool(&a, true), DrawTool::Pen);
+    a.session.run("draw.penAsPointer", json!({})).unwrap();
+    assert!(crate::ribbon::checked(&a, "draw.penAsPointer"));
+    assert_eq!(crate::ink::effective_tool(&a, true), DrawTool::Type, "a pen points");
+    assert_eq!(crate::ink::effective_tool(&a, false), DrawTool::Pen, "a mouse or finger still draws");
+    a.session.run("draw.pointerMode", json!({"mode": "pen"})).unwrap();
+    assert_eq!(crate::ink::effective_tool(&a, true), DrawTool::Pen);
+    assert!(a.session.run("draw.pointerMode", json!({"mode": "laser"})).is_err());
+}
