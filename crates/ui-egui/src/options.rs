@@ -451,6 +451,21 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
                 }
             }
             not_yet(ui, t, "The ribbon, menus and panes are translated; some dialog text is still in English.");
+            // OPT.Language.EditingLanguages: the proofing language, from the installed
+            // dictionaries (Hunspell files in /usr/share/hunspell).
+            section(ui, "Editing language");
+            let mut langs = notecraft_engine::installed_languages();
+            if !langs.contains(&d.proofing_language) {
+                langs.insert(0, d.proofing_language.clone());
+            }
+            let shown = if d.proofing_language.is_empty() { "en_US".to_string() } else { d.proofing_language.clone() };
+            egui::ComboBox::from_id_salt("opt-editing-lang").selected_text(shown).show_ui(ui, |ui| {
+                for l in langs {
+                    let name = if l.is_empty() { "en_US".to_string() } else { l.clone() };
+                    ui.selectable_value(&mut d.proofing_language, l, name);
+                }
+            });
+            ui.label(RichText::new(crate::i18n::tr("Spelling and the thesaurus use this language.")).color(t.page_meta));
         }
         OptionsPage::CustomizeRibbon => {
             section(ui, "Customize the Ribbon");

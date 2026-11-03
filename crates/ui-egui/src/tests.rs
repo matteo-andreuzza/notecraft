@@ -1452,6 +1452,19 @@ fn the_numbering_customization_dialog_numbers_from_its_start() {
 }
 
 #[test]
+fn language_preferences_open_options_language_with_the_editing_language() {
+    // parity: R.Review.Language.LanguagePreferences OPT.Language.EditingLanguages R.Review.Language.LanguageCommands
+    let mut h = harness(app());
+    h.run();
+    let ctx = h.ctx.clone();
+    h.state_mut().run(&ctx, "review.languagePreferences", json!({}));
+    h.run();
+    assert_eq!(h.state().ui.options_page, crate::options::OptionsPage::Language);
+    assert_eq!(h.state().ui.backstage, Some(crate::Backstage::Options));
+    assert!(h.query_by_label("Editing language").is_some());
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

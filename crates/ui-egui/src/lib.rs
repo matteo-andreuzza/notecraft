@@ -407,6 +407,10 @@ impl NoteApp {
         if let Some(url) = v.get("open_url").and_then(Value::as_str) {
             ctx.open_url(egui::OpenUrl::new_tab(url));
         }
+        if v.get("options").and_then(Value::as_str) == Some("language") {
+            self.ui.options_page = crate::options::OptionsPage::Language;
+            self.ui.backstage = Some(crate::Backstage::Options);
+        }
         if let Some(path) = v.get("email_attach").and_then(Value::as_str) {
             let subject = v.get("subject").and_then(Value::as_str).unwrap_or_default();
             if let Err(e) = self.host.send_email(subject, path) {

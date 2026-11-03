@@ -407,9 +407,9 @@ The Review tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Review.Language.TranslateSelected | Translate Selected Text | Review/Language/Translate/Translate Selected Text | button |  | review.translateSelection | P3 | missing | FLUENT19:TranslateSelected |  |
 | R.Review.Language.MiniTranslator | Mini Translator | Review/Language/Translate/Mini Translator | toggle |  | review.miniTranslator | P3 | missing | FLUENT19:MiniTranslator |  |
 | R.Review.Language.TranslationLanguageOptions | Choose Translation Language | Review/Language/Translate/Choose Translation Language | button |  | review.translationLanguage | P3 | missing | FLUENT19:TranslationLanguageOptions |  |
-| R.Review.Language.LanguageCommands | Language | Review/Language | menu |  |  | P2 | missing | FLUENT19:LanguageCommands |  |
+| R.Review.Language.LanguageCommands | Language | Review/Language | menu |  |  | P2 | wired | FLUENT19:LanguageCommands |  |
 | R.Review.Language.SetLanguage | Set Proofing Language | Review/Language/Set Proofing Language | toggle |  | review.setLanguage | P2 | wired | FLUENT19:SetLanguage |  |
-| R.Review.Language.LanguagePreferences | Language Preferences | Review/Language/Language Preferences | button |  | review.languagePreferences | P2 | missing | FLUENT19:LanguagePreferences |  |
+| R.Review.Language.LanguagePreferences | Language Preferences | Review/Language/Language Preferences | button |  | review.languagePreferences | P2 | wired | FLUENT19:LanguagePreferences |  |
 | R.Review.Section.PasswordProtectSection | Password | Review/Section/Password | button |  | review.password | P1 | wired | FLUENT19:PasswordProtectSection |  |
 | R.Review.Notes.LinkedNotes | Linked Notes | Review/Notes/Linked Notes | button |  | review.linkedNotes | P3 | missing | FLUENT19:LinkedNotes |  |
 
@@ -1344,7 +1344,7 @@ The OneNote Options dialog, category by category. Setting names are functional d
 | OPT.AudioVideo.VideoProfile | Video profile | File/Options/Audio & Video/Video profile | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.AudioVideo.AudioSearch | Enable searching audio and video recordings for words | File/Options/Audio & Video/Enable searching audio and video recordings for words | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.AudioVideo.RewindLinked | Rewind from start of paragraph when playing linked audio/video by N seconds | File/Options/Audio & Video/Rewind from start of paragraph when playing linked audio/video by N seconds | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.Language.EditingLanguages | Choose editing languages | File/Options/Language/Choose editing languages | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.Language.EditingLanguages | Choose editing languages | File/Options/Language/Choose editing languages | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Language.DisplayLanguage | Choose display language (interface) | File/Options/Language/Choose display language (interface) | option |  |  | P1 | wired | GK (OneNote Options dialog, user-visible) | English and Italian (NoteCraft's own translations of the ribbon, menus, tabs, panes and shell labels; some dialog text stays English); from the system locale on first run; unverified wording; applies at once |
 | OPT.CustomizeRibbon.CustomizeRibbon | Customize the Ribbon (tabs, groups, commands; reset; import/export) | File/Options/Customize Ribbon/Customize the Ribbon (tabs, groups, commands; reset; import/export) | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.QuickAccessToolbar.CustomizeQAT | Customize the Quick Access Toolbar (commands, order, below the ribbon) | File/Options/Quick Access Toolbar/Customize the Quick Access Toolbar (commands, order, below the ribbon) | option |  |  | P1 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |

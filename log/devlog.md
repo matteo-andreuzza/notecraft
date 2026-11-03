@@ -1219,3 +1219,9 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - `para.numberingCustomize` and its dialog (Home › Numbering › Numbering Customization):
   the number format and the number the list starts at; the first selected paragraph
   restarts there, the rest follow on. The dialog opens on the caret's list.
+
+## 2026-11-03 — Language Preferences
+
+- `review.languagePreferences` (Review › Language › Language Preferences) opens Options ›
+  Language, which now also chooses the editing (proofing) language from the installed
+  Hunspell dictionaries; spelling and the thesaurus follow it.

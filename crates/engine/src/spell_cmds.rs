@@ -83,6 +83,16 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         )
         .params(r#"{"lang"?: dictionary name; without it, the installed dictionaries are listed}"#)
         .pure(),
+        // R.Review.Language.LanguagePreferences: Options › Language, which the UI opens.
+        CommandSpec::new(
+            "review.languagePreferences",
+            "R.Review.Language.LanguagePreferences",
+            "Language Preferences",
+            "Review/Language/Language Preferences",
+            |_, _| Ok(json!({"options": "language"})),
+        )
+        .params(r#"{} → {"options": "language"} for the UI"#)
+        .pure(),
     ]
 }
 
