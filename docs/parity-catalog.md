@@ -858,7 +858,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Section.SectionRenameOneNote | Rename | Context/Section/Rename | button |  | section.rename | P0 | wired | FLUENT19:ContextMenuSection/SectionRenameOneNote |  |
 | CM.Section.FileSaveAsContextualItem | Export… | Context/Section/Export… | button |  | file.exportSection | P1 | wired | FLUENT19:ContextMenuSection/FileSaveAsContextualItem | opens File › Export with this section selected and Section chosen |
 | CM.Section.NotebookDelete | Delete | Context/Section/Delete | button |  | section.delete | P0 | wired | FLUENT19:ContextMenuSection/NotebookDelete |  |
-| CM.Section.EmptyTrash | Empty Deleted Pages | Context/Section/Empty Deleted Pages | button |  | history.emptyRecycleBin | P2 | missing | FLUENT19:ContextMenuSection/EmptyTrash |  |
+| CM.Section.EmptyTrash | Empty Deleted Pages | Context/Section/Empty Deleted Pages | button |  | history.emptyDeletedPages | P2 | wired | FLUENT19:ContextMenuSection/EmptyTrash |  |
 | CM.Section.SectionMove | Move or Copy… | Context/Section/Move or Copy… | button |  | section.moveOrCopy | P0 | verified | FLUENT19:ContextMenuSection/SectionMove |  |
 | CM.Section.SectionsMerge | Merge into Another Section… | Context/Section/Merge into Another Section… | button |  | section.merge | P1 | verified | FLUENT19:ContextMenuSection/SectionsMerge |  |
 | CM.Section.SectionClose | Close (section) | Context/Section/Close (section) | button |  | section.close | P2 | missing | FLUENT19:ContextMenuSection/SectionClose |  |

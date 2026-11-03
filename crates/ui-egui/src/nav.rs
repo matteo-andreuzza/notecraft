@@ -723,7 +723,16 @@ fn recycle_bin(app: &mut NoteApp, ui: &mut Ui, nb_id: Id, t: Tokens) {
             ui.add_space(2.0);
         };
         if !nb.recycle.pages.is_empty() {
-            heading(ui, "Deleted Pages");
+            // CM.Section.EmptyTrash: a right click on the heading.
+            ui.add_space(6.0);
+            let resp = ui.add(egui::Label::new(RichText::new("Deleted Pages").size(12.0).strong().color(t.page_meta)).sense(Sense::click()));
+            ui.add_space(2.0);
+            resp.context_menu(|ui| {
+                if ui.button(crate::i18n::tr("Empty Deleted Pages")).clicked() {
+                    app.run(&ctx, "history.emptyDeletedPages", json!({}));
+                    ui.close();
+                }
+            });
         }
         for d in &nb.recycle.pages {
             let about = format!("From {} · deleted {}", d.from_section_name, d.deleted.short_date(off));

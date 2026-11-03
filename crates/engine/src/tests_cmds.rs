@@ -836,3 +836,19 @@ fn numbering_customization_sets_the_style_and_the_first_number() {
     assert_eq!(o.paragraphs[1].list, Some(ListFormat::Number { style: Numbering::UpperRoman, restart: None }), "the next one follows on");
     assert!(s.run("para.numberingCustomize", json!({"style": "emoji"})).is_err());
 }
+
+#[test]
+fn empty_deleted_pages_keeps_the_deleted_sections() {
+    // parity: CM.Section.EmptyTrash
+    let mut s = sample();
+    assert!(s.run("history.emptyDeletedPages", json!({})).is_err(), "nothing to empty");
+    let page = s.sel.page.unwrap().to_string();
+    run(&mut s, "page.delete", json!({"page": page}));
+    let sec = s.sel.section.unwrap().to_string();
+    run(&mut s, "section.delete", json!({"section": sec}));
+    let nb = |s: &crate::Session| s.notebook().unwrap().recycle.clone();
+    assert!(!nb(&s).pages.is_empty() && !nb(&s).sections.is_empty());
+    run(&mut s, "history.emptyDeletedPages", json!({}));
+    assert!(nb(&s).pages.is_empty(), "the deleted pages are gone");
+    assert!(!nb(&s).sections.is_empty(), "the deleted sections wait in the bin");
+}

@@ -106,6 +106,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
     ("Editing language", "Lingua di modifica"),
     ("Email", "Posta"),
     ("Email Page", "Invia pagina per posta"),
+    ("Empty Deleted Pages", "Svuota pagine eliminate"),
     ("Empty Recycle Bin", "Svuota cestino"),
     ("Equation", "Equazione"),
     ("Eraser", "Gomma"),

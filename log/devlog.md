@@ -1227,3 +1227,5 @@ were certain landed, behaviour unchanged (every test green after each commit).
   Hunspell dictionaries; spelling and the thesaurus follow it.
 - Catalog: the Mark as Read (History) and Rule Line Color (View) menu headers open onto
   working rows; now pinned by a test and wired.
+- `history.emptyDeletedPages` (CM.Section.EmptyTrash): a right click on the Recycle Bin's
+  Deleted Pages heading empties the deleted pages; deleted sections stay.

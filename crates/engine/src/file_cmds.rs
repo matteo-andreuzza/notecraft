@@ -114,6 +114,22 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             empty_bin,
         )
         .when(need_bin),
+        // CM.Section.EmptyTrash: the Recycle Bin's Deleted Pages menu; deleted sections stay.
+        CommandSpec::new(
+            "history.emptyDeletedPages",
+            "CM.Section.EmptyTrash",
+            "Empty Deleted Pages",
+            "Context/Section/Empty Deleted Pages",
+            |s, _| {
+                let id = s.sel.notebook.ok_or_else(no_page)?;
+                s.ws.notebook_mut(id).ok_or_else(no_page)?.recycle.pages.clear();
+                Ok(Value::Null)
+            },
+        )
+        .when(|s| {
+            let pages = s.sel.notebook.and_then(|id| s.ws.notebook(id)).is_some_and(|nb| !nb.recycle.pages.is_empty());
+            if pages { None } else { Some("No deleted pages") }
+        }),
         // BEH.Recycle.DeletedPages — restore a deleted page or section (Move or Copy from the bin).
         CommandSpec::new("history.restore", "BEH.Recycle.DeletedPages", "Restore from Recycle Bin", "Behaviour/Recycle", restore)
             .params(r#"{"item": id, "section"?: id}"#)
