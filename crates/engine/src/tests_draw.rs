@@ -464,3 +464,36 @@ fn favorite_pens_pick_the_galleries_nth_pen_or_highlighter() {
     assert_eq!(s.draw.pens[s.draw.pen].tool, InkTool::Pen);
     assert_eq!(s.draw.pen, s.draw.pens.len() - 1);
 }
+
+#[test]
+fn ink_mode_and_treat_as_mark_strokes_as_writing_or_drawing() {
+    // parity: R.Draw.Tools.InkingBiasAuto R.Draw.Tools.InkingBiasDraw R.Draw.Tools.InkingBiasWrite
+    // parity: CM.InkDrawing.TreatInkAsHandwriting CM.InkDrawing.TreatInkAsDrawing
+    use notecraft_doc::InkKind;
+    let mut s = sample();
+    let kind = |s: &Session, id: &serde_json::Value| s.page().unwrap().ink(Id::parse(id.as_str().unwrap()).unwrap()).unwrap().kind;
+    let a = run(&mut s, "draw.stroke", json!({"points": [[10, 10], [60, 30]]}))["ink"].clone();
+    assert_eq!(kind(&s, &a), None, "Create Both: undecided");
+    run(&mut s, "draw.inkModeDraw", json!({}));
+    let b = run(&mut s, "draw.stroke", json!({"points": [[10, 50], [60, 70]]}))["ink"].clone();
+    assert_eq!(kind(&s, &b), Some(InkKind::Drawing));
+    // Create Handwriting Only: writing, and Ink to Shape leaves it alone.
+    run(&mut s, "draw.inkModeWrite", json!({}));
+    run(&mut s, "draw.inkToShape", json!({"on": true}));
+    let square = json!({"points": [[100, 100], [200, 100], [200, 200], [100, 200], [100, 101]]});
+    let c = run(&mut s, "draw.stroke", square.clone());
+    assert!(c.get("shape").is_none(), "handwriting is never turned into a shape");
+    assert_eq!(kind(&s, &c["ink"]), Some(InkKind::Handwriting));
+    run(&mut s, "draw.inkModeAuto", json!({}));
+    assert!(run(&mut s, "draw.stroke", square).get("shape").is_some(), "Create Both: shapes again");
+    // Treat Selected Ink As, undoable; disabled with nothing selected.
+    run(&mut s, "object.select", json!({"ids": [a.as_str().unwrap()]}));
+    run(&mut s, "draw.treatAsHandwriting", json!({}));
+    assert_eq!(kind(&s, &a), Some(InkKind::Handwriting));
+    run(&mut s, "draw.treatAsDrawing", json!({}));
+    assert_eq!(kind(&s, &a), Some(InkKind::Drawing));
+    run(&mut s, "edit.undo", json!({}));
+    assert_eq!(kind(&s, &a), Some(InkKind::Handwriting));
+    s.sel.on_page = PageSel::None;
+    assert!(s.run("draw.treatAsDrawing", json!({})).is_err());
+}

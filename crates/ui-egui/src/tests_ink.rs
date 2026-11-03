@@ -201,6 +201,25 @@ fn the_draw_tab_and_lasso_menus_act_on_selected_ink() {
     assert!(on("R.Draw.Edit.ObjectRotateRight90") && on("R.Draw.Edit.RotateRight45OneNote"), "R.Draw.Edit.RotateMenuOneNote");
     assert!(on("R.Draw.Edit.ObjectBringToFront") && on("R.Draw.Edit.ObjectSendToBack"), "R.Draw.Edit.ObjectsArrangeMenu");
     assert!(on("CM.LassoSelection.ObjectFlipVertical") && on("CM.LassoSelection.RotateLeft45OneNote"), "CM.LassoSelection.RotateInkMenu");
+    // Treat Selected Ink As, in each menu that has it; checked once the strokes are that kind.
+    // parity: CM.Text.TreatInkAsMenu CM.LassoSelection.TreatInkAsMenu CM.InkDrawing.TreatInkAsMenu
+    for menu in ["CM.Text.", "CM.InkDrawing.", "CM.LassoSelection."] {
+        assert!(on(&format!("{menu}TreatInkAsHandwriting")) && on(&format!("{menu}TreatInkAsDrawing")), "{menu}TreatInkAsMenu");
+    }
+    assert!(
+        on("CM.Text.TreatInkAsHandwriting") && on("CM.LassoSelection.TreatInkAsDrawing"),
+        "CM.Text.TreatInkAsMenu CM.LassoSelection.TreatInkAsMenu"
+    );
+    assert!(on("CM.InkDrawing.TreatInkAsDrawing"), "CM.InkDrawing.TreatInkAsMenu");
+    assert!(
+        on("CM.Text.TreatInkAsDrawing") && on("CM.LassoSelection.TreatInkAsHandwriting"),
+        "CM.Text.TreatInkAsDrawing CM.LassoSelection.TreatInkAsHandwriting"
+    );
+    a.session.run("draw.treatAsDrawing", json!({})).unwrap();
+    assert!(crate::ribbon::checked(&a, "draw.treatAsDrawing") && !crate::ribbon::checked(&a, "draw.treatAsHandwriting"));
+    // Draw › Pens › Ink Mode: the chosen mode is checked.
+    a.session.run("draw.inkModeWrite", json!({})).unwrap();
+    assert!(crate::ribbon::checked(&a, "draw.inkModeWrite") && !crate::ribbon::checked(&a, "draw.inkModeAuto"), "R.Draw.Tools.InkBiasMenu");
 }
 
 #[test]

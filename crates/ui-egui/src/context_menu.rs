@@ -783,8 +783,8 @@ mod tests {
 
     #[test]
     fn object_rows_that_dont_act_on_pictures_yet_are_disabled() {
-        // Treat Selected Ink As has no command yet: the row is drawn disabled.
-        assert!(!row_live("CM.InkDrawing.TreatInkAsHandwriting"));
+        // Ink to Math has no command yet: the row is drawn disabled.
+        assert!(!row_live("CM.InkDrawing.SelectionToMathConvert"));
         assert!(row_live("CM.InkDrawing.TagsGallery"));
         assert!(row_live("CM.Picture.RestoreImageSize"));
         assert!(row_live("CM.FileAttachment.FileAttachmentOpen"));

@@ -32,6 +32,17 @@ pub enum InkTool {
     Highlighter,
 }
 
+/// What a stroke is treated as (Treat Selected Ink As, Draw › Ink Mode). Strokes without one
+/// are left to the app to decide.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum InkKind {
+    /// Writing: never turned into a shape.
+    Handwriting,
+    /// A drawing.
+    Drawing,
+}
+
 /// One sampled point, relative to the stroke's position; stored as `[x, y, pressure]`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(from = "[f32; 3]", into = "[f32; 3]")]
@@ -89,13 +100,16 @@ pub struct Ink {
     /// strokes; absent in files written before tags on ink, so format 4 is unchanged).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<TagUse>,
+    /// Handwriting or drawing, when set (absent in older files: undecided).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<InkKind>,
 }
 
 impl Ink {
     /// A stroke through `page_points` (`(page point, pressure)`), normalised.
     pub fn new(id: Id, page_points: &[(Point, f32)], color: Rgba, width: f32, tool: InkTool) -> Ink {
         let points = page_points.iter().map(|(p, pr)| InkPoint { x: p.x, y: p.y, pressure: *pr }).collect();
-        let mut ink = Ink { id, pos: Point::ZERO, points, color, width, tool, link: None, tags: Vec::new() };
+        let mut ink = Ink { id, pos: Point::ZERO, points, color, width, tool, link: None, tags: Vec::new(), kind: None };
         ink.normalize();
         ink
     }

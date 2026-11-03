@@ -11,7 +11,7 @@ use notecraft_doc::color::Rgba;
 use notecraft_doc::geom::{Point, Rect};
 use notecraft_doc::ink::{MAX_INK_WIDTH, MIN_INK_WIDTH};
 use notecraft_doc::media::MAX_PAGE_OBJECTS;
-use notecraft_doc::{Id, Ink, InkTool, OutlineWidth, PageObject};
+use notecraft_doc::{Id, Ink, InkKind, InkTool, OutlineWidth, PageObject};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
@@ -128,6 +128,22 @@ pub struct DrawState {
     /// (`notecraft_ink::recognize`).
     #[serde(default)]
     pub ink_to_shape: bool,
+    /// Draw › Ink Mode: what new strokes are treated as.
+    #[serde(default)]
+    pub ink_mode: InkMode,
+}
+
+/// Draw › Pens › Ink Mode (`R.Draw.Tools.InkingBias*`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum InkMode {
+    /// Create Both Handwriting and Drawings: strokes stay undecided.
+    #[default]
+    Auto,
+    /// Create Drawings Only.
+    Draw,
+    /// Create Handwriting Only: strokes are writing, never turned into shapes.
+    Write,
 }
 
 impl Default for DrawState {
@@ -146,6 +162,7 @@ impl Default for DrawState {
             snap_to_grid: false,
             with_touch: true,
             ink_to_shape: false,
+            ink_mode: InkMode::Auto,
         }
     }
 }
@@ -306,6 +323,49 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             rotate_ink(s, -45.0)
         })
         .when(need_ink),
+        // R.Draw.Tools.InkingBias*: what new strokes are (unverified: OneNote's Auto mode
+        // recognises writing; NoteCraft leaves those strokes undecided).
+        CommandSpec::new(
+            "draw.inkModeAuto",
+            "R.Draw.Tools.InkingBiasAuto",
+            "Create Both Handwriting and Drawings",
+            "Draw/Tools/Pens/Ink Mode/Create Both Handwriting and Drawings",
+            |s, _| ink_mode(s, InkMode::Auto),
+        )
+        .pure(),
+        CommandSpec::new(
+            "draw.inkModeDraw",
+            "R.Draw.Tools.InkingBiasDraw",
+            "Create Drawings Only",
+            "Draw/Tools/Pens/Ink Mode/Create Drawings Only",
+            |s, _| ink_mode(s, InkMode::Draw),
+        )
+        .pure(),
+        CommandSpec::new(
+            "draw.inkModeWrite",
+            "R.Draw.Tools.InkingBiasWrite",
+            "Create Handwriting Only",
+            "Draw/Tools/Pens/Ink Mode/Create Handwriting Only",
+            |s, _| ink_mode(s, InkMode::Write),
+        )
+        .pure(),
+        // CM.*.TreatInkAs*: the selected strokes become writing or drawing (undoable).
+        CommandSpec::new(
+            "draw.treatAsHandwriting",
+            "CM.InkDrawing.TreatInkAsHandwriting",
+            "Handwriting",
+            "Context/Ink Drawing/Treat Selected Ink As/Handwriting",
+            |s, _| treat_as(s, InkKind::Handwriting),
+        )
+        .when(need_ink),
+        CommandSpec::new(
+            "draw.treatAsDrawing",
+            "CM.InkDrawing.TreatInkAsDrawing",
+            "Drawing",
+            "Context/Ink Drawing/Treat Selected Ink As/Drawing",
+            |s, _| treat_as(s, InkKind::Drawing),
+        )
+        .when(need_ink),
         // QAT.FavoritePen1–8, QAT.FavoriteHighlighter1–4: the gallery's Nth pen or highlighter
         // (the gallery order is the favourites order; unverified).
         CommandSpec::new("draw.favoritePen1", "QAT.FavoritePen1", "Favorite Pen 1", "Quick Access Toolbar/Favorite Pen 1", |s, _| favorite(s, InkTool::Pen, 0))
@@ -361,6 +421,24 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         .when(|s| need_favorite(s, InkTool::Highlighter, 0))
         .pure(),
     ]
+}
+
+fn ink_mode(s: &mut Session, mode: InkMode) -> CmdResult {
+    s.draw.ink_mode = mode;
+    Ok(Value::Null)
+}
+
+fn treat_as(s: &mut Session, kind: InkKind) -> CmdResult {
+    let ids = selected_ink(s);
+    let page = s.page_mut().ok_or_else(no_page)?;
+    for o in page.objects.iter_mut() {
+        if let PageObject::Ink(k) = o
+            && ids.contains(&k.id)
+        {
+            k.kind = Some(kind);
+        }
+    }
+    Ok(Value::Null)
 }
 
 /// The gallery index of the `n`th pen of `tool`'s kind.
@@ -475,7 +553,7 @@ fn stroke(s: &mut Session, v: &Value) -> CmdResult {
         && let Some(along) = r.snap(&samples, stroke_pen(s, v)?.width / 2.0)
     {
         samples = along;
-    } else if s.draw.ink_to_shape && p::bool(v, "free") != Some(true) {
+    } else if s.draw.ink_to_shape && s.draw.ink_mode != InkMode::Write && p::bool(v, "free") != Some(true) {
         // R.Draw.Convert.InkToShape: the shape replaces the stroke, in the same pen.
         let points: Vec<Point> = samples.iter().map(|(p, _)| *p).collect();
         if let Some(shape) = notecraft_ink::recognize::recognize(&points) {
@@ -570,7 +648,12 @@ fn push_ink(s: &mut Session, v: &Value, samples: &[(Point, f32)]) -> CmdResult {
     }
     let pen = stroke_pen(s, v)?;
     let id = s.new_id();
-    let ink = Ink::new(id, &samples, pen.color, pen.width, pen.tool);
+    let mut ink = Ink::new(id, &samples, pen.color, pen.width, pen.tool);
+    ink.kind = match s.draw.ink_mode {
+        InkMode::Auto => None,
+        InkMode::Draw => Some(InkKind::Drawing),
+        InkMode::Write => Some(InkKind::Handwriting),
+    };
     s.pending_outline = None;
     s.page_mut().ok_or_else(no_page)?.objects.push(PageObject::Ink(ink));
     Ok(json!({"ink": id.to_string()}))

@@ -1165,3 +1165,12 @@ were certain landed, behaviour unchanged (every test green after each commit).
   format bump; older builds ignore it). `attachment.openOriginal` opens that file if it is
   still there; `attachment.copyLink` copies it as a `file://` URL. Both are disabled for
   files given as bytes (paste, web).
+
+## 2026-11-03 — Ink Mode, Treat Selected Ink As
+
+- `Ink::kind` (`InkKind::Handwriting` / `Drawing`; absent = undecided, serde default, no
+  format bump). Draw › Pens › Ink Mode (`DrawState::ink_mode`: Create Both / Drawings Only /
+  Handwriting Only) marks new strokes; handwriting is never turned into a shape by Ink to
+  Shape. Treat Selected Ink As › Handwriting / Drawing (text, ink and lasso menus) sets it on
+  the selection (undoable); the menus show the current kind checked. OneNote's Auto mode
+  recognises writing; NoteCraft leaves those strokes undecided (unverified).

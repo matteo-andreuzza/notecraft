@@ -68,7 +68,7 @@ mod tests_table;
 
 use serde_json::Value;
 
-pub use draw_cmds::{DrawState, DrawTool, EraserKind, MAX_PATH as MAX_DRAW_PATH, PenStyle};
+pub use draw_cmds::{DrawState, DrawTool, EraserKind, InkMode, MAX_PATH as MAX_DRAW_PATH, PenStyle};
 pub use help_cmds::{MAX_HELP_RESULTS, about};
 pub use history_cmds::{MAX_RECENT, RECENT_RANGES};
 pub use import_cmds::PICTURE_EXTENSIONS as IMPORT_PICTURE_EXTENSIONS;

@@ -311,10 +311,10 @@ The Draw tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Draw.Tools.LargeEraser | Large Eraser | Draw/Tools/Eraser/Large Eraser | toggle |  | draw.eraserLarge | P1 | wired | FLUENT19:LargeEraser | radius 12 pt, unverified |
 | R.Draw.Tools.StrokeEraserOneNote | Stroke Eraser | Draw/Tools/Eraser/Stroke Eraser | toggle |  | draw.eraserStroke | P1 | wired | FLUENT19:StrokeEraserOneNote |  |
 | R.Draw.Tools.InkStylesGallery | Pens | Draw/Tools/Pens | gallery |  | draw.pen | P1 | wired | FLUENT19:InkStylesGallery | default pens (black, red, blue 0.5 mm; yellow, green highlighters 5 mm) unverified; the desktop app remembers the gallery, the selected pen, the eraser size and the shape between runs (the tool starts as Type) |
-| R.Draw.Tools.InkBiasMenu | Ink Mode | Draw/Tools/Pens/Ink Mode | menu |  |  | P2 | missing | FLUENT19:InkBiasMenu |  |
-| R.Draw.Tools.InkingBiasAuto | Create Both Handwriting and Drawings | Draw/Tools/Pens/Ink Mode/Create Both Handwriting and Drawings | toggle |  | draw.inkModeAuto | P2 | missing | FLUENT19:InkingBiasAuto |  |
-| R.Draw.Tools.InkingBiasDraw | Create Drawings Only | Draw/Tools/Pens/Ink Mode/Create Drawings Only | toggle |  | draw.inkModeDraw | P2 | missing | FLUENT19:InkingBiasDraw |  |
-| R.Draw.Tools.InkingBiasWrite | Create Handwriting Only | Draw/Tools/Pens/Ink Mode/Create Handwriting Only | toggle |  | draw.inkModeWrite | P2 | missing | FLUENT19:InkingBiasWrite |  |
+| R.Draw.Tools.InkBiasMenu | Ink Mode | Draw/Tools/Pens/Ink Mode | menu |  |  | P2 | wired | FLUENT19:InkBiasMenu |  |
+| R.Draw.Tools.InkingBiasAuto | Create Both Handwriting and Drawings | Draw/Tools/Pens/Ink Mode/Create Both Handwriting and Drawings | toggle |  | draw.inkModeAuto | P2 | wired | FLUENT19:InkingBiasAuto |  |
+| R.Draw.Tools.InkingBiasDraw | Create Drawings Only | Draw/Tools/Pens/Ink Mode/Create Drawings Only | toggle |  | draw.inkModeDraw | P2 | wired | FLUENT19:InkingBiasDraw |  |
+| R.Draw.Tools.InkingBiasWrite | Create Handwriting Only | Draw/Tools/Pens/Ink Mode/Create Handwriting Only | toggle |  | draw.inkModeWrite | P2 | wired | FLUENT19:InkingBiasWrite |  |
 | R.Draw.Tools.PenAsPointerMode | Use Pen as Pointer | Draw/Tools/Pens/Ink Mode/Use Pen as Pointer | toggle |  | draw.penAsPointer | P2 | missing | FLUENT19:PenAsPointerMode |  |
 | R.Draw.Tools.MoreColorAndThicknessOptions | Color & Thickness | Draw/Tools/Color & Thickness | button |  | draw.colorThickness | P1 | wired | FLUENT19:MoreColorAndThicknessOptions |  |
 | R.Draw.Tools.FingerPaintingMode | Draw with Touch | Draw/Tools/Draw with Touch | toggle |  | draw.withTouch | P2 | wired | FLUENT19:FingerPaintingMode | Decision D8: on by default; off, a touch without pressure (a finger) pans with the drawing tools while mice and pens draw (egui can't tell pens from fingers otherwise; default unverified) |
@@ -679,9 +679,9 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Text.ObjectRotateLeft90 | Rotate Left 90° | Context/Text/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | wired | FLUENT19:ContextMenuText/ObjectRotateLeft90 |  |
 | CM.Text.ObjectFlipHorizontal | Flip Horizontal | Context/Text/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | wired | FLUENT19:ContextMenuText/ObjectFlipHorizontal |  |
 | CM.Text.ObjectFlipVertical | Flip Vertical | Context/Text/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | wired | FLUENT19:ContextMenuText/ObjectFlipVertical |  |
-| CM.Text.TreatInkAsMenu | Treat Selected Ink As | Context/Text/Treat Selected Ink As | menu |  |  | P2 | missing | FLUENT19:ContextMenuText/TreatInkAsMenu |  |
-| CM.Text.TreatInkAsHandwriting | Handwriting | Context/Text/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | missing | FLUENT19:ContextMenuText/TreatInkAsHandwriting |  |
-| CM.Text.TreatInkAsDrawing | Drawing | Context/Text/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | missing | FLUENT19:ContextMenuText/TreatInkAsDrawing |  |
+| CM.Text.TreatInkAsMenu | Treat Selected Ink As | Context/Text/Treat Selected Ink As | menu |  |  | P2 | wired | FLUENT19:ContextMenuText/TreatInkAsMenu |  |
+| CM.Text.TreatInkAsHandwriting | Handwriting | Context/Text/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | wired | FLUENT19:ContextMenuText/TreatInkAsHandwriting |  |
+| CM.Text.TreatInkAsDrawing | Drawing | Context/Text/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | wired | FLUENT19:ContextMenuText/TreatInkAsDrawing |  |
 | CM.Text.ConvertInkMenu | Convert Ink | Context/Text/Convert Ink | menu |  |  | P2 | missing | FLUENT19:ContextMenuText/ConvertInkMenu |  |
 | CM.Text.SelectionToTextConvert | Ink to Text | Context/Text/Convert Ink/Ink to Text | button |  | draw.inkToText | P2 | missing | FLUENT19:ContextMenuText/SelectionToTextConvert |  |
 | CM.Text.SelectionToMathConvert | Ink to Math | Context/Text/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuText/SelectionToMathConvert |  |
@@ -741,9 +741,9 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.InkDrawing.ObjectRotateLeft90 | Rotate Left 90° | Context/Ink Drawing/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectRotateLeft90 |  |
 | CM.InkDrawing.ObjectFlipHorizontal | Flip Horizontal | Context/Ink Drawing/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectFlipHorizontal |  |
 | CM.InkDrawing.ObjectFlipVertical | Flip Vertical | Context/Ink Drawing/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectFlipVertical |  |
-| CM.InkDrawing.TreatInkAsMenu | Treat Selected Ink As | Context/Ink Drawing/Treat Selected Ink As | menu |  |  | P2 | missing | FLUENT19:ContextMenuInkDrawing/TreatInkAsMenu |  |
-| CM.InkDrawing.TreatInkAsHandwriting | Handwriting | Context/Ink Drawing/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | missing | FLUENT19:ContextMenuInkDrawing/TreatInkAsHandwriting |  |
-| CM.InkDrawing.TreatInkAsDrawing | Drawing | Context/Ink Drawing/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | missing | FLUENT19:ContextMenuInkDrawing/TreatInkAsDrawing |  |
+| CM.InkDrawing.TreatInkAsMenu | Treat Selected Ink As | Context/Ink Drawing/Treat Selected Ink As | menu |  |  | P2 | wired | FLUENT19:ContextMenuInkDrawing/TreatInkAsMenu |  |
+| CM.InkDrawing.TreatInkAsHandwriting | Handwriting | Context/Ink Drawing/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | wired | FLUENT19:ContextMenuInkDrawing/TreatInkAsHandwriting |  |
+| CM.InkDrawing.TreatInkAsDrawing | Drawing | Context/Ink Drawing/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | wired | FLUENT19:ContextMenuInkDrawing/TreatInkAsDrawing |  |
 | CM.InkDrawing.ObjectMove | Move | Context/Ink Drawing/Move | button |  | object.move | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectMove |  |
 | CM.InkDrawing.ObjectResize | Resize | Context/Ink Drawing/Resize | button |  | object.resize | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectResize |  |
 | CM.InkDrawing.SelectionToMathConvert | Ink to Math | Context/Ink Drawing/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuInkDrawing/SelectionToMathConvert |  |
@@ -764,9 +764,9 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.LassoSelection.ObjectRotateLeft90 | Rotate Left 90° | Context/Lasso Selection/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | wired | FLUENT19:ContextMenuLassoSelection/ObjectRotateLeft90 |  |
 | CM.LassoSelection.ObjectFlipHorizontal | Flip Horizontal | Context/Lasso Selection/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | wired | FLUENT19:ContextMenuLassoSelection/ObjectFlipHorizontal |  |
 | CM.LassoSelection.ObjectFlipVertical | Flip Vertical | Context/Lasso Selection/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | wired | FLUENT19:ContextMenuLassoSelection/ObjectFlipVertical |  |
-| CM.LassoSelection.TreatInkAsMenu | Treat Selected Ink As | Context/Lasso Selection/Treat Selected Ink As | menu |  |  | P2 | missing | FLUENT19:ContextMenuLassoSelection/TreatInkAsMenu |  |
-| CM.LassoSelection.TreatInkAsHandwriting | Handwriting | Context/Lasso Selection/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | missing | FLUENT19:ContextMenuLassoSelection/TreatInkAsHandwriting |  |
-| CM.LassoSelection.TreatInkAsDrawing | Drawing | Context/Lasso Selection/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | missing | FLUENT19:ContextMenuLassoSelection/TreatInkAsDrawing |  |
+| CM.LassoSelection.TreatInkAsMenu | Treat Selected Ink As | Context/Lasso Selection/Treat Selected Ink As | menu |  |  | P2 | wired | FLUENT19:ContextMenuLassoSelection/TreatInkAsMenu |  |
+| CM.LassoSelection.TreatInkAsHandwriting | Handwriting | Context/Lasso Selection/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | wired | FLUENT19:ContextMenuLassoSelection/TreatInkAsHandwriting |  |
+| CM.LassoSelection.TreatInkAsDrawing | Drawing | Context/Lasso Selection/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | wired | FLUENT19:ContextMenuLassoSelection/TreatInkAsDrawing |  |
 | CM.LassoSelection.SelectionToTextConvert | Ink to Text | Context/Lasso Selection/Ink to Text | button |  | draw.inkToText | P2 | missing | FLUENT19:ContextMenuLassoSelection/SelectionToTextConvert |  |
 | CM.LassoSelection.SelectionToMathConvert | Ink to Math | Context/Lasso Selection/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuLassoSelection/SelectionToMathConvert |  |
 | CM.Picture.OleObjectEdit | Edit (embedded object) | Context/Picture/Edit (embedded object) | button |  | object.editOle | P3 | missing | FLUENT19:ContextMenuPicture/OleObjectEdit |  |

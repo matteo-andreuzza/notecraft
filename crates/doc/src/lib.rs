@@ -32,7 +32,7 @@ pub mod text;
 pub mod time;
 
 pub use id::{Id, IdGen};
-pub use ink::{Ink, InkPoint, InkTool};
+pub use ink::{Ink, InkKind, InkPoint, InkTool};
 pub use media::{Attachment, Blob, Image};
 pub use notebook::{
     DeletedPage, DeletedSection, NavNode, Notebook, Protection, RecycleBin, Section, SectionColor, SectionGroup, Workspace, clean_name,

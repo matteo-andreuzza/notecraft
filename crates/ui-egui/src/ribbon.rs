@@ -130,6 +130,18 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "history.disable" => s.notebook().is_some_and(|nb| nb.history_disabled),
         "draw.snapToGrid" => s.draw.snap_to_grid,
         "draw.inkToShape" => s.draw.ink_to_shape,
+        "draw.inkModeAuto" => s.draw.ink_mode == notecraft_engine::InkMode::Auto,
+        "draw.inkModeDraw" => s.draw.ink_mode == notecraft_engine::InkMode::Draw,
+        "draw.inkModeWrite" => s.draw.ink_mode == notecraft_engine::InkMode::Write,
+        "draw.treatAsHandwriting" | "draw.treatAsDrawing" => {
+            let kind =
+                if cmd == "draw.treatAsDrawing" { notecraft_engine::doc::InkKind::Drawing } else { notecraft_engine::doc::InkKind::Handwriting };
+            let notecraft_engine::selection::PageSel::Objects { ids } = &s.sel.on_page else { return false };
+            s.page().is_some_and(|p| {
+                let inks: Vec<_> = ids.iter().filter_map(|id| p.ink(*id)).collect();
+                !inks.is_empty() && inks.iter().all(|k| k.kind == Some(kind))
+            })
+        }
         "draw.replay" => s.view.ink_replay,
         "review.password" => s.view.password_pane,
         "review.spelling" => s.view.spelling_pane,

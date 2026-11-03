@@ -258,6 +258,7 @@ pub(crate) fn draw(app: &NoteApp, painter: &Painter, page: &Page, t: Tokens, pag
                 tool: pen.tool,
                 link: None,
                 tags: Vec::new(),
+                kind: None,
             };
             let along = app.session.draw.ruler.and_then(|r| r.snap(pts, pen.width / 2.0));
             let pts = along.as_deref().unwrap_or(pts);
