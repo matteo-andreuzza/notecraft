@@ -366,7 +366,7 @@ The History tab, group by group, in ribbon order. Rows from the Microsoft 365 ap
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | R.History.Unread.GoToNextUnreadPage | Next Unread | History/Unread/Next Unread | button |  | history.nextUnread | P2 | wired | FLUENT19:GoToNextUnreadPage |  |
-| R.History.Unread.UnreadMenu | Mark as Read | History/Unread/Mark as Read | menu |  |  | P2 | missing | FLUENT19:UnreadMenu |  |
+| R.History.Unread.UnreadMenu | Mark as Read | History/Unread/Mark as Read | menu |  |  | P2 | wired | FLUENT19:UnreadMenu |  |
 | R.History.Unread.MarkPageAsReadContextual | Mark as Read | History/Unread/Mark as Read | button |  | history.markRead | P2 | wired | FLUENT19:MarkPageAsReadContextual |  |
 | R.History.Unread.MarkPageAsUnreadContextual | Mark as Unread | History/Unread/Mark as Read/Mark as Unread | button | `Mod+Q` | history.markUnread | P2 | wired | FLUENT19:MarkPageAsUnreadContextual |  |
 | R.History.Unread.MarkAllPagesAsRead | Mark Notebook as Read | History/Unread/Mark as Read/Mark Notebook as Read | button |  | history.markNotebookRead | P2 | wired | FLUENT19:MarkAllPagesAsRead |  |
@@ -424,7 +424,7 @@ The View tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.View.Views.CurrentWindowDock | Dock to Desktop | View/Views/Dock to Desktop | toggle | `Mod+Alt+D` | view.dock | P1 | missing | FLUENT19:CurrentWindowDock |  |
 | R.View.PageSetup.PageColorGallery | Page Color | View/Page Setup/Page Color | gallery |  | view.pageColor | P1 | wired | FLUENT19:PageColorGallery |  |
 | R.View.PageSetup.RuleLinesMenu | Rule Lines | View/Page Setup/Rule Lines | gallery | `Mod+Shift+R` | view.ruleLines | P1 | verified | FLUENT19:RuleLinesMenu |  |
-| R.View.PageSetup.RuleLineColorMenu | Rule Line Color | View/Page Setup/Rule Lines/Rule Line Color | menu |  |  | P2 | missing | FLUENT19:RuleLineColorMenu |  |
+| R.View.PageSetup.RuleLineColorMenu | Rule Line Color | View/Page Setup/Rule Lines/Rule Line Color | menu |  |  | P2 | wired | FLUENT19:RuleLineColorMenu |  |
 | R.View.PageSetup.RuleLineColorGallery | Rule Line Color | View/Page Setup/Rule Lines/Rule Line Color | gallery |  | view.ruleLineColor | P2 | wired | FLUENT19:RuleLineColorGallery |  |
 | R.View.PageSetup.NewPagesWithRuleLines | Always Create Pages with Rule Lines | View/Page Setup/Rule Lines/Always Create Pages with Rule Lines | toggle |  | view.newPagesWithRuleLines | P2 | wired | FLUENT19:NewPagesWithRuleLines |  |
 | R.View.PageSetup.PageTitleHide | Hide Page Title | View/Page Setup/Hide Page Title | toggle |  | view.hidePageTitle | P1 | verified | FLUENT19:PageTitleHide |  |

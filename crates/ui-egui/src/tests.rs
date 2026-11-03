@@ -1465,6 +1465,20 @@ fn language_preferences_open_options_language_with_the_editing_language() {
 }
 
 #[test]
+fn the_mark_as_read_and_rule_line_color_menus_open_onto_working_rows() {
+    // parity: R.History.Unread.UnreadMenu R.View.PageSetup.RuleLineColorMenu
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    let on = |id: &str| crate::ribbon::enabled(&a, id);
+    assert!(on("R.History.Unread.MarkPageAsUnreadContextual") && on("R.History.Unread.UnreadNotebookChangesShow"), "Mark as Read menu");
+    assert!(on("R.View.PageSetup.RuleLineColorGallery"), "Rule Line Color menu");
+    a.ui.tab = "History".into();
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label_contains("Mark as Read").is_some(), "the History tab shows the menu");
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

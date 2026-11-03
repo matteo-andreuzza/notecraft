@@ -1225,3 +1225,5 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - `review.languagePreferences` (Review › Language › Language Preferences) opens Options ›
   Language, which now also chooses the editing (proofing) language from the installed
   Hunspell dictionaries; spelling and the thesaurus follow it.
+- Catalog: the Mark as Read (History) and Rule Line Color (View) menu headers open onto
+  working rows; now pinned by a test and wired.
