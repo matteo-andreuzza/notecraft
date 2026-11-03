@@ -2,6 +2,7 @@
 
 /// English label → Italian label, sorted by the English label.
 pub(crate) const IT: &[(&str, &str)] = &[
+    ("(no name set)", "(nessun nome impostato)"),
     ("A picture has no alternative text", "Un'immagine non ha testo alternativo"),
     ("A table has merged cells", "Una tabella ha celle unite"),
     ("A table has no header row", "Una tabella non ha una riga di intestazione"),
@@ -37,6 +38,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
     ("Cancel", "Annulla"),
     ("Center", "Al centro"),
     ("Change Password", "Cambia password"),
+    ("Change User Name…", "Cambia nome utente…"),
     ("Change to Bulleted List", "Converti in elenco puntato"),
     ("Change to Numbered List", "Converti in elenco numerato"),
     ("Check Accessibility", "Verifica accessibilità"),
@@ -451,6 +453,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
     ("Unlock", "Sblocca"),
     ("Unread", "Da leggere"),
     ("Use Pen as Pointer", "Usa penna come puntatore"),
+    ("User Information", "Informazioni utente"),
     ("View", "Visualizza"),
     ("Views", "Visualizzazioni"),
     ("Voice", "Voce"),

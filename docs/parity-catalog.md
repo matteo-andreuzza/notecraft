@@ -140,7 +140,7 @@ Controls that can sit in the Quick Access Toolbar by default or from its customi
 | QAT.FavoritePen4 | Favorite Pen 4 | Quick Access Toolbar/Favorite Pen 4 | toggle |  | draw.favoritePen4 | P2 | wired | FLUENT19:FavoritePen4 |  |
 | QAT.FavoriteHighlighter1 | Favorite Highlighter 1 | Quick Access Toolbar/Favorite Highlighter 1 | toggle |  | draw.favoriteHighlighter1 | P2 | wired | FLUENT19:FavoriteHighlighter1 |  |
 | QAT.PointerModeOptions | Pen and Pointer Modes | Quick Access Toolbar/Pen and Pointer Modes | gallery |  | draw.pointerMode | P2 | wired | FLUENT19:PointerModeOptions |  |
-| QAT.ShapeSmileyFace | Shapes | Quick Access Toolbar/Shapes | menu |  | draw.shapes | P2 | missing | FLUENT19:ShapeSmileyFace |  |
+| QAT.ShapeSmileyFace | Shapes | Quick Access Toolbar/Shapes | menu |  | draw.shapes | P2 | wired | FLUENT19:ShapeSmileyFace |  |
 
 ## Ribbon › Home
 
@@ -567,7 +567,7 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Send.Pdf | Send: Send as PDF | File/Send/Send as PDF | button |  | share.sendPdf | P2 | wired | FLUENT19:SendPdf |  |
 | BS.Send.Word | Send: Send to Word | File/Send/Send to Word | button |  | share.sendToWord | P2 | wired | FLUENT19:SendNotesToWord |  |
 | BS.Send.Blog | Send: Send to Blog | File/Send/Send to Blog | button |  |  | P3 | out-of-scope | FLUENT19:SendNotesToBlog |  |
-| BS.Account.Identity | Account: User Information (name used as author) | File/Account/User Information | page |  | file.options | P2 | missing | FLUENT19:GroupBackstageIdentity |  |
+| BS.Account.Identity | Account: User Information (name used as author) | File/Account/User Information | page |  | file.options | P2 | wired | FLUENT19:GroupBackstageIdentity |  |
 | BS.Account.Theme | Account: Office Theme / Background | File/Account/Theme | combo |  | | P1 | wired | FLUENT19:Theming | The Office Theme list (Colorful, Dark Gray, Black, White, Use system setting); a UI preference, so no engine command |
 | BS.Account.SignIn | Account: Sign in / Connected Services | File/Account/Connected Services | page |  |  | P3 | out-of-scope | FLUENT19:GroupBackstageSignIn |  |
 | BS.Account.About | Account: About (version) | File/Account/About | button |  | help.about | P1 | wired | FLUENT19:GroupAboutOfficeProducts | About NoteCraft: version, licence, local-first note, trademark notice |
@@ -631,7 +631,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.ParagraphHandle.ShadingColorPicker | Shading | Context/Paragraph Handle/Table/Shading | gallery |  | table.shading | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/ShadingColorPicker |  |
 | CM.ParagraphHandle.SortUp | Sort Ascending | Context/Paragraph Handle/Table/Sort Ascending | button |  | table.sortAscending | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/SortUp |  |
 | CM.ParagraphHandle.SortDown | Sort Descending | Context/Paragraph Handle/Table/Sort Descending | button |  | table.sortDescending | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/SortDown |  |
-| CM.ParagraphHandle.ShowSortTableRowsDialog | Sort… | Context/Paragraph Handle/Table/Sort… | button |  | table.sortDialog | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/ShowSortTableRowsDialog |  |
+| CM.ParagraphHandle.ShowSortTableRowsDialog | Sort… | Context/Paragraph Handle/Table/Sort… | button |  | table.sortDialog | P2 | wired | FLUENT19:ContextMenuOutlineElementHandle/ShowSortTableRowsDialog |  |
 | CM.ParagraphHandle.HeaderRowNoFormatting | Header Row (excluded from sort) | Context/Paragraph Handle/Table/Header Row (excluded from sort) | check |  | table.headerRow | P2 | wired | FLUENT19:ContextMenuOutlineElementHandle/HeaderRowNoFormatting |  |
 | CM.ParagraphHandle.SelectOutlineLevelsMenu | Select Outline Levels | Context/Paragraph Handle/Select Outline Levels | menu |  |  | P2 | wired | FLUENT19:ContextMenuOutlineElementHandle/SelectOutlineLevelsMenu |  |
 | CM.ParagraphHandle.OutlineSelectLevel1 | Show Level 1 | Context/Paragraph Handle/Select Outline Levels/Show Level 1 | button |  | outline.level1 | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevel1 |  |
@@ -707,7 +707,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Text.ShadingColorPicker | Shading | Context/Text/Table/Shading | gallery |  | table.shading | P1 | wired | FLUENT19:ContextMenuText/ShadingColorPicker |  |
 | CM.Text.SortUp | Sort Ascending | Context/Text/Table/Sort Ascending | button |  | table.sortAscending | P1 | wired | FLUENT19:ContextMenuText/SortUp |  |
 | CM.Text.SortDown | Sort Descending | Context/Text/Table/Sort Descending | button |  | table.sortDescending | P1 | wired | FLUENT19:ContextMenuText/SortDown |  |
-| CM.Text.ShowSortTableRowsDialog | Sort… | Context/Text/Table/Sort… | button |  | table.sortDialog | P2 | missing | FLUENT19:ContextMenuText/ShowSortTableRowsDialog |  |
+| CM.Text.ShowSortTableRowsDialog | Sort… | Context/Text/Table/Sort… | button |  | table.sortDialog | P2 | wired | FLUENT19:ContextMenuText/ShowSortTableRowsDialog |  |
 | CM.Text.HeaderRowNoFormatting | Header Row (excluded from sort) | Context/Text/Table/Header Row (excluded from sort) | check |  | table.headerRow | P2 | wired | FLUENT19:ContextMenuText/HeaderRowNoFormatting |  |
 | CM.Text.ConvertToExcelSpreadsheet | Convert to Excel Spreadsheet | Context/Text/Convert to Excel Spreadsheet | button |  | table.convertToSpreadsheet | P3 | missing | FLUENT19:ContextMenuText/ConvertToExcelSpreadsheet |  |
 | CM.Text.LinkedNotesMenu | Linked Notes | Context/Text/Linked Notes | menu |  |  | P3 | missing | FLUENT19:ContextMenuText/LinkedNotesMenu |  |
@@ -1018,8 +1018,8 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| QAT.NR.WebGoBack | Back (history list) | Quick Access Toolbar/Commands Not in the Ribbon/Back (history list) | gallery |  | nav.back | P2 | missing | FLUENT19:WebGoBack |  |
-| QAT.NR.WebGoForward | Forward (history list) | Quick Access Toolbar/Commands Not in the Ribbon/Forward (history list) | gallery |  | nav.forward | P2 | missing | FLUENT19:WebGoForward |  |
+| QAT.NR.WebGoBack | Back (history list) | Quick Access Toolbar/Commands Not in the Ribbon/Back (history list) | gallery |  | nav.back | P2 | wired | FLUENT19:WebGoBack |  |
+| QAT.NR.WebGoForward | Forward (history list) | Quick Access Toolbar/Commands Not in the Ribbon/Forward (history list) | gallery |  | nav.forward | P2 | wired | FLUENT19:WebGoForward |  |
 | QAT.NR.NotebookSearch | Search Notebooks | Quick Access Toolbar/Commands Not in the Ribbon/Search Notebooks | button | `Mod+E` | search.all | P0 | wired | FLUENT19:NotebookSearch |  |
 | QAT.NR.PageDeleteOneNote | Delete Page | Quick Access Toolbar/Commands Not in the Ribbon/Delete Page | button |  | page.delete | P0 | wired | FLUENT19:PageDeleteOneNote |  |
 | QAT.NR.PreviousPageOneNote | Previous Page | Quick Access Toolbar/Commands Not in the Ribbon/Previous Page | button | `Mod+PageUp` | nav.prevPage | P0 | wired | FLUENT19:PreviousPageOneNote |  |

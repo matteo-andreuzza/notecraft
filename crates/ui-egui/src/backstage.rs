@@ -483,6 +483,16 @@ fn theme_picker(app: &mut NoteApp, ui: &mut Ui) {
 
 fn account(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     heading(ui, "Account");
+    // BS.Account.Identity: no sign-in; the user name marks edits as theirs.
+    ui.label(RichText::new(crate::i18n::tr("User Information")).strong());
+    let name = app.session.prefs.author.trim().to_string();
+    let shown = if name.is_empty() { crate::i18n::tr("(no name set)") } else { name };
+    ui.label(shown);
+    if ui.button(crate::i18n::tr("Change User Name…")).clicked() {
+        app.ui.options_page = crate::options::OptionsPage::General;
+        app.ui.backstage = Some(Backstage::Options);
+    }
+    ui.add_space(20.0);
     ui.label(RichText::new("Office Theme").strong());
     // OPT.General.OfficeTheme / UI.Window.DarkMode.
     theme_picker(app, ui);

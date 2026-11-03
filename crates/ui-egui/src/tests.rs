@@ -1613,6 +1613,34 @@ fn the_docked_draw_tab_has_the_touch_tools() {
 }
 
 #[test]
+fn the_account_page_shows_the_user_name_used_as_author() {
+    // parity: BS.Account.Identity
+    let mut a = app();
+    a.session.prefs.author = "Ada Lovelace".into();
+    a.ui.backstage = Some(crate::Backstage::Account);
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Ada Lovelace").is_some());
+    h.get_by_label("Change User Name…").click();
+    h.run();
+    assert_eq!(h.state().ui.options_page, crate::options::OptionsPage::General);
+}
+
+#[test]
+fn more_quick_access_commands_are_offered_and_work() {
+    // parity: QAT.ShapeSmileyFace QAT.NR.WebGoBack QAT.NR.WebGoForward
+    let offered = crate::qat::available();
+    for id in ["QAT.ShapeSmileyFace", "QAT.NR.WebGoBack", "QAT.NR.WebGoForward"] {
+        assert!(offered.iter().any(|x| x == id), "{id} can be added to the toolbar");
+    }
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    assert!(crate::ribbon::enabled(&a, "QAT.NR.WebGoBack"), "Back goes to the page before");
+    a.session.run("draw.shapes", json!({})).unwrap();
+    assert_eq!(a.session.draw.tool, notecraft_engine::DrawTool::Shape);
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

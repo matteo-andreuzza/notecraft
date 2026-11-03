@@ -1262,3 +1262,6 @@ were certain landed, behaviour unchanged (every test green after each commit).
   Pen and Pointer Modes (`draw.pointerMode`, QAT): a pen — a contact that reports pressure —
   types and selects instead of drawing or erasing (`ink::effective_tool`); mice and fingers
   keep the tool.
+- File › Account shows the user name edits are signed with (BS.Account.Identity) and opens
+  Options › General to change it. Pinned rows whose commands already worked: QAT Shapes,
+  Back/Forward (history list), and Sort… in the text and paragraph-handle table menus.

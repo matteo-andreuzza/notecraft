@@ -192,6 +192,18 @@ fn table(h: &Harness<'static, NoteApp>, id: Id) -> notecraft_engine::doc::Table 
 }
 
 #[test]
+fn the_table_menus_sort_opens_the_sort_dialog() {
+    // parity: CM.Text.ShowSortTableRowsDialog CM.ParagraphHandle.ShowSortTableRowsDialog
+    let (mut a, t) = page_with_table();
+    let cell = a.session.page().unwrap().table(t).unwrap().rows[0].cells[0].id;
+    a.session.run("caret.set", json!({"block": cell.to_string(), "para": 0, "offset": 0})).unwrap();
+    for id in ["CM.Text.ShowSortTableRowsDialog", "CM.ParagraphHandle.ShowSortTableRowsDialog"] {
+        assert!(crate::ribbon::enabled(&a, id), "{id}");
+        assert!(matches!(crate::ribbon::dialog_for(&a, id), Some(crate::dialogs::Dialog::SortTable { .. })), "{id}");
+    }
+}
+
+#[test]
 fn table_cells_take_clicks_keys_and_drags() {
     let (a, tid) = page_with_table();
     let mut h = harness(a);
