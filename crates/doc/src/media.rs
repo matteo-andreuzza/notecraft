@@ -193,7 +193,14 @@ pub struct Image {
     /// A hyperlink on the picture (Link… on its menu; [MS-ONE] `WzHyperlinkUrl`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link: Option<String>,
+    /// Text recognised in the picture (Make Text in Image Searchable): search finds it and
+    /// Copy Text from Picture copies it. Absent in older files.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub ocr_text: String,
 }
+
+/// Most text kept from one picture's recognition, bytes.
+pub const MAX_OCR_TEXT: usize = 64 * 1024;
 
 impl Image {
     /// A picture at `pos` drawn `width × height` points.
@@ -212,6 +219,7 @@ impl Image {
             background: false,
             printout: None,
             link: None,
+            ocr_text: String::new(),
         };
         im.normalize();
         im

@@ -1274,3 +1274,11 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - File › Share (new backstage page): Share on Network and Move Notebook move the current
   notebook into a folder named after it inside the folder picked (`notebook.changeLocation`;
   NoteCraft has no cloud, so sharing is a folder others reach).
+
+## 2026-11-03 — Text in pictures (OCR)
+
+- `Image::ocr_text` (serde default): the text recognised in a picture joins the page's plain
+  text, so search finds it. Make Text in Image Searchable (`object.ocrLanguage`) asks the host
+  to recognise it (`Host::ocr`; the desktop runs Tesseract when installed, English) and keeps
+  it (`lang: "none"` forgets it); Copy Text from Picture (`object.copyTextFromPicture`)
+  recognises first when needed and copies the text.

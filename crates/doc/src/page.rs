@@ -653,6 +653,10 @@ impl Page {
                     s.push('\n');
                     s.push_str(&a.name);
                 }
+                PageObject::Image(im) if !im.ocr_text.is_empty() => {
+                    s.push('\n');
+                    s.push_str(&im.ocr_text);
+                }
                 PageObject::Image(_) | PageObject::Ink(_) => {}
             }
         }

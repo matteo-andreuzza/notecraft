@@ -88,6 +88,12 @@ pub trait Host {
         let _ = path;
         Err("opening files isn't available here".into())
     }
+    /// Recognise the text in a picture file's `bytes` (`lang`: a Tesseract language code).
+    /// `Err` with a reason when that isn't possible here.
+    fn ocr(&mut self, bytes: &[u8], lang: &str) -> Result<String, String> {
+        let _ = (bytes, lang);
+        Err("Recognising text in pictures isn't available here".into())
+    }
     /// Start a new mail in the user's mail program with the file at `attach` attached. `Err`
     /// with a reason when that isn't possible here.
     fn send_email(&mut self, subject: &str, attach: &str) -> Result<(), String> {
@@ -462,6 +468,7 @@ impl NoteApp {
                 | "notebook.copyLink"
                 | "link.copy"
                 | "attachment.copyLink"
+                | "object.copyTextFromPicture"
                 | "para.copyLink"
                 | "sectionGroup.copyLink"
         ) && let Some(t) = v.get("text").or_else(|| v.get("link")).and_then(Value::as_str)

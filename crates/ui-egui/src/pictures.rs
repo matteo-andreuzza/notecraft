@@ -405,6 +405,25 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
         "edit.paste" | "edit.pasteKeepSource" | "edit.pasteMerge" | "edit.pasteTextOnly" | "edit.pastePicture" => {
             crate::clipboard::paste(app, ctx, cmd, None)
         }
+        // Make Text in Image Searchable / Copy Text from Picture: the host recognises the text
+        // (Tesseract on the desktop) unless the picture already has it.
+        "object.ocrLanguage" | "object.copyTextFromPicture" => {
+            let bytes = selected_picture(app).filter(|im| cmd == "object.ocrLanguage" || im.ocr_text.is_empty()).map(|im| im.blob.bytes.clone());
+            if let Some(bytes) = bytes {
+                match app.host.ocr(&bytes, "eng") {
+                    Ok(text) => {
+                        app.run(ctx, "object.ocrLanguage", json!({"text": text, "lang": "eng"}));
+                    }
+                    Err(e) => {
+                        app.ui.status = Some((e, ctx.input(|i| i.time)));
+                        return true;
+                    }
+                }
+            }
+            if cmd == "object.copyTextFromPicture" {
+                app.run(ctx, cmd, json!({}));
+            }
+        }
         "attachment.open" | "printout.openOriginal" | "attachment.openOriginal" => {
             if let Some(path) = app.run(ctx, cmd, json!({})).and_then(|v| v.get("path").and_then(|p| p.as_str()).map(str::to_string))
                 && let Err(e) = app.host.open_path(&path)
@@ -415,6 +434,13 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
         _ => return false,
     }
     true
+}
+
+/// The first selected picture.
+fn selected_picture(app: &NoteApp) -> Option<notecraft_engine::doc::Image> {
+    let notecraft_engine::selection::PageSel::Objects { ids } = &app.session.sel.on_page else { return None };
+    let page = app.session.page()?;
+    ids.iter().find_map(|id| page.image(*id)).cloned()
 }
 
 /// Most files taken from one drop.

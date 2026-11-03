@@ -650,7 +650,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.ParagraphHandle.NoteLinkReLink | Re-link | Context/Paragraph Handle/Linked Notes/Re-link | button |  | linked.relink | P3 | missing | FLUENT19:ContextMenuOutlineElementHandle/NoteLinkReLink |  |
 | CM.ParagraphHandle.NoteLinkDelete | Delete Link | Context/Paragraph Handle/Linked Notes/Delete Link | button |  | linked.delete | P3 | missing | FLUENT19:ContextMenuOutlineElementHandle/NoteLinkDelete |  |
 | CM.ParagraphHandle.LinkedNotesOptions | Linked Notes Options | Context/Paragraph Handle/Linked Notes/Linked Notes Options | button |  | linked.options | P3 | missing | FLUENT19:ContextMenuOutlineElementHandle/LinkedNotesOptions |  |
-| CM.ParagraphHandle.OCRLanguageListMenu | Make Text in Image Searchable | Context/Paragraph Handle/Make Text in Image Searchable | menu |  | object.ocrLanguage | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/OCRLanguageListMenu |  |
+| CM.ParagraphHandle.OCRLanguageListMenu | Make Text in Image Searchable | Context/Paragraph Handle/Make Text in Image Searchable | menu |  | object.ocrLanguage | P2 | wired | FLUENT19:ContextMenuOutlineElementHandle/OCRLanguageListMenu |  |
 | CM.ParagraphHandle.LastModifiedBy | Last Modified By (author and date) | Context/Paragraph Handle/Last Modified By (author and date) | button |  | | P2 | wired | FLUENT19:ContextMenuOutlineElementHandle/LastModifiedBy | an information line at the foot of the menu: "Last modified by <author>, <date> <time>" from the paragraph (wording unverified) |
 | CM.Text.NoSpellingSuggestions | Spelling suggestions | Context/Text/Spelling suggestions | gallery |  | review.spellingSuggestion | P1 | wired | FLUENT19:ContextMenuText/NoSpellingSuggestions | a right click on a misspelled word selects it; the menu lists its suggestions (each replaces it), then Ignore All and Add to Dictionary; nothing when the word is spelled right (unverified order) |
 | CM.Text.InkAlternate1 | Ink Recognition Alternate 1 | Context/Text/Ink Recognition Alternate 1 | button |  | draw.inkAlternate | P3 | missing | FLUENT19:ContextMenuText/InkAlternate1 |  |
@@ -669,7 +669,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Text.LinkCopyOneNote | Copy Link | Context/Text/Copy Link | button |  | link.copy | P0 | verified | FLUENT19:ContextMenuText/LinkCopyOneNote |  |
 | CM.Text.LinkSelect | Select Link | Context/Text/Select Link | button |  | link.select | P1 | verified | FLUENT19:ContextMenuText/LinkSelect |  |
 | CM.Text.LinkRemove | Remove Link | Context/Text/Remove Link | button |  | link.remove | P0 | verified | FLUENT19:ContextMenuText/LinkRemove |  |
-| CM.Text.CopyTextFromPicture | Copy Text from Picture | Context/Text/Copy Text from Picture | button |  | object.copyTextFromPicture | P2 | missing | FLUENT19:ContextMenuText/CopyTextFromPicture |  |
+| CM.Text.CopyTextFromPicture | Copy Text from Picture | Context/Text/Copy Text from Picture | button |  | object.copyTextFromPicture | P2 | wired | FLUENT19:ContextMenuText/CopyTextFromPicture |  |
 | CM.Text.PrintoutPageTextCopy | Copy Text from This Page of the Printout | Context/Text/Copy Text from This Page of the Printout | button |  | printout.copyPageText | P2 | missing | FLUENT19:ContextMenuText/PrintoutPageTextCopy |  |
 | CM.Text.CopyTextFromPrintoutPages | Copy Text from All Pages of the Printout | Context/Text/Copy Text from All Pages of the Printout | button |  | printout.copyAllText | P2 | missing | FLUENT19:ContextMenuText/CopyTextFromPrintoutPages |  |
 | CM.Text.RotateInkMenu | Rotate | Context/Text/Rotate | menu |  |  | P1 | wired | FLUENT19:ContextMenuText/RotateInkMenu |  |
@@ -689,7 +689,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Text.Translate | Translate | Context/Text/Translate | button |  | review.translateSelection | P3 | missing | FLUENT19:ContextMenuText/Translate |  |
 | CM.Text.PictureAsBackground | Set Picture as Background | Context/Text/Set Picture as Background | toggle |  | object.setAsBackground | P1 | wired | FLUENT19:ContextMenuText/PictureAsBackground |  |
 | CM.Text.AlternativeText | Alt Text | Context/Text/Alt Text | button |  | object.altText | P1 | wired | FLUENT19:ContextMenuText/AlternativeText |  |
-| CM.Text.OCRLanguageListMenu | Make Text in Image Searchable | Context/Text/Make Text in Image Searchable | menu |  | object.ocrLanguage | P2 | missing | FLUENT19:ContextMenuText/OCRLanguageListMenu |  |
+| CM.Text.OCRLanguageListMenu | Make Text in Image Searchable | Context/Text/Make Text in Image Searchable | menu |  | object.ocrLanguage | P2 | wired | FLUENT19:ContextMenuText/OCRLanguageListMenu |  |
 | CM.Text.TableMenu | Table | Context/Text/Table | menu |  |  | P1 | wired | FLUENT19:ContextMenuText/TableMenu |  |
 | CM.Text.TableInsert | Insert Table | Context/Text/Table/Insert Table | button |  | insert.tableDialog | P1 | wired | FLUENT19:ContextMenuText/TableInsert |  |
 | CM.Text.TableInsertColumnsLeft | Insert Left | Context/Text/Table/Insert Left | button | `Mod+Alt+E` | table.insertLeft | P1 | wired | FLUENT19:ContextMenuText/TableInsertColumnsLeft |  |
@@ -774,7 +774,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Picture.SelectWhatToDisplay | Display As | Context/Picture/Display As | button |  | printout.displayAs | P2 | missing | FLUENT19:ContextMenuPicture/SelectWhatToDisplay |  |
 | CM.Picture.Cut | Cut | Context/Picture/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuPicture/Cut |  |
 | CM.Picture.CopyOneNote | Copy | Context/Picture/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuPicture/CopyOneNote | copies the picture as an object inside NoteCraft |
-| CM.Picture.CopyTextFromPicture | Copy Text from Picture | Context/Picture/Copy Text from Picture | button |  | object.copyTextFromPicture | P2 | missing | FLUENT19:ContextMenuPicture/CopyTextFromPicture |  |
+| CM.Picture.CopyTextFromPicture | Copy Text from Picture | Context/Picture/Copy Text from Picture | button |  | object.copyTextFromPicture | P2 | wired | FLUENT19:ContextMenuPicture/CopyTextFromPicture |  |
 | CM.Picture.PrintoutPageTextCopy | Copy Text from This Page of the Printout | Context/Picture/Copy Text from This Page of the Printout | button |  | printout.copyPageText | P2 | missing | FLUENT19:ContextMenuPicture/PrintoutPageTextCopy |  |
 | CM.Picture.CopyTextFromPrintoutPages | Copy Text from All Pages of the Printout | Context/Picture/Copy Text from All Pages of the Printout | button |  | printout.copyAllText | P2 | missing | FLUENT19:ContextMenuPicture/CopyTextFromPrintoutPages |  |
 | CM.Picture.ZoomToDocument | Zoom to Document | Context/Picture/Zoom to Document | button |  | printout.zoomToDocument | P3 | missing | FLUENT19:ContextMenuPicture/ZoomToDocument |  |
@@ -803,7 +803,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Picture.RestoreImageSize | Restore to Original Size | Context/Picture/Restore to Original Size | button |  | object.restoreSize | P1 | verified | FLUENT19:ContextMenuPicture/RestoreImageSize | the pixel size at 96 dpi |
 | CM.Picture.PictureAsBackground | Set Picture as Background | Context/Picture/Set Picture as Background | toggle |  | object.setAsBackground | P1 | wired | FLUENT19:ContextMenuPicture/PictureAsBackground | unverified: a background picture goes behind everything and only a right click reaches it |
 | CM.Picture.AlternativeText | Alt Text | Context/Picture/Alt Text | button |  | object.altText | P1 | wired | FLUENT19:ContextMenuPicture/AlternativeText |  |
-| CM.Picture.OCRLanguageListMenu | Make Text in Image Searchable | Context/Picture/Make Text in Image Searchable | menu |  | object.ocrLanguage | P2 | missing | FLUENT19:ContextMenuPicture/OCRLanguageListMenu |  |
+| CM.Picture.OCRLanguageListMenu | Make Text in Image Searchable | Context/Picture/Make Text in Image Searchable | menu |  | object.ocrLanguage | P2 | wired | FLUENT19:ContextMenuPicture/OCRLanguageListMenu |  |
 | CM.FileAttachment.FileAttachmentName | File name (header) | Context/File Attachment/File name (header) | labelControl |  |  | P2 | wired | FLUENT19:ContextMenuFileAttachment/FileAttachmentName | The attachment's file name, a non-clickable header |
 | CM.FileAttachment.FileAttachmentSize | File size (header) | Context/File Attachment/File size (header) | labelControl |  |  | P2 | wired | FLUENT19:ContextMenuFileAttachment/FileAttachmentSize | The file size in bytes, KB or MB of 1,024 (wording unverified) |
 | CM.FileAttachment.PlayFromPage | Play (attached media) | Context/File Attachment/Play (attached media) | button |  | media.play | P2 | missing | FLUENT19:ContextMenuFileAttachment/PlayFromPage |  |

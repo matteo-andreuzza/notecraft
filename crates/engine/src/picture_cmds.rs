@@ -165,6 +165,33 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             set_background,
         )
         .when(need_picture),
+        // CM.Picture.OCRLanguageListMenu (Make Text in Image Searchable): keep the text the UI
+        // recognised in the selected picture (`text`), or forget it (`lang`: "none", Disable).
+        CommandSpec::new(
+            "object.ocrLanguage",
+            "CM.Picture.OCRLanguageListMenu",
+            "Make Text in Image Searchable",
+            "Context/Picture/Make Text in Image Searchable",
+            set_ocr_text,
+        )
+        .params(r#"{"text"?: recognised text, "lang"?: language code, or "none" to make it unsearchable}"#)
+        .when(need_picture),
+        // CM.Picture.CopyTextFromPicture: the picture's recognised text, for the clipboard.
+        CommandSpec::new(
+            "object.copyTextFromPicture",
+            "CM.Picture.CopyTextFromPicture",
+            "Copy Text from Picture",
+            "Context/Picture/Copy Text from Picture",
+            |s, _| {
+                let page = s.page().ok_or_else(no_page)?;
+                let text = selected(s, true).iter().filter_map(|id| page.image(*id)).map(|im| im.ocr_text.clone()).find(|t| !t.is_empty());
+                let text = text.ok_or_else(|| CmdError::Disabled("No text was found in this picture".into()))?;
+                Ok(json!({"text": text}))
+            },
+        )
+        .params(r#"{} → {"text"} (the UI recognises the text first when there is none)"#)
+        .pure()
+        .when(need_picture),
         CommandSpec::new("object.altText", "CM.Picture.AlternativeText", "Alt Text", "Context/Picture/Alt Text", alt_text)
             .params(r#"{"text": alt text (pictures and attachments selected)}"#)
             .when(need_media),
@@ -583,6 +610,20 @@ pub(crate) fn open_copy(v: &Value, blob: Blob, name: &str) -> CmdResult {
 #[cfg(target_arch = "wasm32")]
 pub(crate) fn open_copy(_: &Value, _: Blob, _: &str) -> CmdResult {
     Err(CmdError::Disabled("the web version can't open attached files yet".into()))
+}
+
+fn set_ocr_text(s: &mut Session, v: &Value) -> CmdResult {
+    let mut text = if p::str(v, "lang") == Some("none") { String::new() } else { p::str(v, "text").unwrap_or_default().trim().to_string() };
+    if text.len() > notecraft_doc::media::MAX_OCR_TEXT {
+        let mut end = notecraft_doc::media::MAX_OCR_TEXT;
+        while !text.is_char_boundary(end) {
+            end -= 1;
+        }
+        text.truncate(end);
+    }
+    let text: String = text.chars().filter(|c| !c.is_control() || matches!(c, '\n' | '\t')).collect();
+    each_picture(s, |im| im.ocr_text = text.clone())?;
+    Ok(json!({"chars": text.chars().count()}))
 }
 
 fn rename(s: &mut Session, v: &Value) -> CmdResult {

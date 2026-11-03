@@ -432,3 +432,30 @@ fn files_copied_in_a_file_manager_paste_as_attachments_and_pictures() {
     assert!(!page.plain_text().contains("file://"), "the paths are not typed in");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+/// A host whose text recognition finds a fixed text.
+struct OcrHost;
+
+impl crate::Host for OcrHost {
+    fn clock(&self) -> notecraft_engine::Clock {
+        notecraft_engine::Clock::default()
+    }
+    fn ocr(&mut self, bytes: &[u8], lang: &str) -> Result<String, String> {
+        assert!(!bytes.is_empty() && lang == "eng");
+        Ok("INVOICE 42".into())
+    }
+}
+
+#[test]
+fn make_text_searchable_recognises_the_picture_through_the_host() {
+    let (a, id) = page_with_picture();
+    let mut a = NoteApp::new(a.session, Box::new(OcrHost));
+    a.session.run("object.select", json!({"ids": [id.to_string()]})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    let ctx = h.ctx.clone();
+    assert!(crate::pictures::host_action(h.state_mut(), &ctx, "object.copyTextFromPicture"));
+    h.run();
+    let im = h.state().session.page().unwrap().image(id).unwrap().clone();
+    assert_eq!(im.ocr_text, "INVOICE 42", "UI side of CM.Picture.CopyTextFromPicture");
+}

@@ -95,6 +95,28 @@ impl Host for DesktopHost {
         Ok(())
     }
 
+    fn ocr(&mut self, bytes: &[u8], lang: &str) -> Result<String, String> {
+        // Tesseract, if installed: the picture goes through a private temporary file.
+        let lang: String = lang.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '_' || *c == '+').take(32).collect();
+        let dir = std::env::temp_dir().join(format!("notecraft-ocr-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        let file = dir.join("picture");
+        std::fs::write(&file, bytes).map_err(|e| e.to_string())?;
+        let out = std::process::Command::new("tesseract")
+            .arg(&file)
+            .arg("stdout")
+            .args(["-l", if lang.is_empty() { "eng" } else { &lang }])
+            .stdin(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .output();
+        let _ = std::fs::remove_file(&file);
+        let out = out.map_err(|e| format!("couldn't start tesseract ({e}): install it to recognise text in pictures"))?;
+        if !out.status.success() {
+            return Err("tesseract couldn't read this picture".into());
+        }
+        Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+    }
+
     fn send_email(&mut self, subject: &str, attach: &str) -> Result<(), String> {
         // xdg-email (xdg-utils) hands the attachment to the desktop's mail program; other
         // systems have no portable way to attach a file from the command line.

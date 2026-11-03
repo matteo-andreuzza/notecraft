@@ -500,3 +500,19 @@ fn check_accessibility_lists_what_a_screen_reader_misses() {
     run(&mut s, "review.accessibility", json!({}));
     assert!(!s.view.accessibility_pane, "the button closes it again");
 }
+
+#[test]
+fn recognised_picture_text_is_searchable_and_copied() {
+    // parity: CM.Picture.OCRLanguageListMenu CM.Text.OCRLanguageListMenu CM.ParagraphHandle.OCRLanguageListMenu
+    // parity: CM.Picture.CopyTextFromPicture CM.Text.CopyTextFromPicture
+    let (mut s, id) = with_picture(2, 2);
+    run(&mut s, "object.select", json!({"ids": [id.to_string()]}));
+    assert!(s.run("object.copyTextFromPicture", json!({})).is_err(), "nothing recognised yet");
+    run(&mut s, "object.ocrLanguage", json!({"text": "Quarterly zebra report\u{7}", "lang": "eng"}));
+    assert_eq!(image(&s, id).ocr_text, "Quarterly zebra report", "control characters dropped");
+    assert_eq!(run(&mut s, "object.copyTextFromPicture", json!({}))["text"], "Quarterly zebra report");
+    let hits = run(&mut s, "search.all", json!({"query": "zebra"}));
+    assert!(hits.to_string().contains(&s.page().unwrap().id.to_string()), "search finds the picture's text: {hits}");
+    run(&mut s, "object.ocrLanguage", json!({"lang": "none"}));
+    assert!(image(&s, id).ocr_text.is_empty(), "Disable forgets it");
+}
