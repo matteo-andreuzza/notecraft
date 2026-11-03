@@ -51,6 +51,41 @@ fn need_attachment(s: &Session) -> Option<&'static str> {
     if selected(s, false).is_empty() { Some("Select a file attachment first") } else { None }
 }
 
+fn need_original(s: &Session) -> Option<&'static str> {
+    need_attachment(s).or_else(|| if original(s).is_ok() { None } else { Some("This file was not inserted from a file on this computer") })
+}
+
+/// The selected attachment's original path.
+fn original(s: &Session) -> Result<String, CmdError> {
+    let page = s.page().ok_or_else(no_page)?;
+    selected(s, false)
+        .iter()
+        .find_map(|id| page.attachment(*id).and_then(|a| a.source.clone()))
+        .ok_or_else(|| CmdError::Disabled("This file was not inserted from a file on this computer".into()))
+}
+
+/// The absolute form of a command's `path`, kept as the attachment's original.
+fn source_of(v: &Value) -> Option<String> {
+    let path = p::str(v, "path").filter(|p| !p.is_empty())?;
+    std::path::absolute(path).ok().map(|p| p.display().to_string())
+}
+
+/// `path` as a `file://` URL: bytes outside the unreserved set and `/` are percent-encoded.
+pub(crate) fn file_url(path: &str) -> String {
+    let mut out = String::from("file://");
+    if !path.starts_with('/') {
+        out.push('/');
+    }
+    for b in path.replace('\\', "/").bytes() {
+        if b.is_ascii_alphanumeric() || b"-._~/:".contains(&b) {
+            out.push(b as char);
+        } else {
+            out.push_str(&format!("%{b:02X}"));
+        }
+    }
+    out
+}
+
 fn need_media(s: &Session) -> Option<&'static str> {
     if s.sel.page.is_none() {
         return Some("No page is open");
@@ -155,6 +190,27 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("attachment.rename", "CM.FileAttachment.RenameSelected", "Rename", "Context/File Attachment/Rename", rename)
             .params(r#"{"name": new file name}"#)
             .when(need_attachment),
+        // The file the attachment was inserted from, where it was then (not the attached copy).
+        CommandSpec::new("attachment.openOriginal", "CM.FileAttachment.OriginalFileOpen", "Open Original", "Context/File Attachment/Open Original", |s, _| {
+            let path = original(s)?;
+            if !std::path::Path::new(&path).is_file() {
+                return Err(CmdError::Failed(format!("the original file is no longer at {path}")));
+            }
+            Ok(json!({"path": path}))
+        })
+        .params(r#"{} → {"path"} for the host to open"#)
+        .pure()
+        .when(need_original),
+        CommandSpec::new(
+            "attachment.copyLink",
+            "CM.FileAttachment.FileAttachmentShortcutToOriginalCopy",
+            "Copy Link to File",
+            "Context/File Attachment/Copy Link to File",
+            |s, _| Ok(json!({"text": file_url(&original(s)?)})),
+        )
+        .params(r#"{} → {"text": file:// URL} for the clipboard"#)
+        .pure()
+        .when(need_original),
     ]
 }
 
@@ -293,7 +349,7 @@ pub(crate) fn push_attachment(s: &mut Session, v: &Value, name: String, bytes: V
     let page = s.page().ok_or_else(no_page)?;
     let pos = ops::insert_pos(s, page, v);
     let (id, blob_id) = (s.new_id(), s.new_id());
-    let mut a = Attachment { id, pos, name, blob: Blob::new(blob_id, Arc::from(bytes)), alt_text: String::new(), link: None };
+    let mut a = Attachment { id, pos, name, blob: Blob::new(blob_id, Arc::from(bytes)), alt_text: String::new(), link: None, source: source_of(v) };
     a.normalize();
     s.pending_outline = None;
     s.page_mut().ok_or_else(no_page)?.objects.push(PageObject::Attachment(a));

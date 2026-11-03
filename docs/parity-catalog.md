@@ -815,8 +815,8 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.FileAttachment.JotDeletePrintoutPages | Delete Printout Pages | Context/File Attachment/Delete Printout Pages | button |  | printout.delete | P2 | wired | FLUENT19:ContextMenuFileAttachment/JotDeletePrintoutPages |  |
 | CM.FileAttachment.SelectWhatToDisplay | Display As | Context/File Attachment/Display As | button |  | printout.displayAs | P2 | missing | FLUENT19:ContextMenuFileAttachment/SelectWhatToDisplay |  |
 | CM.FileAttachment.RefreshOleObjects | Refresh | Context/File Attachment/Refresh | button |  | printout.refresh | P2 | missing | FLUENT19:ContextMenuFileAttachment/RefreshOleObjects |  |
-| CM.FileAttachment.OriginalFileOpen | Open Original | Context/File Attachment/Open Original | button |  | attachment.openOriginal | P2 | missing | FLUENT19:ContextMenuFileAttachment/OriginalFileOpen |  |
-| CM.FileAttachment.FileAttachmentShortcutToOriginalCopy | Copy Link to File | Context/File Attachment/Copy Link to File | button |  | attachment.copyLink | P2 | missing | FLUENT19:ContextMenuFileAttachment/FileAttachmentShortcutToOriginalCopy |  |
+| CM.FileAttachment.OriginalFileOpen | Open Original | Context/File Attachment/Open Original | button |  | attachment.openOriginal | P2 | wired | FLUENT19:ContextMenuFileAttachment/OriginalFileOpen |  |
+| CM.FileAttachment.FileAttachmentShortcutToOriginalCopy | Copy Link to File | Context/File Attachment/Copy Link to File | button |  | attachment.copyLink | P2 | wired | FLUENT19:ContextMenuFileAttachment/FileAttachmentShortcutToOriginalCopy |  |
 | CM.FileAttachment.Cut | Cut | Context/File Attachment/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuFileAttachment/Cut |  |
 | CM.FileAttachment.CopyOneNote | Copy | Context/File Attachment/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuFileAttachment/CopyOneNote |  |
 | CM.FileAttachment.PasteGalleryMini | Paste Options | Context/File Attachment/Paste Options | gallery |  | edit.pasteOptions | P0 | wired | FLUENT19:ContextMenuFileAttachment/PasteGalleryMini | A row of the four paste choices (Keep Source Formatting, Merge Formatting, Keep Text Only, Picture) under a "Paste Options:" caption; each reads the system clipboard as Ctrl+V does (order and icons unverified) |
@@ -1060,7 +1060,7 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.AttachNotesToMeeting | Attach Notes to Meeting | Quick Access Toolbar/Commands Not in the Ribbon/Attach Notes to Meeting | button |  |  | P3 | out-of-scope | FLUENT19:AttachNotesToMeeting |  |
 | QAT.NR.PenMode | Pen Mode | Quick Access Toolbar/Commands Not in the Ribbon/Pen Mode | toggle |  | draw.penMode | P2 | wired | FLUENT19:PenMode |  |
 | QAT.NR.HighlighterMode | Highlighter Mode | Quick Access Toolbar/Commands Not in the Ribbon/Highlighter Mode | toggle |  | draw.highlighterMode | P2 | wired | FLUENT19:HighlighterMode |  |
-| QAT.NR.HideRibbon | Hide Ribbon | Quick Access Toolbar/Commands Not in the Ribbon/Hide Ribbon | toggle |  | ui.hideRibbon | P2 | missing | FLUENT19:HideRibbon |  |
+| QAT.NR.HideRibbon | Hide Ribbon | Quick Access Toolbar/Commands Not in the Ribbon/Hide Ribbon | toggle |  | ui.hideRibbon | P2 | wired | FLUENT19:HideRibbon |  |
 | QAT.NR.OfficeFeedbackBackstage | Feedback | Quick Access Toolbar/Commands Not in the Ribbon/Feedback | button |  | help.feedback | P3 | missing | FLUENT19:OfficeFeedbackBackstage |  |
 | QAT.NR.NewPageFromTemplate | New Page from Template | Quick Access Toolbar/Commands Not in the Ribbon/New Page from Template | button |  | page.newFromTemplate | P2 | wired | FLUENT19:NewPageFromTemplate | As Insert › Page Templates › Page from Template (unverified) |
 | QAT.NR.PasteAsInkOneNote | Paste as Ink | Quick Access Toolbar/Commands Not in the Ribbon/Paste as Ink | button |  | edit.pasteInk | P3 | missing | FLUENT19:PasteAsInkOneNote |  |

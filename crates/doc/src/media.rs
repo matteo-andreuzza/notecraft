@@ -258,6 +258,10 @@ pub struct Attachment {
     /// A hyperlink on the file's icon (Link… on its menu).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub link: Option<String>,
+    /// The absolute path the file was inserted from, when it came from disk (Open Original,
+    /// Copy Link to File). Older files and other builds leave it out.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 /// Longest stored hyperlink on an object, bytes.
@@ -288,6 +292,9 @@ impl Attachment {
         self.name = safe_file_name(&self.name);
         clean_alt(&mut self.alt_text);
         clean_link(&mut self.link);
+        if self.source.as_ref().is_some_and(|p| p.is_empty() || p.len() > MAX_LINK || p.contains(char::is_control)) {
+            self.source = None;
+        }
     }
 }
 

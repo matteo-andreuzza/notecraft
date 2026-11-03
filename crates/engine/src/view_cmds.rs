@@ -146,6 +146,18 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         )
         .key("Mod+F1")
         .pure(),
+        // QAT.NR.HideRibbon: the tab row and the ribbon go; the same button brings them back.
+        CommandSpec::new(
+            "ui.hideRibbon",
+            "QAT.NR.HideRibbon",
+            "Hide Ribbon",
+            "Quick Access Toolbar/Commands Not in the Ribbon/Hide Ribbon",
+            |s, _| {
+                s.view.ribbon_hidden = !s.view.ribbon_hidden;
+                Ok(json!({"hidden": s.view.ribbon_hidden}))
+            },
+        )
+        .pure(),
         // R.View.Views.NavigationPanes — show or hide the navigation (the notebook tree and the
         // page column), also the ☰ button under the ribbon (UI.Nav.Toggle).
         CommandSpec::new("view.navigationPanes", "R.View.Views.NavigationPanes", "Navigation Panes", "View/Views/Navigation Panes", |s, _| {

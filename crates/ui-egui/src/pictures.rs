@@ -405,7 +405,7 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
         "edit.paste" | "edit.pasteKeepSource" | "edit.pasteMerge" | "edit.pasteTextOnly" | "edit.pastePicture" => {
             crate::clipboard::paste(app, ctx, cmd, None)
         }
-        "attachment.open" | "printout.openOriginal" => {
+        "attachment.open" | "printout.openOriginal" | "attachment.openOriginal" => {
             if let Some(path) = app.run(ctx, cmd, json!({})).and_then(|v| v.get("path").and_then(|p| p.as_str()).map(str::to_string))
                 && let Err(e) = app.host.open_path(&path)
             {

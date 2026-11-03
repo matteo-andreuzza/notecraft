@@ -40,6 +40,7 @@ fn sample(g: &mut IdGen) -> Page {
         blob: Blob::new(g.next_id(), Arc::from(&b"hello"[..])),
         alt_text: String::new(),
         link: None,
+        source: None,
     }));
     p.objects.push(PageObject::Ink(Ink::new(
         g.next_id(),
@@ -104,6 +105,7 @@ fn lost_bytes_and_hostile_names_are_handled() {
         blob: Blob::new(g.next_id(), Arc::from(&b"x"[..])),
         alt_text: String::new(),
         link: None,
+        source: None,
     }));
     let mut lost = Blob::new(g.next_id(), Arc::from(&b""[..]));
     lost.len = 10;

@@ -401,8 +401,16 @@ impl NoteApp {
         }
         if matches!(id, "edit.copy" | "edit.cut") {
             clipboard::after_copy(self, ctx, &v);
-        } else if matches!(id, "page.copyLink" | "section.copyLink" | "notebook.copyLink" | "link.copy" | "para.copyLink" | "sectionGroup.copyLink")
-            && let Some(t) = v.get("text").or_else(|| v.get("link")).and_then(Value::as_str)
+        } else if matches!(
+            id,
+            "page.copyLink"
+                | "section.copyLink"
+                | "notebook.copyLink"
+                | "link.copy"
+                | "attachment.copyLink"
+                | "para.copyLink"
+                | "sectionGroup.copyLink"
+        ) && let Some(t) = v.get("text").or_else(|| v.get("link")).and_then(Value::as_str)
         {
             ctx.copy_text(t.to_string());
         }
@@ -557,8 +565,10 @@ impl NoteApp {
         chrome::title_bar(self, ui, t);
         self.quick_note_window(&ctx);
         if !self.session.view.full_page && !self.session.view.quick_note {
-            chrome::tab_row(self, ui, t);
-            ribbon::show(self, ui, t);
+            if !self.session.view.ribbon_hidden {
+                chrome::tab_row(self, ui, t);
+                ribbon::show(self, ui, t);
+            }
             nav::nav_row(self, ui, t);
             nav::notebook_pane(self, ui, t);
             nav::page_list(self, ui, t);

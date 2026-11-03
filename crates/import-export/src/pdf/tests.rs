@@ -122,6 +122,7 @@ fn all_objects() -> Page {
         blob: Blob::new(g.next_id(), Arc::from(&b"hello"[..])),
         alt_text: String::new(),
         link: None,
+        source: None,
     }));
     p.objects.push(PageObject::Ink(Ink::new(
         g.next_id(),

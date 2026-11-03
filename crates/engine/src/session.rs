@@ -298,6 +298,8 @@ pub struct ViewState {
     pub docked: bool,
     /// Ribbon collapsed.
     pub ribbon_collapsed: bool,
+    /// Ribbon hidden, tab row too (`QAT.NR.HideRibbon`; the title bar's QAT stays).
+    pub ribbon_hidden: bool,
     /// Simplified or classic ribbon.
     pub ribbon_mode: RibbonMode,
     /// Notebook pane collapsed.
@@ -367,6 +369,7 @@ impl Default for ViewState {
             full_page: false,
             docked: false,
             ribbon_collapsed: false,
+            ribbon_hidden: false,
             ribbon_mode: RibbonMode::Simplified,
             notebook_pane_collapsed: false,
             scope: ScopeKind::AllNotebooks,

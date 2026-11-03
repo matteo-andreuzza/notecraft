@@ -314,6 +314,7 @@ impl Walk<'_, '_> {
             blob: Blob::new(self.ids.next_id(), Arc::from(bytes)),
             alt_text: String::new(),
             link: None,
+            source: None,
         };
         a.normalize();
         self.report.keep("attachments");

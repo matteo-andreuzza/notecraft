@@ -211,6 +211,26 @@ fn save_picture_and_attachments() {
 }
 
 #[test]
+fn an_attachment_from_disk_opens_and_links_its_original() {
+    // parity: CM.FileAttachment.OriginalFileOpen CM.FileAttachment.FileAttachmentShortcutToOriginalCopy
+    let (mut s, _) = with_picture(2, 2);
+    let dir = temp_dir("original");
+    let file = dir.join("Q3 report.pdf");
+    std::fs::write(&file, b"%PDF-1.7").unwrap();
+    run(&mut s, "insert.file", json!({"path": file.display().to_string()}));
+    assert_eq!(run(&mut s, "attachment.openOriginal", json!({}))["path"], file.display().to_string());
+    let url = run(&mut s, "attachment.copyLink", json!({}))["text"].as_str().unwrap().to_string();
+    assert!(url.starts_with("file://") && url.ends_with("/Q3%20report.pdf"), "{url}");
+    // The original moved away: Open Original says so, the attached copy is untouched.
+    std::fs::remove_file(&file).unwrap();
+    assert!(s.run("attachment.openOriginal", json!({})).is_err());
+    // A file given as bytes has no original: both are disabled.
+    run(&mut s, "insert.file", json!({"data": data(b"x"), "name": "x.txt"}));
+    assert!(s.run("attachment.copyLink", json!({})).is_err());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn a_page_holds_at_most_max_objects() {
     let (mut s, id) = with_picture(2, 2);
     let im = image(&s, id);

@@ -1372,6 +1372,22 @@ fn the_paragraph_alignment_menu_aligns_the_paragraph() {
 }
 
 #[test]
+fn hide_ribbon_on_the_quick_access_toolbar_hides_the_tabs_and_brings_them_back() {
+    // parity: QAT.NR.HideRibbon
+    let mut a = app();
+    a.ui.qat.push("QAT.NR.HideRibbon".into());
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Insert").is_some());
+    h.get_by_label("Hide Ribbon").click();
+    h.run();
+    assert!(h.query_by_label("Insert").is_none(), "the tab row is hidden");
+    h.get_by_label("Hide Ribbon").click();
+    h.run();
+    assert!(h.query_by_label("Insert").is_some(), "the same button shows it again");
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

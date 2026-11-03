@@ -1156,3 +1156,12 @@ were certain landed, behaviour unchanged (every test green after each commit).
   pinned by a test (Show Level 1 hides a level-2 paragraph, Show All Levels shows it).
 - Dependencies: pulldown-cmark 0.13.6 (RUSTSEC-2026-0433); yanked async-executor and
   clipboard-win updated.
+
+## 2026-11-03 — Hide Ribbon, an attachment's original file
+
+- `ui.hideRibbon` (QAT.NR.HideRibbon): the tab row and the ribbon go away; the same QAT
+  button brings them back (`ViewState::ribbon_hidden`, not saved).
+- `Attachment::source`: the absolute path a file was inserted from (serde default, so no
+  format bump; older builds ignore it). `attachment.openOriginal` opens that file if it is
+  still there; `attachment.copyLink` copies it as a `file://` URL. Both are disabled for
+  files given as bytes (paste, web).
