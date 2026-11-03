@@ -20,6 +20,7 @@ pub mod sample;
 pub mod selection;
 pub mod session;
 
+mod access_cmds;
 mod caret_cmds;
 mod draw_cmds;
 mod edit_cmds;

@@ -37,6 +37,7 @@ fn registry() -> &'static Registry {
         specs.extend(crate::section_cmds::specs());
         specs.extend(crate::protect_cmds::specs());
         specs.extend(crate::spell_cmds::specs());
+        specs.extend(crate::access_cmds::specs());
         specs.extend(crate::file_cmds::specs());
         specs.extend(crate::export_cmds::specs());
         specs.extend(crate::import_cmds::specs());

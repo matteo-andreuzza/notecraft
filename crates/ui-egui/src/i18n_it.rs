@@ -2,7 +2,11 @@
 
 /// English label → Italian label, sorted by the English label.
 pub(crate) const IT: &[(&str, &str)] = &[
+    ("A picture has no alternative text", "Un'immagine non ha testo alternativo"),
+    ("A table has merged cells", "Una tabella ha celle unite"),
+    ("A table has no header row", "Una tabella non ha una riga di intestazione"),
     ("About NoteCraft", "Informazioni su NoteCraft"),
+    ("Accessibility", "Accessibilità"),
     ("Account", "Account"),
     ("Add Pen", "Aggiungi penna"),
     ("Add page", "Aggiungi pagina"),
@@ -228,6 +232,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
     ("Next Page", "Pagina successiva"),
     ("Next Unread", "Successivo da leggere"),
     ("No Color", "Nessun colore"),
+    ("No accessibility issues found on this page.", "Nessun problema di accessibilità in questa pagina."),
     ("None", "Nessuno"),
     ("Normal", "Normale"),
     ("Normal View", "Visualizzazione normale"),
@@ -248,6 +253,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
     ("Open Link", "Apri collegamento"),
     ("Open Notebook", "Apri blocco appunti"),
     ("Open Original", "Apri originale"),
+    ("Open a page to check it.", "Apri una pagina per verificarla."),
     ("Options", "Opzioni"),
     ("Order", "Ordine"),
     ("Page Color", "Colore pagina"),
@@ -399,6 +405,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
         "The page as a single file web page (.mht), attached to a new mail.",
         "La pagina come pagina Web in un unico file (.mht), allegata a un nuovo messaggio.",
     ),
+    ("The page has no title", "La pagina non ha un titolo"),
     ("The page's text in a new mail.", "Il testo della pagina in un nuovo messaggio."),
     ("Thesaurus", "Sinonimi"),
     ("This Notebook", "Questo blocco appunti"),

@@ -339,6 +339,8 @@ pub struct ViewState {
     /// Spelling pane open (Review › Spelling).
     #[serde(default)]
     pub spelling_pane: bool,
+    /// The Accessibility pane (Review › Check Accessibility).
+    pub accessibility_pane: bool,
     /// The word the Spelling pane shows, with its suggestions.
     #[serde(default)]
     pub spelling: Option<SpellingState>,
@@ -388,6 +390,7 @@ impl Default for ViewState {
             paper_pane: false,
             password_pane: false,
             spelling_pane: false,
+            accessibility_pane: false,
             ink_replay: false,
             context_tag: None,
             spelling: None,

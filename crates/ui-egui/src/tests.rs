@@ -1406,6 +1406,19 @@ fn other_authors_initials_show_until_authors_are_hidden() {
 }
 
 #[test]
+fn the_accessibility_pane_lists_the_page_issues() {
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("review.accessibility", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("The page has no title").is_some(), "UI pane for R.Review.Accessibility.AccessibilityChecker");
+    h.get_by_label("The page has no title").click();
+    h.run();
+    assert!(h.state().session.view.accessibility_pane);
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

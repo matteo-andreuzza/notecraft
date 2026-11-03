@@ -146,6 +146,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "draw.replay" => s.view.ink_replay,
         "review.password" => s.view.password_pane,
         "review.spelling" => s.view.spelling_pane,
+        "review.accessibility" => s.view.accessibility_pane,
         "draw.withTouch" => s.draw.with_touch,
         "draw.lasso" => s.draw.tool == notecraft_engine::DrawTool::Lasso,
         "draw.pan" => s.draw.tool == notecraft_engine::DrawTool::Pan,

@@ -402,7 +402,7 @@ The Review tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Review.Proofing.SpellCheck | Spelling | Review/Proofing/Spelling | button | `F7` | review.spelling | P1 | verified | FLUENT19:SpellCheck |  |
 | R.Review.Proofing.ResearchPane | Research | Review/Proofing/Research | toggle |  | review.research | P3 | missing | FLUENT19:ResearchPane |  |
 | R.Review.Proofing.Thesaurus | Thesaurus | Review/Proofing/Thesaurus | button | `Shift+F7` | review.thesaurus | P2 | missing | FLUENT19:Thesaurus |  |
-| R.Review.Accessibility.AccessibilityChecker | Check Accessibility | Review/Accessibility/Check Accessibility | button |  | review.accessibility | P2 | missing | FLUENT19:AccessibilityChecker |  |
+| R.Review.Accessibility.AccessibilityChecker | Check Accessibility | Review/Accessibility/Check Accessibility | button |  | review.accessibility | P2 | wired | FLUENT19:AccessibilityChecker |  |
 | R.Review.Language.TranslateMenu | Translate | Review/Language/Translate | menu |  |  | P3 | missing | FLUENT19:TranslateMenu |  |
 | R.Review.Language.TranslateSelected | Translate Selected Text | Review/Language/Translate/Translate Selected Text | button |  | review.translateSelection | P3 | missing | FLUENT19:TranslateSelected |  |
 | R.Review.Language.MiniTranslator | Mini Translator | Review/Language/Translate/Mini Translator | toggle |  | review.miniTranslator | P3 | missing | FLUENT19:MiniTranslator |  |

@@ -529,3 +529,39 @@ pub fn find_bar(app: &mut NoteApp, ui: &mut Ui, area: egui::Rect, t: Tokens) {
         });
     });
 }
+
+/// The Accessibility pane (Review › Check Accessibility): the page's issues, rechecked as it
+/// changes; a click selects the object (or the title) concerned.
+pub fn accessibility_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    pane_panel("accessibility_pane", 280.0, &t).show(ui, |ui| {
+        card_frame(&t).show(ui, |ui| {
+            ui.set_min_size(ui.available_size());
+            if card_header(ui, "Accessibility", &t) {
+                app.session.view.accessibility_pane = false;
+                return;
+            }
+            ui.add_space(4.0);
+            let Some(res) = app.run(&ctx, "review.accessibility", json!({"open": true})) else {
+                ui.label(RichText::new("Open a page to check it.").color(t.text_disabled));
+                return;
+            };
+            let issues = res["issues"].as_array().cloned().unwrap_or_default();
+            if issues.is_empty() {
+                ui.label(RichText::new("No accessibility issues found on this page.").color(t.page_meta));
+            }
+            egui::ScrollArea::vertical().id_salt("accessibility_scroll").show(ui, |ui| {
+                for it in issues {
+                    let text = crate::i18n::tr(it["message"].as_str().unwrap_or(""));
+                    let resp = ui.add(egui::Button::new(RichText::new(text).color(t.text)).frame(false).min_size(vec2(220.0, 24.0)));
+                    if resp.clicked() {
+                        match it["object"].as_str() {
+                            Some(id) => app.run(&ctx, "object.select", json!({"ids": [id]})),
+                            None => app.run(&ctx, "caret.set", json!({"block": "title", "para": 0, "offset": 0})),
+                        };
+                    }
+                }
+            });
+        });
+    });
+}

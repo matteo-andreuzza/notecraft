@@ -479,3 +479,24 @@ fn a_selected_container_moves_and_resizes_like_an_object() {
     assert_eq!((ol.pos.x, ol.width), (45.0, notecraft_doc::OutlineWidth::Fixed(300.0)));
     assert!(s.run("object.resize", json!({"width": "wide"})).is_err());
 }
+
+#[test]
+fn check_accessibility_lists_what_a_screen_reader_misses() {
+    // parity: R.Review.Accessibility.AccessibilityChecker
+    let (mut s, id) = with_picture(2, 2);
+    let kinds = |r: &serde_json::Value| r["issues"].as_array().unwrap().iter().map(|i| i["kind"].as_str().unwrap().to_string()).collect::<Vec<_>>();
+    let r = run(&mut s, "review.accessibility", json!({}));
+    assert!(s.view.accessibility_pane, "the pane opens");
+    assert!(kinds(&r).contains(&"altText".to_string()), "{r}");
+    assert_eq!(r["issues"].as_array().unwrap().iter().find(|i| i["kind"] == "altText").unwrap()["object"], id.to_string());
+    run(&mut s, "object.select", json!({"ids": [id.to_string()]}));
+    run(&mut s, "object.altText", json!({"text": "A red square"}));
+    run(&mut s, "insert.table", json!({"rows": 2, "cols": 2}));
+    let r = run(&mut s, "review.accessibility", json!({"open": true}));
+    assert!(!kinds(&r).contains(&"altText".to_string()));
+    assert!(kinds(&r).contains(&"tableHeader".to_string()));
+    run(&mut s, "table.headerRow", json!({}));
+    assert!(!kinds(&run(&mut s, "review.accessibility", json!({"open": true}))).contains(&"tableHeader".to_string()));
+    run(&mut s, "review.accessibility", json!({}));
+    assert!(!s.view.accessibility_pane, "the button closes it again");
+}

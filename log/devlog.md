@@ -1195,3 +1195,11 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Find by Author (`history.findByAuthor`): the Recent Edits pane over all pages, grouped by
   the authors of each page's paragraphs (title included), authors by name, pages newest
   first; the pane has a Sort by (Date modified / Author) row.
+
+## 2026-11-03 — Check Accessibility
+
+- `review.accessibility` (Review › Check Accessibility, new `access_cmds.rs`) opens the
+  Accessibility pane: a page without a title, pictures without alternative text, tables
+  without a header row or with merged cells (NoteCraft's own rules; OneNote's are
+  unverified). The pane rechecks as the page changes; a click selects the object (or the
+  title).
