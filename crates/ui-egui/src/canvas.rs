@@ -73,6 +73,13 @@ impl ParaLayout {
         Rect::from_min_size(self.pos, self.galley.size().max(vec2(4.0, self.galley.size().y)))
     }
 
+    /// Where a bullet or number is drawn, left of the first row (the Bullet and Number menus).
+    pub(crate) fn list_marker(&self, zoom: f32) -> Rect {
+        let w = LIST_W * PT * zoom;
+        let h = self.galley.rows.first().map(|r| r.height()).unwrap_or(14.0);
+        Rect::from_min_size(pos2(self.pos.x - w, self.pos.y), vec2(w, h))
+    }
+
     /// The byte offset nearest to a screen point.
     pub fn offset_at(&self, p: Pos2) -> usize {
         let c = self.galley.cursor_from_pos(p - self.pos);
@@ -210,6 +217,9 @@ pub(crate) enum ContextTarget {
     Ink(Id),
     /// A note tag's icon: the paragraph and the tag's index in it (`CM.Tag.*`).
     Tag(Block, usize, usize),
+    /// A bullet or number: the paragraph, and whether it is numbered (`CM.Bullet.*`,
+    /// `CM.Number.*`).
+    List(Block, usize, bool),
     /// A stroke of a multi-object (lasso) selection (`CM.LassoSelection.*`).
     Lasso(Id),
 }

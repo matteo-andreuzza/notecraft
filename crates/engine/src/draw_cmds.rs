@@ -306,7 +306,83 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             rotate_ink(s, -45.0)
         })
         .when(need_ink),
+        // QAT.FavoritePen1–8, QAT.FavoriteHighlighter1–4: the gallery's Nth pen or highlighter
+        // (the gallery order is the favourites order; unverified).
+        CommandSpec::new("draw.favoritePen1", "QAT.FavoritePen1", "Favorite Pen 1", "Quick Access Toolbar/Favorite Pen 1", |s, _| favorite(s, InkTool::Pen, 0))
+            .when(|s| need_favorite(s, InkTool::Pen, 0))
+            .pure(),
+        CommandSpec::new("draw.favoritePen2", "QAT.FavoritePen2", "Favorite Pen 2", "Quick Access Toolbar/Favorite Pen 2", |s, _| favorite(s, InkTool::Pen, 1))
+            .when(|s| need_favorite(s, InkTool::Pen, 1))
+            .pure(),
+        CommandSpec::new("draw.favoritePen3", "QAT.FavoritePen3", "Favorite Pen 3", "Quick Access Toolbar/Favorite Pen 3", |s, _| favorite(s, InkTool::Pen, 2))
+            .when(|s| need_favorite(s, InkTool::Pen, 2))
+            .pure(),
+        CommandSpec::new("draw.favoritePen4", "QAT.FavoritePen4", "Favorite Pen 4", "Quick Access Toolbar/Favorite Pen 4", |s, _| favorite(s, InkTool::Pen, 3))
+            .when(|s| need_favorite(s, InkTool::Pen, 3))
+            .pure(),
+        CommandSpec::new("draw.favoritePen5", "QAT.NR.FavoritePen5", "Favorite Pen 5", "Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 5", |s, _| favorite(s, InkTool::Pen, 4))
+            .when(|s| need_favorite(s, InkTool::Pen, 4))
+            .pure(),
+        CommandSpec::new("draw.favoritePen6", "QAT.NR.FavoritePen6", "Favorite Pen 6", "Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 6", |s, _| favorite(s, InkTool::Pen, 5))
+            .when(|s| need_favorite(s, InkTool::Pen, 5))
+            .pure(),
+        CommandSpec::new("draw.favoritePen7", "QAT.NR.FavoritePen7", "Favorite Pen 7", "Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 7", |s, _| favorite(s, InkTool::Pen, 6))
+            .when(|s| need_favorite(s, InkTool::Pen, 6))
+            .pure(),
+        CommandSpec::new("draw.favoritePen8", "QAT.NR.FavoritePen8", "Favorite Pen 8", "Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 8", |s, _| favorite(s, InkTool::Pen, 7))
+            .when(|s| need_favorite(s, InkTool::Pen, 7))
+            .pure(),
+        CommandSpec::new("draw.favoriteHighlighter1", "QAT.FavoriteHighlighter1", "Favorite Highlighter 1", "Quick Access Toolbar/Favorite Highlighter 1", |s, _| favorite(s, InkTool::Highlighter, 0))
+            .when(|s| need_favorite(s, InkTool::Highlighter, 0))
+            .pure(),
+        CommandSpec::new("draw.favoriteHighlighter2", "QAT.NR.FavoriteHighlighter2", "Favorite Highlighter 2", "Quick Access Toolbar/Commands Not in the Ribbon/Favorite Highlighter 2", |s, _| favorite(s, InkTool::Highlighter, 1))
+            .when(|s| need_favorite(s, InkTool::Highlighter, 1))
+            .pure(),
+        CommandSpec::new("draw.favoriteHighlighter3", "QAT.NR.FavoriteHighlighter3", "Favorite Highlighter 3", "Quick Access Toolbar/Commands Not in the Ribbon/Favorite Highlighter 3", |s, _| favorite(s, InkTool::Highlighter, 2))
+            .when(|s| need_favorite(s, InkTool::Highlighter, 2))
+            .pure(),
+        CommandSpec::new("draw.favoriteHighlighter4", "QAT.NR.FavoriteHighlighter4", "Favorite Highlighter 4", "Quick Access Toolbar/Commands Not in the Ribbon/Favorite Highlighter 4", |s, _| favorite(s, InkTool::Highlighter, 3))
+            .when(|s| need_favorite(s, InkTool::Highlighter, 3))
+            .pure(),
+        // QAT.NR.PenMode / HighlighterMode: the selected pen if it is of that kind, else the
+        // gallery's first one (unverified).
+        CommandSpec::new("draw.penMode", "QAT.NR.PenMode", "Pen Mode", "Quick Access Toolbar/Commands Not in the Ribbon/Pen Mode", |s, _| {
+            mode(s, InkTool::Pen)
+        })
+        .when(|s| need_favorite(s, InkTool::Pen, 0))
+        .pure(),
+        CommandSpec::new(
+            "draw.highlighterMode",
+            "QAT.NR.HighlighterMode",
+            "Highlighter Mode",
+            "Quick Access Toolbar/Commands Not in the Ribbon/Highlighter Mode",
+            |s, _| mode(s, InkTool::Highlighter),
+        )
+        .when(|s| need_favorite(s, InkTool::Highlighter, 0))
+        .pure(),
     ]
+}
+
+/// The gallery index of the `n`th pen of `tool`'s kind.
+fn nth_of(s: &Session, tool: InkTool, n: usize) -> Option<usize> {
+    s.draw.pens.iter().enumerate().filter(|(_, p)| p.tool == tool).nth(n).map(|(i, _)| i)
+}
+
+fn need_favorite(s: &Session, tool: InkTool, n: usize) -> Option<&'static str> {
+    if nth_of(s, tool, n).is_some() { None } else { Some("The pen gallery has no pen there") }
+}
+
+fn favorite(s: &mut Session, tool: InkTool, n: usize) -> CmdResult {
+    let i = nth_of(s, tool, n).ok_or_else(|| CmdError::Disabled("The pen gallery has no pen there".into()))?;
+    choose_pen(s, &json!({"index": i}))
+}
+
+fn mode(s: &mut Session, tool: InkTool) -> CmdResult {
+    let i = match s.draw.pens.get(s.draw.pen) {
+        Some(p) if p.tool == tool => s.draw.pen,
+        _ => nth_of(s, tool, 0).ok_or_else(|| CmdError::Disabled("The pen gallery has no pen of that kind".into()))?,
+    };
+    choose_pen(s, &json!({"index": i}))
 }
 
 fn set_tool(s: &mut Session, tool: DrawTool) -> CmdResult {

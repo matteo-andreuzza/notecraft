@@ -1140,3 +1140,15 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - `Prefs.unit` (`geom::Unit`, inches by default): Options › Advanced › Measurement units; the
   Paper Size pane's width, height and margins show and take that unit (`panes::length_field`
   converts through `Unit::from_points/to_points`). OPT.Advanced.MeasurementUnits wired.
+
+## 2026-11-03 — List menus, favourite pens
+
+- A right click on a bullet or a list number opens the Bullet menu (Remove Bullet, Change to
+  Numbered List) or the Number menu (Restart, Continue, Remove Numbering, Change to Bulleted
+  List): `ContextTarget::List`, `ParaLayout::list_marker`.
+- Quick Access Toolbar: Favorite Pen 1–8 and Favorite Highlighter 1–4 pick the gallery's Nth
+  pen or highlighter (disabled when there is none); Pen Mode and Highlighter Mode keep the
+  selected pen of that kind, else take the first one (unverified).
+- `CM.OutlookTask.TagsRemove` is out of scope (Outlook tasks need Outlook).
+- `cargo xtask parity`: `\"` inside a test's string literal no longer ends it (it hid five
+  catalog mentions after the peer's Paper Size test).

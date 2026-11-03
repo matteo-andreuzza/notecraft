@@ -134,11 +134,11 @@ Controls that can sit in the Quick Access Toolbar by default or from its customi
 | QAT.RedoButton | Redo | Quick Access Toolbar/Redo | button | `Mod+Y` | edit.redo | P0 | wired | FLUENT19:RedoButton |  |
 | QAT.FilePrint | Print | Quick Access Toolbar/Print | button | `Mod+P` | file.print | P1 | wired | FLUENT19:FilePrint |  |
 | QAT.FilePrintPreview | Print Preview | Quick Access Toolbar/Print Preview | button |  | file.printPreview | P2 | wired | FLUENT19:FilePrintPreview |  |
-| QAT.FavoritePen1 | Favorite Pen 1 | Quick Access Toolbar/Favorite Pen 1 | toggle |  | draw.favoritePen1 | P2 | missing | FLUENT19:FavoritePen1 |  |
-| QAT.FavoritePen2 | Favorite Pen 2 | Quick Access Toolbar/Favorite Pen 2 | toggle |  | draw.favoritePen2 | P2 | missing | FLUENT19:FavoritePen2 |  |
-| QAT.FavoritePen3 | Favorite Pen 3 | Quick Access Toolbar/Favorite Pen 3 | toggle |  | draw.favoritePen3 | P2 | missing | FLUENT19:FavoritePen3 |  |
-| QAT.FavoritePen4 | Favorite Pen 4 | Quick Access Toolbar/Favorite Pen 4 | toggle |  | draw.favoritePen4 | P2 | missing | FLUENT19:FavoritePen4 |  |
-| QAT.FavoriteHighlighter1 | Favorite Highlighter 1 | Quick Access Toolbar/Favorite Highlighter 1 | toggle |  | draw.favoriteHighlighter1 | P2 | missing | FLUENT19:FavoriteHighlighter1 |  |
+| QAT.FavoritePen1 | Favorite Pen 1 | Quick Access Toolbar/Favorite Pen 1 | toggle |  | draw.favoritePen1 | P2 | wired | FLUENT19:FavoritePen1 |  |
+| QAT.FavoritePen2 | Favorite Pen 2 | Quick Access Toolbar/Favorite Pen 2 | toggle |  | draw.favoritePen2 | P2 | wired | FLUENT19:FavoritePen2 |  |
+| QAT.FavoritePen3 | Favorite Pen 3 | Quick Access Toolbar/Favorite Pen 3 | toggle |  | draw.favoritePen3 | P2 | wired | FLUENT19:FavoritePen3 |  |
+| QAT.FavoritePen4 | Favorite Pen 4 | Quick Access Toolbar/Favorite Pen 4 | toggle |  | draw.favoritePen4 | P2 | wired | FLUENT19:FavoritePen4 |  |
+| QAT.FavoriteHighlighter1 | Favorite Highlighter 1 | Quick Access Toolbar/Favorite Highlighter 1 | toggle |  | draw.favoriteHighlighter1 | P2 | wired | FLUENT19:FavoriteHighlighter1 |  |
 | QAT.PointerModeOptions | Pen and Pointer Modes | Quick Access Toolbar/Pen and Pointer Modes | gallery |  | draw.pointerMode | P2 | missing | FLUENT19:PointerModeOptions |  |
 | QAT.ShapeSmileyFace | Shapes | Quick Access Toolbar/Shapes | menu |  | draw.shapes | P2 | missing | FLUENT19:ShapeSmileyFace |  |
 
@@ -720,11 +720,11 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Text.LastModifiedBy | Last Modified By (author and date) | Context/Text/Last Modified By (author and date) | button |  | | P2 | wired | FLUENT19:ContextMenuText/LastModifiedBy | an information line at the foot of the menu: "Last modified by <author>, <date> <time>" from the paragraph (wording unverified) |
 | CM.MisspelledWord.NoSpellingSuggestions | Spelling suggestions | Context/Misspelled Word/Spelling suggestions | gallery |  | review.spellingSuggestion | P1 | wired | FLUENT19:ContextMenuSpell/NoSpellingSuggestions | a right click on a misspelled word selects it; the menu lists its suggestions (each replaces it), then Ignore All and Add to Dictionary; nothing when the word is spelled right (unverified order) |
 | CM.Bullet.BulletRemove | Remove Bullet | Context/Bullet/Remove Bullet | button |  | para.bulletRemove | P0 | wired | FLUENT19:ContextMenuBullets/BulletRemove |  |
-| CM.Bullet.ChangeToNumberList | Change to Numbered List | Context/Bullet/Change to Numbered List | button |  | para.numbering | P1 | missing | FLUENT19:ContextMenuBullets/ChangeToNumberList |  |
+| CM.Bullet.ChangeToNumberList | Change to Numbered List | Context/Bullet/Change to Numbered List | button |  | para.numbering | P1 | wired | FLUENT19:ContextMenuBullets/ChangeToNumberList |  |
 | CM.Number.NumberListRestart | Restart Numbering | Context/Number/Restart Numbering | button |  | para.restartNumbering | P1 | verified | FLUENT19:ContextMenuNumbering/NumberListRestart |  |
 | CM.Number.ContinueNumberList | Continue Numbering | Context/Number/Continue Numbering | button |  | para.continueNumbering | P1 | wired | FLUENT19:ContextMenuNumbering/ContinueNumberList |  |
 | CM.Number.NumberListRemove | Remove Numbering | Context/Number/Remove Numbering | button |  | para.numberingRemove | P0 | wired | FLUENT19:ContextMenuNumbering/NumberListRemove |  |
-| CM.Number.ChangeToBullet | Change to Bulleted List | Context/Number/Change to Bulleted List | button |  | para.bullets | P1 | missing | FLUENT19:ContextMenuNumbering/ChangeToBullet |  |
+| CM.Number.ChangeToBullet | Change to Bulleted List | Context/Number/Change to Bulleted List | button |  | para.bullets | P1 | wired | FLUENT19:ContextMenuNumbering/ChangeToBullet |  |
 | CM.InkDrawing.Cut | Cut | Context/Ink Drawing/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuInkDrawing/Cut |  |
 | CM.InkDrawing.CopyOneNote | Copy | Context/Ink Drawing/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuInkDrawing/CopyOneNote |  |
 | CM.InkDrawing.PasteGalleryMini | Paste Options | Context/Ink Drawing/Paste Options | gallery |  | edit.pasteOptions | P0 | wired | FLUENT19:ContextMenuInkDrawing/PasteGalleryMini | A row of the four paste choices (Keep Source Formatting, Merge Formatting, Keep Text Only, Picture) under a "Paste Options:" caption; each reads the system clipboard as Ctrl+V does (order and icons unverified) |
@@ -836,7 +836,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.OutlookTask.OutlookTaskCustomDateContextual | Outlook Task: Custom | Context/Outlook Task/Outlook Task: Custom | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuOutlookTask/OutlookTaskCustomDateContextual |  |
 | CM.OutlookTask.OutlookTaskMarkCompleteContextual | Mark Complete (Outlook task) | Context/Outlook Task/Mark Complete (Outlook task) | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuOutlookTask/OutlookTaskMarkCompleteContextual |  |
 | CM.OutlookTask.OutlookTaskRemoveContextual | Delete Outlook Task | Context/Outlook Task/Delete Outlook Task | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuOutlookTask/OutlookTaskRemoveContextual |  |
-| CM.OutlookTask.TagsRemove | Remove Tag | Context/Outlook Task/Remove Tag | button |  | tag.remove | P0 | missing | FLUENT19:ContextMenuOutlookTask/TagsRemove |  |
+| CM.OutlookTask.TagsRemove | Remove Tag | Context/Outlook Task/Remove Tag | button |  | tag.remove | P0 | out-of-scope | FLUENT19:ContextMenuOutlookTask/TagsRemove | Outlook tasks need Outlook; a plain tag is removed from CM.Tag.TagsRemove |
 | CM.OutlookTask.OutlookTaskOpenContextual | Open Task in Outlook | Context/Outlook Task/Open Task in Outlook | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuOutlookTask/OutlookTaskOpenContextual |  |
 | CM.Notebook.CurrentNotebookSyncNow | Sync This Notebook Now | Context/Notebook/Sync This Notebook Now | button | `Shift+F9` | notebook.syncNow | P2 | missing | FLUENT19:ContextMenuNotebook/CurrentNotebookSyncNow |  |
 | CM.Notebook.GroupSyncStatus | Notebook Sync Status | Context/Notebook/Notebook Sync Status | button |  | notebook.syncStatus | P2 | missing | FLUENT19:ContextMenuNotebook/GroupSyncStatus |  |
@@ -1032,13 +1032,13 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.PasteTextOnly | Paste: Keep Text Only | Quick Access Toolbar/Commands Not in the Ribbon/Paste: Keep Text Only | button | `Mod+Shift+V` | edit.pasteTextOnly | P0 | wired | FLUENT19:PasteTextOnly |  |
 | QAT.NR.PasteAsPicture | Paste: Picture | Quick Access Toolbar/Commands Not in the Ribbon/Paste: Picture | button |  | edit.pastePicture | P2 | wired | FLUENT19:PasteAsPicture | Same command as R.Home.Clipboard.PastePicture |
 | QAT.NR.PasteInk | Paste Ink | Quick Access Toolbar/Commands Not in the Ribbon/Paste Ink | button |  | edit.pasteInk | P3 | missing | FLUENT19:PasteInk |  |
-| QAT.NR.FavoritePen5 | Favorite Pen 5 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 5 | toggle |  | draw.favoritePen5 | P2 | missing | FLUENT19:FavoritePen5 |  |
-| QAT.NR.FavoritePen6 | Favorite Pen 6 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 6 | toggle |  | draw.favoritePen6 | P2 | missing | FLUENT19:FavoritePen6 |  |
-| QAT.NR.FavoritePen7 | Favorite Pen 7 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 7 | toggle |  | draw.favoritePen7 | P2 | missing | FLUENT19:FavoritePen7 |  |
-| QAT.NR.FavoritePen8 | Favorite Pen 8 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 8 | toggle |  | draw.favoritePen8 | P2 | missing | FLUENT19:FavoritePen8 |  |
-| QAT.NR.FavoriteHighlighter2 | Favorite Highlighter 2 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Highlighter 2 | toggle |  | draw.favoriteHighlighter2 | P2 | missing | FLUENT19:FavoriteHighlighter2 |  |
-| QAT.NR.FavoriteHighlighter3 | Favorite Highlighter 3 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Highlighter 3 | toggle |  | draw.favoriteHighlighter3 | P2 | missing | FLUENT19:FavoriteHighlighter3 |  |
-| QAT.NR.FavoriteHighlighter4 | Favorite Highlighter 4 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Highlighter 4 | toggle |  | draw.favoriteHighlighter4 | P2 | missing | FLUENT19:FavoriteHighlighter4 |  |
+| QAT.NR.FavoritePen5 | Favorite Pen 5 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 5 | toggle |  | draw.favoritePen5 | P2 | wired | FLUENT19:FavoritePen5 |  |
+| QAT.NR.FavoritePen6 | Favorite Pen 6 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 6 | toggle |  | draw.favoritePen6 | P2 | wired | FLUENT19:FavoritePen6 |  |
+| QAT.NR.FavoritePen7 | Favorite Pen 7 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 7 | toggle |  | draw.favoritePen7 | P2 | wired | FLUENT19:FavoritePen7 |  |
+| QAT.NR.FavoritePen8 | Favorite Pen 8 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Pen 8 | toggle |  | draw.favoritePen8 | P2 | wired | FLUENT19:FavoritePen8 |  |
+| QAT.NR.FavoriteHighlighter2 | Favorite Highlighter 2 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Highlighter 2 | toggle |  | draw.favoriteHighlighter2 | P2 | wired | FLUENT19:FavoriteHighlighter2 |  |
+| QAT.NR.FavoriteHighlighter3 | Favorite Highlighter 3 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Highlighter 3 | toggle |  | draw.favoriteHighlighter3 | P2 | wired | FLUENT19:FavoriteHighlighter3 |  |
+| QAT.NR.FavoriteHighlighter4 | Favorite Highlighter 4 | Quick Access Toolbar/Commands Not in the Ribbon/Favorite Highlighter 4 | toggle |  | draw.favoriteHighlighter4 | P2 | wired | FLUENT19:FavoriteHighlighter4 |  |
 | QAT.NR.PlaybackTipPlay | Play (playback tip) | Quick Access Toolbar/Commands Not in the Ribbon/Play (playback tip) | button |  | media.play | P3 | missing | FLUENT19:PlaybackTipPlay |  |
 | QAT.NR.About | About NoteCraft | Quick Access Toolbar/Commands Not in the Ribbon/About NoteCraft | button |  | help.about | P1 | wired | FLUENT19:About |  |
 | QAT.NR.MarkPageAsUnread | Mark as Unread | Quick Access Toolbar/Commands Not in the Ribbon/Mark as Unread | button | `Mod+Q` | history.markUnread | P2 | wired | FLUENT19:MarkPageAsUnread |  |
@@ -1058,8 +1058,8 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.JotOpenFile | Open File (section) | Quick Access Toolbar/Commands Not in the Ribbon/Open File (section) | button | `Mod+Alt+Shift+O` | file.openSection | P1 | wired | FLUENT19:JotOpenFile |  |
 | QAT.NR.NewPageInSeries | New Page in Series | Quick Access Toolbar/Commands Not in the Ribbon/New Page in Series | button |  | page.newInSeries | P2 | missing | FLUENT19:NewPageInSeries |  |
 | QAT.NR.AttachNotesToMeeting | Attach Notes to Meeting | Quick Access Toolbar/Commands Not in the Ribbon/Attach Notes to Meeting | button |  |  | P3 | out-of-scope | FLUENT19:AttachNotesToMeeting |  |
-| QAT.NR.PenMode | Pen Mode | Quick Access Toolbar/Commands Not in the Ribbon/Pen Mode | toggle |  | draw.penMode | P2 | missing | FLUENT19:PenMode |  |
-| QAT.NR.HighlighterMode | Highlighter Mode | Quick Access Toolbar/Commands Not in the Ribbon/Highlighter Mode | toggle |  | draw.highlighterMode | P2 | missing | FLUENT19:HighlighterMode |  |
+| QAT.NR.PenMode | Pen Mode | Quick Access Toolbar/Commands Not in the Ribbon/Pen Mode | toggle |  | draw.penMode | P2 | wired | FLUENT19:PenMode |  |
+| QAT.NR.HighlighterMode | Highlighter Mode | Quick Access Toolbar/Commands Not in the Ribbon/Highlighter Mode | toggle |  | draw.highlighterMode | P2 | wired | FLUENT19:HighlighterMode |  |
 | QAT.NR.HideRibbon | Hide Ribbon | Quick Access Toolbar/Commands Not in the Ribbon/Hide Ribbon | toggle |  | ui.hideRibbon | P2 | missing | FLUENT19:HideRibbon |  |
 | QAT.NR.OfficeFeedbackBackstage | Feedback | Quick Access Toolbar/Commands Not in the Ribbon/Feedback | button |  | help.feedback | P3 | missing | FLUENT19:OfficeFeedbackBackstage |  |
 | QAT.NR.NewPageFromTemplate | New Page from Template | Quick Access Toolbar/Commands Not in the Ribbon/New Page from Template | button |  | page.newFromTemplate | P2 | wired | FLUENT19:NewPageFromTemplate | As Insert › Page Templates › Page from Template (unverified) |

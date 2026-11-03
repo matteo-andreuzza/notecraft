@@ -665,6 +665,31 @@ fn right_click_on_a_tag_icon_opens_the_tag_menu_for_that_tag() {
 }
 
 #[test]
+fn right_click_on_a_bullet_or_number_opens_its_list_menu() {
+    // parity: CM.Bullet.ChangeToNumberList CM.Number.ChangeToBullet
+    use notecraft_engine::doc::ListFormat;
+    let (mut a, o) = page_for_context_menu("buy milk");
+    a.session.run("para.bullets", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    let zoom = h.state().session.view.zoom;
+    let at = h.state().canvas.para(Block::Outline(o), 0).unwrap().list_marker(zoom).center();
+    right_click(&mut h, at);
+    assert!(h.query_by_label("Remove Bullet").is_some(), "CM.Bullet.BulletRemove");
+    h.get_by_label("Change to Numbered List").click();
+    h.run();
+    let list = |h: &Harness<'_, NoteApp>| h.state().session.page().unwrap().outline(o).unwrap().paragraphs[0].list;
+    assert!(matches!(list(&h), Some(ListFormat::Number { .. })), "the bullet became a number");
+    right_click(&mut h, at);
+    for item in ["Restart Numbering", "Continue Numbering", "Remove Numbering"] {
+        assert!(h.query_by_label(item).is_some(), "the Number menu: {item}");
+    }
+    h.get_by_label("Change to Bulleted List").click();
+    h.run();
+    assert!(matches!(list(&h), Some(ListFormat::Bullet(_))), "the number became a bullet");
+}
+
+#[test]
 fn right_click_on_a_misspelled_word_offers_its_corrections() {
     // parity: CM.MisspelledWord.NoSpellingSuggestions
     let (mut a, o) = page_for_context_menu("the cta sat");

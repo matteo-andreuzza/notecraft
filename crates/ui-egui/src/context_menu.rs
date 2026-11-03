@@ -46,6 +46,17 @@ pub const TAG_MENU: &[Entry] = &[
     Entry::Item("CM.Tag.JotAddToCustomNoteFlag"),
 ];
 
+/// Right-click menu on a bullet (catalog `CM.Bullet.*`).
+pub const BULLET_MENU: &[Entry] = &[Entry::Item("CM.Bullet.BulletRemove"), Entry::Item("CM.Bullet.ChangeToNumberList")];
+
+/// Right-click menu on a list number (catalog `CM.Number.*`).
+pub const NUMBER_MENU: &[Entry] = &[
+    Entry::Item("CM.Number.NumberListRestart"),
+    Entry::Item("CM.Number.ContinueNumberList"),
+    Entry::Item("CM.Number.NumberListRemove"),
+    Entry::Item("CM.Number.ChangeToBullet"),
+];
+
 /// Right-click menu on page text (and table cells; catalog `CM.Text.*`).
 pub const TEXT_MENU: &[Entry] = &[
     Entry::Item("CM.Text.NoSpellingSuggestions"),
@@ -557,6 +568,16 @@ fn detect(app: &NoteApp, p: Pos2) -> Option<ContextTarget> {
     if let Some((pl, k)) = app.canvas.paras.iter().find_map(|pl| pl.tag_icons.iter().find(|(r, _)| r.contains(p)).map(|(_, k)| (pl, *k))) {
         return Some(ContextTarget::Tag(pl.block, pl.para, k));
     }
+    let zoom = app.session.view.zoom.clamp(0.1, 4.0);
+    if let Some(page) = app.session.page()
+        && let Some((pl, numbered)) =
+            app.canvas.paras.iter().filter(|pl| pl.block != Block::Title && pl.list_marker(zoom).contains(p)).find_map(|pl| {
+                let list = notecraft_engine::Session::block_paras(page, pl.block)?.get(pl.para)?.list?;
+                Some((pl, matches!(list, notecraft_engine::doc::ListFormat::Number { .. })))
+            })
+    {
+        return Some(ContextTarget::List(pl.block, pl.para, numbered));
+    }
     if let Some(pl) = app.canvas.paras.iter().find(|pl| matches!(pl.block, Block::Outline(_)) && pl.handle.contains(p)) {
         return Some(ContextTarget::Handle(pl.block, pl.para));
     }
@@ -623,6 +644,13 @@ fn place_for(app: &mut NoteApp, ctx: &egui::Context, target: ContextTarget) {
                 .and_then(|p| notecraft_engine::Session::block_paras(p, block).and_then(|ps| ps.get(para)))
                 .and_then(|p| p.tags.get(k).map(|t| t.key.clone()));
             app.session.view.context_tag = key;
+        }
+        // A bullet or number: the caret goes to its paragraph, unless that paragraph is in the
+        // selection (the menu then acts on every selected paragraph).
+        ContextTarget::List(block, para, _) => {
+            if !inside_selection(app, block, para, 0) {
+                app.run(ctx, "caret.set", json!({"block": block_param(block), "para": para, "offset": 0}));
+            }
         }
         ContextTarget::Container(id) | ContextTarget::Picture(id) | ContextTarget::Attachment(id) | ContextTarget::Ink(id) => {
             app.run(ctx, "object.select", json!({"ids": [id.to_string()]}));
@@ -695,6 +723,8 @@ pub fn show(app: &mut NoteApp, ui: &Ui, resp: &egui::Response, t: Tokens) {
             ContextTarget::Ink(_) => render(app, ui, INK_MENU, t),
             ContextTarget::Lasso(_) => render(app, ui, LASSO_MENU, t),
             ContextTarget::Tag(..) => render(app, ui, TAG_MENU, t),
+            ContextTarget::List(_, _, false) => render(app, ui, BULLET_MENU, t),
+            ContextTarget::List(_, _, true) => render(app, ui, NUMBER_MENU, t),
         }
     };
     if let Some(at) = app.canvas.keyboard_menu_at {
@@ -773,6 +803,8 @@ mod tests {
             ("CM.FileAttachment.", ATTACHMENT_MENU),
             ("CM.InkDrawing.", INK_MENU),
             ("CM.LassoSelection.", LASSO_MENU),
+            ("CM.Bullet.", BULLET_MENU),
+            ("CM.Number.", NUMBER_MENU),
         ] {
             let mut placed: Vec<&str> = menu.iter().flat_map(ids).collect();
             let n = placed.len();

@@ -434,3 +434,33 @@ fn ink_replay_toggles_on_a_page_with_ink_and_stops_on_another_page() {
     blank_page(&mut s);
     assert!(!s.view.ink_replay, "another page stops the replay");
 }
+
+#[test]
+fn favorite_pens_pick_the_galleries_nth_pen_or_highlighter() {
+    // parity: QAT.FavoritePen1 QAT.FavoritePen2 QAT.FavoritePen3 QAT.FavoritePen4 QAT.NR.FavoritePen5
+    // parity: QAT.NR.FavoritePen6 QAT.NR.FavoritePen7 QAT.NR.FavoritePen8 QAT.FavoriteHighlighter1
+    // parity: QAT.NR.FavoriteHighlighter2 QAT.NR.FavoriteHighlighter3 QAT.NR.FavoriteHighlighter4
+    // parity: QAT.NR.PenMode QAT.NR.HighlighterMode
+    let mut s = sample();
+    // The default gallery: three pens, then two highlighters.
+    run(&mut s, "draw.favoritePen3", json!({}));
+    assert_eq!((s.draw.pen, s.draw.tool), (2, DrawTool::Pen));
+    run(&mut s, "draw.favoriteHighlighter2", json!({}));
+    assert_eq!(s.draw.pen, 4);
+    assert_eq!(s.draw.pens[4].tool, InkTool::Highlighter);
+    // No fourth pen and no third highlighter: disabled, and running them fails cleanly.
+    assert!(s.run("draw.favoritePen4", json!({})).is_err());
+    assert!(s.run("draw.favoriteHighlighter3", json!({})).is_err());
+    assert_eq!(s.draw.pen, 4, "a failed favourite keeps the selected pen");
+    // Pen Mode returns to a pen; Highlighter Mode keeps the selected highlighter.
+    run(&mut s, "draw.penMode", json!({}));
+    assert_eq!(s.draw.pen, 0);
+    run(&mut s, "draw.favoriteHighlighter2", json!({}));
+    run(&mut s, "draw.highlighterMode", json!({}));
+    assert_eq!(s.draw.pen, 4);
+    // An added pen becomes Favorite Pen 4.
+    run(&mut s, "draw.addPen", json!({"tool": "pen", "color": "#00ff00"}));
+    run(&mut s, "draw.favoritePen4", json!({}));
+    assert_eq!(s.draw.pens[s.draw.pen].tool, InkTool::Pen);
+    assert_eq!(s.draw.pen, s.draw.pens.len() - 1);
+}
