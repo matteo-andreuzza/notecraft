@@ -397,6 +397,27 @@ pub(crate) fn dialog_for(app: &NoteApp, id: &str) -> Option<crate::dialogs::Dial
             Some(p.map(|p| Dialog::Spacing(p.space_before, p.space_after, p.line_spacing)).unwrap_or(Dialog::Spacing(0.0, 0.0, 0.0)))
         }
         "TagsCustomize" => Some(Dialog::CustomizeTags(String::new())),
+        // The caret's list as it is (decimal from 1 when it isn't numbered).
+        "NumberingCustomize" => {
+            use notecraft_engine::doc::{ListFormat, Numbering};
+            let p = app.session.text_range().and_then(|r| {
+                app.session.page().and_then(|pg| notecraft_engine::Session::block_paras(pg, r.head.block).and_then(|ps| ps.get(r.head.para).cloned()))
+            });
+            let (style, start) = match p.and_then(|p| p.list) {
+                Some(ListFormat::Number { style, restart }) => (style, restart.unwrap_or(1)),
+                _ => (Numbering::Decimal, 1),
+            };
+            let name = match style {
+                Numbering::Decimal => "decimal",
+                Numbering::DecimalParen => "decimalParen",
+                Numbering::LowerAlpha => "lowerAlpha",
+                Numbering::UpperAlpha => "upperAlpha",
+                Numbering::LowerRoman => "lowerRoman",
+                Numbering::UpperRoman => "upperRoman",
+                Numbering::LowerAlphaParen => "lowerAlphaParen",
+            };
+            Some(Dialog::Numbering(name.to_string(), start))
+        }
         "AlternativeText" => {
             let page = app.session.page()?;
             let notecraft_engine::selection::PageSel::Objects { ids } = &app.session.sel.on_page else { return None };

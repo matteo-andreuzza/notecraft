@@ -36,6 +36,8 @@ pub enum Dialog {
     NotebookProperties(Id, String),
     /// Paragraph Spacing: before, after, line (points).
     Spacing(f32, f32, f32),
+    /// Numbering Customization: the style's name and the starting number.
+    Numbering(String, u32),
     /// Customize Tags: the new tag's name.
     CustomizeTags(String),
     /// Confirm emptying the recycle bin.
@@ -142,6 +144,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
         Dialog::MergeSection(_) => "Merge Section",
         Dialog::NotebookProperties(..) => "Notebook Properties",
         Dialog::Spacing(..) => "Paragraph Spacing",
+        Dialog::Numbering(..) => "Numbering Customization",
         Dialog::CustomizeTags(_) => "Customize Tags",
         Dialog::ConfirmEmptyBin => "Empty Recycle Bin",
         Dialog::AltText(_) => "Alt Text",
@@ -428,6 +431,39 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                 ui.horizontal(|ui| {
                     if crate::chrome::primary_button(ui, "OK", &t).clicked() {
                         app.run(ctx, "notebook.properties", json!({"notebook": nid.to_string(), "name": name}));
+                        close = true;
+                    }
+                    if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::Numbering(style, start) => {
+                const STYLES: &[(&str, &str)] = &[
+                    ("decimal", "1. 2. 3."),
+                    ("decimalParen", "1) 2) 3)"),
+                    ("lowerAlpha", "a. b. c."),
+                    ("lowerAlphaParen", "a) b) c)"),
+                    ("upperAlpha", "A. B. C."),
+                    ("lowerRoman", "i. ii. iii."),
+                    ("upperRoman", "I. II. III."),
+                ];
+                egui::Grid::new("numbering").show(ui, |ui| {
+                    ui.label("Number format:");
+                    let shown = STYLES.iter().find(|s| s.0 == style.as_str()).map_or("1. 2. 3.", |s| s.1);
+                    egui::ComboBox::from_id_salt("numbering_style").selected_text(shown).show_ui(ui, |ui| {
+                        for (id, sample) in STYLES {
+                            ui.selectable_value(style, (*id).to_string(), *sample);
+                        }
+                    });
+                    ui.end_row();
+                    ui.label("Start at:");
+                    ui.add(egui::DragValue::new(start).range(1..=1_000_000));
+                    ui.end_row();
+                });
+                ui.horizontal(|ui| {
+                    if crate::chrome::primary_button(ui, "OK", &t).clicked() {
+                        app.run(ctx, "para.numberingCustomize", json!({"style": style, "start": start}));
                         close = true;
                     }
                     if ui.button("Cancel").clicked() {

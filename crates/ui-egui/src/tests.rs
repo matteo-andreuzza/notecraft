@@ -1435,6 +1435,23 @@ fn shift_f7_opens_the_thesaurus_and_a_synonym_replaces_the_word() {
 }
 
 #[test]
+fn the_numbering_customization_dialog_numbers_from_its_start() {
+    use crate::dialogs::Dialog;
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 40.0, "y": 100.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "item"})).unwrap();
+    assert_eq!(crate::ribbon::dialog_for(&a, "R.Home.BasicText.NumberingCustomize"), Some(Dialog::Numbering("decimal".into(), 1)));
+    a.ui.dialog = Some(Dialog::Numbering("lowerRoman".into(), 3));
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Start at:").is_some(), "the Numbering Customization dialog");
+    h.get_by_label("OK").click();
+    h.run();
+    assert_eq!(crate::ribbon::dialog_for(h.state(), "R.Home.BasicText.NumberingCustomize"), Some(Dialog::Numbering("lowerRoman".into(), 3)));
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

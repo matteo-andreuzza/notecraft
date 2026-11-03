@@ -816,3 +816,23 @@ fn json_results_are_serialisable() {
     let v: Value = run(&mut s, "file.options", json!({}));
     assert!(v.is_object());
 }
+
+#[test]
+fn numbering_customization_sets_the_style_and_the_first_number() {
+    // parity: R.Home.BasicText.NumberingCustomize
+    use notecraft_doc::{ListFormat, Numbering};
+    let mut s = sample();
+    run(&mut s, "page.new", json!({}));
+    run(&mut s, "outline.new", json!({"x": 40.0, "y": 120.0}));
+    run(&mut s, "text.insert", json!({"text": "a"}));
+    run(&mut s, "text.newline", json!({}));
+    run(&mut s, "text.insert", json!({"text": "b"}));
+    let id = s.page().unwrap().objects.iter().find_map(|o| o.as_outline()).unwrap().id.to_string();
+    run(&mut s, "caret.set", json!({"block": id, "para": 0, "offset": 0}));
+    run(&mut s, "caret.set", json!({"block": id, "para": 1, "offset": 1, "extend": true}));
+    run(&mut s, "para.numberingCustomize", json!({"style": "upperRoman", "start": 4}));
+    let o = s.page().unwrap().objects.iter().find_map(|o| o.as_outline()).unwrap().clone();
+    assert_eq!(o.paragraphs[0].list, Some(ListFormat::Number { style: Numbering::UpperRoman, restart: Some(4) }));
+    assert_eq!(o.paragraphs[1].list, Some(ListFormat::Number { style: Numbering::UpperRoman, restart: None }), "the next one follows on");
+    assert!(s.run("para.numberingCustomize", json!({"style": "emoji"})).is_err());
+}

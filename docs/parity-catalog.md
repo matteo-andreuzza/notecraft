@@ -158,7 +158,7 @@ The Home tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Home.BasicText.FontSize | Font Size | Home/Basic Text/Font Size | combo |  | format.size | P0 | wired | FLUENT19:FontSize |  |
 | R.Home.BasicText.BulletsGallery | Bullets | Home/Basic Text/Bullets | gallery | `Mod+.` | para.bullets | P0 | verified | FLUENT19:BulletsGallery |  |
 | R.Home.BasicText.NumberingGallery | Numbering | Home/Basic Text/Numbering | gallery | `Mod+/` | para.numbering | P0 | verified | FLUENT19:NumberingGallery |  |
-| R.Home.BasicText.NumberingCustomize | Numbering Customization | Home/Basic Text/Numbering/Numbering Customization | toggle |  | para.numberingCustomize | P2 | missing | FLUENT19:NumberingCustomize |  |
+| R.Home.BasicText.NumberingCustomize | Numbering Customization | Home/Basic Text/Numbering/Numbering Customization | toggle |  | para.numberingCustomize | P2 | wired | FLUENT19:NumberingCustomize |  |
 | R.Home.BasicText.OutdentClassic | Decrease Indent Position | Home/Basic Text/Decrease Indent Position | button | `Alt+Shift+Left / Shift+Tab` | para.outdent | P0 | verified | FLUENT19:OutdentClassic |  |
 | R.Home.BasicText.IndentClassic | Increase Indent Position | Home/Basic Text/Increase Indent Position | button | `Alt+Shift+Right / Tab` | para.indent | P0 | wired | FLUENT19:IndentClassic |  |
 | R.Home.BasicText.ClearFormatting | Clear All Formatting | Home/Basic Text/Clear All Formatting | button | `Mod+Shift+N` | format.clear | P0 | wired | FLUENT19:ClearFormatting |  |

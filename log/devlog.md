@@ -1213,3 +1213,9 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - `review.thesaurus` (Review › Thesaurus, Shift+F7): the selected word, or the word at the
   caret, which it selects; the Thesaurus pane lists its meanings, a synonym replaces the
   word, and the field looks up another one.
+
+## 2026-11-03 — Numbering Customization
+
+- `para.numberingCustomize` and its dialog (Home › Numbering › Numbering Customization):
+  the number format and the number the list starts at; the first selected paragraph
+  restarts there, the rest follow on. The dialog opens on the caret's list.
