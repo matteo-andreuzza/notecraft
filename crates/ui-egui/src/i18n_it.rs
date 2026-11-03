@@ -341,6 +341,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
     ("Recycle Bin", "Cestino"),
     ("Redo", "Ripeti"),
     ("Refresh", "Aggiorna"),
+    ("Refresh Printout", "Aggiorna stampa"),
     ("Remember for blog", "Da ricordare per il blog"),
     ("Remember for later", "Da ricordare"),
     ("Remove Bullet", "Rimuovi punto elenco"),

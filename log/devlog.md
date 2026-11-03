@@ -1285,3 +1285,7 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Copy Text from This Page / All Pages of the Printout (`printout.copyPageText`,
   `printout.copyAllText`): the printout pages' recognised text, recognising the pages that
   have none first; all pages join top to bottom.
+- Refresh Printout (`printout.refresh`; the attachment's and the pages' Refresh rows): reads
+  the original file again from where it was inserted (`Attachment::source`), prints it anew
+  in place of the old pages and keeps the new bytes as the attached copy; a file that no
+  longer prints leaves the printout as it was.

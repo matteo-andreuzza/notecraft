@@ -45,6 +45,16 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             insert_for_attachment,
         )
         .when(need_printable),
+        // CM.FileAttachment.RefreshPrintoutPages (and the Refresh rows): read the original file
+        // again (where it was inserted from) and print it anew; the attached copy follows.
+        CommandSpec::new(
+            "printout.refresh",
+            "CM.FileAttachment.RefreshPrintoutPages",
+            "Refresh Printout",
+            "Context/File Attachment/Refresh Printout",
+            refresh,
+        )
+        .when(need_refreshable),
         CommandSpec::new(
             "printout.delete",
             "CM.FileAttachment.JotDeletePrintoutPages",
@@ -228,6 +238,36 @@ fn insert_for_attachment(s: &mut Session, _: &Value) -> CmdResult {
     }
     let (pages, total) = print(&bytes)?;
     let ids = place_pages(s, id, pages, total)?;
+    Ok(json!({"pages": ids.iter().map(Id::to_string).collect::<Vec<_>>(), "total": total}))
+}
+
+/// The printout a refresh acts on: the selected attachment, or the one a selected printout
+/// page belongs to.
+fn refresh_target(s: &Session) -> Option<Id> {
+    selected_attachment(s).map(|a| a.id).or_else(|| original_of_selection(s))
+}
+
+fn need_refreshable(s: &Session) -> Option<&'static str> {
+    let Some(att) = refresh_target(s) else { return Some("Select a file printout first") };
+    match s.page().and_then(|p| p.attachment(att)) {
+        Some(a) if a.source.is_none() => Some("This file was not inserted from a file on this computer"),
+        Some(_) if pages_of(s, att).is_empty() => Some("This file has no printout pages"),
+        Some(_) => None,
+        None => Some("Select a file printout first"),
+    }
+}
+
+fn refresh(s: &mut Session, _: &Value) -> CmdResult {
+    let att = refresh_target(s).ok_or_else(|| CmdError::Disabled("select a file printout first".into()))?;
+    let path = s.page().and_then(|p| p.attachment(att)).and_then(|a| a.source.clone()).ok_or_else(no_page)?;
+    let (bytes, _) = crate::picture_cmds::read_input(&json!({"path": path}), MAX_ATTACHMENT_BYTES)
+        .map_err(|e| CmdError::Failed(format!("the original file can't be read ({e})")))?;
+    // Print first: a file that no longer prints leaves the printout as it was.
+    let (pages, total) = print(&bytes)?;
+    let blob = s.new_id();
+    let a = s.page_mut().and_then(|p| p.attachment_mut(att)).ok_or_else(no_page)?;
+    a.blob = Blob::new(blob, Arc::from(bytes));
+    let ids = place_pages(s, att, pages, total)?;
     Ok(json!({"pages": ids.iter().map(Id::to_string).collect::<Vec<_>>(), "total": total}))
 }
 

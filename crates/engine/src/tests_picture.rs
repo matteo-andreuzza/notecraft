@@ -536,3 +536,31 @@ fn printout_text_copies_one_page_or_all_in_order() {
     assert_eq!(run(&mut s, "printout.copyPageText", json!({}))["text"], "page 2");
     assert_eq!(run(&mut s, "printout.copyAllText", json!({}))["text"], "page 1\n\npage 2", "all pages, top to bottom");
 }
+
+#[test]
+fn refresh_printout_prints_the_changed_original_again() {
+    // parity: CM.FileAttachment.RefreshPrintoutPages CM.FileAttachment.RefreshOleObjects CM.Picture.RefreshOleObjects
+    let mut s = sample();
+    blank_page(&mut s);
+    let dir = temp_dir("refresh");
+    let file = dir.join("Plan.pdf");
+    std::fs::write(&file, notecraft_codecs::pdf::sample_pdf(&[(200.0, 100.0, [255, 0, 0]), (100.0, 300.0, [0, 0, 255])])).unwrap();
+    let r = run(&mut s, "insert.printout", json!({"path": file.display().to_string()}));
+    let att = Id::parse(r["attachment"].as_str().unwrap()).unwrap();
+    assert_eq!(printout_pages(&s, att).len(), 2);
+    let one = notecraft_codecs::pdf::sample_pdf(&[(150.0, 150.0, [0, 255, 0])]);
+    std::fs::write(&file, &one).unwrap();
+    run(&mut s, "object.select", json!({"ids": [att.to_string()]}));
+    let r = run(&mut s, "printout.refresh", json!({}));
+    assert_eq!(r["total"], 1);
+    assert_eq!(printout_pages(&s, att).len(), 1, "the old pages are replaced");
+    assert_eq!(&s.page().unwrap().attachment(att).unwrap().blob.bytes[..], &one[..], "the attached copy is the new file");
+    // From a printout page too; a file given as bytes can't be refreshed.
+    let first = printout_pages(&s, att)[0].id.to_string();
+    run(&mut s, "object.select", json!({"ids": [first]}));
+    run(&mut s, "printout.refresh", json!({}));
+    let r = run(&mut s, "insert.printout", json!({"data": data(&one), "name": "x.pdf"}));
+    run(&mut s, "object.select", json!({"ids": [r["attachment"].as_str().unwrap()]}));
+    assert!(s.run("printout.refresh", json!({})).is_err());
+    let _ = std::fs::remove_dir_all(&dir);
+}
