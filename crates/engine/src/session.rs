@@ -345,6 +345,8 @@ pub struct ViewState {
     /// The Recent Edits pane's period (`history_cmds::RECENT_RANGES`), `None` = closed.
     #[serde(default)]
     pub recent_edits: Option<String>,
+    /// The Recent Edits pane groups its pages by author (History › Find by Author).
+    pub recent_by_author: bool,
     /// Page versions shown under the pages in the page list (History › Page Versions).
     pub page_versions: bool,
     /// Help pane open (F1).
@@ -390,6 +392,7 @@ impl Default for ViewState {
             context_tag: None,
             spelling: None,
             recent_edits: None,
+            recent_by_author: false,
             page_versions: false,
             help_pane: false,
             quick_note: false,

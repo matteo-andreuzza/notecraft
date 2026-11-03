@@ -102,8 +102,20 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             recent_edits,
         )
         .params(
-            r#"{"range"?: "today"|"yesterday"|"7d"|"14d"|"30d"|"3m"|"6m"|"all" (default today), "scope"?: "section"|"sectionGroup"|"notebook"|"all" (default all), "limit"?: int, "open"?: bool (the pane; default true)}"#,
+            r#"{"range"?: "today"|"yesterday"|"7d"|"14d"|"30d"|"3m"|"6m"|"all" (default today), "scope"?: "section"|"sectionGroup"|"notebook"|"all" (default all), "limit"?: int, "open"?: bool (the pane; default true), "byAuthor"?: bool} → pages, and with byAuthor "authors": [{"author", "pages"}]"#,
         )
+        .pure(),
+        // R.History.Authors.FindUnread (Find by Author): the Recent Edits pane over every page,
+        // grouped by the people who wrote its paragraphs.
+        CommandSpec::new("history.findByAuthor", "R.History.Authors.FindUnread", "Find by Author", "History/Authors/Find by Author", |s, v| {
+            let mut v = v.clone();
+            if let Some(o) = v.as_object_mut() {
+                o.entry("range").or_insert(json!("all"));
+                o.insert("byAuthor".into(), json!(true));
+            }
+            recent_edits(s, &v)
+        })
+        .params(r#"{"range"?, "scope"?, "limit"?: as history.recentEdits (range default all)}"#)
         .pure(),
     ]
 }
@@ -184,7 +196,10 @@ fn recent_edits(s: &mut Session, v: &Value) -> CmdResult {
         _ => None,
     };
     let off = s.clock.utc_offset_min;
+    let by_author = p::bool(v, "byAuthor").unwrap_or(false);
     let mut found: Vec<(i64, Value)> = Vec::new();
+    // Author → (newest edit, its pages), with byAuthor.
+    let mut authors: std::collections::BTreeMap<String, Vec<(i64, Value)>> = std::collections::BTreeMap::new();
     for nb in &s.ws.notebooks {
         if matches!(kind, ScopeKind::Notebook | ScopeKind::SectionGroup) && group.is_none() && Some(nb.id) != cur_nb {
             continue;
@@ -203,18 +218,28 @@ fn recent_edits(s: &mut Session, v: &Value) -> CmdResult {
                 if since.is_some_and(|t| at < t) {
                     continue;
                 }
-                found.push((
-                    at,
-                    json!({
-                        "page": page.id.to_string(),
-                        "title": page.display_title(),
-                        "section": sec.name,
-                        "notebook": nb.name,
-                        "modified": at,
-                        "date": page.modified.short_date(off),
-                        "time": page.modified.short_time(off),
-                    }),
-                ));
+                let item = json!({
+                    "page": page.id.to_string(),
+                    "title": page.display_title(),
+                    "section": sec.name,
+                    "notebook": nb.name,
+                    "modified": at,
+                    "date": page.modified.short_date(off),
+                    "time": page.modified.short_time(off),
+                });
+                if by_author {
+                    let mut who: Vec<&str> = std::iter::once(&page.title)
+                        .chain(page.objects.iter().flat_map(|o| o.paragraphs()))
+                        .map(|p| p.author.trim())
+                        .filter(|a| !a.is_empty())
+                        .collect();
+                    who.sort_unstable();
+                    who.dedup();
+                    for a in who {
+                        authors.entry(a.to_string()).or_default().push((at, item.clone()));
+                    }
+                }
+                found.push((at, item));
             }
         }
     }
@@ -224,8 +249,21 @@ fn recent_edits(s: &mut Session, v: &Value) -> CmdResult {
     let pages: Vec<Value> = found.into_iter().take(limit).map(|(_, v)| v).collect();
     if p::bool(v, "open").unwrap_or(true) {
         s.view.recent_edits = Some(range.clone());
+        s.view.recent_by_author = by_author;
     }
-    Ok(json!({"range": range, "total": total, "pages": pages}))
+    let mut r = json!({"range": range, "total": total, "pages": pages});
+    if by_author {
+        // Authors by name; each one's pages newest first.
+        let list: Vec<Value> = authors
+            .into_iter()
+            .map(|(a, mut ps)| {
+                ps.sort_by_key(|f| std::cmp::Reverse(f.0));
+                json!({"author": a, "pages": ps.into_iter().take(limit).map(|(_, v)| v).collect::<Vec<_>>()})
+            })
+            .collect();
+        r["authors"] = json!(list);
+    }
+    Ok(r)
 }
 
 /// Whether section `sid` sits (at any depth) inside section group `group`.
@@ -239,6 +277,25 @@ fn in_group(nb: &notecraft_doc::Notebook, sid: notecraft_doc::Id, group: Option<
 mod tests {
     use super::*;
     use crate::tests::{run, sample};
+
+    #[test]
+    fn find_by_author_groups_pages_by_who_wrote_them() {
+        // parity: R.History.Authors.FindUnread
+        let mut s = sample();
+        s.prefs.author = "Ada".into();
+        run(&mut s, "page.new", json!({"title": "Ada's page"}));
+        run(&mut s, "text.insert", json!({"text": "hello"}));
+        let r = run(&mut s, "history.findByAuthor", json!({}));
+        assert!(s.view.recent_by_author && s.view.recent_edits.as_deref() == Some("all"), "the pane opens grouped");
+        let authors = r["authors"].as_array().unwrap();
+        let ada = authors.iter().find(|a| a["author"] == "Ada").expect("Ada is listed");
+        assert_eq!(ada["pages"][0]["title"], "Ada's pagehello", "typed into the new page's title");
+        let names: Vec<&str> = authors.iter().map(|a| a["author"].as_str().unwrap()).collect();
+        assert!(names.windows(2).all(|w| w[0] < w[1]), "authors by name: {names:?}");
+        // Plain Recent Edits doesn't group.
+        assert!(run(&mut s, "history.recentEdits", json!({}))["authors"].is_null());
+        assert!(!s.view.recent_by_author);
+    }
 
     #[test]
     fn recent_edits_lists_pages_changed_in_the_period_newest_first() {

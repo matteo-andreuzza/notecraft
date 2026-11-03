@@ -1192,3 +1192,6 @@ were certain landed, behaviour unchanged (every test green after each commit).
   (`Prefs.show_authors`) turn them off.
 - Catalog: OPT.Proofing.IgnoreUppercase and OPT.Display.NewPagesRuleLines were already
   working and tested; now marked wired.
+- Find by Author (`history.findByAuthor`): the Recent Edits pane over all pages, grouped by
+  the authors of each page's paragraphs (title included), authors by name, pages newest
+  first; the pane has a Sort by (Date modified / Author) row.

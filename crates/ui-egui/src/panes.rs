@@ -6,7 +6,7 @@
 //! title and ✕, and the find bar is a card floating over the page's top right corner.
 
 use egui::{Frame, Margin, RichText, Sense, Ui, vec2};
-use serde_json::json;
+use serde_json::{Value, json};
 
 use crate::chrome::{card_frame, card_header, icon_button};
 use crate::{NoteApp, Tokens, icons};
@@ -383,34 +383,64 @@ pub fn recent_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                     }
                 });
                 ui.end_row();
+                ui.label("Sort by:");
+                let mut by_author = app.session.view.recent_by_author;
+                egui::ComboBox::from_id_salt("recent_sort").width(170.0).selected_text(if by_author { "Author" } else { "Date modified" }).show_ui(
+                    ui,
+                    |ui| {
+                        ui.selectable_value(&mut by_author, false, "Date modified");
+                        ui.selectable_value(&mut by_author, true, "Author");
+                    },
+                );
+                app.session.view.recent_by_author = by_author;
+                ui.end_row();
             });
             ui.data_mut(|d| d.insert_temp(scope_id, scope.clone()));
-            let Some(res) = app.run(&ctx, "history.recentEdits", json!({"range": range, "scope": scope, "limit": 500})) else { return };
+            let by_author = app.session.view.recent_by_author;
+            let Some(res) = app.run(&ctx, "history.recentEdits", json!({"range": range, "scope": scope, "limit": 500, "byAuthor": by_author})) else {
+                return;
+            };
             ui.separator();
             let total = res["total"].as_u64().unwrap_or(0);
             ui.label(RichText::new(format!("{total} page{}", if total == 1 { "" } else { "s" })).size(11.0).color(t.page_meta));
             egui::ScrollArea::vertical().id_salt("recent_scroll").show(ui, |ui| {
-                let pages = res["pages"].as_array().cloned().unwrap_or_default();
-                if pages.is_empty() {
+                // Grouped by author: a heading per author, then that author's pages.
+                let groups: Vec<(String, Vec<Value>)> = if by_author {
+                    res["authors"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .map(|g| (g["author"].as_str().unwrap_or("").to_string(), g["pages"].as_array().cloned().unwrap_or_default()))
+                        .collect()
+                } else {
+                    vec![(String::new(), res["pages"].as_array().cloned().unwrap_or_default())]
+                };
+                if groups.iter().all(|(_, ps)| ps.is_empty()) {
                     ui.label(RichText::new("No pages were changed in this period.").color(t.text_disabled));
                 }
-                for it in pages {
-                    let resp = ui
-                        .vertical(|ui| {
-                            ui.add(egui::Label::new(RichText::new(it["title"].as_str().unwrap_or("")).strong().color(t.text)).selectable(false));
-                            let meta = format!(
-                                "{} · {} {}",
-                                it["section"].as_str().unwrap_or(""),
-                                it["date"].as_str().unwrap_or(""),
-                                it["time"].as_str().unwrap_or("")
-                            );
-                            ui.add(egui::Label::new(RichText::new(meta).size(11.0).color(t.page_meta)).selectable(false));
-                            ui.add_space(4.0);
-                        })
-                        .response
-                        .interact(Sense::click());
-                    if resp.clicked() {
-                        app.run(&ctx, "nav.goto", json!({"page": it["page"]}));
+                for (author, pages) in groups {
+                    if !author.is_empty() {
+                        ui.add_space(4.0);
+                        ui.add(egui::Label::new(RichText::new(&author).strong().color(t.accent)).selectable(false));
+                    }
+                    for it in pages {
+                        let resp = ui
+                            .vertical(|ui| {
+                                ui.add(egui::Label::new(RichText::new(it["title"].as_str().unwrap_or("")).strong().color(t.text)).selectable(false));
+                                let meta = format!(
+                                    "{} · {} {}",
+                                    it["section"].as_str().unwrap_or(""),
+                                    it["date"].as_str().unwrap_or(""),
+                                    it["time"].as_str().unwrap_or("")
+                                );
+                                ui.add(egui::Label::new(RichText::new(meta).size(11.0).color(t.page_meta)).selectable(false));
+                                ui.add_space(4.0);
+                            })
+                            .response
+                            .interact(Sense::click());
+                        if resp.clicked() {
+                            app.run(&ctx, "nav.goto", json!({"page": it["page"]}));
+                        }
                     }
                 }
             });
