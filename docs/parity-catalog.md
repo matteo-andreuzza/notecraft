@@ -771,7 +771,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.LassoSelection.SelectionToMathConvert | Ink to Math | Context/Lasso Selection/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuLassoSelection/SelectionToMathConvert |  |
 | CM.Picture.OleObjectEdit | Edit (embedded object) | Context/Picture/Edit (embedded object) | button |  | object.editOle | P3 | missing | FLUENT19:ContextMenuPicture/OleObjectEdit |  |
 | CM.Picture.RefreshOleObjects | Refresh | Context/Picture/Refresh | button |  | printout.refresh | P2 | wired | FLUENT19:ContextMenuPicture/RefreshOleObjects |  |
-| CM.Picture.SelectWhatToDisplay | Display As | Context/Picture/Display As | button |  | printout.displayAs | P2 | missing | FLUENT19:ContextMenuPicture/SelectWhatToDisplay |  |
+| CM.Picture.SelectWhatToDisplay | Display As | Context/Picture/Display As | button |  | printout.displayAs | P2 | wired | FLUENT19:ContextMenuPicture/SelectWhatToDisplay |  |
 | CM.Picture.Cut | Cut | Context/Picture/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuPicture/Cut |  |
 | CM.Picture.CopyOneNote | Copy | Context/Picture/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuPicture/CopyOneNote | copies the picture as an object inside NoteCraft |
 | CM.Picture.CopyTextFromPicture | Copy Text from Picture | Context/Picture/Copy Text from Picture | button |  | object.copyTextFromPicture | P2 | wired | FLUENT19:ContextMenuPicture/CopyTextFromPicture |  |
@@ -813,7 +813,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.FileAttachment.FilePrintoutInsert | Insert Printout | Context/File Attachment/Insert Printout | button |  | attachment.insertPrintout | P2 | wired | FLUENT19:ContextMenuFileAttachment/FilePrintoutInsert | replaces pages printed earlier from the same file |
 | CM.FileAttachment.RefreshPrintoutPages | Refresh Printout | Context/File Attachment/Refresh Printout | button |  | printout.refresh | P2 | wired | FLUENT19:ContextMenuFileAttachment/RefreshPrintoutPages |  |
 | CM.FileAttachment.JotDeletePrintoutPages | Delete Printout Pages | Context/File Attachment/Delete Printout Pages | button |  | printout.delete | P2 | wired | FLUENT19:ContextMenuFileAttachment/JotDeletePrintoutPages |  |
-| CM.FileAttachment.SelectWhatToDisplay | Display As | Context/File Attachment/Display As | button |  | printout.displayAs | P2 | missing | FLUENT19:ContextMenuFileAttachment/SelectWhatToDisplay |  |
+| CM.FileAttachment.SelectWhatToDisplay | Display As | Context/File Attachment/Display As | button |  | printout.displayAs | P2 | wired | FLUENT19:ContextMenuFileAttachment/SelectWhatToDisplay |  |
 | CM.FileAttachment.RefreshOleObjects | Refresh | Context/File Attachment/Refresh | button |  | printout.refresh | P2 | wired | FLUENT19:ContextMenuFileAttachment/RefreshOleObjects |  |
 | CM.FileAttachment.OriginalFileOpen | Open Original | Context/File Attachment/Open Original | button |  | attachment.openOriginal | P2 | wired | FLUENT19:ContextMenuFileAttachment/OriginalFileOpen |  |
 | CM.FileAttachment.FileAttachmentShortcutToOriginalCopy | Copy Link to File | Context/File Attachment/Copy Link to File | button |  | attachment.copyLink | P2 | wired | FLUENT19:ContextMenuFileAttachment/FileAttachmentShortcutToOriginalCopy |  |

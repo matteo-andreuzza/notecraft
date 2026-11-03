@@ -564,3 +564,22 @@ fn refresh_printout_prints_the_changed_original_again() {
     assert!(s.run("printout.refresh", json!({})).is_err());
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn display_as_switches_between_the_icon_and_the_printout() {
+    // parity: CM.FileAttachment.SelectWhatToDisplay CM.Picture.SelectWhatToDisplay
+    let mut s = sample();
+    blank_page(&mut s);
+    let pdf = notecraft_codecs::pdf::sample_pdf(&[(200.0, 100.0, [255, 0, 0]), (100.0, 300.0, [0, 0, 255])]);
+    let r = run(&mut s, "insert.printout", json!({"data": data(&pdf), "name": "Report.pdf"}));
+    let att = Id::parse(r["attachment"].as_str().unwrap()).unwrap();
+    let first = printout_pages(&s, att)[0].id.to_string();
+    run(&mut s, "object.select", json!({"ids": [first]}));
+    assert_eq!(run(&mut s, "printout.displayAs", json!({}))["as"], "icon", "from a page: switch to the icon");
+    assert!(printout_pages(&s, att).is_empty());
+    assert_eq!(run(&mut s, "printout.displayAs", json!({}))["as"], "printout");
+    assert_eq!(printout_pages(&s, att).len(), 2);
+    run(&mut s, "printout.displayAs", json!({"as": "printout"}));
+    assert_eq!(printout_pages(&s, att).len(), 2, "already a printout: unchanged");
+    assert!(s.run("printout.displayAs", json!({"as": "thumbnail"})).is_err());
+}

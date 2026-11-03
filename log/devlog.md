@@ -1289,3 +1289,6 @@ were certain landed, behaviour unchanged (every test green after each commit).
   the original file again from where it was inserted (`Attachment::source`), prints it anew
   in place of the old pages and keeps the new bytes as the attached copy; a file that no
   longer prints leaves the printout as it was.
+- Display As (`printout.displayAs`, file attachment and printout page menus): a printable
+  file shown as its icon only (the printout pages go) or with its printout; by default it
+  switches.

@@ -55,6 +55,21 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             refresh,
         )
         .when(need_refreshable),
+        // CM.FileAttachment.SelectWhatToDisplay, CM.Picture.SelectWhatToDisplay: show a
+        // printable file as its icon only, or with its printout (default: switch).
+        CommandSpec::new(
+            "printout.displayAs",
+            "CM.FileAttachment.SelectWhatToDisplay",
+            "Display As",
+            "Context/File Attachment/Display As",
+            display_as,
+        )
+        .params(r#"{"as"?: "icon" | "printout" (default: switch)}"#)
+        .when(|s| match refresh_target(s).and_then(|a| s.page().and_then(|p| p.attachment(a))) {
+            Some(a) if printable(&a.blob.bytes) => None,
+            Some(_) => Some("NoteCraft prints PDF files and pictures"),
+            None => Some("Select a file attachment first"),
+        }),
         CommandSpec::new(
             "printout.delete",
             "CM.FileAttachment.JotDeletePrintoutPages",
@@ -269,6 +284,24 @@ fn refresh(s: &mut Session, _: &Value) -> CmdResult {
     a.blob = Blob::new(blob, Arc::from(bytes));
     let ids = place_pages(s, att, pages, total)?;
     Ok(json!({"pages": ids.iter().map(Id::to_string).collect::<Vec<_>>(), "total": total}))
+}
+
+fn display_as(s: &mut Session, v: &Value) -> CmdResult {
+    let att = refresh_target(s).ok_or_else(|| CmdError::Disabled("select a file attachment first".into()))?;
+    let has = !pages_of(s, att).is_empty();
+    let printout = match crate::p::str(v, "as") {
+        None => !has,
+        Some("icon") => false,
+        Some("printout") => true,
+        Some(o) => return Err(CmdError::Params(format!("`as` is \"icon\" or \"printout\", not {o:?}"))),
+    };
+    s.sel.on_page = PageSel::Objects { ids: vec![att] };
+    match (printout, has) {
+        (true, false) => insert_for_attachment(s, v)?,
+        (false, true) => delete_pages(s, v)?,
+        _ => Value::Null,
+    };
+    Ok(json!({"as": if printout { "printout" } else { "icon" }}))
 }
 
 fn delete_pages(s: &mut Session, _: &Value) -> CmdResult {
