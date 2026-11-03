@@ -1126,6 +1126,22 @@ fn pages_marked_unread_from_their_menu_read_when_opened() {
 }
 
 #[test]
+fn the_paper_size_pane_shows_lengths_in_the_chosen_unit() {
+    // parity: OPT.Advanced.MeasurementUnits
+    let mut a = app();
+    a.session.run("page.paperSize", json!({"size": "a4"})).unwrap();
+    a.session.run("view.paperSize", json!({"on": true})).unwrap();
+    a.session.run("file.options", json!({"set": {"unit": "Centimeters"}})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_value("21.00 cm").is_some(), "A4 is 21 cm wide");
+    assert!(h.query_by_value("29.70 cm").is_some());
+    h.state_mut().session.prefs.unit = notecraft_engine::doc::geom::Unit::Inches;
+    h.run();
+    assert!(h.query_by_value("8.27\"").is_some(), "and 8.27 inches");
+}
+
+#[test]
 fn link_dialog_searches_pages_and_sections() {
     // parity: UI.Dialogs.Link
     let mut a = app();

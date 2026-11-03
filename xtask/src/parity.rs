@@ -179,10 +179,25 @@ pub struct TestIndex {
 impl TestIndex {
     /// Index one file's test code.
     pub fn add_test_code(&mut self, code: &str) {
-        let mut rest = code;
+        // String literals; `\"` inside one does not end it, and the char literal '"' starts none.
+        let code_nochar = code.replace("'\"'", "");
+        let mut rest = code_nochar.as_str();
         while let Some(start) = rest.find('"') {
             let after = &rest[start + 1..];
-            let Some(end) = after.find('"') else { break };
+            let mut end = None;
+            let mut esc = false;
+            for (i, c) in after.char_indices() {
+                match c {
+                    _ if esc => esc = false,
+                    '\\' => esc = true,
+                    '"' => {
+                        end = Some(i);
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+            let Some(end) = end else { break };
             let lit = &after[..end];
             if !lit.is_empty() && lit.len() < 128 && !lit.contains(char::is_whitespace) {
                 self.mentions.insert(lit.to_string());
@@ -535,6 +550,13 @@ mod tests {
         assert_eq!(rows[0].shortcut, "Mod+B");
         assert_eq!(rows[2].label, "Odd | key");
         assert_eq!(rows[2].status, Status::OutOfScope);
+    }
+
+    #[test]
+    fn escaped_quotes_keep_literals_paired() {
+        let mut idx = TestIndex { mentions: HashSet::new() };
+        idx.add_test_code("f(\"8.27\\\"\", '\"', \"R.Home.Bold\");");
+        assert!(idx.mentions.contains("R.Home.Bold"), "{:?}", idx.mentions);
     }
 
     #[test]

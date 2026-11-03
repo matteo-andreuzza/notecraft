@@ -56,6 +56,8 @@ pub struct Prefs {
     pub unread_pages: Vec<notecraft_doc::Id>,
     /// Show unread pages bold (History › Show Unread Changes in This Notebook).
     pub show_unread: bool,
+    /// Units for lengths in panes and dialogs (`OPT.Advanced.MeasurementUnits`).
+    pub unit: notecraft_doc::geom::Unit,
     /// The navigation (notebooks and pages) on the left of the page, else on the right
     /// (`OPT.Display.NavBarLeft`; the UI reads it).
     pub nav_left: bool,
@@ -149,6 +151,7 @@ impl Default for Prefs {
             show_note_containers: true,
             unread_pages: Vec::new(),
             show_unread: true,
+            unit: notecraft_doc::geom::Unit::Inches,
             nav_left: true,
             floating_new_page: true,
             default_font: notecraft_doc::text::DEFAULT_FONT.to_string(),

@@ -303,6 +303,23 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             ui.checkbox(&mut d.show_completed_todos, "Show completed To Do tags in the Tags Summary");
             ui.checkbox(&mut d.pen_pressure, "Use pen pressure sensitivity");
             ui.checkbox(&mut d.search_highlight, "Highlight search results on the page");
+            // OPT.Advanced.MeasurementUnits.
+            ui.horizontal(|ui| {
+                use notecraft_engine::doc::geom::Unit;
+                ui.label("Measurement units:");
+                let name = |u: Unit| match u {
+                    Unit::Inches => "Inches",
+                    Unit::Centimeters => "Centimeters",
+                    Unit::Millimeters => "Millimeters",
+                    Unit::Points => "Points",
+                    Unit::Picas => "Picas",
+                };
+                egui::ComboBox::from_id_salt("opt-units").selected_text(name(d.unit)).show_ui(ui, |ui| {
+                    for u in [Unit::Inches, Unit::Centimeters, Unit::Millimeters, Unit::Points, Unit::Picas] {
+                        ui.selectable_value(&mut d.unit, u, name(u));
+                    }
+                });
+            });
             section(ui, "Passwords");
             // OPT.Advanced.LockAfterIdle, OPT.Advanced.LockOnLeave.
             ui.horizontal(|ui| {
