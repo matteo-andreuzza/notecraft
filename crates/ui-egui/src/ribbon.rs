@@ -127,6 +127,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "window.alwaysOnTop" => s.view.always_on_top,
         "view.switchBackground" => s.view.light_page,
         "history.showUnread" => s.prefs.show_unread,
+        "history.hideAuthors" => !s.prefs.show_authors,
         "history.disable" => s.notebook().is_some_and(|nb| nb.history_disabled),
         "draw.snapToGrid" => s.draw.snap_to_grid,
         "draw.inkToShape" => s.draw.ink_to_shape,

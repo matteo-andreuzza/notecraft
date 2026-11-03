@@ -1388,6 +1388,24 @@ fn hide_ribbon_on_the_quick_access_toolbar_hides_the_tabs_and_brings_them_back()
 }
 
 #[test]
+fn other_authors_initials_show_until_authors_are_hidden() {
+    // parity: R.History.Authors.AuthorHighlightingHide OPT.Advanced.ShowAuthors
+    let mut a = app();
+    a.session.prefs.author = "Tester".into();
+    let mut p = notecraft_engine::doc::Paragraph::new(notecraft_engine::doc::Id(1));
+    p.author = "ada lovelace byron".into();
+    assert_eq!(crate::canvas::author_mark(&a, &p).as_deref(), Some("AL"), "two initials, capitals");
+    p.author = "Tester".into();
+    assert_eq!(crate::canvas::author_mark(&a, &p), None, "the user's own paragraphs carry no mark");
+    p.author = "Grace".into();
+    a.session.run("history.hideAuthors", json!({})).unwrap();
+    assert!(crate::ribbon::checked(&a, "history.hideAuthors"));
+    assert_eq!(crate::canvas::author_mark(&a, &p), None, "Hide Authors");
+    a.session.run("history.hideAuthors", json!({})).unwrap();
+    assert_eq!(crate::canvas::author_mark(&a, &p).as_deref(), Some("G"));
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

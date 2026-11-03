@@ -676,6 +676,7 @@ fn view_commands() {
     assert_eq!(s.page().unwrap().setup.rule_lines, RuleLines::GridSmall);
     run(&mut s, "view.ruleLineColor", json!({"color": "#ff0000"}));
     assert!(s.page().unwrap().setup.rule_color.is_some());
+    // parity: OPT.Display.NewPagesRuleLines
     run(&mut s, "view.newPagesWithRuleLines", json!({}));
     assert!(s.prefs.new_pages_rule_lines.is_some());
     run(&mut s, "page.new", json!({}));

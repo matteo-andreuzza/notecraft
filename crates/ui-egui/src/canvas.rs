@@ -33,6 +33,18 @@ use crate::{NoteApp, Tokens, fonts, icons};
 pub const PT: f32 = 4.0 / 3.0;
 /// Indent per outline level, page points.
 pub const INDENT: f32 = 27.0;
+/// The initials shown beside a paragraph someone else last edited (`OPT.Advanced.ShowAuthors`):
+/// the first letters of up to two words of the author's name; `None` for the user's own
+/// paragraphs, unnamed ones, or with authors hidden.
+pub(crate) fn author_mark(app: &NoteApp, para: &notecraft_engine::doc::Paragraph) -> Option<String> {
+    let s = &app.session;
+    let who = para.author.trim();
+    if !s.prefs.show_authors || who.is_empty() || who == s.prefs.author.trim() {
+        return None;
+    }
+    Some(who.split_whitespace().take(2).filter_map(|w| w.chars().next()).flat_map(char::to_uppercase).collect())
+}
+
 /// Width reserved for a bullet or number, page points.
 pub const LIST_W: f32 = 18.0;
 /// Width per tag icon, page points.
@@ -585,6 +597,17 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                     let r = Rect::from_min_size(pos2(x, pl.pos.y + (first_row_h - sz) / 2.0), vec2(sz, sz));
                     let symbol = defs.iter().find(|d| d.key == tag.key).map(|d| d.symbol).unwrap_or(tag.symbol);
                     icons::tag(&painter, r, symbol, tag.checked, page_text);
+                }
+                // Another author's initials, right of the paragraph (History › Hide Authors).
+                if let Some(mark) = author_mark(app, para) {
+                    let x = pl.pos.x + pl.galley.size().x + 12.0 * zoom;
+                    painter.text(
+                        pos2(x, pl.pos.y + first_row_h / 2.0),
+                        Align2::LEFT_CENTER,
+                        mark,
+                        FontId::proportional((9.0 * zoom).clamp(6.0, 30.0)),
+                        t.text_dim,
+                    );
                 }
                 // Collapsed paragraphs show a plus in the handle column.
                 if para.collapsed {

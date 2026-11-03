@@ -1183,3 +1183,12 @@ were certain landed, behaviour unchanged (every test green after each commit).
   return `email_attach`; the UI hands it to `Host::send_email` (desktop: `xdg-email --attach`
   on Linux/BSD; elsewhere it says where the file is). `share.sendToWord` writes a .docx and
   opens it. File › Send is a new backstage page with the four.
+
+## 2026-11-03 — Authors' initials, Hide Authors
+
+- A paragraph someone else last edited shows that author's initials to its right
+  (`canvas::author_mark`; unverified placement: OneNote puts them at the container's edge).
+  History › Hide Authors (`history.hideAuthors`) and Options › Advanced › Show authors
+  (`Prefs.show_authors`) turn them off.
+- Catalog: OPT.Proofing.IgnoreUppercase and OPT.Display.NewPagesRuleLines were already
+  working and tested; now marked wired.

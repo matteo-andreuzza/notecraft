@@ -301,6 +301,8 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             section(ui, "Tags, pens and search");
             // OPT.Advanced.CompletedToDoSummary, PenPressure, SearchHighlight.
             ui.checkbox(&mut d.show_completed_todos, "Show completed To Do tags in the Tags Summary");
+            // OPT.Advanced.ShowAuthors.
+            ui.checkbox(&mut d.show_authors, "Show authors");
             ui.checkbox(&mut d.pen_pressure, "Use pen pressure sensitivity");
             ui.checkbox(&mut d.search_highlight, "Highlight search results on the page");
             // OPT.Advanced.MeasurementUnits.

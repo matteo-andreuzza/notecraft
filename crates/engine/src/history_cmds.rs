@@ -74,6 +74,14 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         )
         .pure()
         .when(|s| if s.prefs.unread_pages.is_empty() { Some("No unread pages") } else { None }),
+        // R.History.Authors.AuthorHighlightingHide: hide (or show again) the authors' initials
+        // beside paragraphs other people edited.
+        CommandSpec::new("history.hideAuthors", "R.History.Authors.AuthorHighlightingHide", "Hide Authors", "History/Authors/Hide Authors", |s, v| {
+            s.prefs.show_authors = !p::bool(v, "on").unwrap_or(s.prefs.show_authors);
+            Ok(json!({"hidden": !s.prefs.show_authors}))
+        })
+        .params(r#"{"on"?: bool (hide)}"#)
+        .pure(),
         CommandSpec::new(
             "history.showUnread",
             "R.History.Unread.UnreadNotebookChangesShow",

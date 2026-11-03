@@ -361,6 +361,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
     ("Show All Levels", "Mostra tutti i livelli"),
     ("Show Page Versions", "Mostra versioni pagina"),
     ("Show Training", "Mostra formazione"),
+    ("Show authors", "Mostra autori"),
     ("Since Yesterday", "Da ieri"),
     ("Skewed Fraction", "Frazione obliqua"),
     ("Small Eraser", "Gomma piccola"),
