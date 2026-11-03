@@ -222,6 +222,10 @@ pub struct UiState {
     /// When a paste command last ran (seconds, `ctx` time): the Paste Options button
     /// (`UI.Canvas.PasteOptions`) shows near the caret for a few seconds after.
     pub paste_shown_at: Option<f64>,
+    /// The style the pointer rests on in the Styles gallery: the selected paragraphs are drawn
+    /// in it until the pointer leaves (`UI.Ribbon.Galleries` live preview). Set every frame.
+    #[serde(skip)]
+    pub style_preview: Option<notecraft_engine::doc::ParaStyle>,
     /// Notebook folders opened recently, most recent first (`BS.Open.RecentNotebooks`); the
     /// desktop app persists this (`apps/notecraft/src/settings.rs`), empty on the web build.
     pub recent_notebooks: Vec<String>,
@@ -289,6 +293,7 @@ impl Default for UiState {
             tags_unchecked: false,
             tags_scope: "all".into(),
             paste_shown_at: None,
+            style_preview: None,
             recent_notebooks: Vec::new(),
             export_scope: "page".into(),
             export_format: "mht".into(),

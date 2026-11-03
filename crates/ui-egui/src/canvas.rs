@@ -33,6 +33,24 @@ use crate::{NoteApp, Tokens, fonts, icons};
 pub const PT: f32 = 4.0 / 3.0;
 /// Indent per outline level, page points.
 pub const INDENT: f32 = 27.0;
+/// Paragraph `i` of `block` as the Styles gallery's live preview shows it: a copy in the
+/// previewed style (formatting cleared as Apply Style clears it), when it is selected or holds
+/// the caret; `None` otherwise.
+pub(crate) fn previewed(app: &NoteApp, block: Block, i: usize, para: &Paragraph) -> Option<Paragraph> {
+    let style = app.ui.style_preview?;
+    let r = app.session.text_range()?;
+    let (a, b) = r.ordered();
+    if a.block != block || i < a.para || i > b.para {
+        return None;
+    }
+    let mut p = para.clone();
+    p.style = style;
+    for run in &mut p.runs {
+        run.fmt = notecraft_engine::doc::CharFormat { link: run.fmt.link.take(), highlight: run.fmt.highlight, ..Default::default() };
+    }
+    Some(p)
+}
+
 /// The initials shown beside a paragraph someone else last edited (`OPT.Advanced.ShowAuthors`):
 /// the first letters of up to two words of the author's name; `None` for the user's own
 /// paragraphs, unnamed ones, or with authors hidden.
@@ -783,7 +801,8 @@ fn layout_page(
             // Pictures and attachments: `pictures::layout`; ink: `ink::draw`.
             PageObject::Image(_) | PageObject::Attachment(_) | PageObject::Ink(_) => continue,
             PageObject::Table(tb) => {
-                let (tl, frame) = layout_table(ctx, tb, origin, zoom, t, page_text, &preedit_at, &math_of, &mut paras);
+                let (tl, frame) =
+                    layout_table(ctx, tb, origin, zoom, t, page_text, &preedit_at, &math_of, &|b, i, p| previewed(app, b, i, p), &mut paras);
                 extent = extent.max(vec2(frame.rect.max.x - origin.x + 240.0, frame.rect.max.y - origin.y + 240.0));
                 tables.push(tl);
                 outlines.push(frame);
@@ -807,7 +826,8 @@ fn layout_page(
             let lead = para.level as f32 * INDENT + para.tags.len() as f32 * TAG_W + if has_list { LIST_W } else { 0.0 };
             let wrap = ((max_w - lead).max(24.0)) * z;
             y += para.space_before * z;
-            let g = layout_para(ctx, para, wrap, zoom, t, page_text, preedit_at(Block::Outline(ol.id), i));
+            let shown = previewed(app, Block::Outline(ol.id), i, para);
+            let g = layout_para(ctx, shown.as_ref().unwrap_or(para), wrap, zoom, t, page_text, preedit_at(Block::Outline(ol.id), i));
             let tx = x0 + lead * z;
             let pos = pos2(tx, y);
             let math = math_of(Block::Outline(ol.id), i, para);
@@ -860,6 +880,7 @@ fn layout_table<'a>(
     page_text: Color32,
     preedit_at: &dyn Fn(Block, usize) -> Option<(usize, &'a str)>,
     math_of: &dyn Fn(Block, usize, &Paragraph) -> Option<Arc<notecraft_math::MathBox>>,
+    preview: &dyn Fn(Block, usize, &Paragraph) -> Option<Paragraph>,
     paras: &mut Vec<ParaLayout>,
 ) -> (TableLayout, OutlineLayout) {
     let z = PT * zoom;
@@ -900,7 +921,8 @@ fn layout_table<'a>(
                 let lead = para.level as f32 * INDENT + para.tags.len() as f32 * TAG_W + if has_list { LIST_W } else { 0.0 };
                 let wrap = (width - 2.0 * CELL_PAD - lead).max(8.0) * z;
                 cy += para.space_before * z;
-                let g = layout_para(ctx, para, wrap, zoom, t, page_text, preedit_at(Block::Cell(cell.id), i));
+                let shown = preview(Block::Cell(cell.id), i, para);
+                let g = layout_para(ctx, shown.as_ref().unwrap_or(para), wrap, zoom, t, page_text, preedit_at(Block::Cell(cell.id), i));
                 let math = math_of(Block::Cell(cell.id), i, para);
                 let h = math.as_ref().map_or(g.size().y, |m| m.height());
                 paras_here.push((i, g, lead * z, cy, para.text(), math));

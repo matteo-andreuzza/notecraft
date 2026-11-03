@@ -1479,6 +1479,27 @@ fn the_mark_as_read_and_rule_line_color_menus_open_onto_working_rows() {
 }
 
 #[test]
+fn hovering_a_style_previews_it_on_the_selected_paragraph() {
+    // parity: UI.Ribbon.Galleries
+    let mut a = app();
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("outline.new", json!({"x": 40.0, "y": 100.0})).unwrap();
+    a.session.run("text.insert", json!({"text": "plain"})).unwrap();
+    let block = match a.session.text_range().unwrap().head.block {
+        b @ notecraft_engine::selection::Block::Outline(_) => b,
+        other => panic!("{other:?}"),
+    };
+    let para = notecraft_engine::Session::block_paras(a.session.page().unwrap(), block).unwrap()[0].clone();
+    a.ui.style_preview = notecraft_engine::doc::ParaStyle::from_name("Heading 1");
+    let shown = crate::canvas::previewed(&a, block, 0, &para).expect("the caret's paragraph is previewed");
+    assert_eq!(Some(shown.style), notecraft_engine::doc::ParaStyle::from_name("Heading 1"));
+    assert_eq!(para.style, notecraft_engine::doc::ParaStyle::default(), "the page itself is unchanged");
+    assert!(crate::canvas::previewed(&a, block, 1, &para).is_none(), "other paragraphs are not");
+    a.ui.style_preview = None;
+    assert!(crate::canvas::previewed(&a, block, 0, &para).is_none());
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

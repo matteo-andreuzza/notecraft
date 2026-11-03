@@ -170,6 +170,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
 /// the ▾ chevron at its bottom right with the layout and display options (catalog
 /// `UI.Ribbon.ModeSwitch`, `UI.Ribbon.DisplayOptions`, `UI.Ribbon.Simplified`).
 pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    app.ui.style_preview = None;
     if app.session.view.ribbon_collapsed {
         return;
     }
@@ -1003,6 +1004,9 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
                 icons::tag(ui.painter(), Rect::from_min_size(r.min + vec2(3.0, (row_h - 13.0) / 2.0), vec2(13.0, 13.0)), def.symbol, false, color);
             }
             ui.painter().text(r.left_center() + vec2(21.0, 0.0), egui::Align2::LEFT_CENTER, &lab, egui::FontId::proportional(11.5), color);
+        }
+        if is_styles && enabled_item && resp.hovered() {
+            app.ui.style_preview = ParaStyle::from_name(&label(item));
         }
         let resp = resp.on_hover_text(tooltip(app, item));
         if resp.clicked() && enabled_item {

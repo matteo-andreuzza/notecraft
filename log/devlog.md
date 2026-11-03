@@ -1229,3 +1229,11 @@ were certain landed, behaviour unchanged (every test green after each commit).
   working rows; now pinned by a test and wired.
 - `history.emptyDeletedPages` (CM.Section.EmptyTrash): a right click on the Recycle Bin's
   Deleted Pages heading empties the deleted pages; deleted sections stay.
+
+## 2026-11-03 — Styles live preview
+
+- Resting the pointer on a style in the Styles gallery draws the selected paragraphs (or
+  the caret's) in that style until the pointer leaves (`UiState::style_preview`, reset each
+  frame by the ribbon; `canvas::previewed` lays out a styled copy; the page is untouched).
+  UI.Ribbon.Galleries wired (Tags and Pens galleries pick on click; their preview is
+  unverified).
