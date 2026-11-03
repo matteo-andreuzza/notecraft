@@ -1322,3 +1322,13 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Options › Customize Ribbon: show or hide each tab and (in the classic ribbon) each group
   (`Prefs::hidden_ribbon`, `"Tab"` or `"Tab/Group"`); Reset shows them all. A hidden tab
   that was open falls back to the first shown one.
+
+## 2026-11-03 — Spreadsheets in
+
+- `notecraft_import_export::sheet`: the first worksheet of an `.xlsx` (SpreadsheetML from
+  ECMA-376: shared strings, inline strings, booleans, cached values) or CSV (`,` `;` or tab,
+  quotes), as cell text; bounded (500 × 64), never panics.
+- Insert › Spreadsheet › Existing Excel Spreadsheet (`insert.existingSpreadsheet`): the file
+  attached, its values as a table below it (OneNote embeds the live workbook; unverified).
+- KB.Insert.ScreenClipping wired: the platform's screenshot reaches the page by paste or
+  Insert › Screen Clipping.

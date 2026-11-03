@@ -17,3 +17,4 @@ pub mod html;
 pub mod import;
 pub mod markdown;
 pub mod pdf;
+pub mod sheet;

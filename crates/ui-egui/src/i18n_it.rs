@@ -122,6 +122,7 @@ pub(crate) const IT: &[(&str, &str)] = &[
     ("Enable Live Preview", "Attiva anteprima dinamica"),
     ("Equation", "Equazione"),
     ("Eraser", "Gomma"),
+    ("Existing Excel Spreadsheet", "Foglio di calcolo di Excel esistente"),
     ("Exit", "Esci"),
     ("Expand Subpages", "Espandi sottopagine"),
     ("Export", "Esporta"),

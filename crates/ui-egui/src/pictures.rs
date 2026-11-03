@@ -383,6 +383,11 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
             Ok(()) => app.ui.status = Some(("Select an area of the screen to clip.".into(), ctx.input(|i| i.time))),
             Err(e) => app.ui.status = Some((e, ctx.input(|i| i.time))),
         },
+        "insert.existingSpreadsheet" => {
+            if let Some(path) = app.host.pick_file("Insert Existing Spreadsheet", &[("Spreadsheets", &["xlsx", "xlsm", "csv"])]) {
+                app.run(ctx, cmd, json!({"path": path}));
+            }
+        }
         "insert.printout" => {
             let mut exts = vec!["pdf"];
             exts.extend(picture_filter());

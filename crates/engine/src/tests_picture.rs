@@ -408,6 +408,7 @@ fn links_on_pictures_attachments_and_ink() {
 
 #[test]
 fn a_screen_clipping_is_a_picture_with_when_it_was_taken() {
+    // parity: KB.Insert.ScreenClipping (the platform takes the screenshot; it arrives here or by paste)
     let mut s = sample();
     blank_page(&mut s);
     assert!(s.run("insert.screenClipping", json!({})).is_err(), "the host captures; the engine alone can't");
@@ -582,4 +583,19 @@ fn display_as_switches_between_the_icon_and_the_printout() {
     run(&mut s, "printout.displayAs", json!({"as": "printout"}));
     assert_eq!(printout_pages(&s, att).len(), 2, "already a printout: unchanged");
     assert!(s.run("printout.displayAs", json!({"as": "thumbnail"})).is_err());
+}
+
+#[test]
+fn an_existing_spreadsheet_is_attached_with_its_values_as_a_table() {
+    // parity: R.Insert.Files.InsertExistingExcelSpreadsheet R.Insert.Files.InsertExcelSpreadsheetMenu
+    let mut s = sample();
+    blank_page(&mut s);
+    let r = run(&mut s, "insert.existingSpreadsheet", json!({"data": data(b"Item,Qty\nPens,4\nPaper,10\n"), "name": "Stock.csv"}));
+    assert_eq!((r["rows"].as_u64(), r["cols"].as_u64()), (Some(3), Some(2)));
+    let t = s.page().unwrap().table(Id::parse(r["table"].as_str().unwrap()).unwrap()).unwrap().clone();
+    assert_eq!(t.rows[2].cells[1].paragraphs[0].text(), "10");
+    assert_eq!(s.page().unwrap().attachment(Id::parse(r["attachment"].as_str().unwrap()).unwrap()).unwrap().name, "Stock.csv");
+    let n = s.page().unwrap().objects.len();
+    assert!(s.run("insert.existingSpreadsheet", json!({"data": data(b"PK\x03\x04 junk"), "name": "x.xlsx"})).is_err());
+    assert_eq!(s.page().unwrap().objects.len(), n, "a broken workbook inserts nothing");
 }

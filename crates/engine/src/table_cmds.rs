@@ -144,6 +144,17 @@ fn need_text_selection(s: &Session) -> Option<&'static str> {
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
         // R.Insert.Tables.TableInsertGallery — the size grid under Insert › Table.
+        // R.Insert.Files.InsertExistingExcelSpreadsheet: the file attached, its first sheet's
+        // values as a table below it (OneNote embeds the live workbook; unverified layout).
+        CommandSpec::new(
+            "insert.existingSpreadsheet",
+            "R.Insert.Files.InsertExistingExcelSpreadsheet",
+            "Existing Excel Spreadsheet",
+            "Insert/Files/Spreadsheet/Existing Excel Spreadsheet",
+            insert_spreadsheet,
+        )
+        .params(r#"{"path": .xlsx or .csv file | "data": base64 with "name", "x"?: pt, "y"?: pt}"#)
+        .when(need_page),
         CommandSpec::new("insert.table", "R.Insert.Tables.TableInsertGallery", "Table", "Insert/Tables/Table", insert_table)
             .params(r#"{"rows": int (1..5000, default 2), "cols": int (1..64, default 2), "x"?: pt, "y"?: pt}"#)
             .when(need_page),
@@ -642,6 +653,30 @@ fn column_width(s: &mut Session, v: &Value) -> CmdResult {
 /// rectangle), for the HTML clipboard.
 pub(crate) fn cells_of(t: &Table, rows: (usize, usize), cols: (usize, usize)) -> notecraft_import_export::html::TableBlock {
     notecraft_import_export::html::TableBlock::from_table(t, rows, cols)
+}
+
+fn insert_spreadsheet(s: &mut Session, v: &Value) -> CmdResult {
+    if s.page().is_some_and(|p| p.objects.len() + 2 > notecraft_doc::media::MAX_PAGE_OBJECTS) {
+        return Err(CmdError::Failed("the page is full".into()));
+    }
+    let (bytes, from_path) = crate::picture_cmds::read_input(v, notecraft_doc::media::MAX_ATTACHMENT_BYTES)?;
+    let name = p::str(v, "name").map(str::to_string).or(from_path).unwrap_or_else(|| "Spreadsheet.xlsx".into());
+    // Read first: a file that isn't a spreadsheet leaves the page untouched.
+    let grid = notecraft_import_export::sheet::read(&bytes).map_err(CmdError::Failed)?;
+    if grid.is_empty() {
+        return Err(CmdError::Failed("the spreadsheet is empty".into()));
+    }
+    let (rows, cols) = (grid.len(), grid[0].len());
+    let att = crate::picture_cmds::push_attachment(s, v, name, bytes)?;
+    let at = s.page().and_then(|p| p.attachment(att)).map(|a| a.pos).ok_or_else(no_page)?;
+    let cells: Vec<Vec<Vec<Paragraph>>> =
+        grid.into_iter().map(|row| row.into_iter().map(|text| vec![Paragraph::with_text(Id(0), &text)]).collect()).collect();
+    let pos = Point::new(at.x, at.y + notecraft_doc::media::ATTACHMENT_SIZE.1 + 12.0);
+    let table = table_from_cells(s, pos, notecraft_import_export::html::TableBlock::plain(cells));
+    let tid = table.id;
+    s.page_mut().ok_or_else(no_page)?.objects.push(PageObject::Table(table));
+    s.sel.on_page = PageSel::Objects { ids: vec![tid] };
+    Ok(json!({"attachment": att.to_string(), "table": tid.to_string(), "rows": rows, "cols": cols}))
 }
 
 /// A new table at `pos` holding `block` (rows of cells of paragraphs and merged cells, from
