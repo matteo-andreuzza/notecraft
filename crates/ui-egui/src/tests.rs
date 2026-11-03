@@ -1656,6 +1656,18 @@ fn live_preview_and_search_highlight_options_are_offered() {
 }
 
 #[test]
+fn the_script_menu_repeats_the_script_used_last() {
+    // parity: R.Home.BasicText.ExtendedTextFormattingMostRecenltyUsed
+    let mut h = harness(app());
+    h.run();
+    assert_eq!(crate::ribbon::recent_script(h.state()).0, "format.subscript", "Subscript until another is used");
+    let ctx = h.ctx.clone();
+    h.state_mut().run(&ctx, "page.new", json!({}));
+    h.state_mut().run(&ctx, "format.superscript", json!({}));
+    assert_eq!(crate::ribbon::recent_script(h.state()), ("format.superscript", "Superscript"));
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

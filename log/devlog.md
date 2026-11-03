@@ -1303,3 +1303,5 @@ were certain landed, behaviour unchanged (every test green after each commit).
   (QAT) opens the Color & Thickness dialog; UI.Window.Docked pinned by the dock test.
 - Add to Custom Tags (`tag.addToCustom`, the tag menu): a tag that isn't in your list (from
   another notebook or an imported file) joins it with its name and icon.
+- The Subscript / Superscript menu's first row applies the script used last
+  (`UiState::last_superscript`, `ribbon::recent_script`).

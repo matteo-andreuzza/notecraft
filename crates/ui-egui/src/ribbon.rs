@@ -807,7 +807,24 @@ pub(crate) fn swatch_grid(
     });
 }
 
+/// The command and label of the Subscript / Superscript menu's Most Recently Used row.
+pub(crate) fn recent_script(app: &NoteApp) -> (&'static str, &'static str) {
+    if app.ui.last_superscript { ("format.superscript", "Superscript") } else { ("format.subscript", "Subscript") }
+}
+
 pub(crate) fn menu_item(app: &mut NoteApp, ui: &mut Ui, id: &str, t: Tokens) {
+    // R.Home.BasicText.ExtendedTextFormattingMostRecenltyUsed: the script used last.
+    if id.ends_with(".ExtendedTextFormattingMostRecenltyUsed") {
+        let (cmd, name) = recent_script(app);
+        let on = app.disabled_reason(cmd).is_none();
+        let text = RichText::new(crate::i18n::tr(name)).color(if on { t.text } else { t.text_disabled });
+        if ui.add_enabled(on, egui::Button::new(text).frame(false).min_size(vec2(170.0, 22.0))).clicked() {
+            let ctx = ui.ctx().clone();
+            app.run(&ctx, cmd, json!({}));
+            ui.close();
+        }
+        return;
+    }
     // Recently Used Templates: the templates themselves, latest first.
     if id.ends_with(".StationeryMostRecentlyUsedList") {
         let recent = app.session.prefs.recent_templates.clone();

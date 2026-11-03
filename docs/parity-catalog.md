@@ -167,7 +167,7 @@ The Home tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Home.BasicText.Underline | Underline | Home/Basic Text/Underline | toggle | `Mod+U` | format.underline | P0 | verified | FLUENT19:Underline |  |
 | R.Home.BasicText.Strikethrough | Strikethrough | Home/Basic Text/Strikethrough | toggle | `Alt+-` | format.strikethrough | P0 | verified | FLUENT19:Strikethrough |  |
 | R.Home.BasicText.ExtendedTextFormattingMenu | Subscript / Superscript | Home/Basic Text/Subscript / Superscript | split |  | format.subscript | P1 | wired | FLUENT19:ExtendedTextFormattingMenu |  |
-| R.Home.BasicText.ExtendedTextFormattingMostRecenltyUsed | Most Recently Used (Subscript/Superscript) | Home/Basic Text/Subscript / Superscript/Most Recently Used (Subscript/Superscript) | toggle |  |  | P2 | missing | FLUENT19:ExtendedTextFormattingMostRecenltyUsed |  |
+| R.Home.BasicText.ExtendedTextFormattingMostRecenltyUsed | Most Recently Used (Subscript/Superscript) | Home/Basic Text/Subscript / Superscript/Most Recently Used (Subscript/Superscript) | toggle |  |  | P2 | wired | FLUENT19:ExtendedTextFormattingMostRecenltyUsed |  |
 | R.Home.BasicText.Subscript | Subscript | Home/Basic Text/Subscript / Superscript/Subscript | toggle | `Mod+=` | format.subscript | P1 | verified | FLUENT19:Subscript |  |
 | R.Home.BasicText.Superscript | Superscript | Home/Basic Text/Subscript / Superscript/Superscript | toggle | `Mod+Shift+Plus` | format.superscript | P1 | verified | FLUENT19:Superscript |  |
 | R.Home.BasicText.TextHighlightColorPicker | Text Highlight Color | Home/Basic Text/Text Highlight Color | gallery | `Mod+Alt+H` | format.highlight | P0 | wired | FLUENT19:TextHighlightColorPicker |  |

@@ -207,6 +207,10 @@ pub struct UiState {
     /// KeyTips: `None` off, `""` the tabs' letters, else the tab whose command letters show.
     #[serde(skip)]
     pub keytips: Option<String>,
+    /// The script last applied, Superscript (`true`) or Subscript: what the Subscript /
+    /// Superscript menu's Most Recently Used row applies.
+    #[serde(default)]
+    pub last_superscript: bool,
     /// Alt is held on its own, and nothing was pressed since (KeyTips start on its release).
     #[serde(skip)]
     pub alt_alone: bool,
@@ -305,6 +309,7 @@ impl Default for UiState {
             search_pane: false,
             quick_note_restore: None,
             keytips: None,
+            last_superscript: false,
             alt_alone: false,
             alt_down: false,
             dock_restore: None,
@@ -440,6 +445,11 @@ impl NoteApp {
         }
         if let Some(url) = v.get("open_url").and_then(Value::as_str) {
             ctx.open_url(egui::OpenUrl::new_tab(url));
+        }
+        match id {
+            "format.superscript" => self.ui.last_superscript = true,
+            "format.subscript" => self.ui.last_superscript = false,
+            _ => {}
         }
         if v.get("keytips").and_then(Value::as_bool) == Some(true) {
             self.ui.keytips = if self.ui.keytips.is_some() { None } else { Some(String::new()) };
