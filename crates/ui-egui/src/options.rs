@@ -220,6 +220,8 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             section(ui, "User Interface options");
             // OPT.General.ShowMiniToolbar.
             ui.checkbox(&mut d.show_mini_toolbar, "Show Mini Toolbar on selection");
+            // OPT.General.LivePreview.
+            ui.checkbox(&mut d.live_preview, "Enable Live Preview");
         }
         OptionsPage::Display => {
             section(ui, "Display");
@@ -305,6 +307,13 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             ui.checkbox(&mut d.show_authors, "Show authors");
             ui.checkbox(&mut d.pen_pressure, "Use pen pressure sensitivity");
             ui.checkbox(&mut d.search_highlight, "Highlight search results on the page");
+            // OPT.Advanced.AutoSwitchPen.
+            ui.checkbox(&mut d.auto_switch_pen, "Automatically switch between pen and selection tool");
+            // OPT.Advanced.EmailSignature.
+            ui.horizontal(|ui| {
+                ui.label("Email signature:");
+                ui.add(egui::TextEdit::singleline(&mut d.email_signature).desired_width(220.0));
+            });
             // OPT.Advanced.MeasurementUnits.
             ui.horizontal(|ui| {
                 use notecraft_engine::doc::geom::Unit;

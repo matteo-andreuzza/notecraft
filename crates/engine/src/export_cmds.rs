@@ -90,6 +90,12 @@ fn email_page(s: &mut Session, _: &Value) -> CmdResult {
     let page = s.page().ok_or_else(no_page)?;
     let subject = page.display_title();
     let mut body = page.plain_text();
+    // OPT.Advanced.EmailSignature.
+    let sig = s.prefs.email_signature.trim();
+    if !sig.is_empty() {
+        body.push_str("\n\n-- \n");
+        body.push_str(sig);
+    }
     if body.len() > MAX_MAIL_BODY {
         let mut end = MAX_MAIL_BODY;
         while !body.is_char_boundary(end) {

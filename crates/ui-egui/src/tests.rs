@@ -1641,6 +1641,20 @@ fn more_quick_access_commands_are_offered_and_work() {
 }
 
 #[test]
+fn live_preview_and_search_highlight_options_are_offered() {
+    // parity: OPT.General.LivePreview OPT.Advanced.SearchHighlight
+    let mut a = app();
+    a.ui.backstage = Some(crate::Backstage::Options);
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Enable Live Preview").is_some());
+    h.state_mut().ui.options_page = crate::options::OptionsPage::Advanced;
+    h.run();
+    assert!(h.query_by_label("Highlight search results on the page").is_some());
+    assert!(h.query_by_label("Automatically switch between pen and selection tool").is_some());
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

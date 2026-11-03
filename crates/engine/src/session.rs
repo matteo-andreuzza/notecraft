@@ -134,6 +134,13 @@ pub struct Prefs {
     /// Show who wrote paragraphs others edited (`OPT.Advanced.ShowAuthors`; History › Hide
     /// Authors turns it off; the UI reads it).
     pub show_authors: bool,
+    /// Draw the Styles gallery's live preview (`OPT.General.LivePreview`; the UI reads it).
+    pub live_preview: bool,
+    /// Text added at the end of Email Page's mail (`OPT.Advanced.EmailSignature`).
+    pub email_signature: String,
+    /// A pen picks the pen tool and a mouse or finger the selection tool by themselves
+    /// (`OPT.Advanced.AutoSwitchPen`; the UI reads it; unverified default: off).
+    pub auto_switch_pen: bool,
     /// Where new notebooks go (`OPT.SaveBackup.DefaultNotebookLocation`; empty: ask).
     pub default_notebook_location: String,
     /// The notebook whose Quick Notes section takes quick notes
@@ -191,6 +198,9 @@ impl Default for Prefs {
             pen_pressure: true,
             search_highlight: true,
             show_authors: true,
+            live_preview: true,
+            email_signature: String::new(),
+            auto_switch_pen: false,
             default_notebook_location: String::new(),
             quick_notes_notebook: String::new(),
             templates: Vec::new(),

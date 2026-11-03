@@ -477,3 +477,16 @@ fn use_pen_as_pointer_makes_a_pen_type_while_the_mouse_still_draws() {
     assert_eq!(crate::ink::effective_tool(&a, true), DrawTool::Pen);
     assert!(a.session.run("draw.pointerMode", json!({"mode": "laser"})).is_err());
 }
+
+#[test]
+fn auto_switch_pen_lets_the_pen_draw_and_the_mouse_select() {
+    // parity: OPT.Advanced.AutoSwitchPen
+    use notecraft_engine::DrawTool;
+    let mut a = app();
+    a.session.prefs.auto_switch_pen = true;
+    assert_eq!(crate::ink::effective_tool(&a, true), DrawTool::Pen, "a pen on the Type tool draws");
+    a.session.run("draw.pen", json!({})).unwrap();
+    assert_eq!(crate::ink::effective_tool(&a, false), DrawTool::Type, "a mouse on the Pen tool selects");
+    a.session.prefs.auto_switch_pen = false;
+    assert_eq!(crate::ink::effective_tool(&a, false), DrawTool::Pen);
+}

@@ -1265,3 +1265,7 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - File › Account shows the user name edits are signed with (BS.Account.Identity) and opens
   Options › General to change it. Pinned rows whose commands already worked: QAT Shapes,
   Back/Forward (history list), and Sort… in the text and paragraph-handle table menus.
+- Options: Enable Live Preview (the Styles gallery's preview), Automatically switch between
+  pen and selection tool (a pen draws on the Type tool, a mouse selects on the Pen tool;
+  default off, unverified), Email signature (appended to Email Page's mail after `-- `);
+  Highlight search results is now pinned by a test.

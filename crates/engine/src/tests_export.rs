@@ -210,3 +210,12 @@ fn email_and_send_hand_the_page_to_a_mail_or_a_file() {
     assert!(std::fs::read(r["path"].as_str().unwrap()).unwrap().starts_with(b"PK"), "a .docx");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn email_page_ends_with_the_signature() {
+    // parity: OPT.Advanced.EmailSignature
+    let mut s = crate::tests::sample();
+    s.prefs.email_signature = "Ada".into();
+    let url = s.run("share.emailPage", serde_json::json!({})).unwrap()["open_url"].as_str().unwrap().to_string();
+    assert!(url.ends_with("%0A%0A--%20%0AAda"), "{url}");
+}

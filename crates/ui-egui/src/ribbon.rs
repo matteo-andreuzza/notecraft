@@ -1008,7 +1008,7 @@ fn gallery(app: &mut NoteApp, ui: &mut Ui, id: &str, items: &[&str], extra: &[&s
             }
             ui.painter().text(r.left_center() + vec2(21.0, 0.0), egui::Align2::LEFT_CENTER, &lab, egui::FontId::proportional(11.5), color);
         }
-        if is_styles && enabled_item && resp.hovered() {
+        if is_styles && enabled_item && resp.hovered() && app.session.prefs.live_preview {
             app.ui.style_preview = ParaStyle::from_name(&label(item));
         }
         let resp = resp.on_hover_text(tooltip(app, item));

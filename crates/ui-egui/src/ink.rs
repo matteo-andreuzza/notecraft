@@ -506,6 +506,14 @@ fn pressure(app: &mut NoteApp, ui: &Ui) -> f32 {
 /// pressure) types and selects instead of drawing or erasing.
 pub(crate) fn effective_tool(app: &NoteApp, pen: bool) -> DrawTool {
     let tool = app.session.draw.tool;
+    // OPT.Advanced.AutoSwitchPen: the pen draws and the mouse selects, whatever is chosen.
+    if app.session.prefs.auto_switch_pen && !app.session.draw.pen_as_pointer {
+        return match (pen, tool) {
+            (true, DrawTool::Type) => DrawTool::Pen,
+            (false, DrawTool::Pen) => DrawTool::Type,
+            _ => tool,
+        };
+    }
     if app.session.draw.pen_as_pointer && pen && matches!(tool, DrawTool::Pen | DrawTool::Shape | DrawTool::Eraser) { DrawTool::Type } else { tool }
 }
 

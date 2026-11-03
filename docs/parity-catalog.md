@@ -1297,7 +1297,7 @@ The OneNote Options dialog, category by category. Setting names are functional d
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | OPT.General.ShowMiniToolbar | Show Mini Toolbar on selection | File/Options/General/Show Mini Toolbar on selection | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.General.LivePreview | Enable Live Preview | File/Options/General/Enable Live Preview | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.General.LivePreview | Enable Live Preview | File/Options/General/Enable Live Preview | option |  |  | P3 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.General.ScreenTipStyle | ScreenTip style | File/Options/General/ScreenTip style | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.General.UserName | User name (author of edits) | File/Options/General/User name (author of edits) | option |  |  | P1 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.General.Initials | Initials | File/Options/General/Initials | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
@@ -1357,9 +1357,9 @@ The OneNote Options dialog, category by category. Setting names are functional d
 | OPT.Advanced.WikiLinks | Enable Wiki linking ([[Page]]) | File/Options/Advanced/Enable Wiki linking ([[Page]]) | option |  |  | P1 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.LinkedNotesOptions | Linked Notes options | File/Options/Advanced/Linked Notes options | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.EmailAttachCopy | Email: attach a copy of the original notes as a OneNote file | File/Options/Advanced/Email: attach a copy of the original notes as a OneNote file | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.Advanced.EmailSignature | Email: add a signature | File/Options/Advanced/Email: add a signature | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.Advanced.EmailSignature | Email: add a signature | File/Options/Advanced/Email: add a signature | option |  |  | P3 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.PenPressure | Use pen pressure sensitivity | File/Options/Advanced/Use pen pressure sensitivity | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.Advanced.AutoSwitchPen | Automatically switch between pen and selection tool | File/Options/Advanced/Automatically switch between pen and selection tool | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.Advanced.AutoSwitchPen | Automatically switch between pen and selection tool | File/Options/Advanced/Automatically switch between pen and selection tool | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.CompletedToDoSummary | Show completed To Do tags in the Tags Summary | File/Options/Advanced/Show completed To Do tags in the Tags Summary | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.MeasurementUnits | Measurement units | File/Options/Advanced/Measurement units | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording; Inches (default), Centimeters, Millimeters, Points, Picas; the Paper Size pane's lengths follow it |
 | OPT.Advanced.DefaultFont | Default font, size and colour | File/Options/Advanced/Default font, size and colour | option |  |  | P0 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
@@ -1368,7 +1368,7 @@ The OneNote Options dialog, category by category. Setting names are functional d
 | OPT.Advanced.AddinsAccessLocked | Enable add-on programs to access password-protected sections when unlocked | File/Options/Advanced/Enable add-on programs to access password-protected sections when unlocked | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.BatteryOptions | Battery life optimization | File/Options/Advanced/Battery life optimization | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Advanced.ShowAuthors | Show authors | File/Options/Advanced/Show authors | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.Advanced.SearchHighlight | Highlight search results on the page | File/Options/Advanced/Highlight search results on the page | option |  |  | P2 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.Advanced.SearchHighlight | Highlight search results on the page | File/Options/Advanced/Highlight search results on the page | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Add-ins.AddIns | Add-ins (COM add-ins list) | File/Options/Add-ins/Add-ins (COM add-ins list) | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.TrustCenter.TrustCenter | Trust Center (privacy options) | File/Options/Trust Center/Trust Center (privacy options) | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 
