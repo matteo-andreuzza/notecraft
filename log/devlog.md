@@ -1237,3 +1237,10 @@ were certain landed, behaviour unchanged (every test green after each commit).
   frame by the ribbon; `canvas::previewed` lays out a styled copy; the page is untouched).
   UI.Ribbon.Galleries wired (Tags and Pens galleries pick on click; their preview is
   unverified).
+
+## 2026-11-03 — Dock to Desktop
+
+- `view.dock` (View › Dock to Desktop, Ctrl+Alt+D): a 380-point window along the screen's
+  right edge, always on top, showing the ribbon and the page (no notebook pane or page
+  list); again (or Normal View) puts the old position, size and level back
+  (`NoteApp::dock_window`; on Wayland the compositor places the window).

@@ -421,7 +421,7 @@ The View tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 |---|---|---|---|---|---|---|---|---|---|
 | R.View.Views.NormalViewOneNote | Normal View | View/Views/Normal View | toggle |  | view.normal | P0 | wired | FLUENT19:NormalViewOneNote |  |
 | R.View.Views.FullPageView | Full Page View | View/Views/Full Page View | toggle | `F11` | view.fullPage | P0 | verified | FLUENT19:FullPageView |  |
-| R.View.Views.CurrentWindowDock | Dock to Desktop | View/Views/Dock to Desktop | toggle | `Mod+Alt+D` | view.dock | P1 | missing | FLUENT19:CurrentWindowDock |  |
+| R.View.Views.CurrentWindowDock | Dock to Desktop | View/Views/Dock to Desktop | toggle | `Mod+Alt+D` | view.dock | P1 | wired | FLUENT19:CurrentWindowDock |  |
 | R.View.PageSetup.PageColorGallery | Page Color | View/Page Setup/Page Color | gallery |  | view.pageColor | P1 | wired | FLUENT19:PageColorGallery |  |
 | R.View.PageSetup.RuleLinesMenu | Rule Lines | View/Page Setup/Rule Lines | gallery | `Mod+Shift+R` | view.ruleLines | P1 | verified | FLUENT19:RuleLinesMenu |  |
 | R.View.PageSetup.RuleLineColorMenu | Rule Line Color | View/Page Setup/Rule Lines/Rule Line Color | menu |  |  | P2 | wired | FLUENT19:RuleLineColorMenu |  |
@@ -1113,7 +1113,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 |---|---|---|---|---|---|---|---|---|---|
 | KB.General.NewWindow | Open a new window | Keyboard/General/Open a new window | shortcut | `Mod+M` | window.new | P1 | missing | KBD365 |  |
 | KB.General.QuickNote | Create a Quick Note | Keyboard/General/Create a Quick Note | shortcut | `Mod+Shift+M` | window.quickNote | P1 | wired | KBD365 | global Win+Alt+N is a desktop-wide hotkey; registered by the desktop app where the platform allows |
-| KB.General.Dock | Dock the window | Keyboard/General/Dock the window | shortcut | `Mod+Alt+D` | view.dock | P2 | missing | KBD365 |  |
+| KB.General.Dock | Dock the window | Keyboard/General/Dock the window | shortcut | `Mod+Alt+D` | view.dock | P2 | wired | KBD365 |  |
 | KB.General.Undo | Undo the previous action | Keyboard/General/Undo the previous action | shortcut | `Mod+Z` | edit.undo | P0 | wired | KBD365 |  |
 | KB.General.Redo | Redo the previous action | Keyboard/General/Redo the previous action | shortcut | `Mod+Y` | edit.redo | P0 | wired | KBD365 |  |
 | KB.General.SelectAll | Select all items on the current page (repeat to expand) | Keyboard/General/Select all items on the current page (repeat to expand) | shortcut | `Mod+A` | edit.selectAll | P0 | wired | KBD365 | repeat expands: paragraph → container → page |

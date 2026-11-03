@@ -103,6 +103,18 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         })
         .key("F11")
         .pure(),
+        // R.View.Views.CurrentWindowDock, KB.General.Dock: a narrow window at the screen's
+        // right edge, on top of the others, showing the page (the UI sizes the window).
+        CommandSpec::new("view.dock", "R.View.Views.CurrentWindowDock", "Dock to Desktop", "View/Views/Dock to Desktop", |s, _| {
+            s.view.docked = !s.view.docked;
+            if s.view.docked {
+                s.view.full_page = false;
+                s.view.quick_note = false;
+            }
+            Ok(json!({"docked": s.view.docked}))
+        })
+        .key("Mod+Alt+D")
+        .pure(),
         CommandSpec::new("view.normal", "R.View.Views.NormalViewOneNote", "Normal View", "View/Views/Normal View", |s, _| {
             s.view.full_page = false;
             s.view.docked = false;

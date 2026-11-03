@@ -125,6 +125,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "history.pageVersions" => s.view.page_versions,
         "help.help" => s.view.help_pane,
         "window.alwaysOnTop" => s.view.always_on_top,
+        "view.dock" => s.view.docked,
         "view.switchBackground" => s.view.light_page,
         "history.showUnread" => s.prefs.show_unread,
         "history.hideAuthors" => !s.prefs.show_authors,

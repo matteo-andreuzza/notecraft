@@ -1500,6 +1500,24 @@ fn hovering_a_style_previews_it_on_the_selected_paragraph() {
 }
 
 #[test]
+fn ctrl_alt_d_docks_the_window_to_the_page_and_back() {
+    // parity: R.View.Views.CurrentWindowDock KB.General.Dock
+    let mut h = harness(app());
+    h.run();
+    assert!(h.query_by_label("Hide Navigation").is_some());
+    let dock = egui::Modifiers { ctrl: true, alt: true, command: true, ..Default::default() };
+    h.event(egui::Event::Key { key: egui::Key::D, physical_key: None, pressed: true, repeat: false, modifiers: dock });
+    h.run();
+    assert!(h.state().session.view.docked && h.state().ui.dock_shown, "docked");
+    assert!(h.query_by_label("Hide Navigation").is_none(), "docked, the navigation is hidden");
+    let ctx = h.ctx.clone();
+    h.state_mut().run(&ctx, "view.dock", json!({}));
+    h.run();
+    assert!(!h.state().ui.dock_shown && h.state().ui.dock_restore.is_none(), "undocked, the old geometry was put back");
+    assert!(h.query_by_label("Hide Navigation").is_some());
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

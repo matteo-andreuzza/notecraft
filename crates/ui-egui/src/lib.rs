@@ -195,6 +195,12 @@ pub struct UiState {
     pub search_pane: bool,
     /// The window size before it became a Quick Note window (restored after).
     pub quick_note_restore: Option<[f32; 2]>,
+    /// The window's position and size before it was docked (restored after).
+    #[serde(default)]
+    pub dock_restore: Option<[f32; 4]>,
+    /// Whether the window is sized as docked (Dock to Desktop), so it is sized once per change.
+    #[serde(default)]
+    pub dock_shown: bool,
     /// Whether the window is currently sized as a Quick Note window.
     pub quick_note_shown: bool,
     /// Whether the window was last told to stay on top (View › Always on Top).
@@ -280,6 +286,8 @@ impl Default for UiState {
             search_open: false,
             search_pane: false,
             quick_note_restore: None,
+            dock_restore: None,
+            dock_shown: false,
             quick_note_shown: false,
             on_top_applied: false,
             find: String::new(),
@@ -597,9 +605,12 @@ impl NoteApp {
                 chrome::tab_row(self, ui, t);
                 ribbon::show(self, ui, t);
             }
-            nav::nav_row(self, ui, t);
-            nav::notebook_pane(self, ui, t);
-            nav::page_list(self, ui, t);
+            // Docked, the window shows the page: no notebook pane or page list.
+            if !self.session.view.docked {
+                nav::nav_row(self, ui, t);
+                nav::notebook_pane(self, ui, t);
+                nav::page_list(self, ui, t);
+            }
             if self.session.view.tags_pane {
                 panes::tags_pane(self, ui, t);
             }
@@ -667,6 +678,7 @@ impl NoteApp {
             let level = if self.ui.on_top_applied { egui::WindowLevel::AlwaysOnTop } else { egui::WindowLevel::Normal };
             ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(level));
         }
+        self.dock_window(ctx);
         let want = self.session.view.quick_note;
         if want == self.ui.quick_note_shown {
             return;
@@ -680,6 +692,35 @@ impl NoteApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(size[0], size[1])));
         }
         self.ui.quick_note_shown = want;
+    }
+
+    /// Dock to Desktop and back, once per change: a 380-point-wide window along the screen's
+    /// right edge, above the others (Wayland lets the compositor place it), then the old
+    /// position, size and level again.
+    fn dock_window(&mut self, ctx: &egui::Context) {
+        let want = self.session.view.docked;
+        if want == self.ui.dock_shown {
+            return;
+        }
+        self.ui.dock_shown = want;
+        if want {
+            let (outer, inner, monitor) = ctx.input(|i| (i.viewport().outer_rect, i.viewport().inner_rect, i.viewport().monitor_size));
+            let r = inner.unwrap_or_else(|| ctx.content_rect());
+            let at = outer.map_or(egui::Pos2::ZERO, |o| o.min);
+            self.ui.dock_restore = Some([at.x, at.y, r.width(), r.height()]);
+            let screen = monitor.unwrap_or(egui::vec2(1280.0, 800.0));
+            const W: f32 = 380.0;
+            ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::AlwaysOnTop));
+            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(W, (screen.y - 40.0).max(300.0))));
+            ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::pos2((screen.x - W).max(0.0), 0.0)));
+        } else {
+            let level = if self.session.view.always_on_top { egui::WindowLevel::AlwaysOnTop } else { egui::WindowLevel::Normal };
+            ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(level));
+            if let Some([x, y, w, h]) = self.ui.dock_restore.take() {
+                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(w, h)));
+                ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::pos2(x, y)));
+            }
+        }
     }
 
     fn expand_button(&mut self, ui: &mut Ui, area: egui::Rect, t: Tokens) {
