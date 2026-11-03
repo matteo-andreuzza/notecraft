@@ -245,6 +245,16 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         )
         .params(r##"{"index"?: pen (default: the selected one), "tool"?: "pen" | "highlighter", "color"?: "#rrggbb", "width"?: pt}"##)
         .pure(),
+        // QAT.NR.ShapeColorAndThickness: the same dialog, for the pen the shapes draw with.
+        CommandSpec::new(
+            "draw.shapeColorThickness",
+            "QAT.NR.ShapeColorAndThickness",
+            "Shape Color & Thickness",
+            "Quick Access Toolbar/Commands Not in the Ribbon/Shape Color & Thickness",
+            color_thickness,
+        )
+        .params(r##"{"index"?: pen, "tool"?: "pen" | "highlighter", "color"?: "#rrggbb", "width"?: pt}"##)
+        .pure(),
         CommandSpec::new("draw.stroke", "NC.Draw.Stroke", "Ink", "Mouse/Canvas/Draw", stroke)
             .params(r##"{"points": [[x, y, pressure?], …] page points, "pen"?: index, "tool"?: "pen" | "highlighter", "color"?: "#rrggbb", "width"?: pt, "free"?: bool (no ruler, no Ink to Shape)}"##)
             .when(need_page),

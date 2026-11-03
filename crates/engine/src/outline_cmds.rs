@@ -3,7 +3,7 @@
 
 use notecraft_doc::OutlineWidth;
 use notecraft_doc::geom::Point;
-use serde_json::Value;
+use serde_json::{Value, json};
 
 use crate::ops::{need_page, need_text, no_page};
 use crate::selection::{Block, PageSel, Pos, TextRange};
@@ -82,6 +82,11 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         // BEH.Canvas.ContainerMove / ContainerResize.
         CommandSpec::new("outline.move", "BEH.Canvas.ContainerMove", "Move Note Container", "Behaviour/Canvas", move_outline)
             .params(r#"{"id": outline or table id, "x": pt, "y": pt}"#)
+            .when(need_page),
+        // BEH.Canvas.MergeContainers: a container shift-dragged onto another joins it; its
+        // paragraphs follow the other's (unverified: where they land).
+        CommandSpec::new("outline.merge", "BEH.Canvas.MergeContainers", "Merge Note Containers", "Behaviour/Canvas", merge_outline)
+            .params(r#"{"from": outline id, "into": outline id}"#)
             .when(need_page),
         CommandSpec::new("outline.resize", "BEH.Canvas.ContainerResize", "Resize Note Container", "Behaviour/Canvas", resize_outline)
             .params(r#"{"id": outline id, "width": pt | null (auto)}"#)
@@ -313,6 +318,26 @@ fn move_outline(s: &mut Session, v: &Value) -> CmdResult {
     o.set_pos(Point::new(x.max(0.0), y.max(0.0)));
     s.coalesce = Some(format!("move:{id}"));
     Ok(Value::Null)
+}
+
+fn merge_outline(s: &mut Session, v: &Value) -> CmdResult {
+    let (from, into) = (p::req_id(v, "from")?, p::req_id(v, "into")?);
+    if from == into {
+        return Err(CmdError::Params("a container can't merge into itself".into()));
+    }
+    let page = s.page().ok_or_else(no_page)?;
+    let (Some(a), Some(_)) = (page.outline(from), page.outline(into)) else {
+        return Err(CmdError::Params("give two note containers".into()));
+    };
+    let moved = a.paragraphs.clone();
+    let page = s.page_mut().ok_or_else(no_page)?;
+    if let Some(b) = page.outline_mut(into) {
+        let at = b.paragraphs.len();
+        b.paragraphs.extend(moved);
+        page.objects.retain(|o| o.id() != from);
+        s.sel.on_page = PageSel::Text(crate::selection::TextRange::caret(crate::selection::Pos { block: Block::Outline(into), para: at, offset: 0 }));
+    }
+    Ok(json!({"into": into.to_string()}))
 }
 
 pub(crate) fn resize_outline(s: &mut Session, v: &Value) -> CmdResult {

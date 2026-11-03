@@ -1345,6 +1345,14 @@ fn interact(app: &mut NoteApp, ui: &Ui, ctx: &egui::Context, resp: &egui::Respon
         }
     }
     if resp.drag_stopped() {
+        // BEH.Canvas.MergeContainers: a container dropped with Shift onto another joins it.
+        if let Some(Drag::Move { id, .. }) = app.canvas.drag
+            && ui.input(|i| i.modifiers.shift)
+            && let Some(p) = resp.interact_pointer_pos().or_else(|| ctx.pointer_latest_pos())
+            && let Some(target) = app.canvas.outlines.iter().find(|o| o.id != id && !o.table && o.rect.contains(p)).map(|o| o.id)
+        {
+            app.run(ctx, "outline.merge", json!({"from": id.to_string(), "into": target.to_string()}));
+        }
         if let Some(Drag::Para { from, para }) = app.canvas.drag
             && let Some(p) = resp.interact_pointer_pos().or_else(|| ctx.pointer_latest_pos())
             && let Some(page) = app.session.page().cloned()

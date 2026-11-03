@@ -1501,7 +1501,7 @@ fn hovering_a_style_previews_it_on_the_selected_paragraph() {
 
 #[test]
 fn ctrl_alt_d_docks_the_window_to_the_page_and_back() {
-    // parity: R.View.Views.CurrentWindowDock KB.General.Dock
+    // parity: R.View.Views.CurrentWindowDock KB.General.Dock UI.Window.Docked
     let mut h = harness(app());
     h.run();
     assert!(h.query_by_label("Hide Navigation").is_some());
@@ -1628,8 +1628,9 @@ fn the_account_page_shows_the_user_name_used_as_author() {
 
 #[test]
 fn more_quick_access_commands_are_offered_and_work() {
-    // parity: QAT.ShapeSmileyFace QAT.NR.WebGoBack QAT.NR.WebGoForward
+    // parity: QAT.ShapeSmileyFace QAT.NR.WebGoBack QAT.NR.WebGoForward QAT.NR.ShapeColorAndThickness
     let offered = crate::qat::available();
+    assert!(matches!(crate::ribbon::dialog_for(&app(), "QAT.NR.ShapeColorAndThickness"), Some(crate::dialogs::Dialog::ColorThickness { .. })));
     for id in ["QAT.ShapeSmileyFace", "QAT.NR.WebGoBack", "QAT.NR.WebGoForward"] {
         assert!(offered.iter().any(|x| x == id), "{id} can be added to the toolbar");
     }

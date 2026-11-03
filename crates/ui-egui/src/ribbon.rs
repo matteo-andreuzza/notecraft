@@ -435,7 +435,7 @@ pub(crate) fn dialog_for(app: &NoteApp, id: &str) -> Option<crate::dialogs::Dial
             ids.iter().find_map(|id| page.attachment(*id)).map(|a| Dialog::RenameAttachment(a.name.clone()))
         }
         "EmptyRecycleBin" => Some(Dialog::ConfirmEmptyBin),
-        "MoreColorAndThicknessOptions" => {
+        "MoreColorAndThicknessOptions" | "ShapeColorAndThickness" => {
             let pen = app.session.draw.current_pen();
             Some(Dialog::ColorThickness {
                 highlighter: pen.tool == notecraft_engine::doc::InkTool::Highlighter,

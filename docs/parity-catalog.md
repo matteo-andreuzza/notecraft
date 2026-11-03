@@ -111,7 +111,7 @@ The window structure, panes and dialogs a OneNote user expects to find. A UI row
 | UI.Dialogs.CustomizeRibbon | Customize the Ribbon page (tabs, groups, commands, reset, import/export) | Window/Dialogs/Customize Ribbon | surface |  |  | P2 | missing | GK (Options) |  |
 | UI.Dialogs.CustomizeQAT | Quick Access Toolbar customization page (and the QAT drop-down) | Window/Dialogs/Customize QAT | surface |  |  | P1 | wired | GK (Options) | the ▾ menu (common commands on/off, More Commands…) and Options › Quick Access Toolbar (add, remove, move up/down, reset); unverified: changes apply at once |
 | UI.Window.FullPage | Full Page View: ribbon and navigation hidden, a single button to return | Window/Full Page View | surface |  |  | P0 | wired | FLUENT19:FullPageView |  |
-| UI.Window.Docked | Docked window: OneNote docked to the side of the desktop with the compact ribbon | Window/Docked | surface |  |  | P2 | missing | FLUENT19:CurrentWindowDock; TabHomeNarrow… |  |
+| UI.Window.Docked | Docked window: OneNote docked to the side of the desktop with the compact ribbon | Window/Docked | surface |  |  | P2 | wired | FLUENT19:CurrentWindowDock; TabHomeNarrow… |  |
 | UI.Window.QuickNote | Quick Note window: a small borderless page saved to Quick Notes | Window/Quick Note | surface |  |  | P1 | wired | FLUENT19:NewSideNote; KBD365 | unverified: the reference opens a separate small window; NoteCraft turns its one window into a 460×400 note window showing only the page (no ribbon, no navigation), and the expand button or Normal View brings the full window back at its old size |
 | UI.Window.ContextMenus | Right-click context menus for each object (see CM rows) | Window/Context Menus | surface |  |  | P0 | wired | FLUENT19 (context menus) | Notebook, section group, section, page and pane-area menus; object menus on the page are not implemented yet. |
 | UI.Window.DarkMode | Office theme (Colorful, Dark Gray, Black, White, Use system setting) and dark page canvas | Window/Theme | surface |  |  | P1 | wired | GK; M365-2024 | Picked in File › Account; the system setting follows the XDG portal on Linux. The Dark Gray and Black page is dark by default (the reference's page-colour switch is not implemented). |
@@ -1075,7 +1075,7 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.SendNotesAsAttachment | Send as Attachment | Quick Access Toolbar/Commands Not in the Ribbon/Send as Attachment | button |  | share.sendAttachment | P2 | wired | FLUENT19:SendNotesAsAttachment |  |
 | QAT.NR.FileExit | Exit | Quick Access Toolbar/Commands Not in the Ribbon/Exit | button |  | file.exit | P0 | verified | FLUENT19:FileExit | Saves every notebook first; when one can't be saved the window stays open and the error says why (closing would lose the change). |
 | QAT.NR.OfficeFeedback | Feedback | Quick Access Toolbar/Commands Not in the Ribbon/Feedback | button |  | help.feedback | P3 | missing | FLUENT19:OfficeFeedback |  |
-| QAT.NR.ShapeColorAndThickness | Shape Color & Thickness | Quick Access Toolbar/Commands Not in the Ribbon/Shape Color & Thickness | toggle |  | draw.shapeColorThickness | P2 | missing | FLUENT19:ShapeColorAndThickness |  |
+| QAT.NR.ShapeColorAndThickness | Shape Color & Thickness | Quick Access Toolbar/Commands Not in the Ribbon/Shape Color & Thickness | toggle |  | draw.shapeColorThickness | P2 | wired | FLUENT19:ShapeColorAndThickness |  |
 | QAT.NR.NewSharedNotebookCreate | New Shared Notebook | Quick Access Toolbar/Commands Not in the Ribbon/New Shared Notebook | button |  |  | P3 | out-of-scope | FLUENT19:NewSharedNotebookCreate |  |
 
 ## Docked window ribbon
@@ -1384,7 +1384,7 @@ Documented (or, where marked, plausible and unverified) behaviour. A behaviour r
 | BEH.Canvas.ContainerMove | Dragging a container's top bar moves it anywhere on the page | Behaviour/Canvas | behaviour |  |  | P0 | verified | GK |  |
 | BEH.Canvas.EmptyContainerRemoved | A container left empty disappears when the caret leaves it | Behaviour/Canvas | behaviour |  |  | P0 | wired | GK | unverified |
 | BEH.Canvas.PageGrows | The page grows right and down as content is added; it never has a fixed size unless Paper Size is set | Behaviour/Canvas | behaviour |  |  | P0 | verified | GK; FLUENT19:PaperSize |  |
-| BEH.Canvas.MergeContainers | Shift-dragging a container onto another merges them | Behaviour/Canvas | behaviour |  |  | P2 | missing | GK | unverified |
+| BEH.Canvas.MergeContainers | Shift-dragging a container onto another merges them | Behaviour/Canvas | behaviour |  |  | P2 | wired | GK | unverified |
 | BEH.Canvas.InsertSpace | Insert Space: drag on the page to push content down or right | Behaviour/Canvas | behaviour |  | canvas.insertSpace | P1 | wired | FLUENT19:PenInsertSpace | the longer way of the drag decides down or right; removing space stops at the line; the tool returns to Type after one use (unverified) |
 | BEH.Outline.EnterNewParagraph | Enter splits/creates a paragraph at the same level; it keeps the list format | Behaviour/Outline | behaviour |  |  | P0 | verified | GK |  |
 | BEH.Outline.TabIndent | Tab at the start of a paragraph indents it (and its children) one level; Shift+Tab outdents | Behaviour/Outline | behaviour |  |  | P0 | verified | KBD365 |  |

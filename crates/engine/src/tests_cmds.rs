@@ -876,3 +876,21 @@ fn sync_writes_the_notebook_and_the_status_says_so() {
     assert_eq!(run(&mut s, "notebook.syncStatus", json!({}))["notebooks"][0]["saved"], true);
     run(&mut s, "notebook.syncAll", json!({}));
 }
+
+#[test]
+fn merging_containers_appends_the_paragraphs() {
+    // parity: BEH.Canvas.MergeContainers
+    let mut s = sample();
+    run(&mut s, "page.new", json!({}));
+    let a = run(&mut s, "outline.new", json!({"x": 40.0, "y": 120.0}))["outline"].as_str().map(str::to_string);
+    run(&mut s, "text.insert", json!({"text": "first"}));
+    let b = run(&mut s, "outline.new", json!({"x": 40.0, "y": 300.0}))["outline"].as_str().map(str::to_string);
+    run(&mut s, "text.insert", json!({"text": "second"}));
+    let ids: Vec<String> = s.page().unwrap().objects.iter().filter_map(|o| o.as_outline()).map(|o| o.id.to_string()).collect();
+    let (a, b) = (a.unwrap_or_else(|| ids[0].clone()), b.unwrap_or_else(|| ids[1].clone()));
+    run(&mut s, "outline.merge", json!({"from": b, "into": a}));
+    let outs: Vec<_> = s.page().unwrap().objects.iter().filter_map(|o| o.as_outline()).collect();
+    assert_eq!(outs.len(), 1);
+    assert_eq!(outs[0].paragraphs.iter().map(|p| p.text()).collect::<Vec<_>>(), ["first", "second"]);
+    assert!(s.run("outline.merge", json!({"from": a, "into": a})).is_err());
+}

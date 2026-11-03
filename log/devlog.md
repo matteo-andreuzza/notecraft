@@ -1298,3 +1298,6 @@ were certain landed, behaviour unchanged (every test green after each commit).
   (`notebook.syncNow`, Shift+F9) writes the notebook's waiting changes, Sync All
   (`notebook.syncAll`, F9) every notebook's, and Notebook Sync Status (`notebook.syncStatus`,
   notebook menu and File › Info) lists each notebook, where it is and whether it is written.
+- A note container dropped with Shift onto another joins it (`outline.merge`,
+  BEH.Canvas.MergeContainers): its paragraphs follow the other's. Shape Color & Thickness
+  (QAT) opens the Color & Thickness dialog; UI.Window.Docked pinned by the dock test.
