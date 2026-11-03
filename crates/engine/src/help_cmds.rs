@@ -41,8 +41,21 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             Ok(about())
         })
         .pure(),
+        // R.Help.Help.Feedback, BS.Feedback: the project's issue tracker, in the browser.
+        CommandSpec::new("help.feedback", "R.Help.Help.Feedback", "Feedback", "Help/Help/Feedback", |_, _| Ok(json!({"open_url": FEEDBACK_URL})))
+            .params(r#"{} → {"open_url"}"#)
+            .pure(),
+        // R.Help.Help.WhatsNew, BS.Account.WhatsNew: the project's release notes.
+        CommandSpec::new("help.whatsNew", "R.Help.Help.WhatsNew", "What's New", "Help/Help/What's New", |_, _| Ok(json!({"open_url": RELEASES_URL})))
+            .params(r#"{} → {"open_url"}"#)
+            .pure(),
     ]
 }
+
+/// Where Feedback goes: the project's issues.
+pub const FEEDBACK_URL: &str = "https://github.com/matteo-andreuzza/notecraft/issues";
+/// Where What's New goes: the project's releases.
+pub const RELEASES_URL: &str = "https://github.com/matteo-andreuzza/notecraft/releases";
 
 /// What About says: name, version, licence.
 pub fn about() -> Value {

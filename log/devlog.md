@@ -1269,3 +1269,5 @@ were certain landed, behaviour unchanged (every test green after each commit).
   pen and selection tool (a pen draws on the Type tool, a mouse selects on the Pen tool;
   default off, unverified), Email signature (appended to Email Page's mail after `-- `);
   Highlight search results is now pinned by a test.
+- Help › Feedback and What's New (`help.feedback`, `help.whatsNew`; also on File › Account)
+  open the project's issues and releases pages on GitHub in the browser.

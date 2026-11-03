@@ -450,9 +450,9 @@ The Help tab of the Microsoft 365 app (not in the 2019 control list).
 |---|---|---|---|---|---|---|---|---|---|
 | R.Help.Help.Help | Help | Help/Help/Help | button | `F1` | help.help | P1 | wired | GK (Microsoft 365 Help tab); KBD (F1) | unverified group names; NoteCraft's help is local: a pane searching every command by name, ribbon path and shortcut (NC.Help.Search); a click runs it |
 | R.Help.Help.ContactSupport | Contact Support | Help/Help/Contact Support | button |  |  | P3 | out-of-scope | GK (Microsoft 365 Help tab) |  |
-| R.Help.Help.Feedback | Feedback | Help/Help/Feedback | button |  | help.feedback | P3 | missing | GK (Microsoft 365 Help tab) |  |
+| R.Help.Help.Feedback | Feedback | Help/Help/Feedback | button |  | help.feedback | P3 | wired | GK (Microsoft 365 Help tab) |  |
 | R.Help.Help.ShowTraining | Show Training | Help/Help/Show Training | button |  | help.training | P3 | missing | GK (Microsoft 365 Help tab) |  |
-| R.Help.Help.WhatsNew | What's New | Help/Help/What's New | button |  | help.whatsNew | P3 | missing | GK (Microsoft 365 Help tab) |  |
+| R.Help.Help.WhatsNew | What's New | Help/Help/What's New | button |  | help.whatsNew | P3 | wired | GK (Microsoft 365 Help tab) |  |
 
 ## Contextual tab › Table Layout
 
@@ -571,10 +571,10 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Account.Theme | Account: Office Theme / Background | File/Account/Theme | combo |  | | P1 | wired | FLUENT19:Theming | The Office Theme list (Colorful, Dark Gray, Black, White, Use system setting); a UI preference, so no engine command |
 | BS.Account.SignIn | Account: Sign in / Connected Services | File/Account/Connected Services | page |  |  | P3 | out-of-scope | FLUENT19:GroupBackstageSignIn |  |
 | BS.Account.About | Account: About (version) | File/Account/About | button |  | help.about | P1 | wired | FLUENT19:GroupAboutOfficeProducts | About NoteCraft: version, licence, local-first note, trademark notice |
-| BS.Account.WhatsNew | Account: What's New | File/Account/What's New | button |  | help.whatsNew | P3 | missing | FLUENT19:GroupWhatsNewInOfficeProducts |  |
+| BS.Account.WhatsNew | Account: What's New | File/Account/What's New | button |  | help.whatsNew | P3 | wired | FLUENT19:GroupWhatsNewInOfficeProducts |  |
 | BS.Account.Updates | Account: Update Options | File/Account/Update Options | menu |  |  | P3 | out-of-scope | FLUENT19:GroupClickToRunUpdateStatus | updates come from the Craft launcher |
 | BS.Account.Insider | Account: Office Insider | File/Account/Insider | menu |  |  | P3 | out-of-scope | FLUENT19:GroupOfficeInsider |  |
-| BS.Feedback | Feedback | File/Feedback | page |  | help.feedback | P3 | missing | FLUENT19:TabOfficeFeedback |  |
+| BS.Feedback | Feedback | File/Feedback | page |  | help.feedback | P3 | wired | FLUENT19:TabOfficeFeedback |  |
 | BS.Options | Options | File/Options | dialog |  | file.options | P0 | wired | FLUENT19:ApplicationOptionsDialog |  |
 | BS.Exit | Exit | File/Exit | button |  | file.exit | P0 | verified | FLUENT19:FileExit | Saves every notebook first; when one can't be saved the window stays open and the error says why (closing would lose the change). |
 

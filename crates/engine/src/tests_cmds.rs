@@ -852,3 +852,11 @@ fn empty_deleted_pages_keeps_the_deleted_sections() {
     assert!(nb(&s).pages.is_empty(), "the deleted pages are gone");
     assert!(!nb(&s).sections.is_empty(), "the deleted sections wait in the bin");
 }
+
+#[test]
+fn feedback_and_whats_new_open_the_project_pages() {
+    // parity: R.Help.Help.Feedback BS.Feedback R.Help.Help.WhatsNew BS.Account.WhatsNew
+    let mut s = sample();
+    assert!(run(&mut s, "help.feedback", json!({}))["open_url"].as_str().unwrap().ends_with("/issues"));
+    assert!(run(&mut s, "help.whatsNew", json!({}))["open_url"].as_str().unwrap().ends_with("/releases"));
+}

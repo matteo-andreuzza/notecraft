@@ -497,6 +497,17 @@ fn account(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
     // OPT.General.OfficeTheme / UI.Window.DarkMode.
     theme_picker(app, ui);
     ui.add_space(20.0);
+    // BS.Account.WhatsNew, BS.Feedback.
+    ui.horizontal(|ui| {
+        let ctx = ui.ctx().clone();
+        if ui.button(crate::i18n::tr("What's New")).clicked() {
+            app.run(&ctx, "help.whatsNew", json!({}));
+        }
+        if ui.button(crate::i18n::tr("Feedback")).clicked() {
+            app.run(&ctx, "help.feedback", json!({}));
+        }
+    });
+    ui.add_space(20.0);
     ui.label(RichText::new("About NoteCraft").strong());
     ui.label(format!("NoteCraft {} — an open-source, local-first notebook. MIT OR Apache-2.0.", env!("CARGO_PKG_VERSION")));
     if ui.button("About NoteCraft").clicked() {
