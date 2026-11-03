@@ -537,7 +537,7 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 |---|---|---|---|---|---|---|---|---|---|
 | BS.Info.NotebookInformation | Info: Notebook Information (settings for each open notebook) | File/Info/Notebook Information | page |  | notebook.properties | P1 | wired | FLUENT19:TabInfo |  |
 | BS.Info.Settings | Info: Settings (Properties, Sync, Close, Open Backups) | File/Info/Settings | menu |  | notebook.properties | P1 | wired | FLUENT19:TabInfo | Settings ▾ beside each notebook: Properties…, Sync This Notebook Now, Close, Open Backups (when a backup folder exists) |
-| BS.Info.ViewSyncStatus | Info: View Sync Status | File/Info/View Sync Status | button |  | notebook.syncStatus | P2 | missing | FLUENT19:GroupSyncStatus |  |
+| BS.Info.ViewSyncStatus | Info: View Sync Status | File/Info/View Sync Status | button |  | notebook.syncStatus | P2 | wired | FLUENT19:GroupSyncStatus |  |
 | BS.Info.OpenBackups | Info: Open Backups | File/Info/Open Backups | button |  | file.openBackups | P1 | wired | FLUENT19:OpenBackup |  |
 | BS.New.NewNotebook | New: New Notebook (location, name) | File/New/New Notebook | page |  | file.newNotebook | P0 | wired | FLUENT19:TabNew |  |
 | BS.New.AddPlace | New: Add a Place (cloud locations) | File/New/Add a Place | button |  |  | P3 | out-of-scope | FLUENT19:GroupAddLocation |  |
@@ -838,8 +838,8 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.OutlookTask.OutlookTaskRemoveContextual | Delete Outlook Task | Context/Outlook Task/Delete Outlook Task | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuOutlookTask/OutlookTaskRemoveContextual |  |
 | CM.OutlookTask.TagsRemove | Remove Tag | Context/Outlook Task/Remove Tag | button |  | tag.remove | P0 | out-of-scope | FLUENT19:ContextMenuOutlookTask/TagsRemove | Outlook tasks need Outlook; a plain tag is removed from CM.Tag.TagsRemove |
 | CM.OutlookTask.OutlookTaskOpenContextual | Open Task in Outlook | Context/Outlook Task/Open Task in Outlook | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuOutlookTask/OutlookTaskOpenContextual |  |
-| CM.Notebook.CurrentNotebookSyncNow | Sync This Notebook Now | Context/Notebook/Sync This Notebook Now | button | `Shift+F9` | notebook.syncNow | P2 | missing | FLUENT19:ContextMenuNotebook/CurrentNotebookSyncNow |  |
-| CM.Notebook.GroupSyncStatus | Notebook Sync Status | Context/Notebook/Notebook Sync Status | button |  | notebook.syncStatus | P2 | missing | FLUENT19:ContextMenuNotebook/GroupSyncStatus |  |
+| CM.Notebook.CurrentNotebookSyncNow | Sync This Notebook Now | Context/Notebook/Sync This Notebook Now | button | `Shift+F9` | notebook.syncNow | P2 | wired | FLUENT19:ContextMenuNotebook/CurrentNotebookSyncNow |  |
+| CM.Notebook.GroupSyncStatus | Notebook Sync Status | Context/Notebook/Notebook Sync Status | button |  | notebook.syncStatus | P2 | wired | FLUENT19:ContextMenuNotebook/GroupSyncStatus |  |
 | CM.Notebook.ShareThisNotebook | Share This Notebook | Context/Notebook/Share This Notebook | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuNotebook/ShareThisNotebook |  |
 | CM.Notebook.NotebookLinkCreate | Copy Link to Notebook | Context/Notebook/Copy Link to Notebook | button |  | notebook.copyLink | P1 | wired | FLUENT19:ContextMenuNotebook/NotebookLinkCreate |  |
 | CM.Notebook.MarkAllPagesAsRead | Mark Notebook as Read | Context/Notebook/Mark Notebook as Read | button |  | history.markNotebookRead | P2 | wired | FLUENT19:ContextMenuNotebook/MarkAllPagesAsRead |  |
@@ -1282,8 +1282,8 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Share.TaskOpen | Open the selected Outlook task | Keyboard/Share/Open the selected Outlook task | shortcut | `Mod+Shift+K` |  | P3 | out-of-scope | KBD365 | Outlook |
 | KB.Share.TaskComplete | Mark the selected Outlook task as complete | Keyboard/Share/Mark the selected Outlook task as complete | shortcut | `Mod+Shift+9` |  | P3 | out-of-scope | KBD365 | Outlook |
 | KB.Share.TaskDelete | Delete the selected Outlook task | Keyboard/Share/Delete the selected Outlook task | shortcut | `Mod+Shift+0` |  | P3 | out-of-scope | KBD365 | Outlook |
-| KB.Share.SyncCurrent | Synchronize changes in the current shared notebook | Keyboard/Share/Synchronize changes in the current shared notebook | shortcut | `Shift+F9` | notebook.syncNow | P2 | missing | KBD365 |  |
-| KB.Share.SyncAll | Synchronize changes in all shared notebooks | Keyboard/Share/Synchronize changes in all shared notebooks | shortcut | `F9` | notebook.syncAll | P2 | missing | KBD365 |  |
+| KB.Share.SyncCurrent | Synchronize changes in the current shared notebook | Keyboard/Share/Synchronize changes in the current shared notebook | shortcut | `Shift+F9` | notebook.syncNow | P2 | wired | KBD365 |  |
+| KB.Share.SyncAll | Synchronize changes in all shared notebooks | Keyboard/Share/Synchronize changes in all shared notebooks | shortcut | `F9` | notebook.syncAll | P2 | wired | KBD365 |  |
 | KB.Share.MarkUnread | Mark the current page as unread | Keyboard/Share/Mark the current page as unread | shortcut | `Mod+Q` | history.markUnread | P2 | wired | KBD365 |  |
 | KB.Protect.LockAll | Lock all password-protected sections | Keyboard/Protect/Lock all password-protected sections | shortcut | `Mod+Alt+L` | protect.lockAll | P1 | wired | KBD365 |  |
 | KB.App.Help | Help | Keyboard/Application/Help | shortcut | `F1` | help.help | P1 | wired | KBD365 | unverified: NoteCraft's help is a local command search, not the reference's online help; standard Office key |

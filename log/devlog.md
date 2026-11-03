@@ -1294,3 +1294,7 @@ were certain landed, behaviour unchanged (every test green after each commit).
   switches.
 - The equation menu starts with who last changed the equation and when
   (CM.Equation.LastModifiedBy).
+- Sync (a notebook is a folder, so syncing is writing it): Sync This Notebook Now
+  (`notebook.syncNow`, Shift+F9) writes the notebook's waiting changes, Sync All
+  (`notebook.syncAll`, F9) every notebook's, and Notebook Sync Status (`notebook.syncStatus`,
+  notebook menu and File › Info) lists each notebook, where it is and whether it is written.

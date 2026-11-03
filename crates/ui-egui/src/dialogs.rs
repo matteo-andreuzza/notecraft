@@ -36,6 +36,8 @@ pub enum Dialog {
     NotebookProperties(Id, String),
     /// Paragraph Spacing: before, after, line (points).
     Spacing(f32, f32, f32),
+    /// Notebook Sync Status: each notebook, where it is kept and whether it is written.
+    SyncStatus,
     /// Numbering Customization: the style's name and the starting number.
     Numbering(String, u32),
     /// Customize Tags: the new tag's name.
@@ -145,6 +147,7 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
         Dialog::NotebookProperties(..) => "Notebook Properties",
         Dialog::Spacing(..) => "Paragraph Spacing",
         Dialog::Numbering(..) => "Numbering Customization",
+        Dialog::SyncStatus => "Notebook Sync Status",
         Dialog::CustomizeTags(_) => "Customize Tags",
         Dialog::ConfirmEmptyBin => "Empty Recycle Bin",
         Dialog::AltText(_) => "Alt Text",
@@ -434,6 +437,27 @@ pub fn show(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
                         close = true;
                     }
                     if ui.button("Cancel").clicked() {
+                        close = true;
+                    }
+                });
+            }
+            Dialog::SyncStatus => {
+                let notebooks: Vec<(notecraft_engine::doc::Id, String)> = app.session.ws.notebooks.iter().map(|n| (n.id, n.name.clone())).collect();
+                egui::Grid::new("sync_status").num_columns(3).spacing(vec2(16.0, 6.0)).show(ui, |ui| {
+                    for (id, name) in notebooks {
+                        ui.label(RichText::new(&name).strong());
+                        let place = app.session.notebook_path(id).map(|p| p.display().to_string()).unwrap_or_else(|| "In memory only".into());
+                        ui.label(RichText::new(place).size(12.0).color(t.page_meta));
+                        let state = if app.session.notebook_dirty(id) { "Changes waiting to be saved" } else { "Up to date" };
+                        ui.label(crate::i18n::tr(state));
+                        ui.end_row();
+                    }
+                });
+                ui.horizontal(|ui| {
+                    if ui.button(crate::i18n::tr("Sync All")).clicked() {
+                        app.run(ctx, "notebook.syncAll", json!({}));
+                    }
+                    if crate::chrome::primary_button(ui, "Close", &t).clicked() {
                         close = true;
                     }
                 });

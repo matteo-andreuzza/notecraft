@@ -154,7 +154,9 @@ fn info(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
                             ui.close();
                         }
                         // BS.Info.Settings: Properties, Sync, Close, Open Backups.
-                        crate::nav::cmd_item(app, ui, "Sync This Notebook Now", "notebook.syncNow", json!({}));
+                        crate::nav::cmd_item(app, ui, "Sync This Notebook Now", "notebook.syncNow", json!({"notebook": nb.id.to_string()}));
+                        // BS.Info.ViewSyncStatus.
+                        crate::nav::cmd_item(app, ui, "View Sync Status", "notebook.syncStatus", json!({}));
                         crate::nav::cmd_item(app, ui, "Close", "notebook.close", json!({"notebook": nb.id.to_string()}));
                         if let Some(folder) = app.host.backup_folder()
                             && ui.button("Open Backups").clicked()

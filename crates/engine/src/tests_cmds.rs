@@ -860,3 +860,19 @@ fn feedback_and_whats_new_open_the_project_pages() {
     assert!(run(&mut s, "help.feedback", json!({}))["open_url"].as_str().unwrap().ends_with("/issues"));
     assert!(run(&mut s, "help.whatsNew", json!({}))["open_url"].as_str().unwrap().ends_with("/releases"));
 }
+
+#[test]
+fn sync_writes_the_notebook_and_the_status_says_so() {
+    // parity: CM.Notebook.CurrentNotebookSyncNow KB.Share.SyncCurrent KB.Share.SyncAll
+    // parity: CM.Notebook.GroupSyncStatus BS.Info.ViewSyncStatus
+    let mut s = sample();
+    run(&mut s, "page.new", json!({"title": "Unsaved"}));
+    let nb = s.sel.notebook.unwrap();
+    assert!(s.notebook_dirty(nb));
+    let status = run(&mut s, "notebook.syncStatus", json!({}));
+    assert_eq!(status["notebooks"][0]["saved"], false);
+    run(&mut s, "notebook.syncNow", json!({}));
+    assert!(!s.notebook_dirty(nb), "written");
+    assert_eq!(run(&mut s, "notebook.syncStatus", json!({}))["notebooks"][0]["saved"], true);
+    run(&mut s, "notebook.syncAll", json!({}));
+}

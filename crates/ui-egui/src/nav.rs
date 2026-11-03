@@ -215,6 +215,8 @@ fn notebook_row(app: &mut NoteApp, ui: &mut Ui, nb: &notecraft_engine::doc::Note
             app.ui.dialog = Some(crate::dialogs::Dialog::NotebookProperties(nb.id, nb.name.clone()));
             ui.close();
         }
+        cmd_item(app, ui, "Sync This Notebook Now", "notebook.syncNow", json!({"notebook": nb_id}));
+        cmd_item(app, ui, "Notebook Sync Status", "notebook.syncStatus", json!({}));
         cmd_item(app, ui, "Close This Notebook", "notebook.close", json!({"notebook": nb_id}));
     });
 }

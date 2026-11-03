@@ -444,6 +444,9 @@ impl NoteApp {
         if v.get("keytips").and_then(Value::as_bool) == Some(true) {
             self.ui.keytips = if self.ui.keytips.is_some() { None } else { Some(String::new()) };
         }
+        if id == "notebook.syncStatus" {
+            self.ui.dialog = Some(crate::dialogs::Dialog::SyncStatus);
+        }
         if v.get("options").and_then(Value::as_str) == Some("language") {
             self.ui.options_page = crate::options::OptionsPage::Language;
             self.ui.backstage = Some(crate::Backstage::Options);

@@ -51,6 +51,47 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("file.save", "KB.Pages.Sync", "Save Now", "Keyboard/Pages/Synchronize the notebook (notes are saved automatically)", save)
             .key("Mod+S")
             .pure(),
+        // CM.Notebook.CurrentNotebookSyncNow, KB.Share.SyncCurrent: a notebook is a folder;
+        // syncing writes its waiting changes now (whatever syncs the folder takes it from there).
+        CommandSpec::new(
+            "notebook.syncNow",
+            "CM.Notebook.CurrentNotebookSyncNow",
+            "Sync This Notebook Now",
+            "Context/Notebook/Sync This Notebook Now",
+            sync_now,
+        )
+        .key("Shift+F9")
+        .params(r#"{"notebook"?: id}"#)
+        .pure()
+        .when(need_notebook),
+        // KB.Share.SyncAll: every notebook's waiting changes.
+        CommandSpec::new(
+            "notebook.syncAll",
+            "KB.Share.SyncAll",
+            "Sync All Notebooks",
+            "Keyboard/Share/Synchronize changes in all shared notebooks",
+            save,
+        )
+        .key("F9")
+        .pure(),
+        // CM.Notebook.GroupSyncStatus, BS.Info.ViewSyncStatus: each notebook, where it is kept
+        // and whether everything is written (the UI shows it in a dialog).
+        CommandSpec::new(
+            "notebook.syncStatus",
+            "CM.Notebook.GroupSyncStatus",
+            "Notebook Sync Status",
+            "Context/Notebook/Notebook Sync Status",
+            |s, _| {
+                let list: Vec<Value> =
+                    s.ws.notebooks
+                        .iter()
+                        .map(|nb| json!({"notebook": nb.id.to_string(), "name": nb.name, "saved": !s.notebook_dirty(nb.id)}))
+                        .collect();
+                Ok(json!({"notebooks": list}))
+            },
+        )
+        .params(r#"{} → {"notebooks": [{"notebook", "name", "saved"}]}"#)
+        .pure(),
         // BS.Export.Notebook — a single-file archive of the notebook.
         CommandSpec::new("file.exportNotebook", "BS.Export.Notebook", "Export Notebook", "File/Export/Notebook", export_notebook)
             .params(r#"{"path": file, "format"?: "archive"|"pdf", "notebook"?: id}"#)
@@ -422,6 +463,27 @@ fn close_notebook(s: &mut Session, v: &Value) -> CmdResult {
         }
     }
     Ok(Value::Null)
+}
+
+fn sync_now(s: &mut Session, v: &Value) -> CmdResult {
+    let id = p::id(v, "notebook")?.or(s.sel.notebook).ok_or_else(no_page)?;
+    // Write this notebook only: the others' changes wait for autosave.
+    let mut others = std::mem::take(&mut s.dirty);
+    if let Some(d) = others.remove(&id) {
+        s.dirty.insert(id, d);
+    }
+    let errors = s.save_dirty();
+    for (k, d) in others {
+        s.dirty.entry(k).or_insert(d);
+    }
+    if errors.is_empty() { Ok(json!({"saved": true})) } else { Err(CmdError::Failed(errors.join("; "))) }
+}
+
+impl Session {
+    /// Whether notebook `id` has changes not written yet.
+    pub fn notebook_dirty(&self, id: notecraft_doc::Id) -> bool {
+        self.dirty.contains_key(&id)
+    }
 }
 
 fn save(s: &mut Session, _: &Value) -> CmdResult {
