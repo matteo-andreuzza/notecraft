@@ -141,6 +141,9 @@ pub struct Prefs {
     /// A pen picks the pen tool and a mouse or finger the selection tool by themselves
     /// (`OPT.Advanced.AutoSwitchPen`; the UI reads it; unverified default: off).
     pub auto_switch_pen: bool,
+    /// New windows open docked to the side of the desktop (`OPT.Display.DockNewWindows`; the
+    /// UI reads it).
+    pub dock_new_windows: bool,
     /// Where new notebooks go (`OPT.SaveBackup.DefaultNotebookLocation`; empty: ask).
     pub default_notebook_location: String,
     /// The notebook whose Quick Notes section takes quick notes
@@ -201,6 +204,7 @@ impl Default for Prefs {
             live_preview: true,
             email_signature: String::new(),
             auto_switch_pen: false,
+            dock_new_windows: false,
             default_notebook_location: String::new(),
             quick_notes_notebook: String::new(),
             templates: Vec::new(),

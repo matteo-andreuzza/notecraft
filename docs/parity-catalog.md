@@ -434,8 +434,8 @@ The View tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.View.Zoom.ZoomClassic | Zoom | View/Zoom | combo |  | view.zoom | P0 | wired | FLUENT19:ZoomClassic |  |
 | R.View.Zoom.ZoomCurrent100 | 100% | View/Zoom/100% | button |  | view.zoom100 | P0 | verified | FLUENT19:ZoomCurrent100 |  |
 | R.View.Zoom.ZoomPageWidth | Page Width | View/Zoom/Page Width | button |  | view.pageWidth | P1 | wired | FLUENT19:ZoomPageWidth |  |
-| R.View.Window.WindowNew | New Window | View/Window/New Window | button | `Mod+M` | window.new | P1 | missing | FLUENT19:WindowNew |  |
-| R.View.Window.NewDockedWindow | New Docked Window | View/Window/New Docked Window | button |  | window.newDocked | P2 | missing | FLUENT19:NewDockedWindow |  |
+| R.View.Window.WindowNew | New Window | View/Window/New Window | button | `Mod+M` | window.new | P1 | wired | FLUENT19:WindowNew |  |
+| R.View.Window.NewDockedWindow | New Docked Window | View/Window/New Docked Window | button |  | window.newDocked | P2 | wired | FLUENT19:NewDockedWindow |  |
 | R.View.Window.NewSideNote | New Quick Note | View/Window/New Quick Note | button | `Mod+Shift+M` | window.quickNote | P1 | wired | FLUENT19:NewSideNote | A new page at the end of the Quick Notes section (OPT.SaveBackup.QuickNotesSection), shown in the Quick Note window (UI.Window.QuickNote) |
 | R.View.Window.WindowKeepOnTop | Always on Top | View/Window/Always on Top | toggle |  | window.alwaysOnTop | P2 | wired | FLUENT19:WindowKeepOnTop | Asks the windowing system to keep the window above others (some Wayland compositors ignore it) |
 | R.View.Immersive.ImmersiveReader | Immersive Reader | View/Immersive/Immersive Reader | button |  | view.immersiveReader | P3 | missing | GK (Microsoft 365 OneNote View tab) | unverified |
@@ -1111,7 +1111,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| KB.General.NewWindow | Open a new window | Keyboard/General/Open a new window | shortcut | `Mod+M` | window.new | P1 | missing | KBD365 |  |
+| KB.General.NewWindow | Open a new window | Keyboard/General/Open a new window | shortcut | `Mod+M` | window.new | P1 | wired | KBD365 |  |
 | KB.General.QuickNote | Create a Quick Note | Keyboard/General/Create a Quick Note | shortcut | `Mod+Shift+M` | window.quickNote | P1 | wired | KBD365 | global Win+Alt+N is a desktop-wide hotkey; registered by the desktop app where the platform allows |
 | KB.General.Dock | Dock the window | Keyboard/General/Dock the window | shortcut | `Mod+Alt+D` | view.dock | P2 | wired | KBD365 |  |
 | KB.General.Undo | Undo the previous action | Keyboard/General/Undo the previous action | shortcut | `Mod+Z` | edit.undo | P0 | wired | KBD365 |  |
@@ -1306,7 +1306,7 @@ The OneNote Options dialog, category by category. Setting names are functional d
 | OPT.General.Privacy | Privacy settings | File/Options/General/Privacy settings | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Display.TrayIcon | Place OneNote icon in the notification area of the taskbar | File/Options/Display/Place OneNote icon in the notification area of the taskbar | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Display.NewPagesRuleLines | Create all new pages with rule lines | File/Options/Display/Create all new pages with rule lines | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
-| OPT.Display.DockNewWindows | Dock new OneNote windows to the side of the desktop | File/Options/Display/Dock new OneNote windows to the side of the desktop | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |
+| OPT.Display.DockNewWindows | Dock new OneNote windows to the side of the desktop | File/Options/Display/Dock new OneNote windows to the side of the desktop | option |  |  | P3 | wired | GK (OneNote Options dialog, user-visible) | unverified wording |
 | OPT.Display.PageTabsLeft | Page tabs appear on the left | File/Options/Display/Page tabs appear on the left | option |  |  | P2 | out-of-scope | GK (OneNote Options dialog, user-visible) | unverified wording; not present in the 2024 UI (decision D1): the page column is always beside the notebook tree (unverified). |
 | OPT.Display.NavBarLeft | Navigation bar appears on the left | File/Options/Display/Navigation bar appears on the left | option |  |  | P2 | wired | GK (OneNote Options dialog, user-visible) | unverified wording; off, the notebook tree and the page column sit on the right of the page (the page column next to it) |
 | OPT.Display.ScrollBarLeft | Vertical scroll bar appears on the left | File/Options/Display/Vertical scroll bar appears on the left | option |  |  | P3 | missing | GK (OneNote Options dialog, user-visible) | unverified wording |

@@ -1668,6 +1668,28 @@ fn the_script_menu_repeats_the_script_used_last() {
 }
 
 #[test]
+fn ctrl_m_opens_a_second_window_with_its_own_page() {
+    // parity: R.View.Window.WindowNew KB.General.NewWindow R.View.Window.NewDockedWindow OPT.Display.DockNewWindows
+    let mut h = harness(app());
+    h.run();
+    let first = h.state().session.sel.page;
+    h.event(egui::Event::Key { key: egui::Key::M, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::COMMAND });
+    h.run();
+    assert_eq!(h.state().windows.len(), 1, "a second window");
+    assert_eq!(h.state().windows[0].sel.page, first, "it starts on the same page");
+    // Each window keeps its own page: the main one moves on, the other stays.
+    let ctx = h.ctx.clone();
+    h.state_mut().run(&ctx, "page.new", json!({"title": "Elsewhere"}));
+    h.run();
+    assert_ne!(h.state().session.sel.page, first);
+    assert_eq!(h.state().windows[0].sel.page, first);
+    h.state_mut().session.prefs.dock_new_windows = true;
+    h.state_mut().run(&ctx, "window.newDocked", json!({}));
+    h.run();
+    assert!(h.state().windows.iter().filter(|w| w.docked).count() == 1);
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

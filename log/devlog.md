@@ -1308,3 +1308,14 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Ctrl+Shift+W (`ui.infoBarAction`) performs the Information Bar's action: over a page
   version, Restore Version; over a deleted page, Restore. The bar above previews is the
   Information Bar (UI.Canvas.InfoBar).
+
+## 2026-11-03 — New Window
+
+- `window.new` (View › New Window, Ctrl+M) and `window.newDocked` open another window on
+  the same notebooks (`NoteApp::windows`, `ExtraWindow`): an egui immediate viewport that
+  draws the page list and the page with its own selection and canvas swapped in; closing
+  it drops it. Options › Display › Dock new windows docks them (380 pt at the right edge,
+  on top). Embedded viewports (tests, web) draw nothing extra: their panels would clash
+  with the main window's; the web build says new windows need the desktop app.
+- Not tried by hand yet: egui keeps widget state (scroll offsets) by id across viewports,
+  so the two windows may share some of it.

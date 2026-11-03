@@ -16,6 +16,18 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
         CommandSpec::new("window.quickNote", "R.View.Window.NewSideNote", "New Quick Note", "View/Window/New Quick Note", quick_note)
             .key("Mod+Shift+M"),
+        // R.View.Window.WindowNew, KB.General.NewWindow (Ctrl+M): another window on the same
+        // notebooks, with its own page and selection (the UI opens it).
+        CommandSpec::new("window.new", "R.View.Window.WindowNew", "New Window", "View/Window/New Window", |_, _| Ok(json!({"new_window": "normal"})))
+            .key("Mod+M")
+            .params(r#"{} → {"new_window": "normal"} for the UI"#)
+            .pure(),
+        // R.View.Window.NewDockedWindow: the same, docked to the side of the desktop.
+        CommandSpec::new("window.newDocked", "R.View.Window.NewDockedWindow", "New Docked Window", "View/Window/New Docked Window", |_, _| {
+            Ok(json!({"new_window": "docked"}))
+        })
+        .params(r#"{} → {"new_window": "docked"} for the UI"#)
+        .pure(),
         CommandSpec::new("window.alwaysOnTop", "R.View.Window.WindowKeepOnTop", "Always on Top", "View/Window/Always on Top", |s, v| {
             s.view.always_on_top = crate::p::bool(v, "on").unwrap_or(!s.view.always_on_top);
             Ok(json!({"on": s.view.always_on_top}))

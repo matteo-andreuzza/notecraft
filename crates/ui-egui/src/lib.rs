@@ -62,6 +62,21 @@ pub struct RichClip {
 /// Most files one drop or paste puts on a page.
 pub const MAX_PASTED_FILES: usize = 50;
 
+/// A window opened with View › New Window: the same notebooks, its own page and selection
+/// and canvas (swapped in while it draws), the page list and the page.
+pub struct ExtraWindow {
+    /// Unique among the windows (its viewport id).
+    pub id: u64,
+    /// Its selection while the main window draws.
+    pub sel: notecraft_engine::Selection,
+    /// Its canvas while the main window draws.
+    pub canvas: canvas::CanvasState,
+    /// Docked to the side of the desktop.
+    pub docked: bool,
+    /// Still open (a close request clears it).
+    pub open: bool,
+}
+
 /// What the host platform provides (desktop app, web app, tests).
 pub trait Host {
     /// The current time and local UTC offset.
@@ -353,6 +368,8 @@ pub struct NoteApp {
     pub ui: UiState,
     /// Canvas state (layout cache, drags, caret blink).
     pub canvas: canvas::CanvasState,
+    /// The other windows (View › New Window), each with its own page and canvas.
+    pub windows: Vec<ExtraWindow>,
     /// Platform services.
     pub host: Box<dyn Host>,
     /// Whether the app asked to quit (File › Exit).
@@ -372,6 +389,7 @@ impl NoteApp {
             session,
             ui: UiState::default(),
             canvas: canvas::CanvasState::default(),
+            windows: Vec::new(),
             host,
             quit_requested: false,
             system_dark: None,
@@ -450,6 +468,15 @@ impl NoteApp {
             "format.superscript" => self.ui.last_superscript = true,
             "format.subscript" => self.ui.last_superscript = false,
             _ => {}
+        }
+        if let Some(kind) = v.get("new_window").and_then(Value::as_str) {
+            if cfg!(target_arch = "wasm32") {
+                self.ui.status = Some(("New windows need the desktop app".into(), ctx.input(|i| i.time)));
+            } else {
+                let id = self.windows.iter().map(|w| w.id).max().unwrap_or(0) + 1;
+                let docked = kind == "docked" || self.session.prefs.dock_new_windows;
+                self.windows.push(ExtraWindow { id, sel: self.session.sel.clone(), canvas: canvas::CanvasState::default(), docked, open: true });
+            }
         }
         if v.get("keytips").and_then(Value::as_bool) == Some(true) {
             self.ui.keytips = if self.ui.keytips.is_some() { None } else { Some(String::new()) };
@@ -708,6 +735,45 @@ impl NoteApp {
         nav::search_dropdown(self, &ctx, t);
         dialogs::show(self, &ctx, t);
         help_ui::about(self, &ctx, t);
+        self.extra_windows(&ctx, t);
+    }
+
+    /// Draw the other windows (View › New Window): each in its own viewport, with its
+    /// selection and canvas swapped in, showing the page list and the page.
+    fn extra_windows(&mut self, ctx: &egui::Context, t: Tokens) {
+        // Embedded viewports (tests, the web build) would share the main window's panels.
+        if self.windows.is_empty() || ctx.embed_viewports() {
+            return;
+        }
+        let mut wins = std::mem::take(&mut self.windows);
+        for w in &mut wins {
+            let title = w.sel.page.and_then(|p| self.session.ws.page(p)).map(|p| p.display_title()).unwrap_or_else(|| "NoteCraft".into());
+            let mut builder = egui::ViewportBuilder::default().with_title(format!("{title} - NoteCraft")).with_inner_size([900.0, 640.0]);
+            if w.docked {
+                let screen = ctx.input(|i| i.viewport().monitor_size).unwrap_or(egui::vec2(1280.0, 800.0));
+                builder = builder
+                    .with_inner_size([380.0, (screen.y - 40.0).max(300.0)])
+                    .with_position([(screen.x - 380.0).max(0.0), 0.0])
+                    .with_window_level(egui::WindowLevel::AlwaysOnTop);
+            }
+            ctx.show_viewport_immediate(egui::ViewportId::from_hash_of(("notecraft-window", w.id)), builder, |ui, _| {
+                std::mem::swap(&mut self.session.sel, &mut w.sel);
+                std::mem::swap(&mut self.canvas, &mut w.canvas);
+                let vctx = ui.ctx().clone();
+                keymap::handle_input(self, &vctx);
+                if !w.docked {
+                    nav::page_list(self, ui, t);
+                }
+                egui::CentralPanel::no_frame().show(ui, |ui| canvas::show(self, ui, t));
+                if ui.input(|i| i.viewport().close_requested()) {
+                    w.open = false;
+                }
+                std::mem::swap(&mut self.session.sel, &mut w.sel);
+                std::mem::swap(&mut self.canvas, &mut w.canvas);
+            });
+        }
+        wins.retain(|w| w.open);
+        self.windows = wins;
     }
 
     /// The expand / restore button at the page's top right (catalog `UI.Canvas.ExpandButton`,

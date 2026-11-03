@@ -224,6 +224,8 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             ui.checkbox(&mut d.live_preview, "Enable Live Preview");
         }
         OptionsPage::Display => {
+            // OPT.Display.DockNewWindows.
+            ui.checkbox(&mut d.dock_new_windows, "Dock new NoteCraft windows to the side of the desktop");
             section(ui, "Display");
             // OPT.Display.NewPagesRuleLines.
             let mut rules = d.new_pages_rule_lines.is_some();
