@@ -17,6 +17,9 @@
 //! bounded, and nothing here panics.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+pub mod thesaurus;
+pub use thesaurus::{Meaning, Thesaurus};
+
 use std::collections::{HashMap, HashSet};
 
 /// Most dictionary words read.

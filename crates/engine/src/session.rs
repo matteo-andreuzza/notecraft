@@ -341,6 +341,8 @@ pub struct ViewState {
     pub spelling_pane: bool,
     /// The Accessibility pane (Review › Check Accessibility).
     pub accessibility_pane: bool,
+    /// The Thesaurus pane and the word it shows (Review › Thesaurus).
+    pub thesaurus: Option<String>,
     /// The word the Spelling pane shows, with its suggestions.
     #[serde(default)]
     pub spelling: Option<SpellingState>,
@@ -391,6 +393,7 @@ impl Default for ViewState {
             password_pane: false,
             spelling_pane: false,
             accessibility_pane: false,
+            thesaurus: None,
             ink_replay: false,
             context_tag: None,
             spelling: None,
@@ -520,6 +523,8 @@ pub struct Session {
     pub(crate) kdf: notecraft_format::protect::KdfParams,
     /// The spelling dictionary and Ignore All words.
     pub(crate) speller: crate::spell_cmds::Speller,
+    /// The thesaurus (Review › Thesaurus).
+    pub(crate) thes: crate::thes_cmds::Thes,
 }
 
 impl Default for Session {
@@ -564,6 +569,7 @@ impl Session {
             forget_history: false,
             kdf: notecraft_format::protect::KdfParams::DEFAULT,
             speller: crate::spell_cmds::Speller::default(),
+            thes: crate::thes_cmds::Thes::default(),
         }
     }
 

@@ -1203,3 +1203,13 @@ were certain landed, behaviour unchanged (every test green after each commit).
   without a header row or with merged cells (NoteCraft's own rules; OneNote's are
   unverified). The pane rechecks as the page changes; a click selects the object (or the
   title).
+
+## 2026-11-03 — Thesaurus
+
+- `notecraft_spell::Thesaurus`: MyThes `.dat` files (UTF-8 or Latin-1; `word|count` then
+  `(pos)|synonym|…` lines; bounded, never panics), read from `/usr/share/mythes` and the
+  usual folders at run time in the proofing language (`th_<lang>_v2.dat`, `th_<lang>.dat`,
+  then the language without its region). None is shipped.
+- `review.thesaurus` (Review › Thesaurus, Shift+F7): the selected word, or the word at the
+  caret, which it selects; the Thesaurus pane lists its meanings, a synonym replaces the
+  word, and the field looks up another one.

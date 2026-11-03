@@ -48,6 +48,7 @@ mod table_cmds;
 mod tag_cmds;
 mod template_cmds;
 mod text_cmds;
+mod thes_cmds;
 mod versions_cmds;
 mod view_cmds;
 mod window_cmds;

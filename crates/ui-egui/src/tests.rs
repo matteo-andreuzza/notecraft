@@ -1419,6 +1419,22 @@ fn the_accessibility_pane_lists_the_page_issues() {
 }
 
 #[test]
+fn shift_f7_opens_the_thesaurus_and_a_synonym_replaces_the_word() {
+    let mut a = app();
+    a.session.set_thesaurus("en_US", notecraft_spell::Thesaurus::parse(b"UTF-8\nhappy|1\n(adj)|glad|content\n"));
+    a.session.run("page.new", json!({})).unwrap();
+    a.session.run("text.insert", json!({"text": "happy"})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    h.event(egui::Event::Key { key: egui::Key::F7, physical_key: None, pressed: true, repeat: false, modifiers: egui::Modifiers::SHIFT });
+    h.run();
+    assert_eq!(h.state().session.view.thesaurus.as_deref(), Some("happy"), "UI pane for KB.General.Thesaurus");
+    h.get_by_label("glad").click();
+    h.run();
+    assert_eq!(h.state().session.page().unwrap().title.text(), "glad");
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

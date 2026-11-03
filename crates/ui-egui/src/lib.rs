@@ -606,6 +606,9 @@ impl NoteApp {
             if self.session.view.spelling_pane {
                 spell_ui::pane(self, ui, t);
             }
+            if self.session.view.thesaurus.is_some() {
+                panes::thesaurus_pane(self, ui, t);
+            }
             if self.session.view.accessibility_pane {
                 panes::accessibility_pane(self, ui, t);
             }

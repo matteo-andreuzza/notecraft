@@ -401,7 +401,7 @@ The Review tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 |---|---|---|---|---|---|---|---|---|---|
 | R.Review.Proofing.SpellCheck | Spelling | Review/Proofing/Spelling | button | `F7` | review.spelling | P1 | verified | FLUENT19:SpellCheck |  |
 | R.Review.Proofing.ResearchPane | Research | Review/Proofing/Research | toggle |  | review.research | P3 | missing | FLUENT19:ResearchPane |  |
-| R.Review.Proofing.Thesaurus | Thesaurus | Review/Proofing/Thesaurus | button | `Shift+F7` | review.thesaurus | P2 | missing | FLUENT19:Thesaurus |  |
+| R.Review.Proofing.Thesaurus | Thesaurus | Review/Proofing/Thesaurus | button | `Shift+F7` | review.thesaurus | P2 | wired | FLUENT19:Thesaurus |  |
 | R.Review.Accessibility.AccessibilityChecker | Check Accessibility | Review/Accessibility/Check Accessibility | button |  | review.accessibility | P2 | wired | FLUENT19:AccessibilityChecker |  |
 | R.Review.Language.TranslateMenu | Translate | Review/Language/Translate | menu |  |  | P3 | missing | FLUENT19:TranslateMenu |  |
 | R.Review.Language.TranslateSelected | Translate Selected Text | Review/Language/Translate/Translate Selected Text | button |  | review.translateSelection | P3 | missing | FLUENT19:TranslateSelected |  |
@@ -1131,7 +1131,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.General.DeleteWordRight | Delete one word to the right | Keyboard/General/Delete one word to the right | shortcut | `Mod+Delete` | text.deleteWordRight | P0 | verified | KBD365 |  |
 | KB.General.LineBreak | Insert a line break without starting a new paragraph | Keyboard/General/Insert a line break without starting a new paragraph | shortcut | `Shift+Enter` | text.lineBreak | P0 | verified | KBD365 |  |
 | KB.General.Spelling | Check spelling | Keyboard/General/Check spelling | shortcut | `F7` | review.spelling | P1 | wired | KBD365 |  |
-| KB.General.Thesaurus | Open the thesaurus for the selected word | Keyboard/General/Open the thesaurus for the selected word | shortcut | `Shift+F7` | review.thesaurus | P2 | missing | KBD365 |  |
+| KB.General.Thesaurus | Open the thesaurus for the selected word | Keyboard/General/Open the thesaurus for the selected word | shortcut | `Shift+F7` | review.thesaurus | P2 | wired | KBD365 |  |
 | KB.General.ContextMenu | Display the context menu for the focused object | Keyboard/General/Display the context menu for the focused object | shortcut | `Shift+F10` | ui.contextMenu | P1 | wired | KBD365 | Shift+F10 opens the menu of the selected object, else of the paragraph with the caret, at its place; the Menu key is not read yet |
 | KB.General.InfoBarAction | Perform the action suggested on the Information Bar | Keyboard/General/Perform the action suggested on the Information Bar | shortcut | `Mod+Shift+W` | ui.infoBarAction | P3 | missing | KBD365 |  |
 | KB.General.PlayAudio | Play the selected audio recording | Keyboard/General/Play the selected audio recording | shortcut | `Mod+Alt+P` | media.play | P2 | missing | KBD365 |  |

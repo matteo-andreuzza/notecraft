@@ -565,3 +565,54 @@ pub fn accessibility_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         });
     });
 }
+
+/// The Thesaurus pane (Review › Thesaurus): the word's meanings and synonyms; a synonym
+/// replaces the selection (the word looked up), and another word can be looked up.
+pub fn thesaurus_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    let ctx = ui.ctx().clone();
+    pane_panel("thesaurus_pane", 260.0, &t).show(ui, |ui| {
+        card_frame(&t).show(ui, |ui| {
+            ui.set_min_size(ui.available_size());
+            if card_header(ui, "Thesaurus", &t) {
+                app.session.view.thesaurus = None;
+                return;
+            }
+            ui.add_space(4.0);
+            let word = app.session.view.thesaurus.clone().unwrap_or_default();
+            let field = egui::Id::new("thesaurus_field");
+            let mut typed: String = ui.data(|d| d.get_temp(field)).unwrap_or_else(|| word.clone());
+            let look = ui.horizontal(|ui| {
+                let r = ui.add(egui::TextEdit::singleline(&mut typed).desired_width(150.0));
+                ui.button(crate::i18n::tr("Look Up")).clicked() || r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter))
+            });
+            ui.data_mut(|d| d.insert_temp(field, typed.clone()));
+            let asked = if look.inner && !typed.trim().is_empty() { typed.trim().to_string() } else { word };
+            let Some(res) = app.run(&ctx, "review.thesaurus", json!({"word": asked})) else { return };
+            ui.separator();
+            if !res["installed"].as_bool().unwrap_or(false) {
+                ui.label(
+                    RichText::new(crate::i18n::tr("No thesaurus is installed for the proofing language (MyThes files in /usr/share/mythes)."))
+                        .color(t.text_disabled),
+                );
+                return;
+            }
+            let meanings = res["meanings"].as_array().cloned().unwrap_or_default();
+            if meanings.is_empty() {
+                ui.label(RichText::new(crate::i18n::tr("No synonyms found.")).color(t.text_disabled));
+            }
+            egui::ScrollArea::vertical().id_salt("thesaurus_scroll").show(ui, |ui| {
+                for m in meanings {
+                    if let Some(pos) = m["pos"].as_str().filter(|p| !p.is_empty()) {
+                        ui.add(egui::Label::new(RichText::new(pos).italics().color(t.page_meta)).selectable(false));
+                    }
+                    for w in m["words"].as_array().into_iter().flatten().filter_map(Value::as_str) {
+                        if ui.add(egui::Button::new(RichText::new(w).color(t.text)).frame(false)).on_hover_text(crate::i18n::tr("Insert")).clicked() {
+                            app.run(&ctx, "text.insert", json!({"text": w}));
+                        }
+                    }
+                    ui.add_space(6.0);
+                }
+            });
+        });
+    });
+}
