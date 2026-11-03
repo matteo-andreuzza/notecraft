@@ -189,3 +189,24 @@ fn a_notebook_archive_reopens_and_change_location_stores_it_in_a_folder() {
     assert!(s.run("file.openNotebook", json!({"path": d.join("junk.ncraft-archive").to_str().unwrap()})).is_err());
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn email_and_send_hand_the_page_to_a_mail_or_a_file() {
+    // parity: R.Home.Email.SendNotesViaEmail BS.Send.Email KB.Share.Email BS.Send.Attachment
+    // parity: BS.Send.Word QAT.NR.SendNotesAsAttachment
+    let mut s = crate::tests::sample();
+    s.run("page.new", serde_json::json!({"title": "Q3 & plans"})).unwrap();
+    let r = s.run("share.emailPage", serde_json::json!({})).unwrap();
+    let url = r["open_url"].as_str().unwrap();
+    assert!(url.starts_with("mailto:?subject=Q3%20%26%20plans&body="), "{url}");
+    let dir = std::env::temp_dir().join(format!("notecraft-test-send-{}", std::process::id()));
+    let d = dir.display().to_string();
+    let r = s.run("share.sendAttachment", serde_json::json!({"dir": d})).unwrap();
+    let path = r["email_attach"].as_str().unwrap();
+    assert!(path.ends_with(".mht") && std::path::Path::new(path).is_file());
+    assert_eq!(r["subject"], "Q3 & plans");
+    let r = s.run("share.sendToWord", serde_json::json!({"dir": d})).unwrap();
+    assert!(r.get("email_attach").is_none(), "Send to Word opens the document, it doesn't mail it");
+    assert!(std::fs::read(r["path"].as_str().unwrap()).unwrap().starts_with(b"PK"), "a .docx");
+    let _ = std::fs::remove_dir_all(&dir);
+}

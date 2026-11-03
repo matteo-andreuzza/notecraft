@@ -95,6 +95,23 @@ impl Host for DesktopHost {
         Ok(())
     }
 
+    fn send_email(&mut self, subject: &str, attach: &str) -> Result<(), String> {
+        // xdg-email (xdg-utils) hands the attachment to the desktop's mail program; other
+        // systems have no portable way to attach a file from the command line.
+        if !cfg!(all(unix, not(target_os = "macos"))) {
+            return Err(format!("Attach {attach} to a new mail (this system has no mail command NoteCraft can call)"));
+        }
+        let mut child = std::process::Command::new("xdg-email")
+            .args(["--subject", subject, "--attach", attach])
+            .stdin(std::process::Stdio::null())
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| format!("couldn't start xdg-email ({e}); the file is at {attach}"))?;
+        std::thread::spawn(move || child.wait());
+        Ok(())
+    }
+
     fn read_clipboard(&mut self, image: bool) -> RichClip {
         let Some(c) = self.clipboard() else { return RichClip::default() };
         let text = c.get_text().ok().filter(|t| !t.is_empty());

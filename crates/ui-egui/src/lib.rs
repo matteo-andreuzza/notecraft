@@ -87,6 +87,12 @@ pub trait Host {
         let _ = path;
         Err("opening files isn't available here".into())
     }
+    /// Start a new mail in the user's mail program with the file at `attach` attached. `Err`
+    /// with a reason when that isn't possible here.
+    fn send_email(&mut self, subject: &str, attach: &str) -> Result<(), String> {
+        let _ = subject;
+        Err(format!("Sending mail isn't available here; the file is at {attach}"))
+    }
     /// Read the system clipboard: text and HTML, and the picture too when `image` (decoding a
     /// picture costs time, so only a paste that has no text, or Paste: Picture, asks for it). Empty when the
     /// host has no rich clipboard (the web build, tests).
@@ -155,6 +161,8 @@ pub enum Backstage {
     Export,
     /// Print and Print Preview.
     Print,
+    /// File › Send (`BS.Send.*`).
+    Send,
     /// Account (theme, about).
     Account,
     /// Options.
@@ -398,6 +406,17 @@ impl NoteApp {
         }
         if let Some(url) = v.get("open_url").and_then(Value::as_str) {
             ctx.open_url(egui::OpenUrl::new_tab(url));
+        }
+        if let Some(path) = v.get("email_attach").and_then(Value::as_str) {
+            let subject = v.get("subject").and_then(Value::as_str).unwrap_or_default();
+            if let Err(e) = self.host.send_email(subject, path) {
+                self.ui.status = Some((e, ctx.input(|i| i.time)));
+            }
+        } else if id == "share.sendToWord"
+            && let Some(path) = v.get("path").and_then(Value::as_str)
+            && let Err(e) = self.host.open_path(path)
+        {
+            self.ui.status = Some((e, ctx.input(|i| i.time)));
         }
         if matches!(id, "edit.copy" | "edit.cut") {
             clipboard::after_copy(self, ctx, &v);

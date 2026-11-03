@@ -34,6 +34,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 (Backstage::New, "New"),
                 (Backstage::Open, "Open"),
                 (Backstage::Print, "Print"),
+                (Backstage::Send, "Send"),
                 (Backstage::Export, "Export"),
                 (Backstage::Account, "Account"),
                 (Backstage::Options, "Options"),
@@ -95,6 +96,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             Backstage::Open => open(app, ui, &ctx, t),
             Backstage::Export => export(app, ui, &ctx),
             Backstage::Print => print(app, ui, &ctx),
+            Backstage::Send => send(app, ui, &ctx),
             Backstage::Account => account(app, ui, t),
             // File › Options opens the Options dialog over the backstage (UI.Dialogs.Options).
             Backstage::Options => {
@@ -267,6 +269,27 @@ fn open(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
 /// File › Print (BS.Print.Print, BS.Print.Preview): printer, copies, what to print; Print
 /// sends the print-ready PDF (`file.print`) to the system's spooler, Print Preview opens it in
 /// the system's PDF viewer.
+/// File › Send (`BS.Send.*`): the current page in a new mail, or as a file.
+fn send(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context) {
+    heading(ui, "Send");
+    let t = app.tokens();
+    for (cmd, label, what) in [
+        ("share.emailPage", "Email Page", "The page's text in a new mail."),
+        ("share.sendAttachment", "Send as Attachment", "The page as a single file web page (.mht), attached to a new mail."),
+        ("share.sendPdf", "Send as PDF", "The page as a PDF, attached to a new mail."),
+        ("share.sendToWord", "Send to Word", "The page as a Word document, opened in your word processor."),
+    ] {
+        let on = app.disabled_reason(cmd).is_none();
+        if ui.add_enabled(on, egui::Button::new(crate::i18n::tr(label)).min_size(vec2(220.0, 30.0))).clicked()
+            && app.run(ctx, cmd, json!({})).is_some()
+        {
+            app.ui.backstage = None;
+        }
+        ui.label(RichText::new(crate::i18n::tr(what)).color(t.page_meta));
+        ui.add_space(10.0);
+    }
+}
+
 fn print(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context) {
     heading(ui, "Print");
     let t = app.tokens();

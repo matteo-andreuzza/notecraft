@@ -1523,6 +1523,43 @@ fn ctrl_p_opens_print_and_print_sends_the_pdf() {
     let _ = std::fs::remove_file(&jobs[0].0);
 }
 
+/// A host that records the mails it was asked to start.
+struct MailHost(std::rc::Rc<std::cell::RefCell<Vec<(String, String)>>>);
+
+impl crate::Host for MailHost {
+    fn clock(&self) -> notecraft_engine::Clock {
+        notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 }
+    }
+    fn send_email(&mut self, subject: &str, attach: &str) -> Result<(), String> {
+        self.0.borrow_mut().push((subject.to_string(), attach.to_string()));
+        Ok(())
+    }
+}
+
+#[test]
+fn file_send_attaches_the_page_as_a_pdf_to_a_new_mail() {
+    // parity: BS.Send.Pdf QAT.NR.SendPdf
+    if notecraft_fonts::page_fonts().regular.is_none() {
+        return;
+    }
+    let mails = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+    let s = notecraft_engine::Session::with_sample(notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 });
+    let mut a = NoteApp::new(s, Box::new(MailHost(mails.clone())));
+    a.ui.backstage = Some(crate::Backstage::Send);
+    let mut h = harness(a);
+    h.run();
+    for item in ["Email Page", "Send as Attachment", "Send to Word"] {
+        assert!(h.query_by_label(item).is_some(), "File › Send: {item}");
+    }
+    h.get_by_label("Send as PDF").click();
+    h.run();
+    let mails = mails.borrow();
+    assert_eq!(mails.len(), 1);
+    assert!(std::fs::read(&mails[0].1).unwrap().starts_with(b"%PDF-"), "the attachment is the page's PDF");
+    assert_eq!(h.state().ui.backstage, None, "the backstage closes");
+    let _ = std::fs::remove_file(&mails[0].1);
+}
+
 /// A host whose file picker answers with a fixed path.
 struct ImportHost(String);
 

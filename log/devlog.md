@@ -1174,3 +1174,12 @@ were certain landed, behaviour unchanged (every test green after each commit).
   Shape. Treat Selected Ink As › Handwriting / Drawing (text, ink and lasso menus) sets it on
   the selection (undoable); the menus show the current kind checked. OneNote's Auto mode
   recognises writing; NoteCraft leaves those strokes undecided (unverified).
+
+## 2026-11-03 — Send by email
+
+- `share.emailPage` (Home › Email Page, File › Send, Ctrl+Shift+E): a `mailto:` link with the
+  page title as subject and its text as body (cut at 8 000 bytes).
+- `share.sendAttachment` (.mht) and `share.sendPdf` write the page to a temporary folder and
+  return `email_attach`; the UI hands it to `Host::send_email` (desktop: `xdg-email --attach`
+  on Linux/BSD; elsewhere it says where the file is). `share.sendToWord` writes a .docx and
+  opens it. File › Send is a new backstage page with the four.

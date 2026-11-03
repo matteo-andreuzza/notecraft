@@ -262,6 +262,9 @@ fn panic_hunt() {
                     | "attachment.saveAs"
                     | "attachment.open"
                     | "printout.openOriginal"
+                    | "share.sendAttachment"
+                    | "share.sendPdf"
+                    | "share.sendToWord"
             ) {
                 // These touch the file system; the hostile `path`/`folder` values are covered by
                 // their own tests below with a sandboxed folder.

@@ -198,7 +198,7 @@ The Home tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Home.Tags.OutlookTaskMarkComplete | Mark Complete (Outlook task) | Home/Tags/Outlook Tasks/Mark Complete (Outlook task) | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskMarkComplete |  |
 | R.Home.Tags.OutlookTaskRemove | Delete Outlook Task | Home/Tags/Outlook Tasks/Delete Outlook Task | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskRemove |  |
 | R.Home.Tags.OutlookTaskOpen | Open Task in Outlook | Home/Tags/Outlook Tasks/Open Task in Outlook | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskOpen |  |
-| R.Home.Email.SendNotesViaEmail | Email Page | Home/Email/Email Page | button | `Mod+Shift+E` | share.emailPage | P2 | missing | FLUENT19:SendNotesViaEmail |  |
+| R.Home.Email.SendNotesViaEmail | Email Page | Home/Email/Email Page | button | `Mod+Shift+E` | share.emailPage | P2 | wired | FLUENT19:SendNotesViaEmail |  |
 | R.Home.Meetings.MeetingDetailsInsertGallery | Meeting Details | Home/Meetings/Meeting Details | gallery |  |  | P3 | out-of-scope | FLUENT19:MeetingDetailsInsertGallery |  |
 | R.Home.Meetings.MeetingDetailsOtherDayInsert | Choose a Meeting from Another Day | Home/Meetings/Meeting Details/Choose a Meeting from Another Day | button |  |  | P3 | out-of-scope | FLUENT19:MeetingDetailsOtherDayInsert |  |
 | R.Home.Meetings.RefreshMeetingDetails | Refresh Meeting Details | Home/Meetings/Meeting Details/Refresh Meeting Details | button |  |  | P3 | out-of-scope | FLUENT19:RefreshMeetingDetails |  |
@@ -562,10 +562,10 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Export.FormatPdf | Export format: PDF (*.pdf) | File/Export/PDF (.pdf) | choice |  | file.exportPage | P1 | wired | GK | unverified: pages, sections and notebooks (file.exportNotebook format pdf) as vector PDF (FMT.Export.Pdf) |
 | BS.Export.FormatXps | Export format: XPS (*.xps) | File/Export/XPS (.xps) | choice |  | file.exportXps | P3 | missing | GK | unverified |
 | BS.Export.FormatMht | Export format: Single File Web Page (*.mht) | File/Export/Single File Web Page (.mht) | choice |  | file.exportMht | P2 | wired | GK | unverified: RFC 2557 multipart/related, the HTML part then one base64 part per picture or attached file; file.exportPage/file.exportSection with format mht do the same |
-| BS.Send.Email | Send: Email Page | File/Send/Email Page | button | `Mod+Shift+E` | share.emailPage | P2 | missing | FLUENT19:SendNotesViaEmail |  |
-| BS.Send.Attachment | Send: Send as Attachment | File/Send/Send as Attachment | button |  | share.sendAttachment | P2 | missing | FLUENT19:SendNotesAsAttachment |  |
-| BS.Send.Pdf | Send: Send as PDF | File/Send/Send as PDF | button |  | share.sendPdf | P2 | missing | FLUENT19:SendPdf |  |
-| BS.Send.Word | Send: Send to Word | File/Send/Send to Word | button |  | share.sendToWord | P2 | missing | FLUENT19:SendNotesToWord |  |
+| BS.Send.Email | Send: Email Page | File/Send/Email Page | button | `Mod+Shift+E` | share.emailPage | P2 | wired | FLUENT19:SendNotesViaEmail |  |
+| BS.Send.Attachment | Send: Send as Attachment | File/Send/Send as Attachment | button |  | share.sendAttachment | P2 | wired | FLUENT19:SendNotesAsAttachment |  |
+| BS.Send.Pdf | Send: Send as PDF | File/Send/Send as PDF | button |  | share.sendPdf | P2 | wired | FLUENT19:SendPdf |  |
+| BS.Send.Word | Send: Send to Word | File/Send/Send to Word | button |  | share.sendToWord | P2 | wired | FLUENT19:SendNotesToWord |  |
 | BS.Send.Blog | Send: Send to Blog | File/Send/Send to Blog | button |  |  | P3 | out-of-scope | FLUENT19:SendNotesToBlog |  |
 | BS.Account.Identity | Account: User Information (name used as author) | File/Account/User Information | page |  | file.options | P2 | missing | FLUENT19:GroupBackstageIdentity |  |
 | BS.Account.Theme | Account: Office Theme / Background | File/Account/Theme | combo |  | | P1 | wired | FLUENT19:Theming | The Office Theme list (Colorful, Dark Gray, Black, White, Use system setting); a UI preference, so no engine command |
@@ -1069,10 +1069,10 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.OutlookTaskRemoveCtxItem | Delete Outlook Task | Quick Access Toolbar/Commands Not in the Ribbon/Delete Outlook Task | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskRemoveCtxItem |  |
 | QAT.NR.NotebookRename | Rename Notebook | Quick Access Toolbar/Commands Not in the Ribbon/Rename Notebook | button |  | notebook.rename | P1 | wired | FLUENT19:NotebookRename |  |
 | QAT.NR.NotebookSaveAs | Save Notebook As | Quick Access Toolbar/Commands Not in the Ribbon/Save Notebook As | button |  | file.exportNotebook | P1 | wired | FLUENT19:NotebookSaveAs |  |
-| QAT.NR.SendPdf | Send as PDF | Quick Access Toolbar/Commands Not in the Ribbon/Send as PDF | button |  | share.sendPdf | P2 | missing | FLUENT19:SendPdf |  |
+| QAT.NR.SendPdf | Send as PDF | Quick Access Toolbar/Commands Not in the Ribbon/Send as PDF | button |  | share.sendPdf | P2 | wired | FLUENT19:SendPdf |  |
 | QAT.NR.SendNotesToBlog | Send to Blog | Quick Access Toolbar/Commands Not in the Ribbon/Send to Blog | button |  |  | P3 | out-of-scope | FLUENT19:SendNotesToBlog |  |
 | QAT.NR.ApplicationOptionsDialog | Options | Quick Access Toolbar/Commands Not in the Ribbon/Options | button |  | file.options | P0 | wired | FLUENT19:ApplicationOptionsDialog |  |
-| QAT.NR.SendNotesAsAttachment | Send as Attachment | Quick Access Toolbar/Commands Not in the Ribbon/Send as Attachment | button |  | share.sendAttachment | P2 | missing | FLUENT19:SendNotesAsAttachment |  |
+| QAT.NR.SendNotesAsAttachment | Send as Attachment | Quick Access Toolbar/Commands Not in the Ribbon/Send as Attachment | button |  | share.sendAttachment | P2 | wired | FLUENT19:SendNotesAsAttachment |  |
 | QAT.NR.FileExit | Exit | Quick Access Toolbar/Commands Not in the Ribbon/Exit | button |  | file.exit | P0 | verified | FLUENT19:FileExit | Saves every notebook first; when one can't be saved the window stays open and the error says why (closing would lose the change). |
 | QAT.NR.OfficeFeedback | Feedback | Quick Access Toolbar/Commands Not in the Ribbon/Feedback | button |  | help.feedback | P3 | missing | FLUENT19:OfficeFeedback |  |
 | QAT.NR.ShapeColorAndThickness | Shape Color & Thickness | Quick Access Toolbar/Commands Not in the Ribbon/Shape Color & Thickness | toggle |  | draw.shapeColorThickness | P2 | missing | FLUENT19:ShapeColorAndThickness |  |
@@ -1273,7 +1273,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.Search.Next | Next result on the page | Keyboard/Search/Next result on the page | shortcut | `F3` | search.next | P0 | verified | KBD365 | Enter too, in the find box |
 | KB.Search.Prev | Previous result on the page | Keyboard/Search/Previous result on the page | shortcut | `Shift+F3` | search.prev | P0 | verified | KBD365 |  |
 | KB.Search.Dismiss | Dismiss the search and return to the page (Esc) | Keyboard/Search/Dismiss the search and return to the page (Esc) | key-behaviour |  | search.dismiss | P0 | verified | KBD365 | Escape in the search box |
-| KB.Share.Email | Send the selected pages in an email | Keyboard/Share/Send the selected pages in an email | shortcut | `Mod+Shift+E` | share.emailPage | P2 | missing | KBD365 |  |
+| KB.Share.Email | Send the selected pages in an email | Keyboard/Share/Send the selected pages in an email | shortcut | `Mod+Shift+E` | share.emailPage | P2 | wired | KBD365 |  |
 | KB.Share.TaskToday | Create a Today Outlook task | Keyboard/Share/Create a Today Outlook task | shortcut | `Mod+Shift+1` |  | P3 | out-of-scope | KBD365 | Outlook |
 | KB.Share.TaskTomorrow | Create a Tomorrow Outlook task | Keyboard/Share/Create a Tomorrow Outlook task | shortcut | `Mod+Shift+2` |  | P3 | out-of-scope | KBD365 | Outlook |
 | KB.Share.TaskThisWeek | Create a This Week Outlook task | Keyboard/Share/Create a This Week Outlook task | shortcut | `Mod+Shift+3` |  | P3 | out-of-scope | KBD365 | Outlook |

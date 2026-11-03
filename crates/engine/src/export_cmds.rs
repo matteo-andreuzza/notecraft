@@ -53,7 +53,95 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .params(r#"{"scope"?: "page"|"section", "dir"?: folder}"#)
             .pure()
             .when(need_page),
+        // R.Home.Email.SendNotesViaEmail (BS.Send.Email, KB.Share.Email): a new mail from the
+        // page (a mailto: link: its title as the subject, its text as the body; pictures and
+        // files stay behind).
+        CommandSpec::new("share.emailPage", "R.Home.Email.SendNotesViaEmail", "Email Page", "Home/Email/Email Page", email_page)
+            .key("Mod+Shift+E")
+            .params(r#"{} → {"open_url": mailto link}"#)
+            .pure()
+            .when(need_page),
+        // BS.Send.Attachment, BS.Send.Pdf: the page as a file the UI attaches to a new mail
+        // (Send as Attachment sends the Single File Web Page; OneNote also attaches a .one).
+        CommandSpec::new("share.sendAttachment", "BS.Send.Attachment", "Send as Attachment", "File/Send/Send as Attachment", |s, v| {
+            send_file(s, v, Format::Mht)
+        })
+        .params(SEND_PARAMS)
+        .pure()
+        .when(need_page),
+        CommandSpec::new("share.sendPdf", "BS.Send.Pdf", "Send as PDF", "File/Send/Send as PDF", |s, v| send_file(s, v, Format::Pdf))
+            .params(SEND_PARAMS)
+            .pure()
+            .when(need_page),
+        // BS.Send.Word: the page as a Word document, which the UI opens.
+        CommandSpec::new("share.sendToWord", "BS.Send.Word", "Send to Word", "File/Send/Send to Word", |s, v| send_file(s, v, Format::Docx))
+            .params(SEND_PARAMS)
+            .pure()
+            .when(need_page),
     ]
+}
+
+const SEND_PARAMS: &str = r#"{"dir"?: folder (default: a temporary one)} → {"path", "subject", "email_attach"?}"#;
+
+/// Longest mail body taken from a page, bytes (mail programs cut long mailto links).
+const MAX_MAIL_BODY: usize = 8_000;
+
+fn email_page(s: &mut Session, _: &Value) -> CmdResult {
+    let page = s.page().ok_or_else(no_page)?;
+    let subject = page.display_title();
+    let mut body = page.plain_text();
+    if body.len() > MAX_MAIL_BODY {
+        let mut end = MAX_MAIL_BODY;
+        while !body.is_char_boundary(end) {
+            end -= 1;
+        }
+        body.truncate(end);
+        body.push('…');
+    }
+    Ok(json!({"open_url": mailto(&subject, &body), "subject": subject}))
+}
+
+/// A `mailto:` link with a subject and a body, percent-encoded.
+pub(crate) fn mailto(subject: &str, body: &str) -> String {
+    let enc = |t: &str| {
+        let mut out = String::new();
+        for b in t.bytes() {
+            if b.is_ascii_alphanumeric() || b"-._~".contains(&b) {
+                out.push(b as char);
+            } else {
+                out.push_str(&format!("%{b:02X}"));
+            }
+        }
+        out
+    };
+    format!("mailto:?subject={}&body={}", enc(subject), enc(body))
+}
+
+/// Write the current page as `fmt` into `dir` (default: a folder per page in the temporary
+/// directory), named after it; mail attachments say so with `email_attach`.
+fn send_file(s: &mut Session, v: &Value, fmt: Format) -> CmdResult {
+    let page = s.page().ok_or_else(no_page)?.clone();
+    let title = page.display_title();
+    let dir = match p::str(v, "dir").filter(|d| !d.is_empty()) {
+        Some(d) => std::path::PathBuf::from(d),
+        None => std::env::temp_dir().join("notecraft-send").join(page.id.to_string()),
+    };
+    print_dir(&dir)?;
+    let ext = match fmt {
+        Format::Pdf => "pdf",
+        Format::Docx => "docx",
+        _ => "mht",
+    };
+    let path = dir.join(format!("{}.{ext}", notecraft_doc::media::safe_file_name(&title))).to_string_lossy().into_owned();
+    let mut r = write(s, &path, fmt, &title, &[&page])?;
+    if let Some(o) = r.as_object_mut() {
+        o.insert("path".into(), json!(path));
+        o.insert("subject".into(), json!(title));
+        if fmt != Format::Docx {
+            o.insert("email_attach".into(), json!(path));
+        }
+    }
+    Ok(r)
 }
 
 /// The print-ready PDF of the page or section in `dir` (default: a `notecraft-print` folder in
