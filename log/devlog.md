@@ -1252,3 +1252,6 @@ were certain landed, behaviour unchanged (every test green after each commit).
   under the ribbon lists its commands' letters (Insert: F File, O Printout, P Picture, the
   documented Alt+N sequences); a command's letter fires it like a click. Esc or a click
   leaves; letters never reach the page meanwhile. Other tabs' command letters: to do.
+- The docked window's narrow ribbon (`ribbon_layout::DOCK_TABS`, catalog `DOCK.*`, 20 rows):
+  Home, Insert, Draw, View and Pages with small groups, laid out as classic groups while
+  docked (`chrome::shown_tabs`). Their contents are NoteCraft's choice (unverified).

@@ -176,7 +176,8 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
         return;
     }
     let Some(tab) = crate::chrome::current_tab(app) else { return };
-    let simplified = app.session.view.ribbon_mode == RibbonMode::Simplified;
+    // The docked window's narrow tabs are laid out as classic groups.
+    let simplified = app.session.view.ribbon_mode == RibbonMode::Simplified && !app.session.view.docked;
     let card_h = if simplified { size::RIBBON_SIMPLIFIED } else { BODY_H };
     let m = size::CARD_MARGIN as i8;
     egui::Panel::top("ribbon_body")

@@ -1084,26 +1084,26 @@ The compact ribbon of a docked OneNote window (one row per group).
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| DOCK.Home.GroupClipboard | Docked window ribbon: Home › Clipboard | Docked/Home/Clipboard | layout |  |  | P3 | missing | FLUENT19:TabHomeNarrow/GroupClipboard |  |
-| DOCK.Home.GroupBasicTextSmall | Docked window ribbon: Home › Basic Text Small | Docked/Home/Basic Text Small | layout |  |  | P3 | missing | FLUENT19:TabHomeNarrow/GroupBasicTextSmall |  |
-| DOCK.Home.GroupTaggingSmall | Docked window ribbon: Home › Tagging Small | Docked/Home/Tagging Small | layout |  |  | P3 | missing | FLUENT19:TabHomeNarrow/GroupTaggingSmall |  |
-| DOCK.Insert.GroupInsertTables | Docked window ribbon: Insert › Tables | Docked/Insert/Tables | layout |  |  | P3 | missing | FLUENT19:TabInsertNarrow/GroupInsertTables |  |
-| DOCK.Insert.GroupInsertFiles | Docked window ribbon: Insert › Files | Docked/Insert/Files | layout |  |  | P3 | missing | FLUENT19:TabInsertNarrow/GroupInsertFiles |  |
-| DOCK.Insert.GroupImages | Docked window ribbon: Insert › Images | Docked/Insert/Images | layout |  |  | P3 | missing | FLUENT19:TabInsertNarrow/GroupImages |  |
-| DOCK.Insert.GroupInsertLinks | Docked window ribbon: Insert › Links | Docked/Insert/Links | layout |  |  | P3 | missing | FLUENT19:TabInsertNarrow/GroupInsertLinks |  |
-| DOCK.Insert.GroupOutlook | Docked window ribbon: Insert › Meetings | Docked/Insert/Meetings | layout |  |  | P3 | missing | FLUENT19:TabInsertNarrow/GroupOutlook |  |
-| DOCK.Insert.GroupRecordAndLink | Docked window ribbon: Insert › Recording | Docked/Insert/Recording | layout |  |  | P3 | missing | FLUENT19:TabInsertNarrow/GroupRecordAndLink |  |
-| DOCK.Draw.GroupWrite | Docked window ribbon: Draw › Tools | Docked/Draw/Tools | layout |  |  | P3 | missing | FLUENT19:TabDrawNarrow/GroupWrite |  |
-| DOCK.Draw.GroupWriteOnTouch | Docked window ribbon: Draw › Tools (touch) | Docked/Draw/Tools (touch) | layout |  |  | P3 | missing | FLUENT19:TabDrawNarrow/GroupWriteOnTouch |  |
-| DOCK.Draw.GroupInkEditNarrow | Docked window ribbon: Draw › Ink Edit Narrow | Docked/Draw/Ink Edit Narrow | layout |  |  | P3 | missing | FLUENT19:TabDrawNarrow/GroupInkEditNarrow |  |
-| DOCK.View.GroupView | Docked window ribbon: View › Views | Docked/View/Views | layout |  |  | P3 | missing | FLUENT19:TabViewNarrow/GroupView |  |
-| DOCK.View.GroupViewDocked | Docked window ribbon: View › View Docked | Docked/View/View Docked | layout |  |  | P3 | missing | FLUENT19:TabViewNarrow/GroupViewDocked |  |
-| DOCK.View.GroupViewFullPage | Docked window ribbon: View › View Full Page | Docked/View/View Full Page | layout |  |  | P3 | missing | FLUENT19:TabViewNarrow/GroupViewFullPage |  |
-| DOCK.View.GroupPageSetupNarrow | Docked window ribbon: View › Page Setup Narrow | Docked/View/Page Setup Narrow | layout |  |  | P3 | missing | FLUENT19:TabViewNarrow/GroupPageSetupNarrow |  |
-| DOCK.View.GroupZoomDocked | Docked window ribbon: View › Zoom Docked | Docked/View/Zoom Docked | layout |  |  | P3 | missing | FLUENT19:TabViewNarrow/GroupZoomDocked |  |
-| DOCK.View.GroupWindowNarrow | Docked window ribbon: View › Window Narrow | Docked/View/Window Narrow | layout |  |  | P3 | missing | FLUENT19:TabViewNarrow/GroupWindowNarrow |  |
-| DOCK.Pages.GroupNavigate | Docked window ribbon: Pages › Navigate | Docked/Pages/Navigate | layout |  |  | P3 | missing | FLUENT19:TabPages/GroupNavigate |  |
-| DOCK.Pages.GroupInsertPages | Docked window ribbon: Pages › Insert Pages | Docked/Pages/Insert Pages | layout |  |  | P3 | missing | FLUENT19:TabPages/GroupInsertPages |  |
+| DOCK.Home.GroupClipboard | Docked window ribbon: Home › Clipboard | Docked/Home/Clipboard | layout |  |  | P3 | wired | FLUENT19:TabHomeNarrow/GroupClipboard |  |
+| DOCK.Home.GroupBasicTextSmall | Docked window ribbon: Home › Basic Text Small | Docked/Home/Basic Text Small | layout |  |  | P3 | wired | FLUENT19:TabHomeNarrow/GroupBasicTextSmall |  |
+| DOCK.Home.GroupTaggingSmall | Docked window ribbon: Home › Tagging Small | Docked/Home/Tagging Small | layout |  |  | P3 | wired | FLUENT19:TabHomeNarrow/GroupTaggingSmall |  |
+| DOCK.Insert.GroupInsertTables | Docked window ribbon: Insert › Tables | Docked/Insert/Tables | layout |  |  | P3 | wired | FLUENT19:TabInsertNarrow/GroupInsertTables |  |
+| DOCK.Insert.GroupInsertFiles | Docked window ribbon: Insert › Files | Docked/Insert/Files | layout |  |  | P3 | wired | FLUENT19:TabInsertNarrow/GroupInsertFiles |  |
+| DOCK.Insert.GroupImages | Docked window ribbon: Insert › Images | Docked/Insert/Images | layout |  |  | P3 | wired | FLUENT19:TabInsertNarrow/GroupImages |  |
+| DOCK.Insert.GroupInsertLinks | Docked window ribbon: Insert › Links | Docked/Insert/Links | layout |  |  | P3 | wired | FLUENT19:TabInsertNarrow/GroupInsertLinks |  |
+| DOCK.Insert.GroupOutlook | Docked window ribbon: Insert › Meetings | Docked/Insert/Meetings | layout |  |  | P3 | wired | FLUENT19:TabInsertNarrow/GroupOutlook |  |
+| DOCK.Insert.GroupRecordAndLink | Docked window ribbon: Insert › Recording | Docked/Insert/Recording | layout |  |  | P3 | wired | FLUENT19:TabInsertNarrow/GroupRecordAndLink |  |
+| DOCK.Draw.GroupWrite | Docked window ribbon: Draw › Tools | Docked/Draw/Tools | layout |  |  | P3 | wired | FLUENT19:TabDrawNarrow/GroupWrite |  |
+| DOCK.Draw.GroupWriteOnTouch | Docked window ribbon: Draw › Tools (touch) | Docked/Draw/Tools (touch) | layout |  |  | P3 | wired | FLUENT19:TabDrawNarrow/GroupWriteOnTouch |  |
+| DOCK.Draw.GroupInkEditNarrow | Docked window ribbon: Draw › Ink Edit Narrow | Docked/Draw/Ink Edit Narrow | layout |  |  | P3 | wired | FLUENT19:TabDrawNarrow/GroupInkEditNarrow |  |
+| DOCK.View.GroupView | Docked window ribbon: View › Views | Docked/View/Views | layout |  |  | P3 | wired | FLUENT19:TabViewNarrow/GroupView |  |
+| DOCK.View.GroupViewDocked | Docked window ribbon: View › View Docked | Docked/View/View Docked | layout |  |  | P3 | wired | FLUENT19:TabViewNarrow/GroupViewDocked |  |
+| DOCK.View.GroupViewFullPage | Docked window ribbon: View › View Full Page | Docked/View/View Full Page | layout |  |  | P3 | wired | FLUENT19:TabViewNarrow/GroupViewFullPage |  |
+| DOCK.View.GroupPageSetupNarrow | Docked window ribbon: View › Page Setup Narrow | Docked/View/Page Setup Narrow | layout |  |  | P3 | wired | FLUENT19:TabViewNarrow/GroupPageSetupNarrow |  |
+| DOCK.View.GroupZoomDocked | Docked window ribbon: View › Zoom Docked | Docked/View/Zoom Docked | layout |  |  | P3 | wired | FLUENT19:TabViewNarrow/GroupZoomDocked |  |
+| DOCK.View.GroupWindowNarrow | Docked window ribbon: View › Window Narrow | Docked/View/Window Narrow | layout |  |  | P3 | wired | FLUENT19:TabViewNarrow/GroupWindowNarrow |  |
+| DOCK.Pages.GroupNavigate | Docked window ribbon: Pages › Navigate | Docked/Pages/Navigate | layout |  |  | P3 | wired | FLUENT19:TabPages/GroupNavigate |  |
+| DOCK.Pages.GroupInsertPages | Docked window ribbon: Pages › Insert Pages | Docked/Pages/Insert Pages | layout |  |  | P3 | wired | FLUENT19:TabPages/GroupInsertPages |  |
 
 ## Keyboard shortcuts
 

@@ -1546,6 +1546,40 @@ fn f10_and_alt_show_keytips_that_open_a_tab_and_run_a_command() {
 }
 
 #[test]
+fn the_docked_window_shows_its_narrow_ribbon() {
+    // parity: DOCK.Home.GroupClipboard DOCK.Home.GroupBasicTextSmall DOCK.Home.GroupTaggingSmall DOCK.Insert.GroupInsertTables DOCK.Insert.GroupInsertFiles DOCK.Insert.GroupImages DOCK.Insert.GroupInsertLinks
+    // parity: DOCK.Insert.GroupOutlook DOCK.Insert.GroupRecordAndLink DOCK.Draw.GroupWrite DOCK.Draw.GroupWriteOnTouch DOCK.Draw.GroupInkEditNarrow DOCK.View.GroupView DOCK.View.GroupViewDocked
+    // parity: DOCK.View.GroupViewFullPage DOCK.View.GroupPageSetupNarrow DOCK.View.GroupZoomDocked DOCK.View.GroupWindowNarrow DOCK.Pages.GroupNavigate DOCK.Pages.GroupInsertPages
+    let mut a = app();
+    a.session.run("view.dock", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Pages").is_some(), "the docked tabs include Pages");
+    for tab in crate::ribbon_layout::DOCK_TABS {
+        h.state_mut().ui.tab = tab.name.to_string();
+        h.run();
+        for g in tab.groups {
+            use crate::ribbon_layout::Item;
+            let id = match &g.items[0] {
+                Item::Large(id) | Item::Small(id) => *id,
+                Item::Stack(ids) => ids[0],
+                Item::TwoRows(a, _) => match a[0] {
+                    Item::Small(id) => id,
+                    _ => unreachable!(),
+                },
+                _ => unreachable!(),
+            };
+            let label = crate::ribbon::label(id);
+            assert!(h.query_all_by_label_contains(&label).next().is_some(), "{} › {}: {label}", tab.name, g.name);
+        }
+    }
+    let ctx = h.ctx.clone();
+    h.state_mut().run(&ctx, "view.dock", json!({}));
+    h.run();
+    assert!(h.query_by_label("Pages").is_none(), "undocked, the full tabs again");
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

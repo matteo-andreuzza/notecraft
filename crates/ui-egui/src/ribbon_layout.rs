@@ -99,6 +99,105 @@ pub(crate) const TAG_ITEMS: &[&str] = &[
     "R.Home.Tags.ClientRequest",
 ];
 
+/// The docked window's narrow ribbon (catalog `DOCK.*`), shown instead of [`TABS`] while the
+/// window is docked (View › Dock to Desktop). The groups' contents are NoteCraft's choice
+/// (unverified): the common commands of each, small enough for a 380-point window.
+pub const DOCK_TABS: &[Tab] = &[
+    Tab {
+        name: "Home",
+        groups: &[
+            // DOCK.Home.GroupClipboard
+            Group {
+                name: "Clipboard",
+                items: &[
+                    Item::Large("R.Home.Clipboard.Paste"),
+                    Item::Stack(&["R.Home.Clipboard.Cut", "R.Home.Clipboard.CopyOneNote", "R.Home.Clipboard.FormatPainter"]),
+                ],
+            },
+            // DOCK.Home.GroupBasicTextSmall
+            Group {
+                name: "Basic Text",
+                items: &[Item::TwoRows(
+                    &[Item::Small("R.Home.BasicText.Bold"), Item::Small("R.Home.BasicText.Italic"), Item::Small("R.Home.BasicText.Underline")],
+                    &[
+                        Item::Small("R.Home.BasicText.BulletsGallery"),
+                        Item::Small("R.Home.BasicText.NumberingGallery"),
+                        Item::Small("R.Home.BasicText.TextHighlightColorPicker"),
+                    ],
+                )],
+            },
+            // DOCK.Home.GroupTaggingSmall
+            Group { name: "Tags", items: &[Item::Stack(&["R.Home.Tags.ToDoTag", "R.Home.Tags.Important", "R.Home.Tags.FindTaggedNotes"])] },
+        ],
+    },
+    Tab {
+        name: "Insert",
+        groups: &[
+            // DOCK.Insert.GroupInsertTables
+            Group { name: "Tables", items: &[Item::Large("R.Insert.Tables.TableInsert")] },
+            // DOCK.Insert.GroupInsertFiles
+            Group { name: "Files", items: &[Item::Stack(&["R.Insert.Files.FileAttachmentInsert", "R.Insert.Files.PrintoutFromFileInsert"])] },
+            // DOCK.Insert.GroupImages
+            Group { name: "Images", items: &[Item::Stack(&["R.Insert.Images.PictureFromFileInsert", "R.Insert.Images.ScreenCaptureInsert"])] },
+            // DOCK.Insert.GroupInsertLinks
+            Group { name: "Links", items: &[Item::Large("R.Insert.Links.HyperlinkCreateHere")] },
+            // DOCK.Insert.GroupOutlook (Outlook meetings: out of scope, drawn disabled)
+            Group { name: "Meetings", items: &[Item::Large("R.Home.Meetings.MeetingDetailsInsertGallery")] },
+            // DOCK.Insert.GroupRecordAndLink
+            Group { name: "Recording", items: &[Item::Large("R.Insert.Recording.AudioRecordingInsert")] },
+        ],
+    },
+    Tab {
+        name: "Draw",
+        groups: &[
+            // DOCK.Draw.GroupWrite
+            Group {
+                name: "Tools",
+                items: &[Item::Stack(&["R.Draw.Tools.SelectAndTypeMode", "R.Draw.Tools.LassoSelect", "R.Draw.Tools.EraserLastUsed"])],
+            },
+            // DOCK.Draw.GroupWriteOnTouch
+            Group {
+                name: "Tools (touch)",
+                items: &[Item::Stack(&["R.Draw.Tools.FingerPaintingMode", "R.Draw.Tools.PanningHand", "R.Draw.Tools.MoreColorAndThicknessOptions"])],
+            },
+            // DOCK.Draw.GroupInkEditNarrow
+            Group { name: "Ink Edit", items: &[Item::Stack(&["R.Draw.Edit.PenInsertSpace", "R.Draw.Edit.Delete", "R.Draw.Convert.InkToShape"])] },
+        ],
+    },
+    Tab {
+        name: "View",
+        groups: &[
+            // DOCK.View.GroupView
+            Group { name: "Views", items: &[Item::Large("R.View.Views.NormalViewOneNote")] },
+            // DOCK.View.GroupViewDocked
+            Group { name: "Docked", items: &[Item::Large("R.View.Views.CurrentWindowDock")] },
+            // DOCK.View.GroupViewFullPage
+            Group { name: "Full Page", items: &[Item::Large("R.View.Views.FullPageView")] },
+            // DOCK.View.GroupPageSetupNarrow
+            Group {
+                name: "Page Setup",
+                items: &[Item::Stack(&["R.View.PageSetup.PageColorGallery", "R.View.PageSetup.RuleLinesMenu", "R.View.PageSetup.PageTitleHide"])],
+            },
+            // DOCK.View.GroupZoomDocked
+            Group { name: "Zoom", items: &[Item::Stack(&["R.View.Zoom.ZoomIn", "R.View.Zoom.ZoomOut", "R.View.Zoom.ZoomCurrent100"])] },
+            // DOCK.View.GroupWindowNarrow
+            Group { name: "Window", items: &[Item::Stack(&["R.View.Window.NewSideNote", "R.View.Window.WindowKeepOnTop"])] },
+        ],
+    },
+    Tab {
+        name: "Pages",
+        groups: &[
+            // DOCK.Pages.GroupNavigate
+            Group { name: "Navigate", items: &[Item::Stack(&["QAT.ViewGoBack", "QAT.NR.PreviousPageOneNote", "QAT.NR.NextPageOneNote"])] },
+            // DOCK.Pages.GroupInsertPages
+            Group {
+                name: "Insert Pages",
+                items: &[Item::Stack(&["KB.Pages.NewPage", "KB.Pages.NewSubpage", "R.Insert.Pages.NewPageFromStationery"])],
+            },
+        ],
+    },
+];
+
 /// The always-visible tabs, in order (File opens the backstage and is drawn separately).
 pub const TABS: &[Tab] = &[
     Tab {
