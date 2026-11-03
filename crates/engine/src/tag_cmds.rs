@@ -65,6 +65,16 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("tag.check", "CM.Tag.NoteTagCheck", "Check Tag", "Context/Tag/Check Tag", |s, v| set_checked(s, v, true)).params(r#"{"key"?: tag key}"#).when(need_tagged),
         CommandSpec::new("tag.uncheck", "CM.Tag.NoteTagUncheck", "Uncheck Tag", "Context/Tag/Uncheck Tag", |s, v| set_checked(s, v, false)).params(r#"{"key"?: tag key}"#).when(need_tagged),
         CommandSpec::new("tag.remove", "CM.Tag.TagsRemove", "Remove Tag", "Context/Tag/Remove Tag", remove_one).params(r#"{"key"?: tag key (default: the tag the menu was opened on)}"#).when(need_tagged),
+        // CM.Tag.JotAddToCustomNoteFlag: a tag that isn't in your list (from another notebook
+        // or file) joins it, with its name and icon.
+        CommandSpec::new("tag.addToCustom", "CM.Tag.JotAddToCustomNoteFlag", "Add to Custom Tags", "Context/Tag/Add to Custom Tags", add_to_custom)
+            .params(r#"{"key"?: tag key (default: the tag the menu was opened on)}"#)
+            .when(|s| {
+                need_tagged(s).or_else(|| match &s.view.context_tag {
+                    Some(k) if s.tag_defs().iter().any(|d| &d.key == k) => Some("This tag is already in your tags"),
+                    _ => None,
+                })
+            }),
         // CM.InkDrawing.TagsMarkAll / TagsClearAll — check or clear every to-do on the selection.
         CommandSpec::new("tag.checkAll", "CM.InkDrawing.TagsMarkAll", "Check All Tags", "Context/Ink Drawing/Check All Tags", |s, _| check_all(s, true)).when(need_tagged),
         CommandSpec::new("tag.clearAll", "CM.InkDrawing.TagsClearAll", "Clear All Checkmarks", "Context/Ink Drawing/Clear All Checkmarks", |s, _| check_all(s, false)).when(need_tagged),
@@ -242,6 +252,25 @@ fn remove_one(s: &mut Session, v: &Value) -> CmdResult {
         None => s.view.context_tag.clone().ok_or_else(|| CmdError::Params("`key` (the tag to remove) is required".into()))?,
     };
     each_target(s, |tags| tags.retain(|t| t.key != key))
+}
+
+fn add_to_custom(s: &mut Session, v: &Value) -> CmdResult {
+    let key = match p::str(v, "key") {
+        Some(k) => k.to_string(),
+        None => s.view.context_tag.clone().ok_or_else(|| CmdError::Params("`key` (the tag to add) is required".into()))?,
+    };
+    let mut list = s.tag_defs();
+    if list.iter().any(|d| d.key == key) {
+        return Err(CmdError::Disabled("This tag is already in your tags".into()));
+    }
+    let page = s.page().ok_or_else(no_page)?;
+    let used = page.objects.iter().flat_map(|o| o.paragraphs()).flat_map(|p| p.tags.iter()).find(|t| t.key == key).cloned();
+    let used = used.ok_or_else(|| CmdError::Params(format!("no tag `{key}` on this page")))?;
+    if list.len() >= notecraft_doc::tags::MAX_CUSTOM_TAGS {
+        return Err(CmdError::Failed("the tag list is full".into()));
+    }
+    list.push(TagDef { key: used.key, name: used.name, symbol: used.symbol, font_color: None, highlight: None });
+    store_tags(s, list)
 }
 
 fn set_checked(s: &mut Session, v: &Value, on: bool) -> CmdResult {
@@ -564,6 +593,24 @@ mod tests {
 
     fn keys(s: &Session) -> Vec<String> {
         s.tag_defs().into_iter().map(|d| d.key).collect()
+    }
+
+    #[test]
+    fn a_tag_from_elsewhere_joins_the_tag_list() {
+        // parity: CM.Tag.JotAddToCustomNoteFlag
+        let mut s = crate::tests::sample();
+        crate::tests::run(&mut s, "page.new", json!({}));
+        crate::tests::run(&mut s, "outline.new", json!({"x": 40.0, "y": 120.0}));
+        crate::tests::run(&mut s, "text.insert", json!({"text": "from a colleague"}));
+        crate::tests::run(&mut s, "tag.todo", json!({}));
+        let page = s.page_mut().unwrap();
+        let o = page.objects.iter_mut().find_map(|o| if let notecraft_doc::PageObject::Outline(o) = o { Some(o) } else { None }).unwrap();
+        o.paragraphs[0].tags[0].key = "imported-7".into();
+        o.paragraphs[0].tags[0].name = "Follow up".into();
+        s.view.context_tag = Some("imported-7".into());
+        crate::tests::run(&mut s, "tag.addToCustom", json!({}));
+        assert!(s.tag_defs().iter().any(|d| d.key == "imported-7" && d.name == "Follow up"));
+        assert!(s.run("tag.addToCustom", json!({})).is_err(), "already there");
     }
 
     #[test]

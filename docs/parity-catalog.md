@@ -827,7 +827,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Tag.TagsRemove | Remove Tag | Context/Tag/Remove Tag | button |  | tag.remove | P0 | wired | FLUENT19:ContextMenuTag/TagsRemove |  |
 | CM.Tag.FindTaggedNotes | Find Tags | Context/Tag/Find Tags | toggle |  | tag.findTags | P0 | wired | FLUENT19:ContextMenuTag/FindTaggedNotes |  |
 | CM.Tag.TagsCustomize | Customize Tags | Context/Tag/Customize Tags | button |  | tag.customize | P1 | wired | FLUENT19:ContextMenuTag/TagsCustomize |  |
-| CM.Tag.JotAddToCustomNoteFlag | Add to Custom Tags | Context/Tag/Add to Custom Tags | button |  | tag.addToCustom | P2 | missing | FLUENT19:ContextMenuTag/JotAddToCustomNoteFlag |  |
+| CM.Tag.JotAddToCustomNoteFlag | Add to Custom Tags | Context/Tag/Add to Custom Tags | button |  | tag.addToCustom | P2 | wired | FLUENT19:ContextMenuTag/JotAddToCustomNoteFlag |  |
 | CM.OutlookTask.OutlookTaskTodayContextual | Outlook Task: Today | Context/Outlook Task/Outlook Task: Today | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuOutlookTask/OutlookTaskTodayContextual |  |
 | CM.OutlookTask.OutlookTaskTomorrowContextual | Outlook Task: Tomorrow | Context/Outlook Task/Outlook Task: Tomorrow | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuOutlookTask/OutlookTaskTomorrowContextual |  |
 | CM.OutlookTask.OutlookTaskThisWeekContextual | Outlook Task: This Week | Context/Outlook Task/Outlook Task: This Week | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuOutlookTask/OutlookTaskThisWeekContextual |  |

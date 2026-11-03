@@ -1301,3 +1301,5 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - A note container dropped with Shift onto another joins it (`outline.merge`,
   BEH.Canvas.MergeContainers): its paragraphs follow the other's. Shape Color & Thickness
   (QAT) opens the Color & Thickness dialog; UI.Window.Docked pinned by the dock test.
+- Add to Custom Tags (`tag.addToCustom`, the tag menu): a tag that isn't in your list (from
+  another notebook or an imported file) joins it with its name and icon.
