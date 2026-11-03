@@ -144,6 +144,9 @@ pub struct Prefs {
     /// New windows open docked to the side of the desktop (`OPT.Display.DockNewWindows`; the
     /// UI reads it).
     pub dock_new_windows: bool,
+    /// Ribbon tabs (`"Insert"`) and groups (`"Insert/Recording"`) the user hid (Options ›
+    /// Customize Ribbon; the UI reads it).
+    pub hidden_ribbon: Vec<String>,
     /// Where new notebooks go (`OPT.SaveBackup.DefaultNotebookLocation`; empty: ask).
     pub default_notebook_location: String,
     /// The notebook whose Quick Notes section takes quick notes
@@ -205,6 +208,7 @@ impl Default for Prefs {
             email_signature: String::new(),
             auto_switch_pen: false,
             dock_new_windows: false,
+            hidden_ribbon: Vec::new(),
             default_notebook_location: String::new(),
             quick_notes_notebook: String::new(),
             templates: Vec::new(),

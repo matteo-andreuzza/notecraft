@@ -197,13 +197,14 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 if simplified {
                     crate::ribbon_simplified::show(app, ui, tab, content, t);
                 } else {
+                    let hidden = app.session.prefs.hidden_ribbon.clone();
                     egui::ScrollArea::horizontal()
                         .id_salt("ribbon_scroll")
                         .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
                                 ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-                                for g in tab.groups {
+                                for g in tab.groups.iter().filter(|g| !hidden.iter().any(|h| *h == format!("{}/{}", tab.name, g.name))) {
                                     group(app, ui, g, t);
                                 }
                             });

@@ -479,8 +479,30 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
             ui.label(RichText::new(crate::i18n::tr("Spelling and the thesaurus use this language.")).color(t.page_meta));
         }
         OptionsPage::CustomizeRibbon => {
+            // OPT.CustomizeRibbon.CustomizeRibbon, UI.Dialogs.CustomizeRibbon: show or hide the
+            // tabs and (in the classic ribbon) their groups; Reset shows them all again.
             section(ui, "Customize the Ribbon");
-            not_yet(ui, t, "The ribbon can't be customized yet. Switch between the simplified and classic ribbon with the ribbon's own button.");
+            egui::ScrollArea::vertical().id_salt("opt-ribbon").max_height(360.0).show(ui, |ui| {
+                for tab in crate::ribbon_layout::TABS {
+                    let mut on = !d.hidden_ribbon.iter().any(|h| h == tab.name);
+                    if ui.checkbox(&mut on, RichText::new(crate::i18n::tr(tab.name)).strong()).changed() {
+                        set_hidden(&mut d.hidden_ribbon, tab.name, !on);
+                    }
+                    ui.indent(tab.name, |ui| {
+                        for g in tab.groups {
+                            let key = format!("{}/{}", tab.name, g.name);
+                            let mut on = !d.hidden_ribbon.contains(&key);
+                            if ui.checkbox(&mut on, crate::i18n::tr(g.name)).changed() {
+                                set_hidden(&mut d.hidden_ribbon, &key, !on);
+                            }
+                        }
+                    });
+                }
+            });
+            if ui.button(crate::i18n::tr("Reset")).clicked() {
+                d.hidden_ribbon.clear();
+            }
+            not_yet(ui, t, "Groups hide in the classic ribbon; the single-line ribbon hides whole tabs.");
         }
         OptionsPage::QuickAccessToolbar => {
             // OPT.QuickAccessToolbar.CustomizeQAT, UI.Dialogs.CustomizeQAT.
@@ -497,4 +519,12 @@ fn page(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, d: &mut Prefs, t: T
         }
     }
     ui.add_space(4.0);
+}
+
+/// Add `key` to the hidden ribbon parts, or take it out.
+fn set_hidden(list: &mut Vec<String>, key: &str, hide: bool) {
+    list.retain(|k| k != key);
+    if hide {
+        list.push(key.to_string());
+    }
 }

@@ -1690,6 +1690,27 @@ fn ctrl_m_opens_a_second_window_with_its_own_page() {
 }
 
 #[test]
+fn customize_the_ribbon_hides_tabs_and_groups() {
+    // parity: UI.Dialogs.CustomizeRibbon OPT.CustomizeRibbon.CustomizeRibbon
+    let mut a = app();
+    a.session.prefs.hidden_ribbon = vec!["Draw".into(), "Insert/Recording".into()];
+    a.session.view.ribbon_mode = notecraft_engine::RibbonMode::Classic;
+    a.ui.tab = "Insert".into();
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Draw").is_none(), "the Draw tab is hidden");
+    assert!(h.query_by_label("Insert").is_some());
+    assert!(h.query_by_label_contains("Record Audio").is_none(), "Insert › Recording is hidden");
+    h.state_mut().ui.tab = "Draw".into();
+    h.run();
+    assert_eq!(crate::chrome::current_tab(h.state()).map(|t| t.name), Some("Home"), "a hidden tab falls back to the first shown");
+    h.state_mut().ui.backstage = Some(crate::Backstage::Options);
+    h.state_mut().ui.options_page = crate::options::OptionsPage::CustomizeRibbon;
+    h.run();
+    assert!(h.query_by_label("Reset").is_some());
+}
+
+#[test]
 fn the_quick_access_toolbar_is_customized_from_its_menu_and_the_options() {
     // parity: UI.Dialogs.CustomizeQAT
     let mut h = harness(app());

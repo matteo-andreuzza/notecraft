@@ -1319,3 +1319,6 @@ were certain landed, behaviour unchanged (every test green after each commit).
   with the main window's; the web build says new windows need the desktop app.
 - Not tried by hand yet: egui keeps widget state (scroll offsets) by id across viewports,
   so the two windows may share some of it.
+- Options › Customize Ribbon: show or hide each tab and (in the classic ribbon) each group
+  (`Prefs::hidden_ribbon`, `"Tab"` or `"Tab/Group"`); Reset shows them all. A hidden tab
+  that was open falls back to the first shown one.

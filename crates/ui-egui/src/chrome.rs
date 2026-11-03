@@ -232,7 +232,8 @@ pub fn shown_tabs(app: &NoteApp) -> &'static [Tab] {
 pub fn current_tab(app: &NoteApp) -> Option<&'static Tab> {
     let ctx_tabs = contextual_tabs(app);
     let tabs = shown_tabs(app);
-    tabs.iter().chain(ctx_tabs.iter().copied()).find(|x| x.name == app.ui.tab).or_else(|| tabs.first())
+    let shown = |x: &&Tab| !app.session.prefs.hidden_ribbon.iter().any(|h| h == x.name);
+    tabs.iter().filter(shown).chain(ctx_tabs.iter().copied()).find(|x| x.name == app.ui.tab).or_else(|| tabs.iter().find(shown))
 }
 
 /// The tab row (catalog `UI.Ribbon.Tabs`, `UI.Ribbon.ContextualTabs`, `UI.Ribbon.Collapse`,
@@ -255,7 +256,13 @@ pub fn tab_row(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                     app.ui.backstage = Some(crate::Backstage::Info);
                 }
                 let selected = current_tab(app).map(|x| x.name).unwrap_or("Home");
-                for (x, is_ctx) in shown_tabs(app).iter().map(|x| (x, false)).chain(contextual.iter().map(|x| (*x, true))) {
+                let hidden = app.session.prefs.hidden_ribbon.clone();
+                for (x, is_ctx) in shown_tabs(app)
+                    .iter()
+                    .filter(|x| !hidden.iter().any(|h| h == x.name))
+                    .map(|x| (x, false))
+                    .chain(contextual.iter().map(|x| (*x, true)))
+                {
                     let sel = selected == x.name && !app.session.view.ribbon_collapsed;
                     let r = tab(ui, &crate::i18n::tr(x.name), sel, is_ctx, &t);
                     if let Some(l) = crate::keytips::tab_letter(app, x.name) {
