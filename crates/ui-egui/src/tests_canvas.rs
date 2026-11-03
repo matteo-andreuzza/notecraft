@@ -665,6 +665,31 @@ fn right_click_on_a_tag_icon_opens_the_tag_menu_for_that_tag() {
 }
 
 #[test]
+fn select_outline_levels_from_the_container_and_handle_menus() {
+    // parity: CM.NoteContainer.SelectOutlineLevelsMenu CM.ParagraphHandle.SelectOutlineLevelsMenu
+    let (mut a, o) = page_for_context_menu("Alpha\nBeta");
+    a.session.run("caret.set", json!({"block": o.to_string(), "para": 1, "offset": 0})).unwrap();
+    a.session.run("para.indent", json!({})).unwrap();
+    let mut h = harness(a);
+    h.run();
+    let collapsed = |h: &Harness<'static, NoteApp>| h.state().session.page().unwrap().outline(o).unwrap().paragraphs[0].collapsed;
+    let bar = h.state().canvas.outlines.iter().find(|x| x.id == o).copied().unwrap().bar.center();
+    right_click(&mut h, bar);
+    h.get_by_label_contains("Select Outline Levels").click();
+    h.run();
+    h.get_by_label("Show Level 1").click();
+    h.run();
+    assert!(collapsed(&h), "Show Level 1 hides the level-2 paragraph");
+    let handle = h.state().canvas.para(Block::Outline(o), 0).unwrap().handle.center();
+    right_click(&mut h, handle);
+    h.get_by_label_contains("Select Outline Levels").click();
+    h.run();
+    h.get_by_label("Show All Levels").click();
+    h.run();
+    assert!(!collapsed(&h), "Show All Levels shows it again");
+}
+
+#[test]
 fn right_click_on_a_bullet_or_number_opens_its_list_menu() {
     // parity: CM.Bullet.ChangeToNumberList CM.Number.ChangeToBullet
     use notecraft_engine::doc::ListFormat;

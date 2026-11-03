@@ -1152,3 +1152,7 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - `CM.OutlookTask.TagsRemove` is out of scope (Outlook tasks need Outlook).
 - `cargo xtask parity`: `\"` inside a test's string literal no longer ends it (it hid five
   catalog mentions after the peer's Paper Size test).
+- Select Outline Levels (container and paragraph-handle menus): the submenu headers are
+  pinned by a test (Show Level 1 hides a level-2 paragraph, Show All Levels shows it).
+- Dependencies: pulldown-cmark 0.13.6 (RUSTSEC-2026-0433); yanked async-executor and
+  clipboard-win updated.
