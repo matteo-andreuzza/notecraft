@@ -174,6 +174,7 @@ pub const CONTAINER_MENU: &[Entry] = &[
 /// Professional/Linear; the structure-editing rows of the reference wait for in-place editing
 /// of built-up equations.
 pub const EQUATION_MENU: &[Entry] = &[
+    Entry::Item("CM.Equation.LastModifiedBy"),
     Entry::Item("CM.Equation.Cut"),
     Entry::Item("CM.Equation.CopyOneNote"),
     Entry::Item("CM.Equation.PasteGalleryMini"),

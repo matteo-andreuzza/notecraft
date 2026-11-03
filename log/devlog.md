@@ -1292,3 +1292,5 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Display As (`printout.displayAs`, file attachment and printout page menus): a printable
   file shown as its icon only (the printout pages go) or with its printout; by default it
   switches.
+- The equation menu starts with who last changed the equation and when
+  (CM.Equation.LastModifiedBy).

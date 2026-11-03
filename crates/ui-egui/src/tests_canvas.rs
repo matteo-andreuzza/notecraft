@@ -317,6 +317,7 @@ fn equations_show_built_up_and_edit_as_linear_text() {
     // Its context menu: Linear, then the equation shows as typed even without the caret.
     right_click(&mut h, shown.rect().center());
     assert!(h.query_by_label("Professional").is_some() && h.query_by_label("Paste Options:").is_some(), "CM.Equation");
+    assert!(h.query_by_label_contains("Last modified").is_some(), "CM.Equation.LastModifiedBy");
     h.get_by_label("Linear").click();
     h.run();
     assert_eq!(para(&h).math, Some(notecraft_engine::doc::MathView::Linear));
