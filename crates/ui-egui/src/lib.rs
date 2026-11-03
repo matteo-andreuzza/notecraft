@@ -164,6 +164,8 @@ pub enum Backstage {
     Print,
     /// File › Send (`BS.Send.*`).
     Send,
+    /// File › Share (`BS.Share.*`): move the notebook, or keep it in a shared folder.
+    Share,
     /// Account (theme, about).
     Account,
     /// Options.

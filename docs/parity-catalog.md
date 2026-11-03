@@ -549,9 +549,9 @@ The File menu. Layout-only groups of the control list (thumbnails, upsell, sign-
 | BS.Print.Preview | Print: Print Preview (range, paper, header/footer) | File/Print/Print Preview | dialog |  | file.printPreview | P2 | wired | FLUENT19:FilePrintPreview | unverified: the print-ready PDF opens in the system's PDF viewer (the reference has its own preview dialog with range, paper and header/footer) |
 | BS.Share.WithPeople | Share: Share with People | File/Share/Share with People | page |  |  | P3 | out-of-scope | FLUENT19:ShareWithPeople |  |
 | BS.Share.GetLink | Share: Get a Sharing Link | File/Share/Get a Sharing Link | page |  |  | P3 | out-of-scope | FLUENT19:GetLinks |  |
-| BS.Share.WithNetwork | Share: Share on Network (shared folder) | File/Share/Share on Network | page |  | notebook.moveToFolder | P2 | missing | FLUENT19:ShareWithNetwork |  |
+| BS.Share.WithNetwork | Share: Share on Network (shared folder) | File/Share/Share on Network | page |  | notebook.changeLocation | P2 | wired | FLUENT19:ShareWithNetwork |  |
 | BS.Share.WithMeeting | Share: Share with Meeting | File/Share/Share with Meeting | page |  |  | P3 | out-of-scope | FLUENT19:ShareWithMeeting |  |
-| BS.Share.MoveNotebook | Share: Move Notebook | File/Share/Move Notebook | page |  | notebook.moveToFolder | P2 | missing | FLUENT19:MoveNotebook |  |
+| BS.Share.MoveNotebook | Share: Move Notebook | File/Share/Move Notebook | page |  | notebook.changeLocation | P2 | wired | FLUENT19:MoveNotebook |  |
 | BS.Export.Page | Export: Page | File/Export/Page | choice |  | file.exportPage | P1 | wired | FLUENT19:PageSaveAs | the current page as Single File Web Page, HTML or Markdown (FMT.Export.Html, FMT.Export.Markdown); .one, .docx, .doc, .pdf, .xps listed disabled until they exist |
 | BS.Export.Section | Export: Section | File/Export/Section | choice |  | file.exportSection | P1 | wired | FLUENT19:SectionSaveAs | every page of the section in page-list order, same formats; .one, .pdf, .xps listed disabled |
 | BS.Export.Notebook | Export: Notebook | File/Export/Notebook | choice |  | file.exportNotebook | P1 | wired | FLUENT19:NotebookSaveAsBackstage |  |

@@ -1827,6 +1827,37 @@ fn file_send_attaches_the_page_as_a_pdf_to_a_new_mail() {
     let _ = std::fs::remove_file(&mails[0].1);
 }
 
+/// A host whose folder picker answers with a fixed folder.
+struct FolderHost(String);
+
+impl crate::Host for FolderHost {
+    fn clock(&self) -> notecraft_engine::Clock {
+        notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 }
+    }
+    fn pick_folder(&mut self, _title: &str) -> Option<String> {
+        Some(self.0.clone())
+    }
+}
+
+#[test]
+fn file_share_moves_the_notebook_into_the_folder_picked() {
+    // parity: BS.Share.MoveNotebook BS.Share.WithNetwork
+    let dir = std::env::temp_dir().join(format!("notecraft-test-share-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let s = notecraft_engine::Session::with_sample(notecraft_engine::Clock { now_ms: 1_792_007_100_000, utc_offset_min: 0 });
+    let mut a = NoteApp::new(s, Box::new(FolderHost(dir.display().to_string())));
+    a.ui.backstage = Some(crate::Backstage::Share);
+    let mut h = harness(a);
+    h.run();
+    assert!(h.query_by_label("Share on Network").is_some());
+    h.get_by_label("Move Notebook").click();
+    h.run();
+    let nid = h.state().session.sel.notebook.unwrap();
+    let at = h.state().session.notebook_path(nid).expect("the notebook has a folder now");
+    assert!(at.starts_with(&dir), "{at:?}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// A host whose file picker answers with a fixed path.
 struct ImportHost(String);
 

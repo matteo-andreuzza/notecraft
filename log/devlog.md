@@ -1271,3 +1271,6 @@ were certain landed, behaviour unchanged (every test green after each commit).
   Highlight search results is now pinned by a test.
 - Help › Feedback and What's New (`help.feedback`, `help.whatsNew`; also on File › Account)
   open the project's issues and releases pages on GitHub in the browser.
+- File › Share (new backstage page): Share on Network and Move Notebook move the current
+  notebook into a folder named after it inside the folder picked (`notebook.changeLocation`;
+  NoteCraft has no cloud, so sharing is a folder others reach).

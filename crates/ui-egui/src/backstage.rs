@@ -34,6 +34,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
                 (Backstage::New, "New"),
                 (Backstage::Open, "Open"),
                 (Backstage::Print, "Print"),
+                (Backstage::Share, "Share"),
                 (Backstage::Send, "Send"),
                 (Backstage::Export, "Export"),
                 (Backstage::Account, "Account"),
@@ -97,6 +98,7 @@ pub fn show(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
             Backstage::Export => export(app, ui, &ctx),
             Backstage::Print => print(app, ui, &ctx),
             Backstage::Send => send(app, ui, &ctx),
+            Backstage::Share => share(app, ui, &ctx),
             Backstage::Account => account(app, ui, t),
             // File › Options opens the Options dialog over the backstage (UI.Dialogs.Options).
             Backstage::Options => {
@@ -269,6 +271,40 @@ fn open(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context, t: Tokens) {
 /// File › Print (BS.Print.Print, BS.Print.Preview): printer, copies, what to print; Print
 /// sends the print-ready PDF (`file.print`) to the system's spooler, Print Preview opens it in
 /// the system's PDF viewer.
+/// File › Share (`BS.Share.MoveNotebook`, `BS.Share.WithNetwork`): NoteCraft has no cloud;
+/// sharing is keeping the notebook's folder where others reach it (a network share, a synced
+/// folder). Both move the current notebook into a folder named after it inside the one picked.
+fn share(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context) {
+    heading(ui, "Share");
+    let t = app.tokens();
+    let Some(nid) = app.session.sel.notebook else {
+        ui.label(RichText::new(crate::i18n::tr("Open a notebook first.")).color(t.page_meta));
+        return;
+    };
+    let name = app.session.ws.notebook(nid).map(|n| n.name.clone()).unwrap_or_default();
+    let place = app.session.notebook_path(nid).map(|p| p.display().to_string());
+    ui.label(RichText::new(&name).strong());
+    ui.label(RichText::new(place.as_deref().unwrap_or("In memory only (not saved to disk)")).size(12.0).color(t.page_meta));
+    ui.add_space(12.0);
+    for (label, title, what) in [
+        (
+            "Share on Network",
+            "Choose a shared folder for the notebook",
+            "Keep the notebook in a folder others can reach: a network share or a synced folder.",
+        ),
+        ("Move Notebook", "Choose where to move the notebook", "Move the notebook's files to another folder and keep saving there."),
+    ] {
+        if ui.add(egui::Button::new(crate::i18n::tr(label)).min_size(vec2(220.0, 30.0))).clicked()
+            && let Some(dir) = app.host.pick_folder(title)
+        {
+            let path = std::path::Path::new(&dir).join(notecraft_engine::doc::clean_name(&name));
+            app.run(ctx, "notebook.changeLocation", json!({"notebook": nid.to_string(), "path": path.to_string_lossy()}));
+        }
+        ui.label(RichText::new(crate::i18n::tr(what)).color(t.page_meta));
+        ui.add_space(10.0);
+    }
+}
+
 /// File › Send (`BS.Send.*`): the current page in a new mail, or as a file.
 fn send(app: &mut NoteApp, ui: &mut Ui, ctx: &egui::Context) {
     heading(ui, "Send");
