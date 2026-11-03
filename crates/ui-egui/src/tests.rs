@@ -1565,9 +1565,9 @@ fn the_docked_window_shows_its_narrow_ribbon() {
                 Item::Stack(ids) => ids[0],
                 Item::TwoRows(a, _) => match a[0] {
                     Item::Small(id) => id,
-                    _ => unreachable!(),
+                    _ => panic!("unexpected item"),
                 },
-                _ => unreachable!(),
+                _ => panic!("unexpected item"),
             };
             let label = crate::ribbon::label(id);
             assert!(h.query_all_by_label_contains(&label).next().is_some(), "{} › {}: {label}", tab.name, g.name);
