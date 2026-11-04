@@ -1342,3 +1342,6 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Not built or looked at yet: written without compiling (cargo was not on PATH); run
   `cargo check -p notecraft-ui-egui` and the snapshot example, then compare with the
   Draw / Insert / History tabs of the reference screenshots.
+- Stickers: `insert.sticker` (`sticker_cmds.rs`) draws six stickers (smile, heart, star, check,
+  cross, important) in code as 128 px PNGs and inserts one as a picture; without a name it
+  cycles through them (unverified: the reference opens a gallery). README rewritten for sharing.

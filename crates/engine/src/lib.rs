@@ -44,6 +44,7 @@ mod protect_cmds;
 mod search_cmds;
 mod section_cmds;
 mod spell_cmds;
+mod sticker_cmds;
 mod table_cmds;
 mod tag_cmds;
 mod template_cmds;

@@ -293,7 +293,7 @@ The Insert tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Insert.Symbols.EquationInsertNew | Insert New Equation | Insert/Symbols/Equation/Insert New Equation | button | `Alt+=` | insert.equation | P2 | verified | FLUENT19:EquationInsertNew | Decision D11: the caret's empty paragraph becomes an equation, else a new equation paragraph follows it; selected text in one paragraph becomes the equation |
 | R.Insert.Symbols.SymbolInsertGallery | Symbol | Insert/Symbols/Symbol | gallery |  | insert.symbol | P2 | wired | FLUENT19:SymbolInsertGallery |  |
 | R.Insert.Symbols.SymbolsDialog | More Symbols… | Insert/Symbols/Symbol/More Symbols… | button |  | insert.symbolDialog | P2 | verified | FLUENT19:SymbolsDialog |  |
-| R.Insert.Stickers.Sticker | Sticker | Insert/Stickers/Sticker | gallery |  | insert.sticker | P3 | missing | KBD365 ("Insert a sticker": Alt+N, S) | unverified group name |
+| R.Insert.Stickers.Sticker | Sticker | Insert/Stickers/Sticker | gallery |  | insert.sticker | P3 | wired | KBD365 ("Insert a sticker": Alt+N, S) | unverified group name |
 
 ## Ribbon › Draw
 

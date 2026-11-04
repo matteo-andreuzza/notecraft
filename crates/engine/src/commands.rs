@@ -31,6 +31,7 @@ fn registry() -> &'static Registry {
         specs.extend(crate::picture_cmds::specs());
         specs.extend(crate::draw_cmds::specs());
         specs.extend(crate::printout_cmds::specs());
+        specs.extend(crate::sticker_cmds::specs());
         specs.extend(crate::page_cmds::specs());
         specs.extend(crate::paper_cmds::specs());
         specs.extend(crate::template_cmds::specs());

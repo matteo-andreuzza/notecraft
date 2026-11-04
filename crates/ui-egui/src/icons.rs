@@ -80,13 +80,23 @@ fn set_name(key: &str) -> Option<&'static str> {
         "ObjectsArrangeMenu" | "ObjectBringForward" | "ObjectBringToFront" | "ObjectSendBackward" | "ObjectSendToBack" => "arrange",
         "SelectionToTextConvert" => "inktotext",
         "InkEquation" => "inktomath",
-        "InsertExcelSpreadsheetMenu" | "InsertExistingExcelSpreadsheet" | "InsertNewExcelSpreadsheetWithPreview" | "ConvertToExcelSpreadsheet" => "spreadsheet",
+        "InsertExcelSpreadsheetMenu" | "InsertExistingExcelSpreadsheet" | "InsertNewExcelSpreadsheetWithPreview" | "ConvertToExcelSpreadsheet" => {
+            "spreadsheet"
+        }
         "InsertVisioDrawingMenu" | "InsertExistingVisioDrawing" | "InsertNewVisioDrawingWithPreview" => "diagram",
         "PrintoutFromFileInsert" => "printout",
         "GoToNextUnreadPage" | "UnreadNotebookChangesShow" | "UnreadMenu" => "nextunread",
         "MarkPageAsReadContextual" | "MarkPageAsUnreadContextual" | "MarkAllPagesAsRead" => "markread",
         "AudioRecordingInsert" => "mic",
-        "FindByDateMenu" | "FindToday" | "FindSinceYesterday" | "FindSinceSevenDays" | "FindLastTwoWeeks" | "FindLastMonth" | "FindLastThreeMonths" | "FindLasteSixMonths" | "FindAllChangesByDate" => "recent",
+        "FindByDateMenu"
+        | "FindToday"
+        | "FindSinceYesterday"
+        | "FindSinceSevenDays"
+        | "FindLastTwoWeeks"
+        | "FindLastMonth"
+        | "FindLastThreeMonths"
+        | "FindLasteSixMonths"
+        | "FindAllChangesByDate" => "recent",
         "RecycleBinMenu" | "RecycleBin" | "EmptyRecycleBin" => "bin",
         "PageTemplatesSplitButton" | "PageTemplatesTaskpane" | "NewPageFromStationery" | "StationeryMostRecentlyUsedList" => "template",
         "Sticker" => "sticker",
@@ -111,7 +121,13 @@ fn set_name(key: &str) -> Option<&'static str> {
         "Help" => "help",
         "Feedback" | "ContactSupport" => "comment",
         "WhatsNew" => "info",
-        "PageVersionSplitButton" | "PageVersions" | "DeleteAllPageVersionsInSection" | "DeleteAllPageVersionsInFolder" | "DeleteAllPageVersionsInNotebook" | "DisableVersionHistory" | "DisableVersionHistory2" => "versions",
+        "PageVersionSplitButton"
+        | "PageVersions"
+        | "DeleteAllPageVersionsInSection"
+        | "DeleteAllPageVersionsInFolder"
+        | "DeleteAllPageVersionsInNotebook"
+        | "DisableVersionHistory"
+        | "DisableVersionHistory2" => "versions",
         "LinkedNotes" => "pin",
         _ => return None,
     })
