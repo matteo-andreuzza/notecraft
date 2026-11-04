@@ -280,8 +280,8 @@ The Insert tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Insert.Addins.OfficeExtensionsFeaturedApp6 | Featured Add-in 6 | Insert/Add-ins/Featured Add-in 6 | button |  |  | P3 | out-of-scope | FLUENT19:OfficeExtensionsFeaturedApp6 |  |
 | R.Insert.Media.InsertOnlineVideo | Online Video | Insert/Media/Online Video | button |  | insert.onlineVideo | P3 | missing | FLUENT19:InsertOnlineVideo |  |
 | R.Insert.Links.HyperlinkCreateHere | Link | Insert/Links/Link | button | `Mod+K` | insert.link | P0 | verified | FLUENT19:HyperlinkCreateHere |  |
-| R.Insert.Recording.AudioRecordingInsert | Record Audio | Insert/Recording/Record Audio | toggle |  | insert.audio | P2 | missing | FLUENT19:AudioRecordingInsert |  |
-| R.Insert.Recording.VideoRecordingInsert | Record Video | Insert/Recording/Record Video | toggle |  | insert.video | P2 | missing | FLUENT19:VideoRecordingInsert |  |
+| R.Insert.Recording.AudioRecordingInsert | Record Audio | Insert/Recording/Record Audio | toggle |  | insert.audio | P2 | wired | FLUENT19:AudioRecordingInsert |  |
+| R.Insert.Recording.VideoRecordingInsert | Record Video | Insert/Recording/Record Video | toggle |  | insert.video | P2 | wired | FLUENT19:VideoRecordingInsert |  |
 | R.Insert.TimeStamp.DateInsert | Date | Insert/Time Stamp/Date | button | `Alt+Shift+D` | insert.date | P1 | verified | FLUENT19:DateInsert |  |
 | R.Insert.TimeStamp.TimeInsert | Time | Insert/Time Stamp/Time | button | `Alt+Shift+T` | insert.time | P1 | verified | FLUENT19:TimeInsert |  |
 | R.Insert.TimeStamp.DateAndTimeInsertOneNote | Date & Time | Insert/Time Stamp/Date & Time | button | `Alt+Shift+F` | insert.dateTime | P1 | verified | FLUENT19:DateAndTimeInsertOneNote |  |
@@ -516,8 +516,8 @@ Shown only while the selection is in a table / an equation / on a recording.
 
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| CT.AudioVideo.Recording.AudioRecordingInsert | Record Audio | Audio & Video/Recording/Record Audio | toggle |  | insert.audio | P2 | missing | FLUENT19:AudioRecordingInsert |  |
-| CT.AudioVideo.Recording.VideoRecordingInsert | Record Video | Audio & Video/Recording/Record Video | toggle |  | insert.video | P2 | missing | FLUENT19:VideoRecordingInsert |  |
+| CT.AudioVideo.Recording.AudioRecordingInsert | Record Audio | Audio & Video/Recording/Record Audio | toggle |  | insert.audio | P2 | wired | FLUENT19:AudioRecordingInsert |  |
+| CT.AudioVideo.Recording.VideoRecordingInsert | Record Video | Audio & Video/Recording/Record Video | toggle |  | insert.video | P2 | wired | FLUENT19:VideoRecordingInsert |  |
 | CT.AudioVideo.Playback.RecordingPlay | Play | Audio & Video/Playback/Play | button | `Mod+Alt+P` | media.play | P2 | missing | FLUENT19:RecordingPlay |  |
 | CT.AudioVideo.Playback.RecordingPause | Pause | Audio & Video/Playback/Pause | toggle |  | media.pause | P2 | missing | FLUENT19:RecordingPause |  |
 | CT.AudioVideo.Playback.RecordingStop | Stop | Audio & Video/Playback/Stop | button | `Mod+Alt+S` | media.stop | P2 | missing | FLUENT19:RecordingStop |  |
@@ -806,7 +806,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Picture.OCRLanguageListMenu | Make Text in Image Searchable | Context/Picture/Make Text in Image Searchable | menu |  | object.ocrLanguage | P2 | wired | FLUENT19:ContextMenuPicture/OCRLanguageListMenu |  |
 | CM.FileAttachment.FileAttachmentName | File name (header) | Context/File Attachment/File name (header) | labelControl |  |  | P2 | wired | FLUENT19:ContextMenuFileAttachment/FileAttachmentName | The attachment's file name, a non-clickable header |
 | CM.FileAttachment.FileAttachmentSize | File size (header) | Context/File Attachment/File size (header) | labelControl |  |  | P2 | wired | FLUENT19:ContextMenuFileAttachment/FileAttachmentSize | The file size in bytes, KB or MB of 1,024 (wording unverified) |
-| CM.FileAttachment.PlayFromPage | Play (attached media) | Context/File Attachment/Play (attached media) | button |  | media.play | P2 | missing | FLUENT19:ContextMenuFileAttachment/PlayFromPage |  |
+| CM.FileAttachment.PlayFromPage | Play (attached media) | Context/File Attachment/Play (attached media) | button |  | media.play | P2 | wired | FLUENT19:ContextMenuFileAttachment/PlayFromPage |  |
 | CM.FileAttachment.FileAttachmentOpen | Open | Context/File Attachment/Open | button |  | attachment.open | P1 | wired | FLUENT19:ContextMenuFileAttachment/FileAttachmentOpen | writes a copy to a private temporary folder and opens it with the system handler (desktop); double-click does the same |
 | CM.FileAttachment.FileAttachmentSaveAs | Save As… | Context/File Attachment/Save As… | button |  | attachment.saveAs | P1 | wired | FLUENT19:ContextMenuFileAttachment/FileAttachmentSaveAs |  |
 | CM.FileAttachment.RenameSelected | Rename | Context/File Attachment/Rename | button |  | attachment.rename | P1 | wired | FLUENT19:ContextMenuFileAttachment/RenameSelected |  |

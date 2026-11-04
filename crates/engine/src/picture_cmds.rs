@@ -44,7 +44,7 @@ fn need_turnable(s: &Session) -> Option<&'static str> {
     if selected(s, true).is_empty() && crate::draw_cmds::selected_ink(s).is_empty() { Some("Select a picture or ink first") } else { None }
 }
 
-fn need_attachment(s: &Session) -> Option<&'static str> {
+pub(crate) fn need_attachment(s: &Session) -> Option<&'static str> {
     if s.sel.page.is_none() {
         return Some("No page is open");
     }
@@ -299,7 +299,7 @@ fn write_path(_: &str, _: &[u8]) -> Result<(), CmdError> {
     Err(CmdError::Disabled("the web version can't write files yet".into()))
 }
 
-fn room_for_one(s: &Session) -> Result<(), CmdError> {
+pub(crate) fn room_for_one(s: &Session) -> Result<(), CmdError> {
     if s.page().is_some_and(|p| p.objects.len() >= MAX_PAGE_OBJECTS) {
         return Err(CmdError::Failed(format!("a page holds at most {MAX_PAGE_OBJECTS} objects")));
     }
@@ -586,7 +586,7 @@ fn save_attachment(s: &mut Session, v: &Value) -> CmdResult {
 
 /// Write the attachment to a private folder (`dir`, or the system's temporary folder) under its
 /// own name and return the path; the host opens it with the system's handler.
-fn open_attachment(s: &mut Session, v: &Value) -> CmdResult {
+pub(crate) fn open_attachment(s: &mut Session, v: &Value) -> CmdResult {
     let blob = first_blob(s, false)?;
     let id = *selected(s, false).first().ok_or_else(no_page)?;
     let name = s.page().and_then(|p| p.attachment(id)).map(|a| notecraft_doc::media::safe_file_name(&a.name)).ok_or_else(no_page)?;

@@ -33,6 +33,7 @@ mod import_cmds;
 mod math_cmds;
 mod nav_cmds;
 mod onenote_cmds;
+mod media_cmds;
 mod ops;
 mod outline_cmds;
 mod page_cmds;

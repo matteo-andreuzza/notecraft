@@ -115,6 +115,20 @@ pub trait Host {
         let _ = subject;
         Err(format!("Sending mail isn't available here; the file is at {attach}"))
     }
+    /// Start recording from the microphone (and the camera when `video`). `Err` with a reason
+    /// when that isn't possible here.
+    fn start_recording(&mut self, video: bool) -> Result<(), String> {
+        let _ = video;
+        Err("Recording isn't available here".into())
+    }
+    /// Whether a recording is running: `Some(video)`.
+    fn recording(&self) -> Option<bool> {
+        None
+    }
+    /// Stop the recording and return the file (its bytes); `None` when none was running.
+    fn stop_recording(&mut self) -> Option<Result<Vec<u8>, String>> {
+        None
+    }
     /// Read the system clipboard: text and HTML, and the picture too when `image` (decoding a
     /// picture costs time, so only a paste that has no text, or Paste: Picture, asks for it). Empty when the
     /// host has no rich clipboard (the web build, tests).
