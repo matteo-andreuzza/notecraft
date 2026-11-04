@@ -37,6 +37,14 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         )
         .key("Mod+Alt+N")
         .when(need_page_sel),
+        CommandSpec::new(
+            "page.newInSeries",
+            "QAT.NR.NewPageInSeries",
+            "New Page in Series",
+            "Quick Access Toolbar/Commands Not in the Ribbon/New Page in Series",
+            new_in_series,
+        )
+        .when(need_page_sel),
         // KB.Pages.NewSubpage — Ctrl+Shift+Alt+N.
         CommandSpec::new(
             "page.newSubpage",
@@ -250,6 +258,18 @@ fn current(s: &Session) -> Result<(Id, usize, Arc<Section>), CmdError> {
     let (sid, i) = s.ws.locate_page(pid).ok_or_else(no_page)?;
     let sec = s.ws.section(sid).ok_or_else(no_page)?.clone();
     Ok((sid, i, sec))
+}
+
+/// QAT.NR.NewPageInSeries — a new page after the current one (and its subpages), at its level,
+/// with the same title: the next page of a series such as weekly meeting notes (unverified: the
+/// reference also offers a date series).
+fn new_in_series(s: &mut Session, _: &Value) -> CmdResult {
+    let (sid, i, sec) = current(s)?;
+    let (level, title) = sec.pages.get(i).map(|p| (p.level, p.title_text())).unwrap_or_default();
+    let at = sec.page_family(i).end;
+    let mut page = crate::template_cmds::new_page_in(s, sid, &title);
+    page.level = level;
+    insert_and_open(s, sid, at, page)
 }
 
 fn new_below(s: &mut Session, _: &Value) -> CmdResult {
@@ -609,4 +629,23 @@ pub(crate) fn page_by_title_or_create(s: &mut Session, name: &str) -> Result<Id,
     let sec = s.ws.section_mut(sid).ok_or_else(no_page)?;
     sec.pages.push(Arc::new(page));
     Ok(id)
+}
+
+#[cfg(test)]
+mod series_tests {
+    use serde_json::json;
+
+    use crate::tests::{run, sample};
+
+    #[test]
+    fn a_page_in_a_series_repeats_the_title_below_the_page() {
+        // parity: QAT.NR.NewPageInSeries
+        let mut s = sample();
+        run(&mut s, "page.new", json!({"title": "Weekly sync"}));
+        let first = s.sel.page.unwrap();
+        run(&mut s, "page.newInSeries", json!({}));
+        let second = s.sel.page.unwrap();
+        assert_ne!(first, second);
+        assert_eq!(s.page().unwrap().title_text(), "Weekly sync");
+    }
 }

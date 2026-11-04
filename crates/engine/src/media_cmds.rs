@@ -28,6 +28,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         // CM.FileAttachment.PlayFromPage / CT.AudioVideo.Playback.RecordingPlay — the system
         // player plays the attached recording (the host opens the returned path).
         CommandSpec::new("media.play", "CM.FileAttachment.PlayFromPage", "Play", "Context/File Attachment/Play (attached media)", open_attachment)
+            .key("Mod+Alt+P")
             .params(r#"{"dir"?: folder for the copy} → {"path"} for the host to open"#)
             .pure()
             .when(need_attachment),
