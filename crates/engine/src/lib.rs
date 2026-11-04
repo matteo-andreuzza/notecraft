@@ -54,6 +54,7 @@ mod text_cmds;
 mod thes_cmds;
 mod versions_cmds;
 mod view_cmds;
+mod web_cmds;
 mod window_cmds;
 
 #[cfg(test)]

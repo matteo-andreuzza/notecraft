@@ -121,6 +121,13 @@ pub trait Host {
         let _ = video;
         Err("Recording isn't available here".into())
     }
+    /// Read `text` aloud (the system's speech, when installed); `Err` with a reason otherwise.
+    fn speak(&mut self, text: &str) -> Result<(), String> {
+        let _ = text;
+        Err("Reading aloud isn't available here".into())
+    }
+    /// Stop reading aloud.
+    fn stop_speaking(&mut self) {}
     /// Whether a recording is running: `Some(video)`.
     fn recording(&self) -> Option<bool> {
         None
@@ -720,6 +727,9 @@ impl NoteApp {
             }
             if self.session.view.help_pane {
                 help_ui::pane(self, ui, t);
+            }
+            if self.session.view.reader_pane {
+                help_ui::reader_pane(self, ui, t);
             }
             if self.ui.search_pane {
                 panes::search_pane(self, ui, t);

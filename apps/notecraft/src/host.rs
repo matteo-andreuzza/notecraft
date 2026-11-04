@@ -20,6 +20,7 @@ pub struct DesktopHost {
     /// A screen clipping waiting for the desktop's answer.
     clip: Option<crate::screen_clip::Clip>,
     recording: Option<crate::recorder::Recording>,
+    speaking: Option<std::process::Child>,
     /// To wake the UI when an answer comes from another thread.
     ctx: egui::Context,
 }
@@ -34,6 +35,7 @@ impl DesktopHost {
             clipboard: None,
             clip: None,
             recording: None,
+            speaking: None,
             ctx: ctx.clone(),
         }
     }
@@ -180,6 +182,34 @@ impl Host for DesktopHost {
 
     fn backup_folder(&self) -> Option<String> {
         notecraft_automation::keyfile::data_dir().map(|d| d.join("backups").display().to_string())
+    }
+
+    fn speak(&mut self, text: &str) -> Result<(), String> {
+        self.stop_speaking();
+        let text: String = text.chars().take(20_000).collect();
+        // speech-dispatcher's client, then eSpeak NG: whichever is installed.
+        for (prog, args) in [("spd-say", vec!["-w", "--"]), ("espeak-ng", vec!["--"])] {
+            let spawned = std::process::Command::new(prog)
+                .args(&args)
+                .arg(&text)
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn();
+            if let Ok(child) = spawned {
+                self.speaking = Some(child);
+                return Ok(());
+            }
+        }
+        Err("Install speech-dispatcher (spd-say) or espeak-ng to read aloud.".into())
+    }
+
+    fn stop_speaking(&mut self) {
+        if let Some(mut child) = self.speaking.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+        let _ = std::process::Command::new("spd-say").arg("-C").stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).status();
     }
 
     fn start_recording(&mut self, video: bool) -> Result<(), String> {

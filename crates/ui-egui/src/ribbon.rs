@@ -126,6 +126,7 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         "view.paperSize" => s.view.paper_pane,
         "history.pageVersions" => s.view.page_versions,
         "help.help" => s.view.help_pane,
+        "view.immersiveReader" => s.view.reader_pane,
         "window.alwaysOnTop" => s.view.always_on_top,
         "view.dock" => s.view.docked,
         "view.switchBackground" => s.view.light_page,
