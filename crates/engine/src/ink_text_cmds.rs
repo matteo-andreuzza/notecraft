@@ -125,7 +125,10 @@ fn ink_to_math(s: &mut Session, v: &Value) -> CmdResult {
     let ids = selected_ink(s);
     let origin = {
         let page = s.page().ok_or_else(ops::no_page)?;
-        ids.iter().filter_map(|id| page.ink(*id)).map(|i| i.bounds().min).fold(Point::new(f32::MAX, f32::MAX), |a, b| Point::new(a.x.min(b.x), a.y.min(b.y)))
+        ids.iter()
+            .filter_map(|id| page.ink(*id))
+            .map(|i| i.bounds().min)
+            .fold(Point::new(f32::MAX, f32::MAX), |a, b| Point::new(a.x.min(b.x), a.y.min(b.y)))
     };
     s.page_mut().ok_or_else(ops::no_page)?.objects.retain(|o| !ids.contains(&o.id()));
     s.sel.on_page = crate::selection::PageSel::None;

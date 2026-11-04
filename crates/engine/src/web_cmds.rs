@@ -13,17 +13,25 @@ const TRAINING_URL: &str = "https://github.com/matteo-andreuzza/notecraft#readme
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
         // R.Help.Help.ShowTraining — unverified: the reference opens Microsoft's training videos.
-        CommandSpec::new("help.training", "R.Help.Help.ShowTraining", "Show Training", "Help/Help/Show Training", |_, _| Ok(json!({"open_url": TRAINING_URL})))
-            .params(r#"{} → {"open_url"}"#)
-            .pure(),
-        // R.Review.Proofing.ResearchPane — unverified: the reference opens a Research task pane.
-        CommandSpec::new("review.research", "R.Review.Proofing.ResearchPane", "Research", "Review/Proofing/Research", |s, v| search(s, v, "https://duckduckgo.com/?q="))
-            .params(r#"{"query"?: text (default: the selected text)} → {"open_url"}"#)
-            .pure(),
-        // R.Insert.Images.ClipArtInsertDialog — pictures are found on the web, then inserted from a file.
-        CommandSpec::new("insert.onlinePicture", "R.Insert.Images.ClipArtInsertDialog", "Online Pictures", "Insert/Images/Online Pictures", |s, v| {
-            search(s, v, "https://commons.wikimedia.org/w/index.php?ns6=1&search=")
+        CommandSpec::new("help.training", "R.Help.Help.ShowTraining", "Show Training", "Help/Help/Show Training", |_, _| {
+            Ok(json!({"open_url": TRAINING_URL}))
         })
+        .params(r#"{} → {"open_url"}"#)
+        .pure(),
+        // R.Review.Proofing.ResearchPane — unverified: the reference opens a Research task pane.
+        CommandSpec::new("review.research", "R.Review.Proofing.ResearchPane", "Research", "Review/Proofing/Research", |s, v| {
+            search(s, v, "https://duckduckgo.com/?q=")
+        })
+        .params(r#"{"query"?: text (default: the selected text)} → {"open_url"}"#)
+        .pure(),
+        // R.Insert.Images.ClipArtInsertDialog — pictures are found on the web, then inserted from a file.
+        CommandSpec::new(
+            "insert.onlinePicture",
+            "R.Insert.Images.ClipArtInsertDialog",
+            "Online Pictures",
+            "Insert/Images/Online Pictures",
+            |s, v| search(s, v, "https://commons.wikimedia.org/w/index.php?ns6=1&search="),
+        )
         .params(r#"{"query"?: text (default: the selected text)} → {"open_url"}"#)
         .pure(),
         // R.Insert.Media.InsertOnlineVideo — unverified: the reference embeds a player; here the

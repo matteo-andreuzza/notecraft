@@ -1355,3 +1355,13 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Ink to Text (`ink_text_cmds.rs`): `draw.inkImage` draws the selected strokes black on white,
   the UI passes it to `Host::ocr` (Tesseract) and `draw.inkToText` swaps the strokes for a
   container holding the text. Quality is Tesseract's on handwriting (unverified).
+
+## 2026-11-04 — Immersive Reader, web commands
+
+- View › Immersive Reader (`view.immersiveReader`, `help_ui::reader_pane`): the page's text in a
+  right pane with a text-size slider and Read aloud / Stop (`Host::speak`: `spd-say`, else
+  `espeak-ng`). Unverified: the reference's reader has syllables, line focus, translation.
+- `web_cmds.rs`: Research and Online Pictures open a web search for the selected text in the
+  browser (`open_url`), Online Video asks for an address in the Link dialog and inserts a link,
+  Show Training opens the README.
+- Ink to Math (`draw.inkToMath`): the recogniser's text becomes an equation, to be corrected by hand.

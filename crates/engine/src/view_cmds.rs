@@ -99,10 +99,16 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .when(need_page),
         // R.View.Immersive.ImmersiveReader — unverified: a reading pane with larger text and
         // read-aloud (the host's speech, when installed).
-        CommandSpec::new("view.immersiveReader", "R.View.Immersive.ImmersiveReader", "Immersive Reader", "View/Immersive/Immersive Reader", |s, v| {
-            s.view.reader_pane = p::bool(v, "on").unwrap_or(!s.view.reader_pane);
-            Ok(json!({"open": s.view.reader_pane}))
-        })
+        CommandSpec::new(
+            "view.immersiveReader",
+            "R.View.Immersive.ImmersiveReader",
+            "Immersive Reader",
+            "View/Immersive/Immersive Reader",
+            |s, v| {
+                s.view.reader_pane = p::bool(v, "on").unwrap_or(!s.view.reader_pane);
+                Ok(json!({"open": s.view.reader_pane}))
+            },
+        )
         .params(r#"{"on"?: bool (default: switch)}"#)
         .pure()
         .when(need_page),
