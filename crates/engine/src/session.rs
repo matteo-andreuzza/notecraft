@@ -373,6 +373,8 @@ pub struct ViewState {
     pub page_versions: bool,
     /// Help pane open (F1).
     pub help_pane: bool,
+    /// Immersive Reader pane open (View › Immersive Reader).
+    pub reader_pane: bool,
     /// The window is a small Quick Note window showing only the page (View › New Quick Note).
     pub quick_note: bool,
     /// The window stays above other windows (View › Always on Top).
@@ -419,6 +421,7 @@ impl Default for ViewState {
             recent_by_author: false,
             page_versions: false,
             help_pane: false,
+            reader_pane: false,
             quick_note: false,
             always_on_top: false,
             light_page: false,

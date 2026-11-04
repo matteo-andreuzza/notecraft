@@ -97,6 +97,21 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("view.pageColor", "R.View.PageSetup.PageColorGallery", "Page Color", "View/Page Setup/Page Color", page_color)
             .params(r##"{"color": "#rrggbb" | null (No Color)}"##)
             .when(need_page),
+        // R.View.Immersive.ImmersiveReader — unverified: a reading pane with larger text and
+        // read-aloud (the host's speech, when installed).
+        CommandSpec::new(
+            "view.immersiveReader",
+            "R.View.Immersive.ImmersiveReader",
+            "Immersive Reader",
+            "View/Immersive/Immersive Reader",
+            |s, v| {
+                s.view.reader_pane = p::bool(v, "on").unwrap_or(!s.view.reader_pane);
+                Ok(json!({"open": s.view.reader_pane}))
+            },
+        )
+        .params(r#"{"on"?: bool (default: switch)}"#)
+        .pure()
+        .when(need_page),
         CommandSpec::new("view.fullPage", "R.View.Views.FullPageView", "Full Page View", "View/Views/Full Page View", |s, _| {
             s.view.full_page = !s.view.full_page;
             Ok(json!({"fullPage": s.view.full_page}))

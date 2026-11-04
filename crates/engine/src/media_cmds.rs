@@ -70,5 +70,8 @@ mod tests {
         let r = run(&mut s, "insert.video", json!({"data": crate::b64::encode(b"mkv"), "name": "Talk.mkv"}));
         assert_eq!(r["name"], "Talk.mkv");
         assert!(s.run("insert.audio", json!({"data": ""})).is_err(), "an empty recording is refused");
+        // parity: CM.FileAttachment.PlayFromPage
+        let r = run(&mut s, "media.play", json!({"dir": std::env::temp_dir().join("notecraft-media-test").display().to_string()}));
+        assert!(r["path"].as_str().unwrap().ends_with("Talk.mkv"));
     }
 }

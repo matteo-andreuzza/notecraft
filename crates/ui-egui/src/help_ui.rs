@@ -111,3 +111,43 @@ pub fn about(app: &mut NoteApp, ctx: &egui::Context, t: Tokens) {
         app.session.view.about = false;
     }
 }
+
+/// The Immersive Reader pane: the page's text at a larger size, with Read aloud.
+pub fn reader_pane(app: &mut NoteApp, ui: &mut Ui, t: Tokens) {
+    egui::Panel::right("reader_pane")
+        .default_size(380.0)
+        .resizable(true)
+        .show_separator_line(false)
+        .frame(egui::Frame::NONE.fill(t.window_back).inner_margin(egui::Margin { left: 6, right: 8, top: 6, bottom: 8 }))
+        .show(ui, |ui| {
+            card_frame(&t).show(ui, |ui| {
+                ui.set_min_size(ui.available_size());
+                if card_header(ui, "Immersive Reader", &t) {
+                    app.session.view.reader_pane = false;
+                    app.host.stop_speaking();
+                    return;
+                }
+                let text = app.session.page().map(|p| p.plain_text()).unwrap_or_default();
+                let size_id = egui::Id::new("reader_size");
+                let mut size: f32 = ui.data(|d| d.get_temp(size_id)).unwrap_or(20.0);
+                ui.add_space(4.0);
+                ui.horizontal(|ui| {
+                    if ui.button("Read aloud").clicked()
+                        && let Err(e) = app.host.speak(&text)
+                    {
+                        app.ui.status = Some((e, ui.ctx().input(|i| i.time)));
+                    }
+                    if ui.button("Stop").clicked() {
+                        app.host.stop_speaking();
+                    }
+                    ui.label("Text size");
+                    ui.add(egui::Slider::new(&mut size, 14.0..=48.0).show_value(false));
+                });
+                ui.data_mut(|d| d.insert_temp(size_id, size));
+                ui.separator();
+                egui::ScrollArea::vertical().id_salt("reader_scroll").show(ui, |ui| {
+                    ui.add(egui::Label::new(RichText::new(text).size(size).color(t.text)).wrap());
+                });
+            });
+        });
+}

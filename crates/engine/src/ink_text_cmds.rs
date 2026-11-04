@@ -31,6 +31,11 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
         CommandSpec::new("draw.inkToText", "R.Draw.Convert.SelectionToTextConvert", "Ink to Text", "Draw/Convert/Ink to Text", ink_to_text)
             .params(r#"{"text": recognised text}"#)
             .when(need_ink),
+        // R.Draw.Convert.SelectionToMathConvert — the same recogniser; its text is read as an
+        // equation's linear (UnicodeMath) form, and may need correcting by hand.
+        CommandSpec::new("draw.inkToMath", "R.Draw.Convert.SelectionToMathConvert", "Ink to Math", "Draw/Convert/Ink to Math", ink_to_math)
+            .params(r#"{"text": recognised text}"#)
+            .when(need_ink),
         CommandSpec::new("draw.inkImage", "NC.Draw.InkImage", "Selected Ink as Picture", "Draw/Convert/Ink Image", ink_image)
             .params(r#"{} → {"png": base64 picture of the selected ink, black on white}"#)
             .pure()
@@ -112,6 +117,24 @@ fn ink_to_text(s: &mut Session, v: &Value) -> CmdResult {
     Ok(json!({"text": text}))
 }
 
+fn ink_to_math(s: &mut Session, v: &Value) -> CmdResult {
+    let text = p::str(v, "text").unwrap_or_default().split_whitespace().collect::<Vec<_>>().join(" ");
+    if text.is_empty() {
+        return Err(CmdError::Failed("No math could be recognised in the selected ink.".into()));
+    }
+    let ids = selected_ink(s);
+    let origin = {
+        let page = s.page().ok_or_else(ops::no_page)?;
+        ids.iter()
+            .filter_map(|id| page.ink(*id))
+            .map(|i| i.bounds().min)
+            .fold(Point::new(f32::MAX, f32::MAX), |a, b| Point::new(a.x.min(b.x), a.y.min(b.y)))
+    };
+    s.page_mut().ok_or_else(ops::no_page)?.objects.retain(|o| !ids.contains(&o.id()));
+    s.sel.on_page = crate::selection::PageSel::None;
+    s.run("insert.equation", json!({"text": text, "x": origin.x, "y": origin.y}))
+}
+
 #[cfg(test)]
 mod tests {
     use notecraft_doc::PageObject;
@@ -134,5 +157,10 @@ mod tests {
         let page = s.page().unwrap();
         assert!(page.objects.iter().all(|o| !matches!(o, PageObject::Ink(_))));
         assert!(page.objects.iter().any(|o| matches!(o, PageObject::Outline(_))));
+        // parity: R.Draw.Convert.SelectionToMathConvert NC.Draw.InkImage
+        run(&mut s, "draw.stroke", json!({"points": [[20, 120], [60, 140], [100, 120]]}));
+        run(&mut s, "edit.selectAll", json!({}));
+        run(&mut s, "draw.inkToMath", json!({"text": "x^2+1"}));
+        assert!(s.page().unwrap().objects.iter().all(|o| !matches!(o, PageObject::Ink(_))));
     }
 }

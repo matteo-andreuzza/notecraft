@@ -268,7 +268,7 @@ The Insert tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Insert.Files.InsertNewVisioDrawingWithPreview | New Visio Diagram | Insert/Files/Diagram/New Visio Diagram | button |  |  | P3 | out-of-scope | FLUENT19:InsertNewVisioDrawingWithPreview |  |
 | R.Insert.Images.ScreenCaptureInsert | Screen Clipping | Insert/Images/Screen Clipping | button |  | insert.screenClipping | P1 | wired | FLUENT19:ScreenCaptureInsert | Linux: the XDG Screenshot portal asks for the area (the desktop draws the selection; NoteCraft stays open, the reference hides itself); a "Screen clipping taken:" line with the date and time goes below the picture (wording unverified); other systems: disabled with a reason |
 | R.Insert.Images.PictureFromFileInsert | Pictures | Insert/Images/Pictures | button |  | insert.picture | P1 | wired | FLUENT19:PictureFromFileInsert | PNG, JPEG, GIF (first frame), BMP, WebP; inserted at its 96-dpi pixel size, at most 468 pt wide, selected (unverified size rule); decision D3 |
-| R.Insert.Images.ClipArtInsertDialog | Online Pictures | Insert/Images/Online Pictures | button |  | insert.onlinePicture | P3 | missing | FLUENT19:ClipArtInsertDialog |  |
+| R.Insert.Images.ClipArtInsertDialog | Online Pictures | Insert/Images/Online Pictures | button |  | insert.onlinePicture | P3 | wired | FLUENT19:ClipArtInsertDialog |  |
 | R.Insert.Addins.OfficeExtensionsAppStore | Get Add-ins (Store) | Insert/Add-ins/Get Add-ins (Store) | button |  |  | P3 | out-of-scope | FLUENT19:OfficeExtensionsAppStore |  |
 | R.Insert.Addins.OfficeExtensionsGallery2 | My Add-ins | Insert/Add-ins/My Add-ins | gallery |  | plugins.manage | P3 | missing | FLUENT19:OfficeExtensionsGallery2 |  |
 | R.Insert.Addins.OfficeExtensionsDialog | See All (add-ins) | Insert/Add-ins/My Add-ins/See All (add-ins) | button |  | plugins.manage | P3 | missing | FLUENT19:OfficeExtensionsDialog |  |
@@ -278,7 +278,7 @@ The Insert tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | R.Insert.Addins.OfficeExtensionsFeaturedApp4 | Featured Add-in 4 | Insert/Add-ins/Featured Add-in 4 | button |  |  | P3 | out-of-scope | FLUENT19:OfficeExtensionsFeaturedApp4 |  |
 | R.Insert.Addins.OfficeExtensionsFeaturedApp5 | Featured Add-in 5 | Insert/Add-ins/Featured Add-in 5 | button |  |  | P3 | out-of-scope | FLUENT19:OfficeExtensionsFeaturedApp5 |  |
 | R.Insert.Addins.OfficeExtensionsFeaturedApp6 | Featured Add-in 6 | Insert/Add-ins/Featured Add-in 6 | button |  |  | P3 | out-of-scope | FLUENT19:OfficeExtensionsFeaturedApp6 |  |
-| R.Insert.Media.InsertOnlineVideo | Online Video | Insert/Media/Online Video | button |  | insert.onlineVideo | P3 | missing | FLUENT19:InsertOnlineVideo |  |
+| R.Insert.Media.InsertOnlineVideo | Online Video | Insert/Media/Online Video | button |  | insert.onlineVideo | P3 | wired | FLUENT19:InsertOnlineVideo |  |
 | R.Insert.Links.HyperlinkCreateHere | Link | Insert/Links/Link | button | `Mod+K` | insert.link | P0 | verified | FLUENT19:HyperlinkCreateHere |  |
 | R.Insert.Recording.AudioRecordingInsert | Record Audio | Insert/Recording/Record Audio | toggle |  | insert.audio | P2 | wired | FLUENT19:AudioRecordingInsert |  |
 | R.Insert.Recording.VideoRecordingInsert | Record Video | Insert/Recording/Record Video | toggle |  | insert.video | P2 | wired | FLUENT19:VideoRecordingInsert |  |
@@ -352,7 +352,7 @@ The Draw tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Draw.Edit.ObjectFlipHorizontal | Flip Horizontal | Draw/Edit/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | wired | FLUENT19:ObjectFlipHorizontal |  |
 | R.Draw.Edit.ObjectFlipVertical | Flip Vertical | Draw/Edit/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | wired | FLUENT19:ObjectFlipVertical |  |
 | R.Draw.Convert.SelectionToTextConvert | Ink to Text | Draw/Convert/Ink to Text | button |  | draw.inkToText | P2 | wired | FLUENT19:SelectionToTextConvert |  |
-| R.Draw.Convert.SelectionToMathConvert | Ink to Math | Draw/Convert/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:SelectionToMathConvert |  |
+| R.Draw.Convert.SelectionToMathConvert | Ink to Math | Draw/Convert/Ink to Math | button |  | draw.inkToMath | P2 | wired | FLUENT19:SelectionToMathConvert |  |
 | R.Draw.Tools.AddPen | Add Pen | Draw/Tools/Add Pen | button |  | draw.addPen | P1 | wired | GK (Microsoft 365 OneNote Draw tab) | unverified |
 | R.Draw.Tools.Ruler | Ruler | Draw/Tools/Ruler | toggle |  | draw.ruler | P2 | wired | GK (Microsoft 365 OneNote Draw tab) | Decision D7: a straightedge over the page (54 × 900 pt, millimetre ticks with centimetres numbered, its angle in the middle), shown in the middle of the page's view; a pen stroke started within 12 pt of a long edge runs along it; session state, never saved or undone (size, scale, snap distance, look and starting angle unverified); two fingers on it move it and turn it about their midpoint (D8) |
 | R.Draw.Convert.InkToShape | Ink to Shape | Draw/Convert/Ink to Shape | toggle |  | draw.inkToShape | P2 | wired | GK (Microsoft 365 OneNote Draw tab); Microsoft support "Convert ink to shapes in Office" | a toggle (session state, no undo step); while on, a pen or highlighter stroke drawn in one go that looks like a line, triangle, rectangle/square, diamond, four-sided shape, pentagon, hexagon, ellipse or circle is replaced by the neat shape in the same pen (notecraft_ink::recognize); unverified: the thresholds, which shapes are straightened, and whether the reference keeps the stroke's width |
@@ -400,7 +400,7 @@ The Review tab, group by group, in ribbon order. Rows from the Microsoft 365 app
 | ID | Label | Path | Kind | Shortcut | Command | Pri | Status | Source | Notes |
 |---|---|---|---|---|---|---|---|---|---|
 | R.Review.Proofing.SpellCheck | Spelling | Review/Proofing/Spelling | button | `F7` | review.spelling | P1 | verified | FLUENT19:SpellCheck |  |
-| R.Review.Proofing.ResearchPane | Research | Review/Proofing/Research | toggle |  | review.research | P3 | missing | FLUENT19:ResearchPane |  |
+| R.Review.Proofing.ResearchPane | Research | Review/Proofing/Research | toggle |  | review.research | P3 | wired | FLUENT19:ResearchPane |  |
 | R.Review.Proofing.Thesaurus | Thesaurus | Review/Proofing/Thesaurus | button | `Shift+F7` | review.thesaurus | P2 | wired | FLUENT19:Thesaurus |  |
 | R.Review.Accessibility.AccessibilityChecker | Check Accessibility | Review/Accessibility/Check Accessibility | button |  | review.accessibility | P2 | wired | FLUENT19:AccessibilityChecker |  |
 | R.Review.Language.TranslateMenu | Translate | Review/Language/Translate | menu |  |  | P3 | missing | FLUENT19:TranslateMenu |  |
@@ -438,7 +438,7 @@ The View tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.View.Window.NewDockedWindow | New Docked Window | View/Window/New Docked Window | button |  | window.newDocked | P2 | wired | FLUENT19:NewDockedWindow |  |
 | R.View.Window.NewSideNote | New Quick Note | View/Window/New Quick Note | button | `Mod+Shift+M` | window.quickNote | P1 | wired | FLUENT19:NewSideNote | A new page at the end of the Quick Notes section (OPT.SaveBackup.QuickNotesSection), shown in the Quick Note window (UI.Window.QuickNote) |
 | R.View.Window.WindowKeepOnTop | Always on Top | View/Window/Always on Top | toggle |  | window.alwaysOnTop | P2 | wired | FLUENT19:WindowKeepOnTop | Asks the windowing system to keep the window above others (some Wayland compositors ignore it) |
-| R.View.Immersive.ImmersiveReader | Immersive Reader | View/Immersive/Immersive Reader | button |  | view.immersiveReader | P3 | missing | GK (Microsoft 365 OneNote View tab) | unverified |
+| R.View.Immersive.ImmersiveReader | Immersive Reader | View/Immersive/Immersive Reader | button |  | view.immersiveReader | P3 | wired | GK (Microsoft 365 OneNote View tab) | unverified |
 | R.View.Views.SwitchBackground | Switch Background (dark mode page) | View/Views/Switch Background | toggle |  | view.switchBackground | P2 | wired | GK (Microsoft 365 OneNote dark mode) | unverified: in the Dark Gray and Black themes the page (and its text, rules, selection) is drawn as in the White theme; no effect in light themes |
 | R.View.Views.NavigationPanes | Navigation Panes (show/hide) | View/Views/Navigation Panes | toggle |  | view.navigationPanes | P1 | wired | GK (Microsoft 365 OneNote, 2023 navigation update) | Hides the notebook tree and the page column together, as the ☰ button does (unverified). |
 
@@ -451,7 +451,7 @@ The Help tab of the Microsoft 365 app (not in the 2019 control list).
 | R.Help.Help.Help | Help | Help/Help/Help | button | `F1` | help.help | P1 | wired | GK (Microsoft 365 Help tab); KBD (F1) | unverified group names; NoteCraft's help is local: a pane searching every command by name, ribbon path and shortcut (NC.Help.Search); a click runs it |
 | R.Help.Help.ContactSupport | Contact Support | Help/Help/Contact Support | button |  |  | P3 | out-of-scope | GK (Microsoft 365 Help tab) |  |
 | R.Help.Help.Feedback | Feedback | Help/Help/Feedback | button |  | help.feedback | P3 | wired | GK (Microsoft 365 Help tab) |  |
-| R.Help.Help.ShowTraining | Show Training | Help/Help/Show Training | button |  | help.training | P3 | missing | GK (Microsoft 365 Help tab) |  |
+| R.Help.Help.ShowTraining | Show Training | Help/Help/Show Training | button |  | help.training | P3 | wired | GK (Microsoft 365 Help tab) |  |
 | R.Help.Help.WhatsNew | What's New | Help/Help/What's New | button |  | help.whatsNew | P3 | wired | GK (Microsoft 365 Help tab) |  |
 
 ## Contextual tab › Table Layout
@@ -605,7 +605,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.NoteContainer.ObjectResize | Resize | Context/Note Container/Resize | button |  | object.resize | P1 | wired | FLUENT19:ContextMenuOutlineHandle/ObjectResize | Keeps the container selected and says how to resize it; Shift+Left/Right then make it 1 pt narrower or wider (10 with Ctrl), and its right edge drags (steps unverified) |
 | CM.NoteContainer.ConvertInkMenu | Convert Ink | Context/Note Container/Convert Ink | menu |  |  | P2 | missing | FLUENT19:ContextMenuOutlineHandle/ConvertInkMenu |  |
 | CM.NoteContainer.SelectionToTextConvert | Ink to Text | Context/Note Container/Convert Ink/Ink to Text | button |  | draw.inkToText | P2 | wired | FLUENT19:ContextMenuOutlineHandle/SelectionToTextConvert |  |
-| CM.NoteContainer.SelectionToMathConvert | Ink to Math | Context/Note Container/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuOutlineHandle/SelectionToMathConvert |  |
+| CM.NoteContainer.SelectionToMathConvert | Ink to Math | Context/Note Container/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | wired | FLUENT19:ContextMenuOutlineHandle/SelectionToMathConvert |  |
 | CM.ParagraphHandle.Cut | Cut | Context/Paragraph Handle/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuOutlineElementHandle/Cut |  |
 | CM.ParagraphHandle.CopyOneNote | Copy | Context/Paragraph Handle/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuOutlineElementHandle/CopyOneNote |  |
 | CM.ParagraphHandle.PasteGalleryMini | Paste Options | Context/Paragraph Handle/Paste Options | gallery |  | edit.pasteOptions | P0 | wired | FLUENT19:ContextMenuOutlineElementHandle/PasteGalleryMini | A row of the four paste choices (Keep Source Formatting, Merge Formatting, Keep Text Only, Picture) under a "Paste Options:" caption; each reads the system clipboard as Ctrl+V does (order and icons unverified) |
@@ -642,7 +642,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.ParagraphHandle.OutlineSelectLevelAll | Show All Levels | Context/Paragraph Handle/Select Outline Levels/Show All Levels | button | `Alt+Shift+0` | outline.expandAll | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevelAll |  |
 | CM.ParagraphHandle.ConvertInkMenu | Convert Ink | Context/Paragraph Handle/Convert Ink | menu |  |  | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/ConvertInkMenu |  |
 | CM.ParagraphHandle.SelectionToTextConvert | Ink to Text | Context/Paragraph Handle/Convert Ink/Ink to Text | button |  | draw.inkToText | P2 | wired | FLUENT19:ContextMenuOutlineElementHandle/SelectionToTextConvert |  |
-| CM.ParagraphHandle.SelectionToMathConvert | Ink to Math | Context/Paragraph Handle/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/SelectionToMathConvert |  |
+| CM.ParagraphHandle.SelectionToMathConvert | Ink to Math | Context/Paragraph Handle/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | wired | FLUENT19:ContextMenuOutlineElementHandle/SelectionToMathConvert |  |
 | CM.ParagraphHandle.LinkedNotesMenu | Linked Notes | Context/Paragraph Handle/Linked Notes | menu |  |  | P3 | missing | FLUENT19:ContextMenuOutlineElementHandle/LinkedNotesMenu |  |
 | CM.ParagraphHandle.LinkedFileOpen | Open Linked File | Context/Paragraph Handle/Linked Notes/Open Linked File | button |  | linked.open | P3 | missing | FLUENT19:ContextMenuOutlineElementHandle/LinkedFileOpen |  |
 | CM.ParagraphHandle.LinkedNotesTargetUrlCopy | Copy Link to Linked File | Context/Paragraph Handle/Linked Notes/Copy Link to Linked File | button |  | linked.copyUrl | P3 | missing | FLUENT19:ContextMenuOutlineElementHandle/LinkedNotesTargetUrlCopy |  |
@@ -684,7 +684,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Text.TreatInkAsDrawing | Drawing | Context/Text/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | wired | FLUENT19:ContextMenuText/TreatInkAsDrawing |  |
 | CM.Text.ConvertInkMenu | Convert Ink | Context/Text/Convert Ink | menu |  |  | P2 | missing | FLUENT19:ContextMenuText/ConvertInkMenu |  |
 | CM.Text.SelectionToTextConvert | Ink to Text | Context/Text/Convert Ink/Ink to Text | button |  | draw.inkToText | P2 | wired | FLUENT19:ContextMenuText/SelectionToTextConvert |  |
-| CM.Text.SelectionToMathConvert | Ink to Math | Context/Text/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuText/SelectionToMathConvert |  |
+| CM.Text.SelectionToMathConvert | Ink to Math | Context/Text/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | wired | FLUENT19:ContextMenuText/SelectionToMathConvert |  |
 | CM.Text.LookUp | Smart Lookup | Context/Text/Smart Lookup | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuText/LookUp |  |
 | CM.Text.Translate | Translate | Context/Text/Translate | button |  | review.translateSelection | P3 | missing | FLUENT19:ContextMenuText/Translate |  |
 | CM.Text.PictureAsBackground | Set Picture as Background | Context/Text/Set Picture as Background | toggle |  | object.setAsBackground | P1 | wired | FLUENT19:ContextMenuText/PictureAsBackground |  |
@@ -746,7 +746,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.InkDrawing.TreatInkAsDrawing | Drawing | Context/Ink Drawing/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | wired | FLUENT19:ContextMenuInkDrawing/TreatInkAsDrawing |  |
 | CM.InkDrawing.ObjectMove | Move | Context/Ink Drawing/Move | button |  | object.move | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectMove |  |
 | CM.InkDrawing.ObjectResize | Resize | Context/Ink Drawing/Resize | button |  | object.resize | P1 | wired | FLUENT19:ContextMenuInkDrawing/ObjectResize |  |
-| CM.InkDrawing.SelectionToMathConvert | Ink to Math | Context/Ink Drawing/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuInkDrawing/SelectionToMathConvert |  |
+| CM.InkDrawing.SelectionToMathConvert | Ink to Math | Context/Ink Drawing/Ink to Math | button |  | draw.inkToMath | P2 | wired | FLUENT19:ContextMenuInkDrawing/SelectionToMathConvert |  |
 | CM.InkDrawing.TagsGallery | Tags | Context/Ink Drawing/Tags | gallery |  | tag.toggle | P0 | wired | FLUENT19:ContextMenuInkDrawing/TagsGallery | Decision D5: a drawing carries the tag on its leftmost selected stroke; the icon sits left of that stroke, level with its top, and Find Tags lists it as "Ink drawing" (placement and wording unverified) |
 | CM.InkDrawing.TagsCustomize | Customize Tags | Context/Ink Drawing/Tags/Customize Tags | button |  | tag.customize | P1 | wired | FLUENT19:ContextMenuInkDrawing/TagsCustomize | Opens the Customize Tags dialog, as on the Home tab |
 | CM.InkDrawing.TagsRemoveAll | Remove Tag | Context/Ink Drawing/Tags/Remove Tag | button | `Mod+0` | tag.removeAll | P0 | wired | FLUENT19:ContextMenuInkDrawing/TagsRemoveAll | Clears the tags of every selected stroke (D5) |
@@ -768,7 +768,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.LassoSelection.TreatInkAsHandwriting | Handwriting | Context/Lasso Selection/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | wired | FLUENT19:ContextMenuLassoSelection/TreatInkAsHandwriting |  |
 | CM.LassoSelection.TreatInkAsDrawing | Drawing | Context/Lasso Selection/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | wired | FLUENT19:ContextMenuLassoSelection/TreatInkAsDrawing |  |
 | CM.LassoSelection.SelectionToTextConvert | Ink to Text | Context/Lasso Selection/Ink to Text | button |  | draw.inkToText | P2 | wired | FLUENT19:ContextMenuLassoSelection/SelectionToTextConvert |  |
-| CM.LassoSelection.SelectionToMathConvert | Ink to Math | Context/Lasso Selection/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuLassoSelection/SelectionToMathConvert |  |
+| CM.LassoSelection.SelectionToMathConvert | Ink to Math | Context/Lasso Selection/Ink to Math | button |  | draw.inkToMath | P2 | wired | FLUENT19:ContextMenuLassoSelection/SelectionToMathConvert |  |
 | CM.Picture.OleObjectEdit | Edit (embedded object) | Context/Picture/Edit (embedded object) | button |  | object.editOle | P3 | missing | FLUENT19:ContextMenuPicture/OleObjectEdit |  |
 | CM.Picture.RefreshOleObjects | Refresh | Context/Picture/Refresh | button |  | printout.refresh | P2 | wired | FLUENT19:ContextMenuPicture/RefreshOleObjects |  |
 | CM.Picture.SelectWhatToDisplay | Display As | Context/Picture/Display As | button |  | printout.displayAs | P2 | wired | FLUENT19:ContextMenuPicture/SelectWhatToDisplay |  |
@@ -1514,6 +1514,7 @@ Actions every editor needs that the reference exposes only implicitly (typing, a
 | NC.Draw.Erase | Erase | Mouse/Canvas/Erase | mouse |  | draw.erase | P1 | wired | NoteCraft (decision D4) | Dragging with an eraser erases along the path; one drag is one undo step. Eraser radii (2.5/6/12 pt) unverified |
 | NC.Draw.Shape | Shape | Mouse/Canvas/Shape | mouse |  | draw.shape | P1 | verified | NoteCraft (decision D4) | Dragging with the Shape tool draws the chosen shape with the selected pen as one ink stroke (one undo step); Shift keeps the proportions. |
 | NC.Draw.RulerPlace | Move or Turn the Ruler | Mouse/Canvas/Ruler | mouse |  | draw.rulerPlace | P2 | verified | NoteCraft (decision D7) | Moves the ruler to or by a point and turns it to or by an angle (never an undo step). On the canvas a drag that starts on the ruler, away from its edges with the pen, moves it; the mouse wheel over it turns it a degree a notch, up counterclockwise, instead of scrolling. |
+| NC.Draw.InkImage | Selected Ink as Picture | Draw/Convert/Ink Image | behaviour |  | draw.inkImage | P2 | verified | NoteCraft | The selected strokes drawn black on white as a PNG, which the host's text recogniser reads for Ink to Text / Ink to Math. Never an undo step. |
 | NC.Templates.List | List Templates | Window/Panes/Templates | button |  | template.list | P2 | verified | NoteCraft (decision D10) | Every template (id, name, category, description), the current section's default and the recently used ones, for agents. |
 | NC.Templates.SetDefault | Choose Default Template | Window/Panes/Templates/Choose default template | button |  | template.setDefault | P2 | wired | NoteCraft (decision D10) | The template new pages of a section start from (stored with the section), or none. |
 | NC.Templates.Save | Save Current Page as a Template | Window/Panes/Templates/Save current page as a template | button |  | template.save | P2 | wired | NoteCraft (decision D10) | Keeps the page's text, tables, ink and page setup under a name in the preferences (pictures and attachments are left out); optionally the section's default. |

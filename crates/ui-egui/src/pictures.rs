@@ -399,7 +399,7 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
             },
         },
         // Ink to Text: the host's recogniser reads the selected ink; the text replaces it.
-        "draw.inkToText" => {
+        "draw.inkToText" | "draw.inkToMath" => {
             let Some(png) = app.run(ctx, "draw.inkImage", json!({})).and_then(|v| v.get("png").and_then(|p| p.as_str()).map(str::to_string)) else {
                 return true;
             };
@@ -410,6 +410,10 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 }
                 Err(e) => app.ui.status = Some((e, ctx.input(|i| i.time))),
             }
+        }
+        // Online Video: the address is asked in the Link dialog (the video becomes a link).
+        "insert.onlineVideo" => {
+            app.ui.dialog = Some(crate::dialogs::Dialog::Link { url: String::new(), text: "Online video".into(), filter: String::new() });
         }
         "insert.existingSpreadsheet" => {
             if let Some(path) = app.host.pick_file("Insert Existing Spreadsheet", &[("Spreadsheets", &["xlsx", "xlsm", "csv"])]) {
