@@ -261,6 +261,7 @@ fn panic_hunt() {
                     | "object.saveAs"
                     | "attachment.saveAs"
                     | "attachment.open"
+                    | "media.play"
                     | "printout.openOriginal"
                     | "share.sendAttachment"
                     | "share.sendPdf"
