@@ -383,6 +383,34 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
             Ok(()) => app.ui.status = Some(("Select an area of the screen to clip.".into(), ctx.input(|i| i.time))),
             Err(e) => app.ui.status = Some((e, ctx.input(|i| i.time))),
         },
+        // Record Audio / Record Video are toggles: the first press starts, the next stops and
+        // attaches the file.
+        "insert.audio" | "insert.video" => match app.host.recording() {
+            Some(_) => match app.host.stop_recording() {
+                Some(Ok(bytes)) => {
+                    app.run(ctx, cmd, json!({"data": notecraft_engine::b64::encode(&bytes)}));
+                }
+                Some(Err(e)) => app.ui.status = Some((e, ctx.input(|i| i.time))),
+                None => {}
+            },
+            None => match app.host.start_recording(cmd == "insert.video") {
+                Ok(()) => app.ui.status = Some(("Recording… press the button again to stop.".into(), ctx.input(|i| i.time))),
+                Err(e) => app.ui.status = Some((e, ctx.input(|i| i.time))),
+            },
+        },
+        // Ink to Text: the host's recogniser reads the selected ink; the text replaces it.
+        "draw.inkToText" => {
+            let Some(png) = app.run(ctx, "draw.inkImage", json!({})).and_then(|v| v.get("png").and_then(|p| p.as_str()).map(str::to_string)) else {
+                return true;
+            };
+            let bytes = notecraft_engine::b64::decode(&png).unwrap_or_default();
+            match app.host.ocr(&bytes, "eng") {
+                Ok(text) => {
+                    app.run(ctx, cmd, json!({"text": text}));
+                }
+                Err(e) => app.ui.status = Some((e, ctx.input(|i| i.time))),
+            }
+        }
         "insert.existingSpreadsheet" => {
             if let Some(path) = app.host.pick_file("Insert Existing Spreadsheet", &[("Spreadsheets", &["xlsx", "xlsm", "csv"])]) {
                 app.run(ctx, cmd, json!({"path": path}));
@@ -449,7 +477,7 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
             app.session.sel.on_page = keep;
             app.run(ctx, cmd, json!({}));
         }
-        "attachment.open" | "printout.openOriginal" | "attachment.openOriginal" => {
+        "attachment.open" | "media.play" | "printout.openOriginal" | "attachment.openOriginal" => {
             if let Some(path) = app.run(ctx, cmd, json!({})).and_then(|v| v.get("path").and_then(|p| p.as_str()).map(str::to_string))
                 && let Err(e) = app.host.open_path(&path)
             {

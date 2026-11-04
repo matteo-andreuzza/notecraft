@@ -96,6 +96,8 @@ pub(crate) fn checked(app: &NoteApp, cmd: &str) -> bool {
         Some((s.pending_fmt.clone().unwrap_or_else(|| p.fmt_at(r.ordered().0.offset + usize::from(!r.is_caret()))).over(&base), p.align, p.list))
     };
     match cmd {
+        "insert.audio" => app.host.recording() == Some(false),
+        "insert.video" => app.host.recording() == Some(true),
         "format.bold" => fmt().is_some_and(|(f, _, _)| f.bold == Some(true)),
         "format.italic" => fmt().is_some_and(|(f, _, _)| f.italic == Some(true)),
         "format.underline" => fmt().is_some_and(|(f, _, _)| f.underline == Some(true)),

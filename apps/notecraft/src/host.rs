@@ -19,6 +19,7 @@ pub struct DesktopHost {
     clipboard: Option<arboard::Clipboard>,
     /// A screen clipping waiting for the desktop's answer.
     clip: Option<crate::screen_clip::Clip>,
+    recording: Option<crate::recorder::Recording>,
     /// To wake the UI when an answer comes from another thread.
     ctx: egui::Context,
 }
@@ -27,7 +28,14 @@ impl DesktopHost {
     /// A host whose theme watcher asks `ctx` for a repaint when the desktop's preference changes.
     pub fn new(ctx: &egui::Context) -> DesktopHost {
         let waker = ctx.clone();
-        DesktopHost { theme: DesktopTheme::start(move || waker.request_repaint()), dark: None, clipboard: None, clip: None, ctx: ctx.clone() }
+        DesktopHost {
+            theme: DesktopTheme::start(move || waker.request_repaint()),
+            dark: None,
+            clipboard: None,
+            clip: None,
+            recording: None,
+            ctx: ctx.clone(),
+        }
     }
 
     fn clipboard(&mut self) -> Option<&mut arboard::Clipboard> {
@@ -172,6 +180,22 @@ impl Host for DesktopHost {
 
     fn backup_folder(&self) -> Option<String> {
         notecraft_automation::keyfile::data_dir().map(|d| d.join("backups").display().to_string())
+    }
+
+    fn start_recording(&mut self, video: bool) -> Result<(), String> {
+        if self.recording.is_some() {
+            return Err("A recording is already running.".into());
+        }
+        self.recording = Some(crate::recorder::Recording::start(video)?);
+        Ok(())
+    }
+
+    fn recording(&self) -> Option<bool> {
+        self.recording.as_ref().map(|r| r.video)
+    }
+
+    fn stop_recording(&mut self) -> Option<Result<Vec<u8>, String>> {
+        self.recording.take().map(crate::recorder::Recording::stop)
     }
 
     fn start_screen_clip(&mut self) -> Result<(), String> {

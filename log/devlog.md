@@ -1345,3 +1345,13 @@ were certain landed, behaviour unchanged (every test green after each commit).
 - Stickers: `insert.sticker` (`sticker_cmds.rs`) draws six stickers (smile, heart, star, check,
   cross, important) in code as 128 px PNGs and inserts one as a picture; without a name it
   cycles through them (unverified: the reference opens a gallery). README rewritten for sharing.
+
+## 2026-11-04 — Recording, Ink to Text
+
+- Insert › Record Audio / Record Video (`media_cmds.rs`, `apps/notecraft/src/recorder.rs`): toggles;
+  the desktop host records with `ffmpeg` (PulseAudio/PipeWire, `/dev/video0`) into a temp file;
+  stopping attaches it (`insert.audio` / `insert.video`). Play (`media.play`, attachment menu)
+  opens the attachment with the system player. No Audio & Video contextual tab (needs a player).
+- Ink to Text (`ink_text_cmds.rs`): `draw.inkImage` draws the selected strokes black on white,
+  the UI passes it to `Host::ocr` (Tesseract) and `draw.inkToText` swaps the strokes for a
+  container holding the text. Quality is Tesseract's on handwriting (unverified).
