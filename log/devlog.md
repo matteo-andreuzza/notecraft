@@ -1332,3 +1332,13 @@ were certain landed, behaviour unchanged (every test green after each commit).
   attached, its values as a table below it (OneNote embeds the live workbook; unverified).
 - KB.Insert.ScreenClipping wired: the platform's screenshot reaches the page by paste or
   Insert › Screen Clipping.
+
+## 2026-11-04 — Icons closer to OneNote desktop
+
+- `icons_set`: new outline icons (Add Pen with a green plus, Panning Hand, Draw with Touch,
+  Insert Space, Arrange, Ink to Text / Math, Spreadsheet, Diagram, File Printout, Next Unread,
+  Mark as Read, Record Audio, Recent Edits, Recycle Bin, Page Templates, Sticker, Page
+  Versions) mapped in `icons::set_name`, taking over from the older `draw_own` drawings.
+- Not built or looked at yet: written without compiling (cargo was not on PATH); run
+  `cargo check -p notecraft-ui-egui` and the snapshot example, then compare with the
+  Draw / Insert / History tabs of the reference screenshots.
