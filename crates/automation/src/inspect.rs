@@ -107,10 +107,62 @@ pub fn page_json(p: &Page, runs: bool) -> Value {
                         if runs {
                             v["runs"] = serde_json::to_value(&para.runs).unwrap_or(Value::Null);
                         }
+                        // An equation (decision D11): its view; the text is its linear format.
+                        if let Some(m) = para.math {
+                            v["math"] = serde_json::to_value(m).unwrap_or(Value::Null);
+                        }
                         v
                     })
                     .collect();
                 json!({"kind": "outline", "id": ol.id, "x": ol.pos.x, "y": ol.pos.y, "width": serde_json::to_value(ol.width).unwrap_or(Value::Null), "paragraphs": paras})
+            }
+            PageObject::Table(t) => {
+                let grid = t.span_grid();
+                let rows: Vec<Value> = t
+                    .rows
+                    .iter()
+                    .enumerate()
+                    .map(|(ri, r)| {
+                        let cells: Vec<Value> = r
+                            .cells
+                            .iter()
+                            .enumerate()
+                            .map(|(ci, c)| {
+                                let mut v = json!({"id": c.id, "text": c.text(), "shading": c.shading.map(|x| x.to_hex())});
+                                // Merged cells (decision D9): the span, or that a merged cell hides this one.
+                                match grid.get(ri).and_then(|g| g.get(ci)).copied().flatten() {
+                                    Some((rs, cs)) if (rs, cs) != (1, 1) => {
+                                        v["rowSpan"] = json!(rs);
+                                        v["colSpan"] = json!(cs);
+                                    }
+                                    None => v["covered"] = json!(true),
+                                    _ => {}
+                                }
+                                v
+                            })
+                            .collect();
+                        json!({"id": r.id, "cells": cells})
+                    })
+                    .collect();
+                json!({"kind": "table", "id": t.id, "x": t.pos.x, "y": t.pos.y, "columns": t.columns, "borders": t.borders, "headerRow": t.header_row, "rows": rows})
+            }
+            PageObject::Image(im) => json!({
+                "kind": "picture", "id": im.id, "x": im.pos.x, "y": im.pos.y, "width": im.width, "height": im.height,
+                "pixels": [im.pixels.0, im.pixels.1], "bytes": im.blob.len, "missing": im.blob.is_missing(),
+                "quarterTurns": im.quarter_turns, "flipH": im.flip_h, "flipV": im.flip_v, "altText": im.alt_text, "background": im.background,
+            }),
+            PageObject::Attachment(a) => json!({
+                "kind": "attachment", "id": a.id, "x": a.pos.x, "y": a.pos.y, "name": a.name, "bytes": a.blob.len,
+                "missing": a.blob.is_missing(), "altText": a.alt_text,
+            }),
+            PageObject::Ink(k) => {
+                let b = k.bounds();
+                json!({
+                    "kind": "ink", "id": k.id, "x": k.pos.x, "y": k.pos.y, "tool": serde_json::to_value(k.tool).unwrap_or(Value::Null),
+                    "color": k.color.to_hex(), "width": k.width, "points": k.points.len(),
+                    "bounds": [b.min.x, b.min.y, b.width(), b.height()],
+                    "tags": k.tags.iter().map(|t| json!({"key": t.key, "name": t.name, "checked": t.checked})).collect::<Vec<_>>(),
+                })
             }
         })
         .collect();
@@ -132,7 +184,29 @@ pub fn page_json(p: &Page, runs: bool) -> Value {
 pub fn page_text(p: &Page) -> String {
     let mut out = format!("# {}\n", p.display_title());
     for o in &p.objects {
-        let PageObject::Outline(ol) = o;
+        let ol = match o {
+            PageObject::Outline(ol) => ol,
+            PageObject::Table(t) => {
+                // A table prints as tab-separated rows.
+                out.push_str(&t.plain_text());
+                out.push_str("\n\n");
+                continue;
+            }
+            PageObject::Image(im) => {
+                let alt = if im.alt_text.is_empty() { String::new() } else { format!(": {}", im.alt_text) };
+                out.push_str(&format!("[picture {}×{} pt{alt}]\n\n", im.width.round(), im.height.round()));
+                continue;
+            }
+            PageObject::Attachment(a) => {
+                out.push_str(&format!("[file {}]\n\n", a.name));
+                continue;
+            }
+            PageObject::Ink(k) => {
+                let what = if k.tool == notecraft_engine::doc::InkTool::Highlighter { "highlighter" } else { "ink" };
+                out.push_str(&format!("[{what} stroke, {} points]\n\n", k.points.len()));
+                continue;
+            }
+        };
         let labels = notecraft_engine::text::list_labels(&ol.paragraphs);
         for (para, label) in ol.paragraphs.iter().zip(labels) {
             let tags: String = para.tags.iter().map(|t| format!("[{}{}]", t.name, if t.checked { " ✓" } else { "" })).collect();

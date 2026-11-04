@@ -95,6 +95,18 @@ pub fn engine_query(s: &Session, method: &str, params: &Value) -> Option<Result<
     })
 }
 
+/// The `command` and `params` of an `engine.execute` request (`params` defaults to `{}`).
+pub fn execute_request(params: &Value) -> Result<(&str, Value), String> {
+    let id = params.get("command").and_then(Value::as_str).ok_or("missing `command`")?;
+    Ok((id, params.get("params").cloned().filter(|v| !v.is_null()).unwrap_or_else(|| json!({}))))
+}
+
+/// `notebook.save`: write every dirty notebook now.
+pub fn save_now(s: &mut Session) -> Result<Value, String> {
+    let errors = s.save_dirty();
+    if errors.is_empty() { Ok(json!({"saved": true})) } else { Err(errors.join("; ")) }
+}
+
 impl Backend for Headless {
     fn call(&mut self, method: &str, params: Value) -> Result<Value, String> {
         if let Some(r) = engine_query(&self.session, method, &params) {
@@ -102,14 +114,10 @@ impl Backend for Headless {
         }
         match method {
             "engine.execute" | "command" => {
-                let id = params.get("command").and_then(Value::as_str).ok_or("missing `command`")?.to_string();
-                let p = params.get("params").cloned().filter(|v| !v.is_null()).unwrap_or(json!({}));
-                self.execute(&id, p)
+                let (id, p) = execute_request(&params)?;
+                self.execute(id, p)
             }
-            "notebook.save" => {
-                let errors = self.session.save_dirty();
-                if errors.is_empty() { Ok(json!({"saved": true})) } else { Err(errors.join("; ")) }
-            }
+            "notebook.save" => save_now(&mut self.session),
             m if m.starts_with("ui.") => Err(format!("`{m}` {NEEDS_APP}")),
             other => self.execute(other, params),
         }

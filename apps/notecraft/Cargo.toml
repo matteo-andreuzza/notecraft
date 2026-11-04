@@ -27,7 +27,11 @@ serde_json = { workspace = true }
 log = { workspace = true }
 chrono = { workspace = true }
 craft-atomic = { workspace = true }
+craft-print = { workspace = true }
 rfd = { workspace = true }
+# The rich system clipboard (HTML and pictures; plain text goes through egui).
+arboard = { workspace = true, features = ["image-data"] }
+notecraft-codecs = { workspace = true }
 # Screenshots for the control channel (`ui.screenshot`). Already in the build through eframe's
 # icon loading, at this version.
 png = "0.18"

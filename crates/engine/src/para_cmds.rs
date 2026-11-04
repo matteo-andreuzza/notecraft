@@ -35,6 +35,17 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             .key("Mod+/")
             .params(r#"{"style"?: "decimal"|"decimalParen"|"lowerAlpha"|"upperAlpha"|"lowerRoman"|"upperRoman"|"lowerAlphaParen"}"#)
             .when(need_text),
+        // R.Home.BasicText.NumberingCustomize: a numbering style and the number the list
+        // starts at, from the Numbering Customization dialog.
+        CommandSpec::new(
+            "para.numberingCustomize",
+            "R.Home.BasicText.NumberingCustomize",
+            "Numbering Customization",
+            "Home/Basic Text/Numbering/Numbering Customization",
+            numbering_customize,
+        )
+        .params(r#"{"style": "decimal"|"decimalParen"|"lowerAlpha"|"upperAlpha"|"lowerRoman"|"upperRoman"|"lowerAlphaParen", "start"?: int (1 = no restart)}"#)
+        .when(need_text),
         CommandSpec::new("para.bulletRemove", "CM.Bullet.BulletRemove", "Remove Bullet", "Context/Bullet/Remove Bullet", remove_list)
             .when(|s| need_list(s, false)),
         CommandSpec::new("para.numberingRemove", "CM.Number.NumberListRemove", "Remove Numbering", "Context/Number/Remove Numbering", remove_list)
@@ -236,6 +247,20 @@ fn numbering(s: &mut Session, v: &Value) -> CmdResult {
     Ok(Value::Null)
 }
 
+fn numbering_customize(s: &mut Session, v: &Value) -> CmdResult {
+    let name = p::req_str(v, "style")?;
+    let style = parse_numbering(name).ok_or_else(|| CmdError::Params(format!("unknown numbering `{name}`")))?;
+    let start = p::usize(v, "start").unwrap_or(1).clamp(1, 1_000_000) as u32;
+    // The first paragraph starts the list at `start`; the others follow on.
+    let mut first = true;
+    each_para(s, &mut |p| {
+        let restart = if first && start != 1 { Some(start) } else { None };
+        first = false;
+        p.list = Some(ListFormat::Number { style, restart });
+    })?;
+    Ok(Value::Null)
+}
+
 fn remove_list(s: &mut Session, _: &Value) -> CmdResult {
     each_para(s, &mut |p| p.list = None)?;
     Ok(Value::Null)
@@ -318,6 +343,10 @@ pub(crate) fn shift_level(s: &mut Session, delta: i8) -> CmdResult {
 }
 
 fn indent(s: &mut Session, v: &Value) -> CmdResult {
+    // Tab at the end of a paragraph's text makes it a table (decision D6).
+    if p::str(v, "key") == Some("tab") && crate::table_cmds::tab_to_table(s)? {
+        return Ok(Value::Null);
+    }
     // Tab in the middle of a single paragraph inserts a tab character.
     if p::str(v, "key") == Some("tab")
         && let (PageSel::Text(_), Some(r)) = (&s.sel.on_page, s.text_range())

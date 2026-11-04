@@ -14,7 +14,8 @@
 //! does exactly what the ribbon or the keyboard would, with the same undo steps.
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
-pub mod base64;
+/// Base64 for screenshots in control replies: the engine's codec, re-exported for the hosts.
+pub use notecraft_engine::b64 as base64;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod control;
 pub mod headless;

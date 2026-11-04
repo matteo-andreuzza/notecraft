@@ -1,0 +1,18 @@
+[package]
+name = "notecraft-ink-geom"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "NoteCraft L0 ink geometry: distances, polygon tests, simplification, disc cuts and stroke outlines"
+
+[lints]
+workspace = true
+
+[dependencies]
+notecraft-geom = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

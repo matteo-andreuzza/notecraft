@@ -6,17 +6,9 @@ use std::sync::Arc;
 use notecraft_doc::{DeletedSection, Id, NavNode, Section, SectionColor, SectionGroup};
 use serde_json::{Value, json};
 
-use crate::ops::no_page;
+use crate::ops::{need_notebook, need_section, no_page, set_link_clipboard};
 use crate::selection::{Block, Pos};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
-
-fn need_notebook(s: &Session) -> Option<&'static str> {
-    if s.notebook().is_some() { None } else { Some("Open a notebook first") }
-}
-
-fn need_section(s: &Session) -> Option<&'static str> {
-    if s.section().is_some() { None } else { Some("Select a section first") }
-}
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
@@ -189,8 +181,16 @@ fn parent_path(s: &Session, nb: &notecraft_doc::Notebook, group: Option<Id>) -> 
 /// The name of the Quick Notes section.
 pub(crate) const QUICK_NOTES: &str = "Quick Notes";
 
-fn quick_notes(s: &mut Session, _v: &Value) -> CmdResult {
-    let nb = s.ws.notebooks.first().cloned().ok_or_else(|| CmdError::Disabled("open a notebook first".into()))?;
+pub(crate) fn quick_notes(s: &mut Session, _v: &Value) -> CmdResult {
+    // OPT.SaveBackup.QuickNotesSection: the notebook named in the Options, else the first.
+    let wanted = s.prefs.quick_notes_notebook.trim().to_lowercase();
+    let nb =
+        s.ws.notebooks
+            .iter()
+            .find(|n| !wanted.is_empty() && n.name.to_lowercase() == wanted)
+            .or_else(|| s.ws.notebooks.first())
+            .cloned()
+            .ok_or_else(|| CmdError::Disabled("open a notebook first".into()))?;
     let existing = nb.children.iter().find_map(|n| match n {
         NavNode::Section(sec) if sec.name.eq_ignore_ascii_case(QUICK_NOTES) => Some(sec.id),
         _ => None,
@@ -272,6 +272,10 @@ fn reselect(s: &mut Session, nb: Id) {
 
 fn delete_section(s: &mut Session, v: &Value) -> CmdResult {
     let sid = target_section(s, v)?;
+    // The Recycle Bin isn't sealed (decision D15).
+    if s.ws.section(sid).is_some_and(|x| x.protection.is_some()) {
+        return Err(CmdError::Failed("Remove the section's password before deleting it.".into()));
+    }
     let nb = s.ws.notebook_of(sid).map(|n| n.id).ok_or_else(|| CmdError::Params("no such section".into()))?;
     let NavNode::Section(sec) = take_node(s, nb, sid)? else { return Err(CmdError::Params("that is a section group".into())) };
     let now = s.now();
@@ -302,6 +306,9 @@ fn move_or_copy(s: &mut Session, v: &Value) -> CmdResult {
     let copy = p::bool(v, "copy").unwrap_or(false);
     let node = if copy {
         let sec = s.ws.section(sid).ok_or_else(no_page)?.clone();
+        if sec.protection.is_some() {
+            return Err(CmdError::Failed("Remove the section's password before copying it.".into()));
+        }
         NavNode::Section(Arc::new(fresh_section(s, &sec)))
     } else {
         take_node(s, from_nb, sid)?
@@ -362,12 +369,6 @@ fn color(s: &mut Session, v: &Value) -> CmdResult {
     Ok(Value::Null)
 }
 
-fn set_link_clipboard(s: &mut Session, title: &str, link: &str) {
-    let mut para = crate::ops::new_para(s);
-    para.runs.push(notecraft_doc::Run::new(title, notecraft_doc::CharFormat { link: Some(link.to_string()), ..Default::default() }));
-    s.clipboard = crate::session::Clipboard { paragraphs: vec![para], text: link.to_string(), pages: Vec::new() };
-}
-
 fn copy_link(s: &mut Session, v: &Value) -> CmdResult {
     let sid = target_section(s, v)?;
     let name = s.ws.section(sid).map(|x| x.name.clone()).ok_or_else(|| CmdError::Params("no such section".into()))?;
@@ -426,6 +427,15 @@ fn rename_group(s: &mut Session, v: &Value) -> CmdResult {
 fn delete_group(s: &mut Session, v: &Value) -> CmdResult {
     let gid = p::req_id(v, "group")?;
     let nb = s.ws.notebook_of(gid).map(|n| n.id).ok_or_else(|| CmdError::Params("no such section group".into()))?;
+    // The Recycle Bin isn't sealed (decision D15).
+    let protected = s.ws.notebook(nb).and_then(|n| n.group(gid)).is_some_and(|g| {
+        let tmp =
+            notecraft_doc::Notebook { children: g.children.clone(), ..notecraft_doc::Notebook::new(gid, "", notecraft_doc::SectionColor::default()) };
+        tmp.sections().iter().any(|x| x.protection.is_some())
+    });
+    if protected {
+        return Err(CmdError::Failed("A section in this group has a password: remove it before deleting the group.".into()));
+    }
     let NavNode::Group(g) = take_node(s, nb, gid)? else { return Err(CmdError::Params("that is not a section group".into())) };
     // Every section inside goes to the recycle bin.
     let mut sections = Vec::new();

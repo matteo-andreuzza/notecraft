@@ -8,48 +8,10 @@
 //! 4. Reorganise pages: reorder, make a subpage, move a page to another section, delete and
 //!    restore from the Notebook Recycle Bin.
 
-use notecraft_automation::Headless;
-use notecraft_automation::mcp::Server;
-use notecraft_engine::{Clock, Session};
+mod common;
+
+use common::{Agent, notebook_dir, reopen};
 use serde_json::{Value, json};
-
-fn clock() -> Clock {
-    Clock { now_ms: 1_792_007_100_000, utc_offset_min: 60 }
-}
-
-struct Agent {
-    srv: Server,
-    next: i64,
-}
-
-impl Agent {
-    fn new() -> Agent {
-        Agent { srv: Server::new(Box::new(Headless::new(Session::new(clock()), Box::new(clock)))), next: 1 }
-    }
-
-    /// Call a tool; panics with the tool's error text when it fails.
-    fn tool(&mut self, name: &str, args: Value) -> Value {
-        self.next += 1;
-        let v =
-            self.srv.handle(json!({"jsonrpc": "2.0", "id": self.next, "method": "tools/call", "params": {"name": name, "arguments": args}})).unwrap();
-        let r = &v["result"];
-        let text = r["content"][0]["text"].as_str().unwrap_or("").to_string();
-        assert_eq!(r["isError"], false, "{name} {args}: {text}");
-        serde_json::from_str(&text).unwrap_or(Value::String(text))
-    }
-
-    fn exec(&mut self, command: &str, params: Value) -> Value {
-        self.tool("execute", json!({"command": command, "params": params}))
-    }
-
-    fn page_text(&mut self) -> String {
-        self.tool("get_page_text", json!({})).as_str().unwrap_or("").to_string()
-    }
-
-    fn inspect(&mut self) -> Value {
-        self.tool("inspect", json!({}))
-    }
-}
 
 /// Titles of the pages of the section named `section` in an inspect tree, with their levels.
 fn pages_of(tree: &Value, section: &str) -> Vec<(String, u64)> {
@@ -90,8 +52,7 @@ fn section_id(tree: &Value, name: &str) -> String {
 
 #[test]
 fn m1_core_workflows_headless() {
-    let dir = std::env::temp_dir().join(format!("notecraft-m1-workflows-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
+    let dir = notebook_dir("m1-workflows");
     let mut a = Agent::new();
     a.tool("new_notebook", json!({"name": "Work", "path": dir.display().to_string()}));
     a.exec("section.rename", json!({"name": "Meetings"}));
@@ -181,8 +142,7 @@ fn m1_core_workflows_headless() {
     assert!(pages_of(&a.inspect(), "Meetings").iter().any(|(t, _)| t == "Weekly sync"));
 
     // Everything is on disk: a fresh session sees the same notebook.
-    let mut fresh = Session::new(clock());
-    fresh.open_path(&dir.display().to_string()).unwrap();
+    let (fresh, _) = reopen(&dir, "Weekly sync");
     let tree = notecraft_automation::inspect::inspect(&fresh, &json!({})).unwrap();
     let mut meetings: Vec<(String, u64)> = pages_of(&tree, "Meetings").into_iter().filter(|(t, _)| t != "Untitled page").collect();
     meetings.sort();

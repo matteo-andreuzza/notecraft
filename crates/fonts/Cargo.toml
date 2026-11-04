@@ -1,0 +1,16 @@
+[package]
+name = "notecraft-fonts"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "NoteCraft L0: finds the page's font files on the system (Carlito for Calibri, open fallbacks), validated"
+
+[lints]
+workspace = true
+
+[dependencies]
+skrifa = { version = "0.44", default-features = false, features = ["std"] }
+log = { workspace = true }

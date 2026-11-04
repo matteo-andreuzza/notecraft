@@ -6,13 +6,9 @@ use std::sync::Arc;
 use notecraft_doc::{DeletedPage, Id, Page, Paragraph, Section};
 use serde_json::{Value, json};
 
-use crate::ops::{self, no_page};
+use crate::ops::{self, need_section, no_page};
 use crate::selection::{Block, FocusArea, PageSel, Pos};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
-
-fn need_section(s: &Session) -> Option<&'static str> {
-    if s.sel.section.is_some() && s.section().is_some() { None } else { Some("Open a section first") }
-}
 
 fn need_page_sel(s: &Session) -> Option<&'static str> {
     if s.page().is_some() { None } else { Some("No page is selected") }
@@ -83,7 +79,7 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
             move_or_copy,
         )
         .key("Mod+Alt+M")
-        .params(r#"{"section": id, "copy"?: bool, "page"?: id}"#)
+        .params(r#"{"section": id, "copy"?: bool, "page"?: id, "version"?: ms (copy that version of the page as a new page)}"#)
         .when(need_page_sel),
         // KB.Pages.Demote / Promote — Ctrl+Alt+] / [ (also Make Subpage / Promote Subpage).
         CommandSpec::new("page.demote", "KB.Pages.Demote", "Make Subpage", "Keyboard/Pages/Increase the indent level of the current page", |s, v| {
@@ -221,7 +217,7 @@ pub(crate) fn make_page(s: &mut Session, title: &str) -> Page {
 }
 
 /// Insert `page` into `section` at `index` and open it with the caret in the title.
-fn insert_and_open(s: &mut Session, section: Id, index: usize, page: Page) -> CmdResult {
+pub(crate) fn insert_and_open(s: &mut Session, section: Id, index: usize, page: Page) -> CmdResult {
     let pid = page.id;
     let title_len = page.title.len();
     let sec = s.ws.section_mut(section).ok_or_else(|| CmdError::Failed("that section no longer exists".into()))?;
@@ -234,13 +230,13 @@ fn insert_and_open(s: &mut Session, section: Id, index: usize, page: Page) -> Cm
     Ok(json!({"page": pid.to_string()}))
 }
 
-fn new_page(s: &mut Session, v: &Value) -> CmdResult {
+pub(crate) fn new_page(s: &mut Session, v: &Value) -> CmdResult {
     let section = match p::id(v, "section")? {
         Some(id) => id,
         None => s.sel.section.ok_or_else(|| CmdError::Disabled("open a section first".into()))?,
     };
     let title = p::str(v, "title").unwrap_or("").to_string();
-    let page = make_page(s, &title);
+    let page = crate::template_cmds::new_page_in(s, section, &title);
     let sec = s.ws.section(section).ok_or_else(|| CmdError::Params("no such section".into()))?;
     let index = match p::id(v, "after")? {
         Some(after) => sec.page_index(after).map(|i| sec.page_family(i).end).unwrap_or(sec.pages.len()),
@@ -260,7 +256,7 @@ fn new_below(s: &mut Session, _: &Value) -> CmdResult {
     let (sid, i, sec) = current(s)?;
     let level = sec.pages.get(i).map(|p| p.level).unwrap_or(0);
     let at = sec.page_family(i).end;
-    let mut page = make_page(s, "");
+    let mut page = crate::template_cmds::new_page_in(s, sid, "");
     page.level = level;
     insert_and_open(s, sid, at, page)
 }
@@ -268,7 +264,7 @@ fn new_below(s: &mut Session, _: &Value) -> CmdResult {
 fn new_subpage(s: &mut Session, _: &Value) -> CmdResult {
     let (sid, i, sec) = current(s)?;
     let level = sec.pages.get(i).map(|p| p.level).unwrap_or(0);
-    let mut page = make_page(s, "");
+    let mut page = crate::template_cmds::new_page_in(s, sid, "");
     page.level = (level + 1).min(notecraft_doc::page::MAX_PAGE_LEVEL);
     insert_and_open(s, sid, i + 1, page)
 }
@@ -300,14 +296,21 @@ fn rename(s: &mut Session, v: &Value) -> CmdResult {
     Ok(Value::Null)
 }
 
-/// Move the selected pages (current page plus multi-selection) to the recycle bin.
-pub(crate) fn delete_pages_to_bin(s: &mut Session) -> Result<usize, CmdError> {
+/// The selected pages: the current page first (when it isn't in the multi-selection), then
+/// the multi-selection in the order it was made.
+pub(crate) fn selected_pages(s: &Session) -> Vec<notecraft_doc::Id> {
     let mut ids = s.sel.pages.clone();
     if let Some(p) = s.sel.page
         && !ids.contains(&p)
     {
         ids.insert(0, p);
     }
+    ids
+}
+
+/// Move the selected pages (current page plus multi-selection) to the recycle bin.
+pub(crate) fn delete_pages_to_bin(s: &mut Session) -> Result<usize, CmdError> {
+    let ids = selected_pages(s);
     let mut n = 0;
     for id in ids {
         if delete_one(s, id)? {
@@ -329,7 +332,7 @@ fn delete_one(s: &mut Session, pid: Id) -> Result<bool, CmdError> {
     let range = if collapsed { fam.clone() } else { i..i + 1 };
     let section_name = sec.name.clone();
     let secm = s.ws.section_mut(sid).ok_or_else(no_page)?;
-    let removed: Vec<Arc<Page>> = secm.pages.drain(range.clone()).collect();
+    let removed: Vec<Arc<Page>> = secm.pages.drain(range).collect();
     if !collapsed {
         // Former children of the deleted page move up one level.
         for p in secm.pages.iter_mut().skip(i).take(fam.len().saturating_sub(1)) {
@@ -339,9 +342,15 @@ fn delete_one(s: &mut Session, pid: Id) -> Result<bool, CmdError> {
     }
     secm.normalize();
     let next = secm.pages.get(i).or_else(|| i.checked_sub(1).and_then(|j| secm.pages.get(j))).map(|p| p.id);
-    let nb = s.ws.notebook_mut(nb_id).ok_or_else(no_page)?;
-    for page in removed {
-        nb.recycle.pages.push(DeletedPage { page, from_section: sid, from_section_name: section_name.clone(), deleted: now });
+    // Pages of a password-protected section skip the Recycle Bin, whose file isn't sealed
+    // (decision D15; undo still brings them back in this session).
+    if sec.protection.is_some() {
+        s.notice("Pages deleted from a password-protected section are not kept in the Recycle Bin.".to_string());
+    } else {
+        let nb = s.ws.notebook_mut(nb_id).ok_or_else(no_page)?;
+        for page in removed {
+            nb.recycle.pages.push(DeletedPage { page, from_section: sid, from_section_name: section_name.clone(), deleted: now });
+        }
     }
     s.sel.pages.retain(|x| *x != pid);
     if s.sel.page == Some(pid) {
@@ -373,6 +382,20 @@ fn move_or_copy(s: &mut Session, v: &Value) -> CmdResult {
     let copy = p::bool(v, "copy").unwrap_or(false);
     if s.ws.section(to).is_none() {
         return Err(CmdError::Params("no such target section".into()));
+    }
+    // CM.PageVersion.CopyOrMoveToSection: a version becomes a page of its own (always a copy).
+    if let Some(at) = v.get("version").and_then(Value::as_i64) {
+        let page = s.ws.page(pid).ok_or_else(|| CmdError::Params("no such page".into()))?;
+        let i = page.versions.iter().position(|x| x.at.0 == at).ok_or_else(|| CmdError::Params("no version at that time".into()))?;
+        let old = page.version_page(i).ok_or_else(|| CmdError::Params("no version at that time".into()))?;
+        let now = s.now();
+        let mut np = ops::clone_page_fresh(s, &old, now);
+        np.level = 0;
+        let id = np.id;
+        let dst = s.ws.section_mut(to).ok_or_else(no_page)?;
+        dst.pages.push(Arc::new(np));
+        s.goto_page(id)?;
+        return Ok(json!({"page": id.to_string()}));
     }
     let (sid, i) = s.ws.locate_page(pid).ok_or_else(|| CmdError::Params("no such page".into()))?;
     let sec = s.ws.section(sid).ok_or_else(no_page)?.clone();
@@ -514,9 +537,7 @@ fn copy_link(s: &mut Session, v: &Value) -> CmdResult {
     let pid = target_page(s, v)?;
     let title = s.ws.page(pid).map(|p| p.display_title()).ok_or_else(|| CmdError::Params("no such page".into()))?;
     let link = page_link(pid);
-    let mut para = ops::new_para(s);
-    para.runs.push(notecraft_doc::Run::new(&title, notecraft_doc::CharFormat { link: Some(link.clone()), ..Default::default() }));
-    s.clipboard = crate::session::Clipboard { paragraphs: vec![para], text: link.clone(), pages: Vec::new() };
+    ops::set_link_clipboard(s, &title, &link);
     Ok(json!({"link": link, "text": link}))
 }
 

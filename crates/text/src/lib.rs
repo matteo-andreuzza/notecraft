@@ -15,10 +15,31 @@
 
 use notecraft_doc::text::{CharFormat, ListFormat, MAX_FONT_SIZE, MIN_FONT_SIZE, Numbering, Paragraph, Run, sanitize_text};
 use notecraft_doc::{Bullet, Id};
-use unicode_segmentation::UnicodeSegmentation;
+use unicode_segmentation::{GraphemeCursor, UnicodeSegmentation};
 
 /// Snap `offset` to the nearest grapheme boundary at or before it, clamped to the text length.
+///
+/// Looks only around `offset` (a grapheme cursor), not from the start of the text: the UI
+/// validates the selection through this many times a frame.
 pub fn snap(text: &str, offset: usize) -> usize {
+    let mut o = offset.min(text.len());
+    while !text.is_char_boundary(o) {
+        o = o.saturating_sub(1);
+    }
+    let mut cursor = GraphemeCursor::new(o, text.len(), true);
+    match cursor.is_boundary(text, 0) {
+        Ok(true) => o,
+        Ok(false) => match cursor.prev_boundary(text, 0) {
+            Ok(b) => b.unwrap_or(0),
+            Err(_) => snap_scan(text, o),
+        },
+        // The whole text is one chunk starting at 0, so the cursor never asks for more context.
+        Err(_) => snap_scan(text, o),
+    }
+}
+
+/// [`snap`] by a scan from the start (the reference the cursor version must agree with).
+fn snap_scan(text: &str, offset: usize) -> usize {
     let offset = offset.min(text.len());
     if offset == text.len() {
         return offset;
@@ -572,6 +593,15 @@ mod tests {
     }
 
     proptest! {
+        // Property: the cursor `snap` agrees with the scan from the start at every offset,
+        // across combining marks, ZWJ emoji sequences, flags (regional indicators) and CRLF.
+        #[test]
+        fn snap_matches_the_scan(text in "[a\u{301}\u{200d}👍👩🇮🇹\r\né ]{0,12}") {
+            for o in 0..=text.len() + 2 {
+                prop_assert_eq!(snap(&text, o), snap_scan(&text, o), "offset {} of {:?}", o, text);
+            }
+        }
+
         // Property: any sequence of inserts/deletes at arbitrary offsets keeps valid UTF-8, no empty runs, and text consistent with a plain-string model.
         #[test]
         fn edits_never_break_invariants(ops in proptest::collection::vec((any::<bool>(), 0usize..40, "[a-zé👍\u{301} ]{0,4}", 0usize..8), 0..30)) {

@@ -212,10 +212,11 @@ fn indent_outdent_alignment_spacing_direction() {
     assert!(para(&s, o, 1).rtl);
     run(&mut s, "para.ltr", json!({}));
     assert!(!para(&s, o, 1).rtl);
-    // Tab inside text inserts a tab character instead of indenting.
+    // Tab after the text makes a table instead of indenting (BEH.Table.TabToCreate; the tab
+    // character typed inside text is pinned in tests_table.rs).
     caret(&mut s, o, 0, 1);
     run(&mut s, "para.indent", json!({"key": "tab"}));
-    assert_eq!(para(&s, o, 0).text(), "a\t");
+    assert!(s.page().unwrap().objects.iter().any(|x| x.as_table().is_some()));
 }
 
 #[test]
@@ -292,7 +293,7 @@ fn tag_summary_page_and_custom_tags() {
     assert!(s.tag_defs().iter().any(|d| d.name == "Recipe idea"));
     run(&mut s, "tag.customize", json!({"action": "remove", "key": key}));
     assert!(!s.tag_defs().iter().any(|d| d.name == "Recipe idea"));
-    assert!(s.run("tag.customize", json!({"action": "modify", "key": "todo"})).is_err(), "built-ins can't be modified");
+    assert!(s.run("tag.customize", json!({"action": "modify", "key": "no-such-tag"})).is_err(), "unknown tags are an error");
 }
 
 #[test]
@@ -360,6 +361,65 @@ fn containers_move_resize_and_paragraph_drag() {
     assert_eq!(body_texts(&s), vec!["two", "one"]);
     run(&mut s, "object.select", json!({"ids": [o.to_string()]}));
     assert!(matches!(&s.sel.on_page, PageSel::Objects { ids } if ids == &vec![o]));
+    // Dropped on empty canvas: a new container at the point, one undo step; the last
+    // paragraph leaving a container takes the container with it.
+    let undo_before = s.undo_labels().len();
+    run(&mut s, "outline.moveParagraph", json!({"from": o.to_string(), "para": 1, "x": 300.0, "y": 400.0}));
+    assert_eq!(s.undo_labels().len(), undo_before + 1);
+    let page = s.page().unwrap();
+    assert_eq!(page.objects.len(), 2);
+    let new = page.objects[1].as_outline().unwrap();
+    assert_eq!((new.pos.x, new.pos.y, new.paragraphs[0].text()), (300.0, 400.0, "one".to_string()));
+    let n = new.id;
+    run(&mut s, "outline.moveParagraph", json!({"from": n.to_string(), "para": 0, "to": o.to_string(), "index": 1}));
+    assert_eq!(s.page().unwrap().objects.len(), 1, "the emptied container is gone");
+    assert!(s.run("outline.moveParagraph", json!({"from": o.to_string(), "para": 0})).is_err(), "a target is required");
+}
+
+#[test]
+fn object_z_order_commands() {
+    // parity: CM.NoteContainer.ObjectBringForward, CM.NoteContainer.ObjectBringToFront, CM.NoteContainer.ObjectSendBackward, CM.NoteContainer.ObjectSendToBack
+    let (mut s, a) = page_with("a");
+    run(&mut s, "outline.new", json!({"x": 40.0, "y": 300.0}));
+    run(&mut s, "text.insert", json!({"text": "b"}));
+    let b = match s.sel.caret().unwrap().block {
+        Block::Outline(id) => id,
+        _ => panic!("expected a new container"),
+    };
+    run(&mut s, "outline.new", json!({"x": 40.0, "y": 500.0}));
+    run(&mut s, "text.insert", json!({"text": "c"}));
+    let c = match s.sel.caret().unwrap().block {
+        Block::Outline(id) => id,
+        _ => panic!("expected a new container"),
+    };
+    let order = |s: &Session| s.page().unwrap().objects.iter().map(|x| x.id()).collect::<Vec<_>>();
+    assert_eq!(order(&s), vec![a, b, c], "z-order is page creation order (back to front)");
+
+    run(&mut s, "object.select", json!({"ids": [a.to_string()]}));
+    let undo = s.undo_labels().len();
+    run(&mut s, "object.bringForward", json!({}));
+    assert_eq!(order(&s), vec![b, a, c]);
+    assert_eq!(s.undo_labels().len(), undo + 1, "one undo step");
+
+    // Already at the front: a no-op, no undo step.
+    run(&mut s, "object.select", json!({"ids": [c.to_string()]}));
+    let undo = s.undo_labels().len();
+    run(&mut s, "object.bringForward", json!({}));
+    assert_eq!(order(&s), vec![b, a, c]);
+    assert_eq!(s.undo_labels().len(), undo, "no-op at the boundary records nothing");
+
+    run(&mut s, "object.sendToBack", json!({}));
+    assert_eq!(order(&s), vec![c, b, a]);
+
+    run(&mut s, "object.select", json!({"ids": [b.to_string()]}));
+    run(&mut s, "object.bringToFront", json!({}));
+    assert_eq!(order(&s), vec![c, a, b]);
+    run(&mut s, "object.sendBackward", json!({}));
+    assert_eq!(order(&s), vec![c, b, a]);
+
+    // Disabled without a selected note container or table.
+    run(&mut s, "nav.pageTitle", json!({}));
+    assert!(s.run("object.bringForward", json!({})).is_err());
 }
 
 #[test]
@@ -486,6 +546,30 @@ fn notebook_operations() {
 }
 
 #[test]
+fn exit_saves_first_and_stays_open_when_it_cannot() {
+    // parity: BS.Exit, QAT.NR.FileExit
+    let mut s = sample();
+    assert_eq!(run(&mut s, "file.exit", json!({}))["quit"], true);
+    assert!(s.quit_request, "the shell closes the window");
+    // A notebook on disk whose folder became a file: saving fails, so Exit refuses.
+    let d = std::env::temp_dir().join(format!("notecraft-exit-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    let nb = d.join("Exit test");
+    let mut s = sample();
+    run(&mut s, "file.newNotebook", json!({"name": "Exit test", "path": nb.to_str().unwrap()}));
+    let _ = s.save_dirty();
+    run(&mut s, "text.insert", json!({"text": "unsaved"}));
+    std::fs::remove_dir_all(&nb).unwrap();
+    std::fs::write(&nb, b"in the way").unwrap();
+    s.quit_request = false;
+    let e = s.run("file.exit", json!({})).unwrap_err();
+    assert!(e.to_string().contains("not closing"), "{e}");
+    assert!(!s.quit_request, "the change would be lost: the window stays");
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+#[test]
 fn recycle_bin_view_and_empty() {
     // parity: R.History.History.RecycleBinMenu, R.History.History.EmptyRecycleBin
     let mut s = sample();
@@ -592,6 +676,7 @@ fn view_commands() {
     assert_eq!(s.page().unwrap().setup.rule_lines, RuleLines::GridSmall);
     run(&mut s, "view.ruleLineColor", json!({"color": "#ff0000"}));
     assert!(s.page().unwrap().setup.rule_color.is_some());
+    // parity: OPT.Display.NewPagesRuleLines
     run(&mut s, "view.newPagesWithRuleLines", json!({}));
     assert!(s.prefs.new_pages_rule_lines.is_some());
     run(&mut s, "page.new", json!({}));
@@ -730,4 +815,82 @@ fn json_results_are_serialisable() {
     let mut s = sample();
     let v: Value = run(&mut s, "file.options", json!({}));
     assert!(v.is_object());
+}
+
+#[test]
+fn numbering_customization_sets_the_style_and_the_first_number() {
+    // parity: R.Home.BasicText.NumberingCustomize
+    use notecraft_doc::{ListFormat, Numbering};
+    let mut s = sample();
+    run(&mut s, "page.new", json!({}));
+    run(&mut s, "outline.new", json!({"x": 40.0, "y": 120.0}));
+    run(&mut s, "text.insert", json!({"text": "a"}));
+    run(&mut s, "text.newline", json!({}));
+    run(&mut s, "text.insert", json!({"text": "b"}));
+    let id = s.page().unwrap().objects.iter().find_map(|o| o.as_outline()).unwrap().id.to_string();
+    run(&mut s, "caret.set", json!({"block": id, "para": 0, "offset": 0}));
+    run(&mut s, "caret.set", json!({"block": id, "para": 1, "offset": 1, "extend": true}));
+    run(&mut s, "para.numberingCustomize", json!({"style": "upperRoman", "start": 4}));
+    let o = s.page().unwrap().objects.iter().find_map(|o| o.as_outline()).unwrap().clone();
+    assert_eq!(o.paragraphs[0].list, Some(ListFormat::Number { style: Numbering::UpperRoman, restart: Some(4) }));
+    assert_eq!(o.paragraphs[1].list, Some(ListFormat::Number { style: Numbering::UpperRoman, restart: None }), "the next one follows on");
+    assert!(s.run("para.numberingCustomize", json!({"style": "emoji"})).is_err());
+}
+
+#[test]
+fn empty_deleted_pages_keeps_the_deleted_sections() {
+    // parity: CM.Section.EmptyTrash
+    let mut s = sample();
+    assert!(s.run("history.emptyDeletedPages", json!({})).is_err(), "nothing to empty");
+    let page = s.sel.page.unwrap().to_string();
+    run(&mut s, "page.delete", json!({"page": page}));
+    let sec = s.sel.section.unwrap().to_string();
+    run(&mut s, "section.delete", json!({"section": sec}));
+    let nb = |s: &crate::Session| s.notebook().unwrap().recycle.clone();
+    assert!(!nb(&s).pages.is_empty() && !nb(&s).sections.is_empty());
+    run(&mut s, "history.emptyDeletedPages", json!({}));
+    assert!(nb(&s).pages.is_empty(), "the deleted pages are gone");
+    assert!(!nb(&s).sections.is_empty(), "the deleted sections wait in the bin");
+}
+
+#[test]
+fn feedback_and_whats_new_open_the_project_pages() {
+    // parity: R.Help.Help.Feedback BS.Feedback R.Help.Help.WhatsNew BS.Account.WhatsNew
+    let mut s = sample();
+    assert!(run(&mut s, "help.feedback", json!({}))["open_url"].as_str().unwrap().ends_with("/issues"));
+    assert!(run(&mut s, "help.whatsNew", json!({}))["open_url"].as_str().unwrap().ends_with("/releases"));
+}
+
+#[test]
+fn sync_writes_the_notebook_and_the_status_says_so() {
+    // parity: CM.Notebook.CurrentNotebookSyncNow KB.Share.SyncCurrent KB.Share.SyncAll
+    // parity: CM.Notebook.GroupSyncStatus BS.Info.ViewSyncStatus
+    let mut s = sample();
+    run(&mut s, "page.new", json!({"title": "Unsaved"}));
+    let nb = s.sel.notebook.unwrap();
+    assert!(s.notebook_dirty(nb));
+    let status = run(&mut s, "notebook.syncStatus", json!({}));
+    assert_eq!(status["notebooks"][0]["saved"], false);
+    run(&mut s, "notebook.syncNow", json!({}));
+    assert!(!s.notebook_dirty(nb), "written");
+    assert_eq!(run(&mut s, "notebook.syncStatus", json!({}))["notebooks"][0]["saved"], true);
+    run(&mut s, "notebook.syncAll", json!({}));
+}
+
+#[test]
+fn merging_containers_appends_the_paragraphs() {
+    // parity: BEH.Canvas.MergeContainers
+    let mut s = sample();
+    run(&mut s, "page.new", json!({}));
+    let a = run(&mut s, "outline.new", json!({"x": 40.0, "y": 120.0}))["outline"].as_str().map(str::to_string);
+    run(&mut s, "text.insert", json!({"text": "first"}));
+    let b = run(&mut s, "outline.new", json!({"x": 40.0, "y": 300.0}))["outline"].as_str().map(str::to_string);
+    run(&mut s, "text.insert", json!({"text": "second"}));
+    let ids: Vec<String> = s.page().unwrap().objects.iter().filter_map(|o| o.as_outline()).map(|o| o.id.to_string()).collect();
+    let (a, b) = (a.unwrap_or_else(|| ids[0].clone()), b.unwrap_or_else(|| ids[1].clone()));
+    run(&mut s, "outline.merge", json!({"from": b, "into": a}));
+    let outs: Vec<_> = s.page().unwrap().objects.iter().filter_map(|o| o.as_outline()).collect();
+    assert_eq!(outs.len(), 1);
+    assert_eq!(outs[0].paragraphs.iter().map(|p| p.text()).collect::<Vec<_>>(), ["first", "second"]);
+    assert!(s.run("outline.merge", json!({"from": a, "into": a})).is_err());
 }

@@ -505,6 +505,20 @@ pub struct Paragraph {
     /// When it was last edited.
     #[serde(default)]
     pub modified: Timestamp,
+    /// An equation (decision D11): the paragraph's text is the equation's linear format
+    /// (UnicodeMath), shown built-up or as typed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub math: Option<MathView>,
+}
+
+/// How an equation shows (Equation › Professional / Linear).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum MathView {
+    /// Built up: fractions stacked, scripts raised (the text shows while the caret is in it).
+    #[default]
+    Professional,
+    /// As typed, on one line.
+    Linear,
 }
 
 impl Paragraph {
@@ -525,6 +539,7 @@ impl Paragraph {
             collapsed: false,
             author: String::new(),
             modified: Timestamp(0),
+            math: None,
         }
     }
 
@@ -541,6 +556,16 @@ impl Paragraph {
     /// The concatenated text.
     pub fn text(&self) -> String {
         self.runs.iter().map(|r| r.text.as_str()).collect()
+    }
+
+    /// [`Paragraph::text`] without a copy when the paragraph has at most one run (the common
+    /// case), for hot read-only paths.
+    pub fn text_cow(&self) -> std::borrow::Cow<'_, str> {
+        match self.runs.as_slice() {
+            [] => std::borrow::Cow::Borrowed(""),
+            [r] => std::borrow::Cow::Borrowed(r.text.as_str()),
+            _ => std::borrow::Cow::Owned(self.text()),
+        }
     }
 
     /// Length of the text in bytes.

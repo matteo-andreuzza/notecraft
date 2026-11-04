@@ -15,8 +15,6 @@ workspace = true
 notecraft-geom = { workspace = true }
 notecraft-color = { workspace = true }
 serde = { workspace = true }
-thiserror = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
-proptest = { workspace = true }

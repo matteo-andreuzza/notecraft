@@ -33,6 +33,90 @@ pub struct DesktopSettings {
     pub notebooks: Notebooks,
     /// Pane sizes.
     pub layout: Layout,
+    /// The Draw tab: the pen gallery, the selected pen, the eraser size and the shape (the tool
+    /// itself is not kept: a run starts typing).
+    pub drawing: notecraft_engine::DrawState,
+    /// The main window's size, position and state.
+    pub window: Window,
+}
+
+/// The main window between runs: its inner size in points, whether it was maximized, and its
+/// position only where the windowing system reports one (X11, Windows, macOS; Wayland
+/// compositors place windows themselves and never tell).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Window {
+    /// Inner width in points.
+    pub width: f32,
+    /// Inner height in points.
+    pub height: f32,
+    /// Outer left edge in points, if known.
+    pub x: Option<f32>,
+    /// Outer top edge in points, if known.
+    pub y: Option<f32>,
+    /// Maximized (the size above is the one to restore to).
+    pub maximized: bool,
+}
+
+/// The first run's window size.
+pub const DEFAULT_WINDOW: (f32, f32) = (1366.0, 860.0);
+/// The smallest window the layout works in.
+pub const MIN_WINDOW: (f32, f32) = (720.0, 480.0);
+/// Larger sizes and farther positions than this are damage, not a screen.
+const MAX_WINDOW: f32 = 16_384.0;
+
+impl Default for Window {
+    fn default() -> Window {
+        Window { width: DEFAULT_WINDOW.0, height: DEFAULT_WINDOW.1, x: None, y: None, maximized: false }
+    }
+}
+
+impl Window {
+    /// The window with every value usable: sizes within the minimum and a sane maximum
+    /// (non-numbers become the default), positions dropped when they are not numbers or far off.
+    pub fn sane(self) -> Window {
+        let side = |v: f32, min: f32, default: f32| if v.is_finite() { v.clamp(min, MAX_WINDOW) } else { default };
+        let at = |v: Option<f32>| v.filter(|v| v.is_finite() && v.abs() <= MAX_WINDOW);
+        let (x, y) = (at(self.x), at(self.y));
+        Window {
+            width: side(self.width, MIN_WINDOW.0, DEFAULT_WINDOW.0),
+            height: side(self.height, MIN_WINDOW.1, DEFAULT_WINDOW.1),
+            // Both or neither.
+            x: x.and(y).and(x),
+            y: x.and(y),
+            maximized: self.maximized,
+        }
+    }
+
+    /// What to remember of the window as egui sees it now, starting from `previous`: a
+    /// maximized, full-screen or minimized window keeps the size it will restore to.
+    pub fn observe(previous: Window, v: &egui::ViewportInfo) -> Window {
+        if v.minimized == Some(true) || v.fullscreen == Some(true) {
+            return previous;
+        }
+        let maximized = v.maximized == Some(true);
+        let mut w = Window { maximized, ..previous };
+        if !maximized {
+            if let Some(r) = v.inner_rect {
+                w.width = r.width();
+                w.height = r.height();
+            }
+            if let Some(r) = v.outer_rect {
+                (w.x, w.y) = (Some(r.min.x), Some(r.min.y));
+            }
+        }
+        w.sane()
+    }
+
+    /// The window to open: this one's size, position and state.
+    pub fn viewport(self, mut b: egui::ViewportBuilder) -> egui::ViewportBuilder {
+        let w = self.sane();
+        b = b.with_inner_size([w.width, w.height]).with_min_inner_size([MIN_WINDOW.0, MIN_WINDOW.1]).with_maximized(w.maximized);
+        if let (Some(x), Some(y)) = (w.x, w.y) {
+            b = b.with_position([x, y]);
+        }
+        b
+    }
 }
 
 /// Look.
@@ -45,6 +129,10 @@ pub struct Appearance {
     pub ribbon: notecraft_engine::RibbonMode,
     /// Ribbon collapsed to its tabs (Ctrl+F1, Show tabs only).
     pub ribbon_collapsed: bool,
+    /// The Quick Access Toolbar's buttons (catalog ids; empty: the default).
+    pub qat: Vec<String>,
+    /// The display language (`None`: the system locale's).
+    pub lang: Option<notecraft_ui_egui::i18n::Lang>,
 }
 
 /// Open notebooks, as OneNote reopens them.
@@ -55,6 +143,8 @@ pub struct Notebooks {
     pub open: Vec<String>,
     /// The page that was open (id), reopened when it still exists.
     pub last_page: String,
+    /// Recently opened folders, most recent first (`BS.Open.RecentNotebooks`).
+    pub recent: Vec<String>,
 }
 
 /// Pane sizes in points and the navigation tree's folds.
@@ -191,15 +281,24 @@ pub fn capture(app: &NoteApp, previous: &DesktopSettings) -> DesktopSettings {
         _ => previous.notebooks.last_page.clone(),
     };
     DesktopSettings {
-        appearance: Appearance { theme: app.ui.theme, ribbon: s.view.ribbon_mode, ribbon_collapsed: s.view.ribbon_collapsed },
+        appearance: Appearance {
+            theme: app.ui.theme,
+            ribbon: s.view.ribbon_mode,
+            ribbon_collapsed: s.view.ribbon_collapsed,
+            qat: app.ui.qat.clone(),
+            lang: Some(app.ui.lang),
+        },
         editing: s.prefs.clone(),
-        notebooks: Notebooks { open, last_page },
+        notebooks: Notebooks { open, last_page, recent: app.ui.recent_notebooks.clone() },
         layout: Layout {
             notebook_pane_width: app.ui.notebook_pane_width,
             page_list_width: s.view.page_list_width,
             navigation_hidden: s.view.notebook_pane_collapsed,
             collapsed: app.ui.nav_collapsed.clone(),
         },
+        drawing: notecraft_engine::DrawState { tool: notecraft_engine::DrawTool::Type, ruler: None, ..s.draw.clone() },
+        // The shell observes the window ([`Window::observe`]); the app can't see it.
+        window: previous.window,
     }
 }
 
@@ -208,6 +307,17 @@ pub fn apply(app: &mut NoteApp, s: &DesktopSettings) {
     app.ui.theme = s.appearance.theme;
     app.session.view.ribbon_mode = s.appearance.ribbon;
     app.session.view.ribbon_collapsed = s.appearance.ribbon_collapsed;
+    // A settings file is hostile input: unknown or repeated buttons are dropped.
+    // OPT.Language.DisplayLanguage: the remembered choice, else the system's locale.
+    app.ui.lang = s.appearance.lang.unwrap_or_else(|| {
+        let locale = std::env::var("LC_ALL").or_else(|_| std::env::var("LC_MESSAGES")).or_else(|_| std::env::var("LANG")).unwrap_or_default();
+        notecraft_ui_egui::i18n::Lang::from_locale(&locale)
+    });
+    if !s.appearance.qat.is_empty() {
+        let mut qat = s.appearance.qat.clone();
+        notecraft_ui_egui::qat::normalize(&mut qat);
+        app.ui.qat = qat;
+    }
     app.session.prefs = s.editing.clone();
     // Options › General › User name starts as the account's name, as in OneNote.
     if app.session.prefs.author.trim().is_empty() {
@@ -222,6 +332,9 @@ pub fn apply(app: &mut NoteApp, s: &DesktopSettings) {
     app.session.view.notebook_pane_collapsed = s.layout.navigation_hidden;
     // Folds of notebooks that no longer exist are harmless; cap the list against a hostile file.
     app.ui.nav_collapsed = s.layout.collapsed.iter().take(10_000).copied().collect();
+    app.ui.recent_notebooks = s.notebooks.recent.iter().take(notecraft_ui_egui::MAX_RECENT_NOTEBOOKS).cloned().collect();
+    app.session.draw = s.drawing.clone();
+    app.session.draw.normalize();
 }
 
 /// The account's user name (`USER`, `USERNAME` on Windows), or empty.
@@ -294,6 +407,35 @@ mod tests {
     }
 
     #[test]
+    fn the_window_is_remembered_and_never_insane() {
+        // Old files have no window: the default.
+        assert_eq!(serde_json::from_str::<DesktopSettings>("{}").unwrap().window, Window::default());
+        let hostile = Window { width: f32::NAN, height: 1e12, x: Some(f32::INFINITY), y: Some(10.0), maximized: true };
+        let w = hostile.sane();
+        assert_eq!((w.width, w.height, w.x, w.y, w.maximized), (DEFAULT_WINDOW.0, MAX_WINDOW, None, None, true), "half a position is none");
+        assert_eq!(Window { width: 10.0, height: 10.0, ..Window::default() }.sane().width, MIN_WINDOW.0);
+        // Observed: a normal window's size and place; a maximized one keeps the size to restore.
+        let mut v = egui::ViewportInfo {
+            inner_rect: Some(egui::Rect::from_min_size(egui::pos2(110.0, 140.0), egui::vec2(1000.0, 700.0))),
+            outer_rect: Some(egui::Rect::from_min_size(egui::pos2(100.0, 100.0), egui::vec2(1020.0, 760.0))),
+            maximized: Some(false),
+            ..Default::default()
+        };
+        let w = Window::observe(Window::default(), &v);
+        assert_eq!((w.width, w.height, w.x, w.y, w.maximized), (1000.0, 700.0, Some(100.0), Some(100.0), false));
+        v.maximized = Some(true);
+        v.inner_rect = Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(2560.0, 1400.0)));
+        let m = Window::observe(w, &v);
+        assert_eq!((m.width, m.maximized), (1000.0, true));
+        v.minimized = Some(true);
+        assert_eq!(Window::observe(m, &v), m, "minimized changes nothing");
+        // Wayland: no rectangles at all.
+        let none = egui::ViewportInfo::default();
+        assert_eq!(Window::observe(w, &none), Window { maximized: false, ..w });
+        let _ = Window::default().viewport(egui::ViewportBuilder::default());
+    }
+
+    #[test]
     fn a_damaged_file_is_moved_aside() {
         let dir = tmp("bad");
         std::fs::create_dir_all(&dir).unwrap();
@@ -320,6 +462,9 @@ mod tests {
         let nb = app.session.notebook().unwrap().id;
         app.ui.nav_collapsed.push(nb);
         app.session.prefs.author = "Grace".into();
+        app.ui.recent_notebooks = vec!["/notebooks/Work".into(), "/notebooks/Home".into()];
+        app.session.run("draw.addPen", serde_json::json!({"color": "#00ff00", "width": 3.0})).unwrap();
+        app.session.run("draw.eraserLarge", serde_json::json!({})).unwrap();
         let s = capture(&app, &DesktopSettings::default());
         // The sample notebook lives in memory: nothing to reopen.
         assert!(s.notebooks.open.is_empty());
@@ -333,6 +478,14 @@ mod tests {
         assert_eq!(other.session.view.page_list_width, 260.0);
         assert_eq!(other.ui.nav_collapsed, vec![nb]);
         assert_eq!(other.session.prefs.author, "Grace");
+        // BS.Open.RecentNotebooks.
+        assert_eq!(other.ui.recent_notebooks, vec!["/notebooks/Work".to_string(), "/notebooks/Home".to_string()]);
+        // R.Draw.Tools.InkStylesGallery: the pens (an added one too), the selected pen and the
+        // eraser size are remembered; the tool starts as Type.
+        assert_eq!(other.session.draw.pens, app.session.draw.pens);
+        assert_eq!(other.session.draw.current_pen().color.to_hex(), "#00ff00");
+        assert_eq!(other.session.draw.eraser, notecraft_engine::EraserKind::Large);
+        assert_eq!(other.session.draw.tool, notecraft_engine::DrawTool::Type);
         let mut bad = s.clone();
         bad.layout.notebook_pane_width = f32::NAN;
         apply(&mut other, &bad);

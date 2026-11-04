@@ -4,13 +4,9 @@
 use notecraft_doc::Id;
 use serde_json::{Value, json};
 
-use crate::ops::{need_page, no_page};
+use crate::ops::{need_page, need_section, no_page};
 use crate::selection::{Block, FocusArea, Pos};
 use crate::{CmdError, CmdResult, CommandSpec, Session, p};
-
-fn need_section(s: &Session) -> Option<&'static str> {
-    if s.section().is_some() { None } else { Some("Select a section first") }
-}
 
 pub(crate) fn specs() -> Vec<CommandSpec> {
     vec![
@@ -169,33 +165,29 @@ pub(crate) fn specs() -> Vec<CommandSpec> {
 }
 
 fn back(s: &mut Session, _: &Value) -> CmdResult {
-    while let Some(prev) = s.nav_back.pop() {
-        if let Some((sid, _)) = s.ws.locate_page(prev) {
-            if let Some(cur) = s.sel.page {
-                s.last_sel.insert(cur, s.sel.on_page.clone());
-                s.nav_forward.push(cur);
-            }
-            let nb = s.ws.notebook_of(sid).map(|n| n.id);
-            s.show_page(nb, sid, prev);
-            return Ok(Value::Null);
-        }
-    }
-    Err(CmdError::Disabled("no previous page".into()))
+    travel(s, true)
 }
 
 fn forward(s: &mut Session, _: &Value) -> CmdResult {
-    while let Some(next) = s.nav_forward.pop() {
-        if let Some((sid, _)) = s.ws.locate_page(next) {
-            if let Some(cur) = s.sel.page {
-                s.last_sel.insert(cur, s.sel.on_page.clone());
-                s.nav_back.push(cur);
-            }
-            let nb = s.ws.notebook_of(sid).map(|n| n.id);
-            s.show_page(nb, sid, next);
-            return Ok(Value::Null);
+    travel(s, false)
+}
+
+/// Back or Forward: the nearest page on that stack that still exists (deleted pages are
+/// skipped); the current page goes on the other stack.
+fn travel(s: &mut Session, back: bool) -> CmdResult {
+    loop {
+        let popped = if back { s.nav_back.pop() } else { s.nav_forward.pop() };
+        let Some(id) = popped else { break };
+        let Some((sid, _)) = s.ws.locate_page(id) else { continue };
+        if let Some(cur) = s.sel.page {
+            s.last_sel.insert(cur, s.sel.on_page.clone());
+            if back { s.nav_forward.push(cur) } else { s.nav_back.push(cur) }
         }
+        let nb = s.ws.notebook_of(sid).map(|n| n.id);
+        s.show_page(nb, sid, id);
+        return Ok(Value::Null);
     }
-    Err(CmdError::Disabled("no next page".into()))
+    Err(CmdError::Disabled(if back { "no previous page" } else { "no next page" }.into()))
 }
 
 /// Visible pages of the current section (collapsed subpages skipped).
@@ -348,7 +340,9 @@ fn link_at_caret(s: &Session) -> Option<String> {
 fn open_link(s: &mut Session, v: &Value) -> CmdResult {
     let url = match p::str(v, "url") {
         Some(u) => u.to_string(),
-        None => link_at_caret(s).ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?,
+        None => {
+            link_at_caret(s).or_else(|| crate::view_cmds::object_link(s)).ok_or_else(|| CmdError::Disabled("the caret is not on a link".into()))?
+        }
     };
     match parse_link(&url) {
         Some(("page", ids)) => {

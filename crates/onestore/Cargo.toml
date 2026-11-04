@@ -1,0 +1,27 @@
+[package]
+name = "notecraft-onestore"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+description = "NoteCraft L4 interop: a bounded, panic-free reader of OneNote .one/.onetoc2 files ([MS-ONESTORE] revision store, [MS-ONE] content)"
+
+[lints]
+workspace = true
+
+[features]
+# The minimal writer that makes synthetic test files (never a user-facing export).
+fixtures = []
+
+[dependencies]
+miniz_oxide = { workspace = true }
+notecraft-codecs = { workspace = true }
+notecraft-color = { workspace = true }
+notecraft-doc = { workspace = true }
+notecraft-geom = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

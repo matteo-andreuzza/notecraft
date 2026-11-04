@@ -43,11 +43,6 @@ impl Dirty {
     pub fn everything() -> Dirty {
         Dirty { all: true, structure: true, recycle: true, ..Dirty::default() }
     }
-
-    /// Whether nothing is dirty.
-    pub fn is_clean(&self) -> bool {
-        !self.all && !self.structure && !self.recycle && self.sections.is_empty()
-    }
 }
 
 /// Result of a save: what was written and what failed (and stays dirty).
@@ -119,11 +114,12 @@ impl NotebookStore {
         let mut store = NotebookStore { root: root.to_path_buf(), layout: HashMap::new(), tocs: HashMap::new() };
         let folder_name = root.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Notebook".into());
         let (toc, children) = store.load_dir(Path::new(""), 0, ids, &mut warnings);
-        let (id, name, color) = match &toc {
-            Some(t) => (t.id, t.name.clone(), t.color),
-            None => (ids.next_id(), folder_name, SectionColor::default()),
+        let (id, name, color, history_disabled) = match &toc {
+            Some(t) => (t.id, t.name.clone(), t.color, t.history_disabled),
+            None => (ids.next_id(), folder_name, SectionColor::default(), false),
         };
         let mut nb = Notebook::new(id, &name, color);
+        nb.history_disabled = history_disabled;
         nb.children = children;
         let rpath = root.join(RECYCLE_DIR).join(RECYCLE_FILE);
         if rpath.exists() {
@@ -227,7 +223,6 @@ impl NotebookStore {
         (toc, children)
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn load_section(
         &mut self,
         rel: &Path,
@@ -282,7 +277,7 @@ impl NotebookStore {
         let mut report = SaveReport::default();
         let mut new_layout: HashMap<notecraft_doc::Id, PathBuf> = HashMap::new();
         let mut tocs: Vec<(PathBuf, Vec<u8>)> = Vec::new();
-        self.plan(Path::new(""), &nb.children, 0, &mut new_layout, &mut tocs, Some((nb.id, nb.name.as_str(), nb.color)))?;
+        self.plan(Path::new(""), &nb.children, 0, &mut new_layout, &mut tocs, Some((nb.id, nb.name.as_str(), nb.color, nb.history_disabled)))?;
 
         // Group folders first, so section files have somewhere to go.
         for (id, rp) in &new_layout {
@@ -357,7 +352,7 @@ impl NotebookStore {
         depth: usize,
         layout: &mut HashMap<notecraft_doc::Id, PathBuf>,
         tocs: &mut Vec<(PathBuf, Vec<u8>)>,
-        head: Option<(notecraft_doc::Id, &str, SectionColor)>,
+        head: Option<(notecraft_doc::Id, &str, SectionColor, bool)>,
     ) -> Result<()> {
         if depth > MAX_DEPTH {
             return Err(FormatError::Corrupt("section groups nested too deeply to save".into()));
@@ -405,12 +400,13 @@ impl NotebookStore {
                 NavNode::Group(g) => {
                     layout.insert(g.id, rp.clone());
                     entries.push(TocEntry::Group { id: g.id, name: g.name.clone(), dir: fname });
-                    self.plan(&rp, &g.children, depth + 1, layout, tocs, Some((g.id, g.name.as_str(), SectionColor::default())))?;
+                    self.plan(&rp, &g.children, depth + 1, layout, tocs, Some((g.id, g.name.as_str(), SectionColor::default(), false)))?;
                 }
             }
         }
-        if let Some((id, name, color)) = head {
-            tocs.push((rel.to_path_buf(), encode_toc(&toc_for(id, name, color, entries))?));
+        if let Some((id, name, color, history_disabled)) = head {
+            let toc = crate::Toc { history_disabled, ..toc_for(id, name, color, entries) };
+            tocs.push((rel.to_path_buf(), encode_toc(&toc)?));
         }
         Ok(())
     }
@@ -424,11 +420,6 @@ impl NotebookStore {
         std::fs::create_dir_all(&dir).map_err(|e| io(&dir, e))?;
         let bytes = encode_recycle(bin)?;
         craft_atomic::atomic_write(&p, &bytes).map_err(|e| io(&p, e))
-    }
-
-    /// The file holding section `id`, if it has been saved.
-    pub fn section_path(&self, id: notecraft_doc::Id) -> Option<PathBuf> {
-        self.layout.get(&id).map(|p| self.root.join(p))
     }
 }
 
@@ -526,6 +517,20 @@ mod tests {
         assert_eq!(names, vec!["Meetings", "Alpha", "Beta: v2"]);
         assert_eq!(o.notebook.group(Id(20)).map(|g| g.name.as_str()), Some("Projects"));
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_notebook_with_history_disabled_keeps_it_after_a_save() {
+        let dir = std::env::temp_dir().join(format!("notecraft-store-history-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut nb = Notebook::new(Id(1), "Work", SectionColor::default());
+        nb.history_disabled = true;
+        let mut ids = IdGen::new(100);
+        let mut store = NotebookStore::create(&dir, &nb).unwrap();
+        store.save(&nb, &Default::default()).ok();
+        let opened = NotebookStore::open(&dir, &mut ids).unwrap();
+        assert!(opened.notebook.history_disabled);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
