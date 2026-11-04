@@ -351,7 +351,7 @@ The Draw tab, group by group, in ribbon order. Rows from the Microsoft 365 app t
 | R.Draw.Edit.ObjectRotateLeft90 | Rotate Left 90° | Draw/Edit/Rotate/Rotate Left 90° | button |  | object.rotateLeft90 | P1 | wired | FLUENT19:ObjectRotateLeft90 |  |
 | R.Draw.Edit.ObjectFlipHorizontal | Flip Horizontal | Draw/Edit/Rotate/Flip Horizontal | button |  | object.flipHorizontal | P1 | wired | FLUENT19:ObjectFlipHorizontal |  |
 | R.Draw.Edit.ObjectFlipVertical | Flip Vertical | Draw/Edit/Rotate/Flip Vertical | button |  | object.flipVertical | P1 | wired | FLUENT19:ObjectFlipVertical |  |
-| R.Draw.Convert.SelectionToTextConvert | Ink to Text | Draw/Convert/Ink to Text | button |  | draw.inkToText | P2 | missing | FLUENT19:SelectionToTextConvert |  |
+| R.Draw.Convert.SelectionToTextConvert | Ink to Text | Draw/Convert/Ink to Text | button |  | draw.inkToText | P2 | wired | FLUENT19:SelectionToTextConvert |  |
 | R.Draw.Convert.SelectionToMathConvert | Ink to Math | Draw/Convert/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:SelectionToMathConvert |  |
 | R.Draw.Tools.AddPen | Add Pen | Draw/Tools/Add Pen | button |  | draw.addPen | P1 | wired | GK (Microsoft 365 OneNote Draw tab) | unverified |
 | R.Draw.Tools.Ruler | Ruler | Draw/Tools/Ruler | toggle |  | draw.ruler | P2 | wired | GK (Microsoft 365 OneNote Draw tab) | Decision D7: a straightedge over the page (54 × 900 pt, millimetre ticks with centimetres numbered, its angle in the middle), shown in the middle of the page's view; a pen stroke started within 12 pt of a long edge runs along it; session state, never saved or undone (size, scale, snap distance, look and starting angle unverified); two fingers on it move it and turn it about their midpoint (D8) |
@@ -604,7 +604,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.NoteContainer.ObjectMove | Move | Context/Note Container/Move | button |  | object.move | P1 | wired | FLUENT19:ContextMenuOutlineHandle/ObjectMove | Keeps the container selected and says how to move it; the arrow keys then nudge it 1 pt, 10 with Ctrl, and its top bar drags it (steps unverified) |
 | CM.NoteContainer.ObjectResize | Resize | Context/Note Container/Resize | button |  | object.resize | P1 | wired | FLUENT19:ContextMenuOutlineHandle/ObjectResize | Keeps the container selected and says how to resize it; Shift+Left/Right then make it 1 pt narrower or wider (10 with Ctrl), and its right edge drags (steps unverified) |
 | CM.NoteContainer.ConvertInkMenu | Convert Ink | Context/Note Container/Convert Ink | menu |  |  | P2 | missing | FLUENT19:ContextMenuOutlineHandle/ConvertInkMenu |  |
-| CM.NoteContainer.SelectionToTextConvert | Ink to Text | Context/Note Container/Convert Ink/Ink to Text | button |  | draw.inkToText | P2 | missing | FLUENT19:ContextMenuOutlineHandle/SelectionToTextConvert |  |
+| CM.NoteContainer.SelectionToTextConvert | Ink to Text | Context/Note Container/Convert Ink/Ink to Text | button |  | draw.inkToText | P2 | wired | FLUENT19:ContextMenuOutlineHandle/SelectionToTextConvert |  |
 | CM.NoteContainer.SelectionToMathConvert | Ink to Math | Context/Note Container/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuOutlineHandle/SelectionToMathConvert |  |
 | CM.ParagraphHandle.Cut | Cut | Context/Paragraph Handle/Cut | button | `Mod+X` | edit.cut | P0 | wired | FLUENT19:ContextMenuOutlineElementHandle/Cut |  |
 | CM.ParagraphHandle.CopyOneNote | Copy | Context/Paragraph Handle/Copy | button | `Mod+C` | edit.copy | P0 | wired | FLUENT19:ContextMenuOutlineElementHandle/CopyOneNote |  |
@@ -641,7 +641,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.ParagraphHandle.OutlineSelectLevel5 | Show Level 5 | Context/Paragraph Handle/Select Outline Levels/Show Level 5 | button |  | outline.level5 | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevel5 |  |
 | CM.ParagraphHandle.OutlineSelectLevelAll | Show All Levels | Context/Paragraph Handle/Select Outline Levels/Show All Levels | button | `Alt+Shift+0` | outline.expandAll | P1 | wired | FLUENT19:ContextMenuOutlineElementHandle/OutlineSelectLevelAll |  |
 | CM.ParagraphHandle.ConvertInkMenu | Convert Ink | Context/Paragraph Handle/Convert Ink | menu |  |  | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/ConvertInkMenu |  |
-| CM.ParagraphHandle.SelectionToTextConvert | Ink to Text | Context/Paragraph Handle/Convert Ink/Ink to Text | button |  | draw.inkToText | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/SelectionToTextConvert |  |
+| CM.ParagraphHandle.SelectionToTextConvert | Ink to Text | Context/Paragraph Handle/Convert Ink/Ink to Text | button |  | draw.inkToText | P2 | wired | FLUENT19:ContextMenuOutlineElementHandle/SelectionToTextConvert |  |
 | CM.ParagraphHandle.SelectionToMathConvert | Ink to Math | Context/Paragraph Handle/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuOutlineElementHandle/SelectionToMathConvert |  |
 | CM.ParagraphHandle.LinkedNotesMenu | Linked Notes | Context/Paragraph Handle/Linked Notes | menu |  |  | P3 | missing | FLUENT19:ContextMenuOutlineElementHandle/LinkedNotesMenu |  |
 | CM.ParagraphHandle.LinkedFileOpen | Open Linked File | Context/Paragraph Handle/Linked Notes/Open Linked File | button |  | linked.open | P3 | missing | FLUENT19:ContextMenuOutlineElementHandle/LinkedFileOpen |  |
@@ -683,7 +683,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.Text.TreatInkAsHandwriting | Handwriting | Context/Text/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | wired | FLUENT19:ContextMenuText/TreatInkAsHandwriting |  |
 | CM.Text.TreatInkAsDrawing | Drawing | Context/Text/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | wired | FLUENT19:ContextMenuText/TreatInkAsDrawing |  |
 | CM.Text.ConvertInkMenu | Convert Ink | Context/Text/Convert Ink | menu |  |  | P2 | missing | FLUENT19:ContextMenuText/ConvertInkMenu |  |
-| CM.Text.SelectionToTextConvert | Ink to Text | Context/Text/Convert Ink/Ink to Text | button |  | draw.inkToText | P2 | missing | FLUENT19:ContextMenuText/SelectionToTextConvert |  |
+| CM.Text.SelectionToTextConvert | Ink to Text | Context/Text/Convert Ink/Ink to Text | button |  | draw.inkToText | P2 | wired | FLUENT19:ContextMenuText/SelectionToTextConvert |  |
 | CM.Text.SelectionToMathConvert | Ink to Math | Context/Text/Convert Ink/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuText/SelectionToMathConvert |  |
 | CM.Text.LookUp | Smart Lookup | Context/Text/Smart Lookup | button |  |  | P3 | out-of-scope | FLUENT19:ContextMenuText/LookUp |  |
 | CM.Text.Translate | Translate | Context/Text/Translate | button |  | review.translateSelection | P3 | missing | FLUENT19:ContextMenuText/Translate |  |
@@ -767,7 +767,7 @@ Every item of every right-click menu, in menu order (FLUENT19 context menus). It
 | CM.LassoSelection.TreatInkAsMenu | Treat Selected Ink As | Context/Lasso Selection/Treat Selected Ink As | menu |  |  | P2 | wired | FLUENT19:ContextMenuLassoSelection/TreatInkAsMenu |  |
 | CM.LassoSelection.TreatInkAsHandwriting | Handwriting | Context/Lasso Selection/Treat Selected Ink As/Handwriting | button |  | draw.treatAsHandwriting | P2 | wired | FLUENT19:ContextMenuLassoSelection/TreatInkAsHandwriting |  |
 | CM.LassoSelection.TreatInkAsDrawing | Drawing | Context/Lasso Selection/Treat Selected Ink As/Drawing | button |  | draw.treatAsDrawing | P2 | wired | FLUENT19:ContextMenuLassoSelection/TreatInkAsDrawing |  |
-| CM.LassoSelection.SelectionToTextConvert | Ink to Text | Context/Lasso Selection/Ink to Text | button |  | draw.inkToText | P2 | missing | FLUENT19:ContextMenuLassoSelection/SelectionToTextConvert |  |
+| CM.LassoSelection.SelectionToTextConvert | Ink to Text | Context/Lasso Selection/Ink to Text | button |  | draw.inkToText | P2 | wired | FLUENT19:ContextMenuLassoSelection/SelectionToTextConvert |  |
 | CM.LassoSelection.SelectionToMathConvert | Ink to Math | Context/Lasso Selection/Ink to Math | button |  | draw.inkToMath | P2 | missing | FLUENT19:ContextMenuLassoSelection/SelectionToMathConvert |  |
 | CM.Picture.OleObjectEdit | Edit (embedded object) | Context/Picture/Edit (embedded object) | button |  | object.editOle | P3 | missing | FLUENT19:ContextMenuPicture/OleObjectEdit |  |
 | CM.Picture.RefreshOleObjects | Refresh | Context/Picture/Refresh | button |  | printout.refresh | P2 | wired | FLUENT19:ContextMenuPicture/RefreshOleObjects |  |

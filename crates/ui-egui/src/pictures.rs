@@ -398,6 +398,19 @@ pub(crate) fn host_action(app: &mut NoteApp, ctx: &egui::Context, cmd: &str) -> 
                 Err(e) => app.ui.status = Some((e, ctx.input(|i| i.time))),
             },
         },
+        // Ink to Text: the host's recogniser reads the selected ink; the text replaces it.
+        "draw.inkToText" => {
+            let Some(png) = app.run(ctx, "draw.inkImage", json!({})).and_then(|v| v.get("png").and_then(|p| p.as_str()).map(str::to_string)) else {
+                return true;
+            };
+            let bytes = notecraft_engine::b64::decode(&png).unwrap_or_default();
+            match app.host.ocr(&bytes, "eng") {
+                Ok(text) => {
+                    app.run(ctx, cmd, json!({"text": text}));
+                }
+                Err(e) => app.ui.status = Some((e, ctx.input(|i| i.time))),
+            }
+        }
         "insert.existingSpreadsheet" => {
             if let Some(path) = app.host.pick_file("Insert Existing Spreadsheet", &[("Spreadsheets", &["xlsx", "xlsm", "csv"])]) {
                 app.run(ctx, cmd, json!({"path": path}));

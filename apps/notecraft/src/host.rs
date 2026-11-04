@@ -28,7 +28,14 @@ impl DesktopHost {
     /// A host whose theme watcher asks `ctx` for a repaint when the desktop's preference changes.
     pub fn new(ctx: &egui::Context) -> DesktopHost {
         let waker = ctx.clone();
-        DesktopHost { theme: DesktopTheme::start(move || waker.request_repaint()), dark: None, clipboard: None, clip: None, recording: None, ctx: ctx.clone() }
+        DesktopHost {
+            theme: DesktopTheme::start(move || waker.request_repaint()),
+            dark: None,
+            clipboard: None,
+            clip: None,
+            recording: None,
+            ctx: ctx.clone(),
+        }
     }
 
     fn clipboard(&mut self) -> Option<&mut arboard::Clipboard> {
