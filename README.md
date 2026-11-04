@@ -45,9 +45,9 @@ On Linux it runs on Wayland and X11. Optional helpers are used when installed: `
 
 NoteCraft tracks every OneNote desktop control, menu item, shortcut and option in
 [`docs/parity-catalog.md`](docs/parity-catalog.md); [`docs/parity-checklist.md`](docs/parity-checklist.md)
-is generated from it and shows what is wired. About 78% of the catalog is wired. Not yet:
-audio / video recording and playback, writing `.one` / `.onepkg` files, conflict pages (sync),
-linked notes, handwriting recognition (ink to text / math) and the equation structure menu.
+is generated from it and shows what is wired. About 80% of the catalog is wired. Not yet:
+in-app audio / video playback controls, writing `.one` / `.onepkg` files, conflict pages (sync),
+linked notes and the equation structure menu. Ink to Text uses Tesseract, so its quality on handwriting is limited.
 
 ## Develop
 

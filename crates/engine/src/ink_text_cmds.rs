@@ -157,7 +157,7 @@ mod tests {
         let page = s.page().unwrap();
         assert!(page.objects.iter().all(|o| !matches!(o, PageObject::Ink(_))));
         assert!(page.objects.iter().any(|o| matches!(o, PageObject::Outline(_))));
-        // parity: R.Draw.Convert.SelectionToMathConvert
+        // parity: R.Draw.Convert.SelectionToMathConvert NC.Draw.InkImage
         run(&mut s, "draw.stroke", json!({"points": [[20, 120], [60, 140], [100, 120]]}));
         run(&mut s, "edit.selectAll", json!({}));
         run(&mut s, "draw.inkToMath", json!({"text": "x^2+1"}));
