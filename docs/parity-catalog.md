@@ -1056,7 +1056,7 @@ Commands available only through Customize Quick Access Toolbar ("Commands Not in
 | QAT.NR.OutlookTaskCustomDate | Outlook Task: Custom | Quick Access Toolbar/Commands Not in the Ribbon/Outlook Task: Custom | button |  |  | P3 | out-of-scope | FLUENT19:OutlookTaskCustomDate |  |
 | QAT.NR.OpenBackup | Open Backups | Quick Access Toolbar/Commands Not in the Ribbon/Open Backups | button |  | file.openBackups | P1 | wired | FLUENT19:OpenBackup |  |
 | QAT.NR.JotOpenFile | Open File (section) | Quick Access Toolbar/Commands Not in the Ribbon/Open File (section) | button | `Mod+Alt+Shift+O` | file.openSection | P1 | wired | FLUENT19:JotOpenFile |  |
-| QAT.NR.NewPageInSeries | New Page in Series | Quick Access Toolbar/Commands Not in the Ribbon/New Page in Series | button |  | page.newInSeries | P2 | missing | FLUENT19:NewPageInSeries |  |
+| QAT.NR.NewPageInSeries | New Page in Series | Quick Access Toolbar/Commands Not in the Ribbon/New Page in Series | button |  | page.newInSeries | P2 | wired | FLUENT19:NewPageInSeries |  |
 | QAT.NR.AttachNotesToMeeting | Attach Notes to Meeting | Quick Access Toolbar/Commands Not in the Ribbon/Attach Notes to Meeting | button |  |  | P3 | out-of-scope | FLUENT19:AttachNotesToMeeting |  |
 | QAT.NR.PenMode | Pen Mode | Quick Access Toolbar/Commands Not in the Ribbon/Pen Mode | toggle |  | draw.penMode | P2 | wired | FLUENT19:PenMode |  |
 | QAT.NR.HighlighterMode | Highlighter Mode | Quick Access Toolbar/Commands Not in the Ribbon/Highlighter Mode | toggle |  | draw.highlighterMode | P2 | wired | FLUENT19:HighlighterMode |  |
@@ -1134,7 +1134,7 @@ The complete "OneNote for Windows" table of Microsoft's keyboard-shortcut articl
 | KB.General.Thesaurus | Open the thesaurus for the selected word | Keyboard/General/Open the thesaurus for the selected word | shortcut | `Shift+F7` | review.thesaurus | P2 | wired | KBD365 |  |
 | KB.General.ContextMenu | Display the context menu for the focused object | Keyboard/General/Display the context menu for the focused object | shortcut | `Shift+F10` | ui.contextMenu | P1 | wired | KBD365 | Shift+F10 opens the menu of the selected object, else of the paragraph with the caret, at its place; the Menu key is not read yet |
 | KB.General.InfoBarAction | Perform the action suggested on the Information Bar | Keyboard/General/Perform the action suggested on the Information Bar | shortcut | `Mod+Shift+W` | ui.infoBarAction | P3 | wired | KBD365 |  |
-| KB.General.PlayAudio | Play the selected audio recording | Keyboard/General/Play the selected audio recording | shortcut | `Mod+Alt+P` | media.play | P2 | missing | KBD365 |  |
+| KB.General.PlayAudio | Play the selected audio recording | Keyboard/General/Play the selected audio recording | shortcut | `Mod+Alt+P` | media.play | P2 | wired | KBD365 |  |
 | KB.General.StopAudio | Stop audio recording playback | Keyboard/General/Stop audio recording playback | shortcut | `Mod+Alt+S` | media.stop | P2 | missing | KBD365 |  |
 | KB.General.Rewind10 | Skip backward 10 seconds | Keyboard/General/Skip backward 10 seconds | shortcut | `Mod+Alt+Y` | media.rewind | P2 | missing | KBD365 |  |
 | KB.General.Forward10 | Skip forward 10 seconds | Keyboard/General/Skip forward 10 seconds | shortcut | `Mod+Alt+U` | media.forward | P2 | missing | KBD365 |  |

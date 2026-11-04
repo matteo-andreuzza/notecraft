@@ -1365,3 +1365,9 @@ were certain landed, behaviour unchanged (every test green after each commit).
   browser (`open_url`), Online Video asks for an address in the Link dialog and inserts a link,
   Show Training opens the README.
 - Ink to Math (`draw.inkToMath`): the recogniser's text becomes an equation, to be corrected by hand.
+
+## 2026-11-04 — New Page in Series, Play key
+
+- `page.newInSeries` (QAT.NR.NewPageInSeries): a page below the current one (and its subpages),
+  same level and title. Unverified: the reference also offers a date series.
+- `media.play` bound to Ctrl+Alt+P (KB.General.PlayAudio).
